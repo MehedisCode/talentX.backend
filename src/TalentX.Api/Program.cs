@@ -1,6 +1,9 @@
+using DotNetEnv;
 using TalentX.Api.Extensions;
 using TalentX.Application;
 using TalentX.Infrastructure;
+
+Env.Load();
 
 var builder = WebApplication.CreateBuilder(args);
 

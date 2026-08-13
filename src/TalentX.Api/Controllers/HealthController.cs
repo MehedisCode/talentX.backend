@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using TalentX.Application.Common.Interfaces;
 
 namespace TalentX.Api.Controllers;
 
@@ -6,9 +7,18 @@ namespace TalentX.Api.Controllers;
 [Route("api/[controller]")]
 public sealed class AuthController : ControllerBase
 {
-    [HttpPost("health")]
+    private readonly IUnitOfWork _unitOfWork;
+    public AuthController(
+        IUnitOfWork unitOfWork
+    )
+    {
+        _unitOfWork = unitOfWork;
+    }
+    [HttpGet("health")]
     public async Task<IActionResult> Health()
     {
-        return Ok("Healthy!");
+        // return Ok("Healthy!");
+
+        return Ok(await _unitOfWork.Users.GetByEmailAsync("mail@.com"));
     }
 }
