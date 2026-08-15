@@ -4,6 +4,7 @@ namespace TalentX.Application.Common.Interfaces;
 public interface IUnitOfWork
 {
     IUserRepository Users {get;}
+    IJobRepository Jobs {get;}
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }
