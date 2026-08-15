@@ -7,6 +7,7 @@ public class UnitOfWork : IUnitOfWork
 {
     private readonly ApplicationDbContext _context;
     public IUserRepository Users { get; }
+    public IJobRepository Jobs { get; }
 
     public UnitOfWork(
         ApplicationDbContext context
@@ -14,6 +15,7 @@ public class UnitOfWork : IUnitOfWork
     {
         _context = context;
         Users = new UserRepository(_context);
+        Jobs = new JobRepository(_context);
     }
 
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken)
