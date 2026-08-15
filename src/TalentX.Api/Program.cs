@@ -1,7 +1,9 @@
 using DotNetEnv;
+using Microsoft.OpenApi;
 using TalentX.Api.Extensions;
 using TalentX.Application;
 using TalentX.Infrastructure;
+using TalentX.Infrastructure.Identity.Seed;
 
 Env.Load();
 
@@ -30,10 +32,31 @@ builder.Services.AddSwaggerGen(options =>
     });
 
 
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new OpenApiInfo { Title = "TalentX", Version = "v1" });
+
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "Enter JWT Bearer token"
+    });
+
+    options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
+    {
+        [new OpenApiSecuritySchemeReference("Bearer", document)] = []
+    });
+});
 
 
 var app = builder.Build();
+
+
+await IdentitySeeder.SeedAsync(app.Services);
 
 
 if (app.Environment.IsDevelopment())
