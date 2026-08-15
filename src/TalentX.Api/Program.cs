@@ -1,4 +1,5 @@
 using DotNetEnv;
+using Microsoft.EntityFrameworkCore;
 using TalentX.Api.Extensions;
 using TalentX.Application;
 using TalentX.Infrastructure;
@@ -12,6 +13,14 @@ builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
+var frontendUrl = builder.Configuration["Cors:FrontendUrl"] ?? "http://localhost:3000";
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend", policy =>
+        policy.WithOrigins(frontendUrl)
+              .AllowAnyHeader()
+              .AllowAnyMethod());
+});
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
@@ -48,10 +57,26 @@ app.UseRequestLoggingMiddleware();
 
 app.UseHttpsRedirection();
 
+app.UseCors("AllowFrontend");
+
 app.UseAuthentication();
 
 app.UseAuthorization();
 
 app.MapControllers();
+
+// Development convenience only — production migrations run via the deployment
+// pipeline, not app startup.
+if (app.Environment.IsDevelopment())
+{
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<TalentX.Infrastructure.Persistence.Contexts.ApplicationDbContext>();
+    db.Database.Migrate();
+    if (!db.Jobs.Any())
+    {
+        db.Jobs.AddRange(TalentX.Infrastructure.Persistence.SeedData.JobSeedData.GetJobs());
+        db.SaveChanges();
+    }
+}
 
 app.Run();
