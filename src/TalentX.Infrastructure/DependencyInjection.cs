@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using TalentX.Application.Common.Interfaces;
+using TalentX.Infrastructure.Configuration;
 using TalentX.Infrastructure.Identity.Models;
 using TalentX.Infrastructure.Identity.Services;
 using TalentX.Infrastructure.Persistence.Contexts;
@@ -38,6 +39,10 @@ public static class DependencyInjection
         .AddRoles<IdentityRole>()
         .AddEntityFrameworkStores<ApplicationDbContext>();
 
+        // Configuration Options
+        services.Configure<EmailSettings>(configuration.GetSection(EmailSettings.SectionName));
+
+        // Application Services
         services.AddScoped<IIdentityService, IdentityService>();
         services.AddSingleton<IOtpService, OtpService>();
         services.AddScoped<IEmailService, EmailService>();
