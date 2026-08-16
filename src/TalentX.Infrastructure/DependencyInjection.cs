@@ -27,6 +27,8 @@ public static class DependencyInjection
 
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
+        // TODO: current-user/employer identity implementation remaining (ICurrentUserService).
+
         return services;
     }
 }

@@ -2,6 +2,7 @@ using MediatR;
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 using TalentX.Application.Common.Behaviours;
+using AutoMapper;
 
 namespace TalentX.Application;
 public static class DependencyInjection
@@ -17,6 +18,8 @@ public static class DependencyInjection
         });
 
         services.AddValidatorsFromAssembly(typeof(DependencyInjection).Assembly);
+
+        services.AddAutoMapper(cfg => { }, typeof(DependencyInjection).Assembly);
 
         services.AddTransient(
             typeof(IPipelineBehavior<,>),

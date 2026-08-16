@@ -1,0 +1,126 @@
+using TalentX.Domain.Common;
+using TalentX.Domain.Enums;
+
+
+namespace TalentX.Domain.Entities;
+
+public class Job : BaseEntity
+{
+    // TODO: user id implementation remaining — populate EmployerId from the authenticated employer once ICurrentUserService is implemented.
+    public Guid EmployerId { get; private set; }
+    public string Title { get; private set; } = string.Empty;
+    public string Description { get; private set; } = string.Empty;
+    public EmploymentType EmploymentType { get; private set; }
+    public string Location { get; private set; } = string.Empty;
+    public WorkArrangement WorkArrangement { get; private set; }
+    public ExperienceLevel ExperienceLevel { get; private set; }
+    public List<string> RequiredSkills { get; private set; } = new();
+    public JobStatus Status { get; private set; }
+    public int Vacancies { get; private set; }
+
+
+    private Job() { }
+
+    public static Job CreateDraft(
+        string title,
+        string description,
+        EmploymentType employmentType,
+        ExperienceLevel experienceLevel,
+        string location,
+        WorkArrangement workArrangement,
+        List<string> requiredSkills,
+        int vacancies
+    )
+    {
+        var job = new Job
+        {
+            Title = title.Trim(),
+            Description = description.Trim(),
+            EmploymentType = employmentType,
+            ExperienceLevel = experienceLevel,
+            Location = location.Trim(),
+            WorkArrangement = workArrangement,
+            RequiredSkills = requiredSkills?.Where(s => !string.IsNullOrWhiteSpace(s))
+                                             .Select(s => s.Trim())
+                                             .Distinct(StringComparer.OrdinalIgnoreCase)
+                                             .ToList() ?? new List<string>(),
+            Vacancies = vacancies,
+            Status = JobStatus.Draft,
+            CreatedAt = DateTime.UtcNow
+        };
+        return job;
+    }
+
+    public void UpdateDetails(
+        string title,
+        string description,
+        EmploymentType employmentType,
+        ExperienceLevel experienceLevel,
+        string location,
+        WorkArrangement workArrangement,
+        List<string> requiredSkills,
+        int vacancies
+    )
+    {
+
+        Title = title.Trim();
+        Description = description.Trim();
+        EmploymentType = employmentType;
+        ExperienceLevel = experienceLevel;
+        Location = location.Trim();
+        WorkArrangement = workArrangement;
+        RequiredSkills = requiredSkills?.Where(s => !string.IsNullOrWhiteSpace(s))
+                                         .Select(s => s.Trim())
+                                         .Distinct(StringComparer.OrdinalIgnoreCase)
+                                         .ToList() ?? new List<string>();
+
+        Vacancies = vacancies;
+    }
+
+
+    public void EnsureIsPublishable()
+    {
+        if (Status != JobStatus.Draft)
+            throw new InvalidOperationException("Only draft jobs can be published.");
+
+        var missing = new List<string>();
+
+        if (string.IsNullOrWhiteSpace(Title))
+            missing.Add(nameof(Title));
+
+        if (string.IsNullOrWhiteSpace(Description))
+            missing.Add(nameof(Description));
+
+        if (string.IsNullOrWhiteSpace(Location))
+            missing.Add(nameof(Location));
+
+        if (!Enum.IsDefined(EmploymentType))
+            missing.Add(nameof(EmploymentType));
+
+        if (!Enum.IsDefined(ExperienceLevel))
+            missing.Add(nameof(ExperienceLevel));
+
+        if (!Enum.IsDefined(WorkArrangement))
+            missing.Add(nameof(WorkArrangement));
+
+        if (RequiredSkills.Count == 0)
+            missing.Add(nameof(RequiredSkills));
+
+        if (Vacancies <= 0)
+            missing.Add(nameof(Vacancies));
+
+        if (missing.Count > 0)
+        {
+            throw new InvalidOperationException(
+                $"Job cannot be published. Invalid or missing fields: {string.Join(", ", missing)}"
+            );
+        }
+    }
+    public void Publish()
+    {
+        EnsureIsPublishable();
+
+        Status = JobStatus.Published;
+    }
+}
+
