@@ -7,6 +7,7 @@ using TalentX.Infrastructure.Identity.Models;
 using TalentX.Infrastructure.Identity.Services;
 using TalentX.Infrastructure.Persistence.Contexts;
 using TalentX.Infrastructure.Persistence.Repositories;
+using TalentX.Infrastructure.Services;
 
 namespace TalentX.Infrastructure;
 
@@ -24,7 +25,7 @@ public static class DependencyInjection
                 npgsqlOptions =>
                     npgsqlOptions.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName)));
 
-        // Identity Core
+        // Identity Core (strictly for user/role management)
         services.AddIdentityCore<ApplicationUser>(options =>
         {
             options.Password.RequireDigit = true;
@@ -38,6 +39,8 @@ public static class DependencyInjection
         .AddEntityFrameworkStores<ApplicationDbContext>();
 
         services.AddScoped<IIdentityService, IdentityService>();
+        services.AddSingleton<IOtpService, OtpService>();
+        services.AddScoped<IEmailService, EmailService>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         return services;
