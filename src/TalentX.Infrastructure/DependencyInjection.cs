@@ -44,6 +44,8 @@ public static class DependencyInjection
 
         // Application Services
         services.AddScoped<IIdentityService, IdentityService>();
+        services.AddScoped<IExternalIdentityService, ExternalIdentityService>();
+        services.AddScoped<IGoogleAuthService, GoogleAuthService>();
         services.AddSingleton<IOtpService, OtpService>();
         services.AddScoped<IEmailService, EmailService>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
