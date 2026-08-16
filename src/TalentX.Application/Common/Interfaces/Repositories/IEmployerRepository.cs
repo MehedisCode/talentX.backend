@@ -15,6 +15,12 @@ public interface IEmployerRepository
     Task AddAsync(Employer employer, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Updates an existing employer entity in the repository.
+    /// </summary>
+    /// <param name="employer">The employer domain entity.</param>
+    void Update(Employer employer);
+
+    /// <summary>
     /// Gets an employer by its domain unique identifier.
     /// </summary>
     /// <param name="id">The employer GUID identifier.</param>

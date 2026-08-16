@@ -22,24 +22,26 @@ public sealed class EmployerRepository : IEmployerRepository
         await _context.Employers.AddAsync(employer, cancellationToken);
     }
 
+    public void Update(Employer employer)
+    {
+        _context.Employers.Update(employer);
+    }
+
     public async Task<Employer?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
         return await _context.Employers
-            .AsNoTracking()
             .FirstOrDefaultAsync(e => e.Id == id, cancellationToken);
     }
 
     public async Task<Employer?> GetByUserIdAsync(string userId, CancellationToken cancellationToken = default)
     {
         return await _context.Employers
-            .AsNoTracking()
             .FirstOrDefaultAsync(e => e.UserId == userId, cancellationToken);
     }
 
     public async Task<Employer?> GetByEmailAsync(string email, CancellationToken cancellationToken = default)
     {
         return await _context.Employers
-            .AsNoTracking()
             .FirstOrDefaultAsync(e => e.Email == email, cancellationToken);
     }
 
