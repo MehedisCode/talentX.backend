@@ -33,6 +33,17 @@ Accept: application/json
 
 ###
 
+### Resend Verification OTP (Valid for unverified account)
+POST {{TalentX.Api_HostAddress}}/api/v1/employers/resend-otp
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "sarah.connor@cyberdyne.com"
+}
+
+###
+
 ### Verify Employer Email (Invalid OTP format)
 POST {{TalentX.Api_HostAddress}}/api/v1/employers/verify-email
 Content-Type: application/json

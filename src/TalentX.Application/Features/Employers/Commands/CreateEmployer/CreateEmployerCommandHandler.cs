@@ -10,6 +10,7 @@ namespace TalentX.Application.Features.Employers.Commands.CreateEmployer;
 
 /// <summary>
 /// Handler for <see cref="CreateEmployerCommand"/> to register user in Identity, persist employer profile, dispatch verification OTP, and return projected DTO.
+/// Handles the edge case of unverified users re-registering by refreshing OTP and profile data.
 /// </summary>
 public sealed class CreateEmployerCommandHandler : IRequestHandler<CreateEmployerCommand, EmployerDto>
 {
@@ -35,10 +36,25 @@ public sealed class CreateEmployerCommandHandler : IRequestHandler<CreateEmploye
 
     public async Task<EmployerDto> Handle(CreateEmployerCommand request, CancellationToken cancellationToken)
     {
-        var exists = await _unitOfWork.Employers.ExistsByEmailAsync(request.Email, cancellationToken);
-        if (exists)
+        var existingEmployer = await _unitOfWork.Employers.GetByEmailAsync(request.Email, cancellationToken);
+        if (existingEmployer != null)
         {
-            throw new ConflictException($"An employer with email '{request.Email}' already exists.");
+            if (existingEmployer.IsVerified)
+            {
+                throw new ConflictException($"An employer with email '{request.Email}' is already registered and verified. Please sign in.");
+            }
+
+            // Edge Case: User registered but did not complete email verification.
+            // Update profile with latest submitted details and dispatch a fresh OTP.
+            existingEmployer.Update(request.Name);
+            existingEmployer.UpdateCompany(request.CompanyName);
+            _unitOfWork.Employers.Update(existingEmployer);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            var newOtp = await _otpService.GenerateOtpAsync(request.Email, cancellationToken: cancellationToken);
+            await _emailService.SendOtpEmailAsync(request.Email, request.Name, newOtp, cancellationToken);
+
+            return _mapper.Map<EmployerDto>(existingEmployer);
         }
 
         var (succeeded, userId, errors) = await _identityService.CreateUserAsync(

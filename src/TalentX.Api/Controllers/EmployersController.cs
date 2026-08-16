@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TalentX.Application.DTOs.Employers;
 using TalentX.Application.Features.Employers.Commands.CreateEmployer;
+using TalentX.Application.Features.Employers.Commands.ResendOtp;
 using TalentX.Application.Features.Employers.Commands.VerifyEmail;
 
 namespace TalentX.Api.Controllers;
@@ -28,9 +29,9 @@ public sealed class EmployersController : ControllerBase
     /// <param name="command">The employer registration command details.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The created employer data transfer object.</returns>
-    /// <response code="201">Employer successfully created.</response>
+    /// <response code="201">Employer successfully created or OTP refreshed.</response>
     /// <response code="400">Request validation failed.</response>
-    /// <response code="409">Employer with given email already exists.</response>
+    /// <response code="409">Employer with given email is already registered and verified.</response>
     [HttpPost]
     [ProducesResponseType(typeof(EmployerDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -64,5 +65,27 @@ public sealed class EmployersController : ControllerBase
         await _sender.Send(command, cancellationToken);
 
         return Ok(new { message = "Email verified successfully." });
+    }
+
+    /// <summary>
+    /// Resends a fresh verification OTP email for an unverified employer account.
+    /// </summary>
+    /// <param name="command">Payload containing the employer's email address.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Confirmation message that a new OTP was sent.</returns>
+    /// <response code="200">New verification OTP dispatched successfully.</response>
+    /// <response code="400">Account is already verified.</response>
+    /// <response code="404">Employer not found.</response>
+    [HttpPost("resend-otp")]
+    [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ResendOtp(
+        [FromBody] ResendEmployerOtpCommand command,
+        CancellationToken cancellationToken)
+    {
+        await _sender.Send(command, cancellationToken);
+
+        return Ok(new { message = "A new verification code has been sent to your email." });
     }
 }
