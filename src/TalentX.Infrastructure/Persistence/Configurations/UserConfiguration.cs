@@ -26,5 +26,10 @@ public sealed class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(u => u.Email)
             .HasMaxLength(255)
             .IsRequired();
+
+        builder.Property(u => u.Role)
+            .HasConversion<string>()
+            .HasMaxLength(50)
+            .IsRequired();
     }
 }

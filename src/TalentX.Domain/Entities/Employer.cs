@@ -1,3 +1,5 @@
+using TalentX.Domain.Enums;
+
 namespace TalentX.Domain.Entities;
 
 /// <summary>
@@ -14,7 +16,7 @@ public sealed class Employer : User
         string name,
         string email,
         string companyName
-    ) : base(userId, name, email)
+    ) : base(userId, name, email, UserRole.Employer)
     {
         CompanyName = companyName;
     }
