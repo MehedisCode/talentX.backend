@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using TalentX.Domain.Enums;
 
 namespace TalentX.Api.Controllers;
 
@@ -8,8 +9,9 @@ namespace TalentX.Api.Controllers;
 /// Provides health and diagnostic endpoints for the API service.
 /// </summary>
 [ApiController]
-[Route("api/[controller]")]
-[AllowAnonymous]
+[Route("api/v1/[controller]")]
+// [AllowAnonymous]
+[Authorize(Roles = nameof(UserRole.Employer))]
 public sealed class HealthController : ControllerBase
 {
     private static readonly DateTimeOffset ProcessStartTime = DateTimeOffset.UtcNow;

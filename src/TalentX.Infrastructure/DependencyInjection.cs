@@ -11,6 +11,7 @@ using TalentX.Infrastructure.Identity.Models;
 using TalentX.Infrastructure.Identity.Services;
 using TalentX.Infrastructure.Persistence.Contexts;
 using TalentX.Infrastructure.Persistence.Repositories;
+using TalentX.Infrastructure.Services;
 namespace TalentX.Infrastructure;
 
 public static class DependencyInjection
@@ -50,11 +51,8 @@ public static class DependencyInjection
         // Authentication
         services.AddAuthentication(options =>
         {
-            options.DefaultAuthenticateScheme =
-                JwtBearerDefaults.AuthenticationScheme;
-
-            options.DefaultChallengeScheme =
-                JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
         })
         .AddJwtBearer(options =>
         {
@@ -63,27 +61,29 @@ public static class DependencyInjection
                 ValidateIssuer = true,
                 ValidateAudience = true,
                 ValidateLifetime = true,
-                ClockSkew = TimeSpan.Zero,
                 ValidateIssuerSigningKey = true,
-
                 ValidIssuer = jwtSettings.Issuer,
                 ValidAudience = jwtSettings.Audience,
-
-                IssuerSigningKey =
-                    new SymmetricSecurityKey(
-                        Encoding.UTF8.GetBytes(jwtSettings.Secret))
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Secret))
             };
 
             options.Events = new JwtBearerEvents
             {
                 OnMessageReceived = context =>
                 {
-                    context.Token = context.Request.Cookies["TalentXAccessToken"];
-
+                    // Read the access token from the httpOnly cookie instead of the Authorization header
+                    if (context.Request.Cookies.TryGetValue("TalentXAccessToken", out var token))
+                    {
+                        context.Token = token;
+                    }
                     return Task.CompletedTask;
                 }
             };
         });
+
+        services.AddHttpContextAccessor();
+
+        services.AddScoped<ICurrentUserService, CurrentUserService>();
 
         services.AddScoped<ITokenService, TokenService>();
 
