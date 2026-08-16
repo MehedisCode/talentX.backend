@@ -1,0 +1,52 @@
+@TalentX.Api_HostAddress = http://localhost:5035
+
+### Health Check
+GET {{TalentX.Api_HostAddress}}/api/Health
+Accept: application/json
+
+###
+
+### Create Employer (Valid)
+POST {{TalentX.Api_HostAddress}}/api/v1/employers
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "Sarah Connor",
+  "email": "sarah.connor@cyberdyne.com",
+  "companyName": "Cyberdyne Systems",
+  "password": "Password123!",
+  "confirmPassword": "Password123!"
+}
+
+###
+
+### Create Employer (Validation Failure - Password Mismatch)
+POST {{TalentX.Api_HostAddress}}/api/v1/employers
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "Sarah Connor",
+  "email": "sarah.connor@cyberdyne.com",
+  "companyName": "Cyberdyne Systems",
+  "password": "Password123!",
+  "confirmPassword": "DifferentPassword123!"
+}
+
+###
+
+### Create Employer (Validation Failure - Weak Password & Invalid Email)
+POST {{TalentX.Api_HostAddress}}/api/v1/employers
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "",
+  "email": "invalid-email",
+  "companyName": "",
+  "password": "weak",
+  "confirmPassword": "weak"
+}
+
+###
