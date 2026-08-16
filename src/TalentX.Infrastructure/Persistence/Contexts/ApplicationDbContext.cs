@@ -15,6 +15,7 @@ public class ApplicationDbContext
     }
 
     public DbSet<User> DomainUsers => Set<User>();
+    public DbSet<Employer> Employers => Set<Employer>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
