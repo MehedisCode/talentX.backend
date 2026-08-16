@@ -1,17 +1,35 @@
-using DotNetEnv;
 using TalentX.Api.Extensions;
 using TalentX.Application;
 using TalentX.Infrastructure;
 
-Env.Load();
+// Load .env from the backend root directory (talentx2026q3.backend/.env)
+var envFile = Path.Combine(Directory.GetCurrentDirectory(), ".env");
+var depth = 0;
+while (!File.Exists(envFile) && depth++ < 5)
+{
+    envFile = Path.Combine(Path.GetDirectoryName(envFile)!, "..", ".env");
+    envFile = Path.GetFullPath(envFile);
+}
+
+if (File.Exists(envFile))
+{
+    foreach (var line in File.ReadAllLines(envFile))
+    {
+        var trimmed = line.Trim();
+        if (string.IsNullOrWhiteSpace(trimmed) || trimmed.StartsWith('#')) continue;
+        var idx = trimmed.IndexOf('=');
+        if (idx <= 0) continue;
+        var key = trimmed[..idx].Trim();
+        var value = trimmed[(idx + 1)..].Trim().Trim('"').Trim('\'');
+        Environment.SetEnvironmentVariable(key, value);
+    }
+}
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Configuration.AddEnvironmentVariables();
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
-builder.Services.AddControllers();
-builder.Services.AddEndpointsApiExplorer();
-
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
@@ -24,17 +42,12 @@ builder.Services.AddControllers()
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
-    {
-        // Describes enums as strings in Swagger UI
-        options.UseInlineDefinitionsForEnums();
-    });
-
-
-builder.Services.AddSwaggerGen();
-
+{
+    // Describes enums as strings in Swagger UI
+    options.UseInlineDefinitionsForEnums();
+});
 
 var app = builder.Build();
-
 
 if (app.Environment.IsDevelopment())
 {
@@ -43,15 +56,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseGlobalExceptionMiddleware();
-
 app.UseRequestLoggingMiddleware();
-
 app.UseHttpsRedirection();
-
 app.UseAuthentication();
-
 app.UseAuthorization();
-
 app.MapControllers();
-
 app.Run();
