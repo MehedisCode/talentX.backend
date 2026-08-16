@@ -11,7 +11,7 @@ public class IdentityService : IIdentityService
     private readonly RoleManager<IdentityRole> _roleManager;
 
     public IdentityService(
-        UserManager<ApplicationUser> userManager, 
+        UserManager<ApplicationUser> userManager,
         RoleManager<IdentityRole> roleManager
     )
     {
@@ -19,21 +19,21 @@ public class IdentityService : IIdentityService
         _roleManager = roleManager;
     }
 
-    public async Task<IdentityResponse> CreateApplicationUserAsync(
-        string email, 
-        string password, 
+    public async Task<IdentityResponse<CreateUserResult>> CreateApplicationUserAsync(
+        string email,
+        string password,
         UserRole role
     )
     {
         if (!await _roleManager.RoleExistsAsync(role.ToString()))
         {
-            return IdentityResponse.Fail($"Invalid user role.");
+            return IdentityResponse<CreateUserResult>.Fail("Invalid user role.");
         }
 
         var existing = await _userManager.FindByEmailAsync(email);
         if (existing is not null)
         {
-            return IdentityResponse.Fail("Email is already in use.");
+            return IdentityResponse<CreateUserResult>.Fail("Email is already in use.");
         }
 
         var user = new ApplicationUser { UserName = email, Email = email };
@@ -41,55 +41,61 @@ public class IdentityService : IIdentityService
         var createResult = await _userManager.CreateAsync(user, password);
         if (!createResult.Succeeded)
         {
-            return IdentityResponse.Fail(createResult.Errors.Select(e => e.Description));
+            return IdentityResponse<CreateUserResult>.Fail(createResult.Errors.Select(e => e.Description));
         }
 
         var roleResult = await _userManager.AddToRoleAsync(user, role.ToString());
         if (!roleResult.Succeeded)
         {
             await _userManager.DeleteAsync(user);
-            return IdentityResponse.Fail(roleResult.Errors.Select(e => e.Description));
+            return IdentityResponse<CreateUserResult>.Fail(roleResult.Errors.Select(e => e.Description));
         }
 
-        return IdentityResponse.Ok(new { UserId = user.Id });
+        return IdentityResponse<CreateUserResult>.Ok(new CreateUserResult { UserId = user.Id });
     }
-    public async Task<IdentityResponse> ValidatePasswordAsync(
-        string email, 
+
+    public async Task<IdentityResponse<PasswordValidationResult>> ValidatePasswordAsync(
+        string email,
         string password
     )
     {
         var user = await _userManager.FindByEmailAsync(email);
         if (user is null)
         {
-            return IdentityResponse.Fail("Invalid credentials.");
+            return IdentityResponse<PasswordValidationResult>.Fail("Invalid credentials.");
         }
 
         if (await _userManager.IsLockedOutAsync(user))
         {
-            return IdentityResponse.Fail("Account is locked out. Try again later.");
+            return IdentityResponse<PasswordValidationResult>.Fail("Account is locked out. Try again later.");
         }
 
         if (!await _userManager.CheckPasswordAsync(user, password))
         {
             await _userManager.AccessFailedAsync(user);
-            return IdentityResponse.Fail("Invalid credentials.");
+            return IdentityResponse<PasswordValidationResult>.Fail("Invalid credentials.");
         }
 
         await _userManager.ResetAccessFailedCountAsync(user);
         var roles = await _userManager.GetRolesAsync(user);
 
-        return IdentityResponse.Ok(new { UserId = user.Id, user.Email, Roles = roles });
+        return IdentityResponse<PasswordValidationResult>.Ok(new PasswordValidationResult
+        {
+            UserId = user.Id,
+            Email = user.Email!,
+            Roles = roles
+        });
     }
 
-    public async Task<IdentityResponse> GetApplicationUserEmailByUserIdAsync(string userId)
+    public async Task<IdentityResponse<string>> GetApplicationUserEmailByUserIdAsync(string userId)
     {
         var user = await _userManager.FindByIdAsync(userId);
         if (user is null)
         {
-            return IdentityResponse.Fail("User not found.");
+            return IdentityResponse<string>.Fail("User not found.");
         }
 
-        return IdentityResponse.Ok(user.Email);
+        return IdentityResponse<string>.Ok(user.Email!);
     }
 
     public async Task<IdentityResponse> UpdateApplicationUserEmailAsync(string userId, string newEmail)

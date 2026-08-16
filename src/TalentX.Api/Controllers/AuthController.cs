@@ -1,8 +1,7 @@
-
-
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
+using TalentX.Application.Common.Identity.Interfaces;
 using TalentX.Application.Common.Identity.Models;
 using TalentX.Application.Features.Auth.LogIn;
 using TalentX.Infrastructure.Identity.Models;
@@ -10,18 +9,23 @@ using TalentX.Infrastructure.Identity.Models;
 namespace TalentX.API.Controllers;
 
 [ApiController]
-[Route("api/auth")]
+[Route("api/v1/auth")]
 public class AuthController : ControllerBase
 {
     private readonly ISender _sender;
     private readonly JwtSettings _jwtSettings;
 
+    private readonly IIdentityService _identityService;
+
     public AuthController(
         ISender sender,
-        IOptions<JwtSettings> jwtSettings)
+        IOptions<JwtSettings> jwtSettings,
+        IIdentityService identityService
+    )
     {
         _sender = sender;
         _jwtSettings = jwtSettings.Value;
+        _identityService = identityService;
     }
 
     [HttpPost("login")]
@@ -32,20 +36,48 @@ public class AuthController : ControllerBase
 
         if (!result.Success)
         {
-            return Unauthorized(result);
+            return Unauthorized(result.Errors);
         }
 
-        var tokens = (TokenResponse)result.Data!;
+        var login = result.Data!;
 
-        SetAuthCookies(tokens);
+        SetAuthCookies(login.Tokens);
 
-        return Ok();
+        return Ok(new
+        {
+            login.UserId,
+            login.Email
+        });
     }
+
+
+    [HttpPost("register")]
+    public async Task<IActionResult> Register()
+    {
+
+        // var result = await _identityService.CreateApplicationUserAsync(
+        //     "testEmail1@gmail.com",
+        //     "12osA_&fowfoeso",
+        //     Domain.Enums.UserRole.Employer);
+
+        var result = await _identityService.CreateApplicationUserAsync(
+        "testEmail2@gmail.com",
+        "12osA_&fowfoeso",
+        Domain.Enums.UserRole.Employer);
+
+        if (!result.Success)
+        {
+           return StatusCode(StatusCodes.Status500InternalServerError, result.Errors);
+        }
+
+        return Ok(result.Data);
+    }
+
 
     private void SetAuthCookies(TokenResponse tokens)
     {
         Response.Cookies.Append(
-            "accessToken",
+            "TalentXAccessToken",
             tokens.AccessToken,
             new CookieOptions
             {
@@ -58,7 +90,7 @@ public class AuthController : ControllerBase
             });
 
         Response.Cookies.Append(
-            "refreshToken",
+            "TalentXRefreshToken",
             tokens.RefreshToken,
             new CookieOptions
             {
@@ -67,7 +99,7 @@ public class AuthController : ControllerBase
                 SameSite = SameSiteMode.None,
                 Expires = DateTimeOffset.UtcNow.AddDays(
                     _jwtSettings.RefreshTokenExpiryDays),
-                Path = "/api/auth"
+                Path = "/"
             });
     }
 }

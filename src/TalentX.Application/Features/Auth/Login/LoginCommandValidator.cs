@@ -13,8 +13,10 @@ public class LoginCommandValidator : AbstractValidator<LoginCommand>
             .MaximumLength(256).WithMessage("Email must not exceed 256 characters.");
 
         // As we are using 'Identity'
-        // Password must contain at least 1 uppercase letter [A-Z],
+        // Password should have atleast 8 characters,
+        // must contain at least 1 uppercase letter [A-Z],
         // 1 lowercase letter [a-z] and 1 digit [0-9]
+        // 1 special character
         RuleFor(x => x.Password)
             .NotEmpty().WithMessage("Password is required.");
     }

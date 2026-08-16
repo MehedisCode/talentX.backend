@@ -6,7 +6,7 @@ using TalentX.Application.Features.Auth.LogIn;
 namespace TalentX.Application.Features.Auth.Login;
 
 public class LoginCommandHandler 
-    : IRequestHandler<LoginCommand, IdentityResponse>
+    : IRequestHandler<LoginCommand, IdentityResponse<LoginResult>>
 {
     private readonly IIdentityService _identityService;
     private readonly ITokenService _tokenService;
@@ -19,23 +19,27 @@ public class LoginCommandHandler
         _tokenService = tokenService;
     }
 
-    public async Task<IdentityResponse> Handle(LoginCommand request, CancellationToken ct)
+    public async Task<IdentityResponse<LoginResult>> Handle(LoginCommand request, CancellationToken ct)
     {
         var validation = await _identityService.ValidatePasswordAsync(request.Email, request.Password);
         if (!validation.Success)
         {
-            return validation;
+            return IdentityResponse<LoginResult>.Fail(validation.Errors);
         }
 
-        // adjust the cast to whatever shape ValidatePasswordAsync actually returns
-        // 'dynamic' is C#'s escape hatch from the compiler's normal type checking 
-        // it tells the compiler "don't verify this at compile time, 
-        // figure out what to do with it at runtime instead.
-        dynamic data = validation.Data!;
-        string userId = data.UserId;
+        var userId = validation.Data!.UserId;
 
-        var response = await _tokenService.CreateAsync(userId);
-        
-        return response;
+        var tokenResult = await _tokenService.CreateAsync(userId);
+        if (!tokenResult.Success)
+        {
+            return IdentityResponse<LoginResult>.Fail(tokenResult.Errors);
+        }
+
+        return IdentityResponse<LoginResult>.Ok(new LoginResult
+        {
+            UserId = userId,
+            Email = validation.Data.Email,
+            Tokens = tokenResult.Data!
+        });
     }
 }

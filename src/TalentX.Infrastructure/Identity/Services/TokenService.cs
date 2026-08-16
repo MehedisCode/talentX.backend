@@ -30,12 +30,12 @@ public class TokenService : ITokenService
         _jwtSettings = jwtSettings.Value;
     }
 
-    public async Task<IdentityResponse> CreateAsync(string userId)
+    public async Task<IdentityResponse<TokenResponse>> CreateAsync(string userId)
     {
         var user = await _userManager.FindByIdAsync(userId);
         if (user is null)
         {
-            return IdentityResponse.Fail("User not found.");
+            return IdentityResponse<TokenResponse>.Fail("User not found.");
         }
         var roles = await _userManager.GetRolesAsync(user);
         var accessToken = GenerateAccessToken(user, roles);
@@ -49,30 +49,30 @@ public class TokenService : ITokenService
         });
         await _context.SaveChangesAsync();
 
-        return IdentityResponse.Ok(new TokenResponse
-            {
-                AccessToken = accessToken,
-                RefreshToken = rawRefreshToken
-            });
+        return IdentityResponse<TokenResponse>.Ok(new TokenResponse
+        {
+            AccessToken = accessToken,
+            RefreshToken = rawRefreshToken
+        });
     }
 
-    public async Task<IdentityResponse> ValidateAndRotateAsync(string rawToken)
+    public async Task<IdentityResponse<TokenResponse>> ValidateAndRotateAsync(string rawToken)
     {
         var hash = Hash(rawToken);
         var stored = await _context.RefreshTokens.FirstOrDefaultAsync(t => t.TokenHash == hash);
 
         if (stored is null)
-            return IdentityResponse.Fail("Invalid refresh token.");
+            return IdentityResponse<TokenResponse>.Fail("Invalid refresh token.");
 
         if (!stored.IsActive)
         {
             await RevokeAllForUserAsync(stored.ApplicationUserId);
-            return IdentityResponse.Fail("Refresh token reuse detected. All sessions have been revoked.");
+            return IdentityResponse<TokenResponse>.Fail("Refresh token reuse detected. All sessions have been revoked.");
         }
 
         var user = await _userManager.FindByIdAsync(stored.ApplicationUserId);
         if (user is null)
-            return IdentityResponse.Fail("User not found.");
+            return IdentityResponse<TokenResponse>.Fail("User not found.");
 
         var roles = await _userManager.GetRolesAsync(user);
         var newAccessToken = GenerateAccessToken(user, roles);
@@ -89,11 +89,11 @@ public class TokenService : ITokenService
         });
         await _context.SaveChangesAsync();
 
-        return IdentityResponse.Ok(new TokenResponse
-            {
-                AccessToken = newAccessToken,
-                RefreshToken = newRawRefreshToken
-            });
+        return IdentityResponse<TokenResponse>.Ok(new TokenResponse
+        {
+            AccessToken = newAccessToken,
+            RefreshToken = newRawRefreshToken
+        });
     }
 
     public async Task<IdentityResponse> RevokeAsync(string rawToken)

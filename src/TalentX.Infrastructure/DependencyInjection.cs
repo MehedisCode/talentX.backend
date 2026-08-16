@@ -78,7 +78,7 @@ public static class DependencyInjection
             {
                 OnMessageReceived = context =>
                 {
-                    context.Token = context.Request.Cookies["accessToken"];
+                    context.Token = context.Request.Cookies["TalentXAccessToken"];
 
                     return Task.CompletedTask;
                 }
