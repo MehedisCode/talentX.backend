@@ -31,5 +31,9 @@ public sealed class UserConfiguration : IEntityTypeConfiguration<User>
             .HasConversion<string>()
             .HasMaxLength(50)
             .IsRequired();
+
+        builder.Property(u => u.IsVerified)
+            .HasDefaultValue(false)
+            .IsRequired();
     }
 }
