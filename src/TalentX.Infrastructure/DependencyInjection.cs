@@ -1,10 +1,10 @@
-
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using TalentX.Application.Common.Interfaces;
-using TalentX.Infrastructure.Persistence;
+using TalentX.Infrastructure.Identity.Models;
+using TalentX.Infrastructure.Identity.Services;
 using TalentX.Infrastructure.Persistence.Contexts;
 using TalentX.Infrastructure.Persistence.Repositories;
 
@@ -24,7 +24,20 @@ public static class DependencyInjection
                 npgsqlOptions =>
                     npgsqlOptions.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName)));
 
+        // Identity Core
+        services.AddIdentityCore<ApplicationUser>(options =>
+        {
+            options.Password.RequireDigit = true;
+            options.Password.RequireLowercase = true;
+            options.Password.RequireUppercase = true;
+            options.Password.RequireNonAlphanumeric = true;
+            options.Password.RequiredLength = 8;
+            options.User.RequireUniqueEmail = true;
+        })
+        .AddRoles<IdentityRole>()
+        .AddEntityFrameworkStores<ApplicationDbContext>();
 
+        services.AddScoped<IIdentityService, IdentityService>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         return services;
