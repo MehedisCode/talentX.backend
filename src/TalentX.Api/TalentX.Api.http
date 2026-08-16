@@ -6,7 +6,7 @@ Accept: application/json
 
 ###
 
-### Create Employer (Valid)
+### Create Employer (Valid - Registers and dispatches OTP email)
 POST {{TalentX.Api_HostAddress}}/api/v1/employers
 Content-Type: application/json
 Accept: application/json
@@ -17,6 +17,30 @@ Accept: application/json
   "companyName": "Cyberdyne Systems",
   "password": "Password123!",
   "confirmPassword": "Password123!"
+}
+
+###
+
+### Verify Employer Email with OTP (Valid)
+POST {{TalentX.Api_HostAddress}}/api/v1/employers/verify-email
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "sarah.connor@cyberdyne.com",
+  "otp": "123456"
+}
+
+###
+
+### Verify Employer Email (Invalid OTP format)
+POST {{TalentX.Api_HostAddress}}/api/v1/employers/verify-email
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "sarah.connor@cyberdyne.com",
+  "otp": "abc"
 }
 
 ###

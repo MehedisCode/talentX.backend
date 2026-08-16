@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TalentX.Application.DTOs.Employers;
 using TalentX.Application.Features.Employers.Commands.CreateEmployer;
+using TalentX.Application.Features.Employers.Commands.VerifyEmail;
 
 namespace TalentX.Api.Controllers;
 
@@ -41,5 +42,27 @@ public sealed class EmployersController : ControllerBase
         var result = await _sender.Send(command, cancellationToken);
 
         return StatusCode(StatusCodes.Status201Created, result);
+    }
+
+    /// <summary>
+    /// Verifies the employer's email using a 6-digit OTP code.
+    /// </summary>
+    /// <param name="command">Verification payload containing email and OTP code.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Confirmation message of successful verification.</returns>
+    /// <response code="200">Email verified successfully.</response>
+    /// <response code="400">Invalid or expired OTP code.</response>
+    /// <response code="404">Employer not found.</response>
+    [HttpPost("verify-email")]
+    [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> VerifyEmail(
+        [FromBody] VerifyEmployerEmailCommand command,
+        CancellationToken cancellationToken)
+    {
+        await _sender.Send(command, cancellationToken);
+
+        return Ok(new { message = "Email verified successfully." });
     }
 }
