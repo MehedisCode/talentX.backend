@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TalentX.Application.DTOs.Employers;
 using TalentX.Application.Features.Employers.Commands.CreateEmployer;
+using TalentX.Application.Features.Employers.Commands.GoogleSignIn;
 using TalentX.Application.Features.Employers.Commands.ResendOtp;
 using TalentX.Application.Features.Employers.Commands.VerifyEmail;
 
@@ -43,6 +44,28 @@ public sealed class EmployersController : ControllerBase
         var result = await _sender.Send(command, cancellationToken);
 
         return StatusCode(StatusCodes.Status201Created, result);
+    }
+
+    /// <summary>
+    /// Registers or signs in an employer account via verified Google OAuth ID token.
+    /// </summary>
+    /// <param name="command">Payload containing the Google ID token.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The verified employer profile data transfer object.</returns>
+    /// <response code="200">Employer profile retrieved or created successfully.</response>
+    /// <response code="400">Request validation failed or missing ID token.</response>
+    /// <response code="401">Google ID token is invalid, expired, or signature verification failed.</response>
+    [HttpPost("google")]
+    [ProducesResponseType(typeof(EmployerDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> GoogleSignIn(
+        [FromBody] GoogleSignInEmployerCommand command,
+        CancellationToken cancellationToken)
+    {
+        var result = await _sender.Send(command, cancellationToken);
+
+        return Ok(result);
     }
 
     /// <summary>

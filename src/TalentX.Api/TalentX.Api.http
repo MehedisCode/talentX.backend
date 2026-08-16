@@ -21,6 +21,17 @@ Accept: application/json
 
 ###
 
+### Google Sign-In Employer (Valid Google ID Token)
+POST {{TalentX.Api_HostAddress}}/api/v1/employers/google
+Content-Type: application/json
+Accept: application/json
+
+{
+  "idToken": "YOUR_GOOGLE_ID_TOKEN_HERE"
+}
+
+###
+
 ### Verify Employer Email with OTP (Valid)
 POST {{TalentX.Api_HostAddress}}/api/v1/employers/verify-email
 Content-Type: application/json
