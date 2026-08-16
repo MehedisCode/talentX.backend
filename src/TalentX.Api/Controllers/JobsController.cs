@@ -5,7 +5,7 @@ using TalentX.Application.Features.Jobs.Queries;
 namespace TalentX.Api.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/v1/[controller]")]
 public class JobsController : ControllerBase
 {
     private readonly IMediator _mediator;
