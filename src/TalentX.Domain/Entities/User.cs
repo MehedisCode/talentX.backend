@@ -12,6 +12,7 @@ public class User : BaseEntity
     public string Name { get; protected set; } = string.Empty;
     public string Email { get; protected set; } = string.Empty;
     public UserRole Role { get; protected set; }
+    public bool IsVerified { get; protected set; } = false;
 
     protected User() { }
 
@@ -26,6 +27,7 @@ public class User : BaseEntity
         Name = name;
         Email = email;
         Role = role;
+        IsVerified = false;
         CreatedAt = DateTime.UtcNow;
     }
 
@@ -35,6 +37,12 @@ public class User : BaseEntity
     {
         Name = name;
 
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void MarkAsVerified()
+    {
+        IsVerified = true;
         UpdatedAt = DateTime.UtcNow;
     }
 }
