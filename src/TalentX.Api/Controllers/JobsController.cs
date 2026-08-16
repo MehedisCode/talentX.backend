@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using TalentX.Application.Jobs.Commands.CreateJob;
+using TalentX.Application.Jobs.Commands.UpdateJob;
 
 namespace TalentX.Api.Controllers;
 
@@ -21,5 +22,13 @@ public class JobsController : ControllerBase
     {
         var jobId = await _mediator.Send(command);
         return StatusCode(StatusCodes.Status201Created, jobId);
+    }
+
+    [HttpPatch("{id}")]
+    // [Authorize(Roles = "Employer")] // Authorization will be implemented by someone else as stated by user
+    public async Task<IActionResult> UpdateJob(Guid id, [FromBody] UpdateJobCommand command)
+    {
+        await _mediator.Send(command with { Id = id });
+        return NoContent();
     }
 }

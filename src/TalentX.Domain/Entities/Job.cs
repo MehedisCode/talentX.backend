@@ -51,30 +51,34 @@ public class Job : BaseEntity
         return job;
     }
 
+    // Partial update: a null argument leaves the corresponding field unchanged.
     public void UpdateDetails(
-        string title,
-        string description,
-        EmploymentType employmentType,
-        ExperienceLevel experienceLevel,
-        string location,
-        WorkArrangement workArrangement,
-        List<string> requiredSkills,
-        int vacancies
+        string? title,
+        string? description,
+        EmploymentType? employmentType,
+        ExperienceLevel? experienceLevel,
+        string? location,
+        WorkArrangement? workArrangement,
+        List<string>? requiredSkills,
+        int? vacancies
     )
     {
+        if (title != null) Title = title.Trim();
+        if (description != null) Description = description.Trim();
+        if (employmentType.HasValue) EmploymentType = employmentType.Value;
+        if (experienceLevel.HasValue) ExperienceLevel = experienceLevel.Value;
+        if (location != null) Location = location.Trim();
+        if (workArrangement.HasValue) WorkArrangement = workArrangement.Value;
+        if (requiredSkills != null)
+        {
+            RequiredSkills = requiredSkills.Where(s => !string.IsNullOrWhiteSpace(s))
+                                            .Select(s => s.Trim())
+                                            .Distinct(StringComparer.OrdinalIgnoreCase)
+                                            .ToList();
+        }
+        if (vacancies.HasValue) Vacancies = vacancies.Value;
 
-        Title = title.Trim();
-        Description = description.Trim();
-        EmploymentType = employmentType;
-        ExperienceLevel = experienceLevel;
-        Location = location.Trim();
-        WorkArrangement = workArrangement;
-        RequiredSkills = requiredSkills?.Where(s => !string.IsNullOrWhiteSpace(s))
-                                         .Select(s => s.Trim())
-                                         .Distinct(StringComparer.OrdinalIgnoreCase)
-                                         .ToList() ?? new List<string>();
-
-        Vacancies = vacancies;
+        UpdatedAt = DateTime.UtcNow;
     }
 
 

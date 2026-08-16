@@ -1,4 +1,5 @@
 using MediatR;
+using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Domain.Entities;
 
@@ -29,7 +30,14 @@ public class CreateJobCommandHandler : IRequestHandler<CreateJobCommand, Guid>
 
         if (request.Publish)
         {
-            job.Publish();
+            try
+            {
+                job.Publish();
+            }
+            catch (InvalidOperationException ex)
+            {
+                throw new ValidationException(ex.Message);
+            }
         }
 
         await _unitOfWork.Jobs.AddAsync(job, cancellationToken);
