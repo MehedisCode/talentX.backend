@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using TalentX.Api.Extensions;
 using TalentX.Application;
 using TalentX.Infrastructure;
@@ -29,11 +30,12 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddEnvironmentVariables();
 
 const string CorsPolicyName = "AllowFrontend";
+var configuredFrontendUrl = builder.Configuration["Cors:FrontendUrl"] ?? "http://localhost:3000";
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(CorsPolicyName, policy =>
     {
-        policy.WithOrigins("http://localhost:3000", "http://127.0.0.1:3000")
+        policy.WithOrigins(configuredFrontendUrl, "http://localhost:3000", "http://127.0.0.1:3000")
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();
@@ -77,4 +79,18 @@ app.UseCors(CorsPolicyName);
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+
+// Development convenience only — production migrations run via the deployment pipeline
+if (app.Environment.IsDevelopment())
+{
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<TalentX.Infrastructure.Persistence.Contexts.ApplicationDbContext>();
+    db.Database.Migrate();
+    if (!db.Jobs.Any())
+    {
+        db.Jobs.AddRange(TalentX.Infrastructure.Persistence.SeedData.JobSeedData.GetJobs());
+        db.SaveChanges();
+    }
+}
+
 app.Run();

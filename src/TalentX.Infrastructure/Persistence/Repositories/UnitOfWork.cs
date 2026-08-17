@@ -13,12 +13,14 @@ public sealed class UnitOfWork : IUnitOfWork
 
     public IUserRepository Users { get; }
     public IEmployerRepository Employers { get; }
+    public IJobRepository Jobs { get; }
 
     public UnitOfWork(ApplicationDbContext context)
     {
         _context = context;
         Users = new UserRepository(_context);
         Employers = new EmployerRepository(_context);
+        Jobs = new JobRepository(_context);
     }
 
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
