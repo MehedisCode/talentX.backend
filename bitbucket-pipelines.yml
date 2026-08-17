@@ -1,0 +1,172 @@
+image: google/cloud-sdk:slim
+
+pipelines:
+  branches:
+    staging-cicd:
+
+      # ============================================================
+      # BUILD & PUSH IMAGE
+      # ============================================================
+      - step:
+          name: Build & Push TalentX Backend Image
+          services:
+            - docker
+          size: 2x
+
+          script:
+            # -----------------------------
+            # Image Variables
+            # -----------------------------
+            - export IMAGE_TAG="stage-${BITBUCKET_BUILD_NUMBER}"
+            - echo "${IMAGE_TAG}" > image_tag.txt
+
+            - export IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${IMAGE_NAME}:${IMAGE_TAG}"
+
+            - echo "Building ${IMAGE}"
+
+            # -----------------------------
+            # Authenticate to GCP
+            # -----------------------------
+            - echo "$GCP_SA_KEY" > gcp-key.json
+            - gcloud auth activate-service-account --key-file=gcp-key.json
+            - gcloud config set project "${PROJECT_ID}"
+
+            # -----------------------------
+            # Configure Docker
+            # -----------------------------
+            - gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
+
+            # -----------------------------
+            # Build Image
+            # -----------------------------
+            - docker build -t "${IMAGE}" .
+
+            # -----------------------------
+            # Push Image
+            # -----------------------------
+            - docker push "${IMAGE}"
+
+            - echo "Image pushed successfully: ${IMAGE}"
+
+          artifacts:
+            - image_tag.txt
+
+
+      # ============================================================
+      # DEPLOY TO STAGING
+      # ============================================================
+      - step:
+          name: Deploy TalentX Backend to Staging
+          deployment: staging
+
+          script:
+            # -----------------------------
+            # Install SSH Client
+            # -----------------------------
+            - apt-get update
+            - apt-get install -y openssh-client
+
+            # -----------------------------
+            # Authenticate to GCP
+            # -----------------------------
+            - echo "$GCP_SA_KEY" > gcp-key.json
+            - gcloud auth activate-service-account --key-file=gcp-key.json
+            - gcloud config set project "${PROJECT_ID}"
+
+            # -----------------------------
+            # Read Image Tag
+            # -----------------------------
+            - export IMAGE_TAG=$(cat image_tag.txt)
+
+            - export IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${IMAGE_NAME}:${IMAGE_TAG}"
+
+            - echo "Deploying ${IMAGE}"
+
+            # -----------------------------
+            # SSH Configuration
+            # -----------------------------
+            - mkdir -p ~/.ssh
+            - chmod 700 ~/.ssh
+            - ssh-keyscan -H "${VM_HOST}" >> ~/.ssh/known_hosts
+            - chmod 644 ~/.ssh/known_hosts
+
+            # -----------------------------
+            # Deploy to VM
+            # -----------------------------
+            - |
+              ssh "${VM_USER}@${VM_HOST}" << EOF
+              set -e
+
+              IMAGE="${IMAGE}"
+
+              echo "Deploying TalentX backend..."
+              echo "Image: \$IMAGE"
+
+              # -----------------------------
+              # Configure Docker Authentication
+              # -----------------------------
+              gcloud auth configure-docker ${REGION}-docker.pkg.dev --quiet
+
+              # -----------------------------
+              # Create Docker Network
+              # -----------------------------
+              docker network create talentx-net 2>/dev/null || true
+
+              # -----------------------------
+              # Stop Existing Backend
+              # -----------------------------
+              docker stop backend 2>/dev/null || true
+              docker rm backend 2>/dev/null || true
+
+              # -----------------------------
+              # Remove Previous Backend Images
+              # -----------------------------
+              docker images \
+                ${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${IMAGE_NAME} \
+                -q | xargs -r docker rmi -f || true
+
+              # -----------------------------
+              # Pull New Image
+              # -----------------------------
+              docker pull "\$IMAGE"
+
+              # -----------------------------
+              # Run TalentX Backend
+              # -----------------------------
+              docker run -d \
+                --name backend \
+                --restart always \
+                --network talentx-net \
+                -p 5035:5035 \
+                -e ENABLE_SWAGGER="${ENABLE_SWAGGER}" \
+                -e CORS_ALLOWED_ORIGINS="${CORS_ALLOWED_ORIGINS}" \
+                -e Jwt__Secret="${JWT_SECRET}" \
+                -e JWT_ISSUER="${JWT_ISSUER}" \
+                -e JWT_AUDIENCE="${JWT_AUDIENCE}" \
+                -e DB_HOST="${DB_HOST}" \
+                -e DB_PORT="${DB_PORT}" \
+                -e DB_NAME="${DB_NAME}" \
+                -e DB_USER_NAME="${DB_USER_NAME}" \
+                -e DB_PASSWORD="${DB_PASSWORD}" \
+                -e SMTP_HOST="${SMTP_HOST}" \
+                -e SMTP_PORT="${SMTP_PORT}" \
+                -e SMTP_USER="${SMTP_USER}" \
+                -e SMTP_PASS="${SMTP_PASS}" \
+                -e SENDER_EMAIL="${SENDER_EMAIL}" \
+                -e SENDER_NAME="${SENDER_NAME}" \
+                -e GOOGLE_CLIENT_ID="${GOOGLE_CLIENT_ID}" \
+                -e GOOGLE_CLIENT_SECRET="${GOOGLE_CLIENT_SECRET}" \
+                -e GEMINI_API_KEY="${GEMINI_API_KEY}" \
+                -e GEMINI_MODEL_NAME="${GEMINI_MODEL_NAME}" \
+                -e GEMINI_BASE_URL="${GEMINI_BASE_URL}" \
+                "\$IMAGE"
+
+              echo "TalentX staging deployment completed successfully."
+
+              EOF
+
+
+definitions:
+  services:
+    docker:
+      memory: 4096
