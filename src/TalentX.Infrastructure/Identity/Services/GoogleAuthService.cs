@@ -1,4 +1,5 @@
 using Google.Apis.Auth;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
@@ -14,10 +15,13 @@ public sealed class GoogleAuthService : IGoogleAuthService
     private readonly ILogger<GoogleAuthService> _logger;
     private readonly string _clientId;
 
-    public GoogleAuthService(ILogger<GoogleAuthService> logger)
+    public GoogleAuthService(ILogger<GoogleAuthService> logger, IConfiguration configuration)
     {
         _logger = logger;
-        _clientId = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID")?.Trim() ?? string.Empty;
+        _clientId = configuration["GOOGLE_CLIENT_ID"]
+            ?? configuration["Google:ClientId"]
+            ?? Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID")?.Trim()
+            ?? string.Empty;
     }
 
     /// <inheritdoc/>
@@ -47,7 +51,7 @@ public sealed class GoogleAuthService : IGoogleAuthService
         }
         catch (Exception ex) when (ex is not UnauthorizedException)
         {
-            _logger.LogError(ex, "Unexpected error during Google ID token verification.");
+            _logger.LogError(ex, "Unexpected error during Google ID token verification: {Message}", ex.Message);
             throw new UnauthorizedException("Unable to verify Google credentials.");
         }
     }
