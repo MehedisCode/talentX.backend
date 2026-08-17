@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Security.Cryptography;
+using Microsoft.Extensions.Hosting;
 using TalentX.Application.Common.Interfaces;
 
 namespace TalentX.Infrastructure.Services;
@@ -12,6 +13,12 @@ public sealed class OtpService : IOtpService
 {
     private static readonly TimeSpan DefaultExpiry = TimeSpan.FromMinutes(10);
     private readonly ConcurrentDictionary<string, (string Code, DateTime ExpiresAtUtc)> _otpStore = new(StringComparer.OrdinalIgnoreCase);
+    private readonly IHostEnvironment _environment;
+
+    public OtpService(IHostEnvironment environment)
+    {
+        _environment = environment;
+    }
 
     public Task<string> GenerateOtpAsync(
         string key,
@@ -31,6 +38,13 @@ public sealed class OtpService : IOtpService
         string otpCode,
         CancellationToken cancellationToken = default)
     {
+        // In Development environment, bypass with magic OTP "000000"
+        if (_environment.IsDevelopment() && otpCode == "000000")
+        {
+            _otpStore.TryRemove(key, out _);
+            return Task.FromResult(true);
+        }
+
         if (!_otpStore.TryGetValue(key, out var record))
         {
             return Task.FromResult(false);
