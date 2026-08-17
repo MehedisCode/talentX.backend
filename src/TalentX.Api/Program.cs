@@ -1,7 +1,9 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.OpenApi;
 using TalentX.Api.Extensions;
 using TalentX.Application;
 using TalentX.Infrastructure;
+using TalentX.Infrastructure.Identity.Seed;
 
 // Load .env from the backend root directory (talentx2026q3.backend/.env)
 var envFile = Path.Combine(Directory.GetCurrentDirectory(), ".env");
@@ -59,9 +61,12 @@ builder.Services.AddSwaggerGen(options =>
 {
     // Describes enums as strings in Swagger UI
     options.UseInlineDefinitionsForEnums();
+    options.SwaggerDoc("v1", new OpenApiInfo { Title = "TalentX", Version = "v1" });
 });
 
 var app = builder.Build();
+
+await IdentitySeeder.SeedAsync(app.Services);
 
 if (app.Environment.IsDevelopment())
 {

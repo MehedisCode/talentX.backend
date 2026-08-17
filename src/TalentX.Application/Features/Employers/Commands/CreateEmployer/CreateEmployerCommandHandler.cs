@@ -1,6 +1,7 @@
 using AutoMapper;
 using MediatR;
 using TalentX.Application.Common.Exceptions;
+using TalentX.Application.Common.Identity.Interfaces;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.DTOs.Employers;
 using TalentX.Domain.Entities;
@@ -57,20 +58,19 @@ public sealed class CreateEmployerCommandHandler : IRequestHandler<CreateEmploye
             return _mapper.Map<EmployerDto>(existingEmployer);
         }
 
-        var (succeeded, userId, errors) = await _identityService.CreateUserAsync(
+        var identityResponse = await _identityService.CreateApplicationUserAsync(
             request.Email,
             request.Password,
-            UserRole.Employer.ToString(),
-            cancellationToken
+            UserRole.Employer
         );
 
-        if (!succeeded)
+        if (!identityResponse.Success || identityResponse.Data is null)
         {
-            throw new ValidationException(string.Join("; ", errors));
+            throw new ValidationException(string.Join("; ", identityResponse.Errors));
         }
 
         var employer = new Employer(
-            userId,
+            identityResponse.Data.UserId,
             request.Name,
             request.Email,
             request.CompanyName

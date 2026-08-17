@@ -1,61 +1,139 @@
 using Microsoft.AspNetCore.Identity;
-using TalentX.Application.Common.Exceptions;
-using TalentX.Application.Common.Interfaces;
+using TalentX.Application.Common.Identity.Interfaces;
+using TalentX.Application.Common.Identity.Models;
+using TalentX.Domain.Enums;
 using TalentX.Infrastructure.Identity.Models;
 
 namespace TalentX.Infrastructure.Identity.Services;
 
-/// <summary>
-/// Implementation of <see cref="IIdentityService"/> using ASP.NET Core Identity.
-/// </summary>
-public sealed class IdentityService : IIdentityService
+public class IdentityService : IIdentityService
 {
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly RoleManager<IdentityRole> _roleManager;
 
     public IdentityService(
         UserManager<ApplicationUser> userManager,
-        RoleManager<IdentityRole> roleManager)
+        RoleManager<IdentityRole> roleManager
+    )
     {
         _userManager = userManager;
         _roleManager = roleManager;
     }
 
-    public async Task<(bool Succeeded, string UserId, IEnumerable<string> Errors)> CreateUserAsync(
+    public async Task<IdentityResponse<CreateUserResult>> CreateApplicationUserAsync(
         string email,
         string password,
-        string role,
-        CancellationToken cancellationToken = default)
+        UserRole role
+    )
     {
-        var existingUser = await _userManager.FindByEmailAsync(email);
-        if (existingUser != null)
+        if (!await _roleManager.RoleExistsAsync(role.ToString()))
         {
-            throw new ConflictException($"An account with email '{email}' already exists.");
+            return IdentityResponse<CreateUserResult>.Fail("Invalid user role.");
         }
 
-        var user = new ApplicationUser
+        var existing = await _userManager.FindByEmailAsync(email);
+        if (existing is not null)
         {
-            UserName = email,
-            Email = email
-        };
-
-        var result = await _userManager.CreateAsync(user, password);
-        if (!result.Succeeded)
-        {
-            return (false, string.Empty, result.Errors.Select(e => e.Description));
+            return IdentityResponse<CreateUserResult>.Fail("Email is already in use.");
         }
 
-        if (!string.IsNullOrWhiteSpace(role))
-        {
-            var roleExists = await _roleManager.RoleExistsAsync(role);
-            if (!roleExists)
-            {
-                await _roleManager.CreateAsync(new IdentityRole(role));
-            }
+        var user = new ApplicationUser { UserName = email, Email = email };
 
-            await _userManager.AddToRoleAsync(user, role);
+        var createResult = await _userManager.CreateAsync(user, password);
+        if (!createResult.Succeeded)
+        {
+            return IdentityResponse<CreateUserResult>.Fail(createResult.Errors.Select(e => e.Description));
         }
 
-        return (true, user.Id, Enumerable.Empty<string>());
+        var roleResult = await _userManager.AddToRoleAsync(user, role.ToString());
+        if (!roleResult.Succeeded)
+        {
+            await _userManager.DeleteAsync(user);
+            return IdentityResponse<CreateUserResult>.Fail(roleResult.Errors.Select(e => e.Description));
+        }
+
+        return IdentityResponse<CreateUserResult>.Ok(new CreateUserResult { UserId = user.Id });
+    }
+
+    public async Task<IdentityResponse<PasswordValidationResult>> ValidatePasswordAsync(
+        string email,
+        string password
+    )
+    {
+        var user = await _userManager.FindByEmailAsync(email);
+        if (user is null)
+        {
+            return IdentityResponse<PasswordValidationResult>.Fail("Invalid credentials.");
+        }
+
+        if (await _userManager.IsLockedOutAsync(user))
+        {
+            return IdentityResponse<PasswordValidationResult>.Fail("Account is locked out. Try again later.");
+        }
+
+        if (!await _userManager.CheckPasswordAsync(user, password))
+        {
+            await _userManager.AccessFailedAsync(user);
+            return IdentityResponse<PasswordValidationResult>.Fail("Invalid credentials.");
+        }
+
+        await _userManager.ResetAccessFailedCountAsync(user);
+        var roles = await _userManager.GetRolesAsync(user);
+
+        return IdentityResponse<PasswordValidationResult>.Ok(new PasswordValidationResult
+        {
+            UserId = user.Id,
+            Email = user.Email!,
+            Roles = roles
+        });
+    }
+
+    public async Task<IdentityResponse<string>> GetApplicationUserEmailByUserIdAsync(string userId)
+    {
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user is null)
+        {
+            return IdentityResponse<string>.Fail("User not found.");
+        }
+
+        return IdentityResponse<string>.Ok(user.Email!);
+    }
+
+    public async Task<IdentityResponse> UpdateApplicationUserEmailAsync(string userId, string newEmail)
+    {
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user is null)
+        {
+            return IdentityResponse.Fail("User not found.");
+        }
+
+        var token = await _userManager.GenerateChangeEmailTokenAsync(user, newEmail);
+        var changeResult = await _userManager.ChangeEmailAsync(user, newEmail, token);
+        if (!changeResult.Succeeded)
+        {
+            return IdentityResponse.Fail(changeResult.Errors.Select(e => e.Description));
+        }
+
+        var setUserNameResult = await _userManager.SetUserNameAsync(user, newEmail);
+        if (!setUserNameResult.Succeeded)
+        {
+            return IdentityResponse.Fail(setUserNameResult.Errors.Select(e => e.Description));
+        }
+
+        return IdentityResponse.Ok();
+    }
+
+    public async Task<IdentityResponse> DeleteApplicationUserAsync(string userId)
+    {
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user is null)
+        {
+            return IdentityResponse.Fail("User not found.");
+        }
+
+        var result = await _userManager.DeleteAsync(user);
+        return result.Succeeded
+            ? IdentityResponse.Ok()
+            : IdentityResponse.Fail(result.Errors.Select(e => e.Description));
     }
 }
