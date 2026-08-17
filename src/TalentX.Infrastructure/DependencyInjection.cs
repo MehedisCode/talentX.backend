@@ -23,10 +23,12 @@ public static class DependencyInjection
         IConfiguration configuration
     )
     {
-        // Database
+        // Database Connection (Granular DevOps environment variables or connection string fallback)
+        var connectionString = GetDatabaseConnectionString(configuration);
+
         services.AddDbContext<ApplicationDbContext>(options =>
             options.UseNpgsql(
-                configuration.GetConnectionString("DefaultConnection"),
+                connectionString,
                 npgsqlOptions =>
                     npgsqlOptions.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName)));
 
@@ -46,20 +48,16 @@ public static class DependencyInjection
             .AddEntityFrameworkStores<ApplicationDbContext>()
             .AddDefaultTokenProviders();
 
-        var jwtSettings = configuration
-            .GetSection(JwtSettings.SectionName)
-            .Get<JwtSettings>()
-            ?? new JwtSettings
-            {
-                Secret = Environment.GetEnvironmentVariable("JWT_SECRET") ?? "MbBQkjWEwRtON2jZs6J57djfewfGWiPHZ2hFKFKZhr0SberrsfcrQ6wrWTCpYCSQjLNKMi9wI5I6NApdB4ymI2T",
-                Issuer = Environment.GetEnvironmentVariable("JWT_ISSUER") ?? "talentx-api",
-                Audience = Environment.GetEnvironmentVariable("JWT_AUDIENCE") ?? "talentx-client",
-                AccessTokenMinutes = 15,
-                RefreshTokenExpiryDays = 7
-            };
+        var jwtSettings = GetJwtSettings(configuration);
 
-        services.Configure<JwtSettings>(
-            configuration.GetSection(JwtSettings.SectionName));
+        services.Configure<JwtSettings>(options =>
+        {
+            options.Secret = jwtSettings.Secret;
+            options.Issuer = jwtSettings.Issuer;
+            options.Audience = jwtSettings.Audience;
+            options.AccessTokenMinutes = jwtSettings.AccessTokenMinutes;
+            options.RefreshTokenExpiryDays = jwtSettings.RefreshTokenExpiryDays;
+        });
 
         // Authentication
         services.AddAuthentication(options =>
@@ -110,5 +108,78 @@ public static class DependencyInjection
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         return services;
+    }
+
+    /// <summary>
+    /// Constructs a PostgreSQL connection string from individual DevOps environment variables
+    /// (DB_HOST, DB_PORT, DB_NAME, DB_USER_NAME, DB_PASSWORD), falling back to ConnectionStrings:DefaultConnection.
+    /// </summary>
+    private static string GetDatabaseConnectionString(IConfiguration configuration)
+    {
+        var host = Environment.GetEnvironmentVariable("DB_HOST") ?? configuration["DB_HOST"];
+        var port = Environment.GetEnvironmentVariable("DB_PORT") ?? configuration["DB_PORT"];
+        var database = Environment.GetEnvironmentVariable("DB_NAME") ?? configuration["DB_NAME"];
+        var username = Environment.GetEnvironmentVariable("DB_USER_NAME")
+                       ?? Environment.GetEnvironmentVariable("DB_USERNAME")
+                       ?? Environment.GetEnvironmentVariable("DB_USER")
+                       ?? configuration["DB_USER_NAME"];
+        var password = Environment.GetEnvironmentVariable("DB_PASSWORD") ?? configuration["DB_PASSWORD"];
+
+        if (!string.IsNullOrWhiteSpace(host) && !string.IsNullOrWhiteSpace(database))
+        {
+            var builder = new Npgsql.NpgsqlConnectionStringBuilder
+            {
+                Host = host,
+                Port = int.TryParse(port, out var parsedPort) ? parsedPort : 5432,
+                Database = database,
+                Username = username ?? "postgres",
+                Password = password ?? string.Empty
+            };
+
+            return builder.ConnectionString;
+        }
+
+        return configuration.GetConnectionString("DefaultConnection")
+               ?? Environment.GetEnvironmentVariable("DATABASE_URL")
+               ?? string.Empty;
+    }
+
+    /// <summary>
+    /// Constructs JWT settings from environment variables (JWT_SECRET, JWT_ISSUER, JWT_AUDIENCE),
+    /// falling back to the "Jwt" configuration section in appsettings.json.
+    /// </summary>
+    private static JwtSettings GetJwtSettings(IConfiguration configuration)
+    {
+        var secret = Environment.GetEnvironmentVariable("JWT_SECRET")
+                     ?? configuration["JWT_SECRET"]
+                     ?? configuration["Jwt:Secret"]
+                     ?? string.Empty;
+
+        var issuer = Environment.GetEnvironmentVariable("JWT_ISSUER")
+                     ?? configuration["JWT_ISSUER"]
+                     ?? configuration["Jwt:Issuer"]
+                     ?? "TalentX";
+
+        var audience = Environment.GetEnvironmentVariable("JWT_AUDIENCE")
+                      ?? configuration["JWT_AUDIENCE"]
+                      ?? configuration["Jwt:Audience"]
+                      ?? "TalentX.Client";
+
+        var accessMinutes = Environment.GetEnvironmentVariable("JWT_ACCESS_TOKEN_MINUTES")
+                            ?? configuration["JWT_ACCESS_TOKEN_MINUTES"]
+                            ?? configuration["Jwt:AccessTokenMinutes"];
+
+        var refreshDays = Environment.GetEnvironmentVariable("JWT_REFRESH_TOKEN_EXPIRY_DAYS")
+                          ?? configuration["JWT_REFRESH_TOKEN_EXPIRY_DAYS"]
+                          ?? configuration["Jwt:RefreshTokenExpiryDays"];
+
+        return new JwtSettings
+        {
+            Secret = secret,
+            Issuer = issuer,
+            Audience = audience,
+            AccessTokenMinutes = int.TryParse(accessMinutes, out var mins) ? mins : 15,
+            RefreshTokenExpiryDays = int.TryParse(refreshDays, out var days) ? days : 7
+        };
     }
 }
