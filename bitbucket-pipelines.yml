@@ -3,10 +3,6 @@ image: google/cloud-sdk:slim
 pipelines:
   branches:
     staging-cicd:
-
-      # ============================================================
-      # BUILD & PUSH IMAGE
-      # ============================================================
       - step:
           name: Build & Push TalentX Backend Image
           services:
@@ -14,36 +10,18 @@ pipelines:
           size: 2x
 
           script:
-            # -----------------------------
-            # Image Variables
-            # -----------------------------
             - export IMAGE_TAG="stage-${BITBUCKET_BUILD_NUMBER}"
             - echo "${IMAGE_TAG}" > image_tag.txt
-
             - export IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${IMAGE_NAME}:${IMAGE_TAG}"
-
             - echo "Building ${IMAGE}"
 
-            # -----------------------------
-            # Authenticate to GCP
-            # -----------------------------
             - echo "$GCP_SA_KEY" > gcp-key.json
             - gcloud auth activate-service-account --key-file=gcp-key.json
             - gcloud config set project "${PROJECT_ID}"
 
-            # -----------------------------
-            # Configure Docker
-            # -----------------------------
             - gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
 
-            # -----------------------------
-            # Build Image
-            # -----------------------------
             - docker build -t "${IMAGE}" .
-
-            # -----------------------------
-            # Push Image
-            # -----------------------------
             - docker push "${IMAGE}"
 
             - echo "Image pushed successfully: ${IMAGE}"
@@ -51,48 +29,27 @@ pipelines:
           artifacts:
             - image_tag.txt
 
-
-      # ============================================================
-      # DEPLOY TO STAGING
-      # ============================================================
       - step:
           name: Deploy TalentX Backend to Staging
           deployment: staging
 
           script:
-            # -----------------------------
-            # Install SSH Client
-            # -----------------------------
             - apt-get update
             - apt-get install -y openssh-client
 
-            # -----------------------------
-            # Authenticate to GCP
-            # -----------------------------
             - echo "$GCP_SA_KEY" > gcp-key.json
             - gcloud auth activate-service-account --key-file=gcp-key.json
             - gcloud config set project "${PROJECT_ID}"
 
-            # -----------------------------
-            # Read Image Tag
-            # -----------------------------
             - export IMAGE_TAG=$(cat image_tag.txt)
-
             - export IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${IMAGE_NAME}:${IMAGE_TAG}"
-
             - echo "Deploying ${IMAGE}"
 
-            # -----------------------------
-            # SSH Configuration
-            # -----------------------------
             - mkdir -p ~/.ssh
             - chmod 700 ~/.ssh
             - ssh-keyscan -H "${VM_HOST}" >> ~/.ssh/known_hosts
             - chmod 644 ~/.ssh/known_hosts
 
-            # -----------------------------
-            # Deploy to VM
-            # -----------------------------
             - |
               ssh "${VM_USER}@${VM_HOST}" << EOF
               set -e
@@ -102,37 +59,19 @@ pipelines:
               echo "Deploying TalentX backend..."
               echo "Image: \$IMAGE"
 
-              # -----------------------------
-              # Configure Docker Authentication
-              # -----------------------------
               gcloud auth configure-docker ${REGION}-docker.pkg.dev --quiet
 
-              # -----------------------------
-              # Create Docker Network
-              # -----------------------------
               docker network create talentx-net 2>/dev/null || true
 
-              # -----------------------------
-              # Stop Existing Backend
-              # -----------------------------
               docker stop backend 2>/dev/null || true
               docker rm backend 2>/dev/null || true
 
-              # -----------------------------
-              # Remove Previous Backend Images
-              # -----------------------------
               docker images \
                 ${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${IMAGE_NAME} \
                 -q | xargs -r docker rmi -f || true
 
-              # -----------------------------
-              # Pull New Image
-              # -----------------------------
               docker pull "\$IMAGE"
 
-              # -----------------------------
-              # Run TalentX Backend
-              # -----------------------------
               docker run -d \
                 --name backend \
                 --restart always \
@@ -162,9 +101,7 @@ pipelines:
                 "\$IMAGE"
 
               echo "TalentX staging deployment completed successfully."
-
               EOF
-
 
 definitions:
   services:
