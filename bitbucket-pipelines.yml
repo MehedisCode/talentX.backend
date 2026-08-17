@@ -8,48 +8,37 @@ pipelines:
           services:
             - docker
           size: 2x
-
           script:
             - export IMAGE_TAG="stage-${BITBUCKET_BUILD_NUMBER}"
             - echo "${IMAGE_TAG}" > image_tag.txt
             - export IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${IMAGE_NAME}:${IMAGE_TAG}"
             - echo "Building ${IMAGE}"
-
             - echo "$GCP_SA_KEY" > gcp-key.json
             - gcloud auth activate-service-account --key-file=gcp-key.json
             - gcloud config set project "${PROJECT_ID}"
-
             - gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
-
             - docker build -t "${IMAGE}" .
             - docker push "${IMAGE}"
-
-            - echo "Image pushed successfully: ${IMAGE}"
-
+            - 'echo "Image pushed successfully: ${IMAGE}"'
           artifacts:
             - image_tag.txt
 
       - step:
           name: Deploy TalentX Backend to Staging
           deployment: staging
-
           script:
             - apt-get update
             - apt-get install -y openssh-client
-
             - echo "$GCP_SA_KEY" > gcp-key.json
             - gcloud auth activate-service-account --key-file=gcp-key.json
             - gcloud config set project "${PROJECT_ID}"
-
             - export IMAGE_TAG=$(cat image_tag.txt)
             - export IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${IMAGE_NAME}:${IMAGE_TAG}"
             - echo "Deploying ${IMAGE}"
-
             - mkdir -p ~/.ssh
             - chmod 700 ~/.ssh
             - ssh-keyscan -H "${VM_HOST}" >> ~/.ssh/known_hosts
             - chmod 644 ~/.ssh/known_hosts
-
             - |
               ssh "${VM_USER}@${VM_HOST}" << EOF
               set -e
