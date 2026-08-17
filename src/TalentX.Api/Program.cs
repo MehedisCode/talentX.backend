@@ -31,13 +31,30 @@ if (File.Exists(envFile))
 var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddEnvironmentVariables();
 
+// Dynamic Port / Hosting URL Configuration (Support PORT or ASPNETCORE_URLS from DevOps .env)
+var customPort = Environment.GetEnvironmentVariable("PORT") ?? builder.Configuration["PORT"];
+if (!string.IsNullOrWhiteSpace(customPort))
+{
+    builder.WebHost.UseUrls($"http://0.0.0.0:{customPort}");
+}
+
+// Dynamic CORS Policy (Support comma-separated origins from CORS_ALLOWED_ORIGINS in .env)
 const string CorsPolicyName = "AllowFrontend";
-var configuredFrontendUrl = builder.Configuration["Cors:FrontendUrl"] ?? "http://localhost:3000";
+var rawCors = builder.Configuration["CORS_ALLOWED_ORIGINS"]
+           ?? builder.Configuration["Cors:AllowedOrigins"]
+           ?? builder.Configuration["Cors:FrontendUrl"]
+           ?? "http://localhost:3000,http://127.0.0.1:3000";
+
+var allowedOrigins = rawCors
+    .Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+    .Distinct()
+    .ToArray();
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(CorsPolicyName, policy =>
     {
-        policy.WithOrigins(configuredFrontendUrl, "http://localhost:3000", "http://127.0.0.1:3000")
+        policy.WithOrigins(allowedOrigins)
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();
@@ -61,19 +78,22 @@ builder.Services.AddSwaggerGen(options =>
 {
     // Describes enums as strings in Swagger UI
     options.UseInlineDefinitionsForEnums();
-    options.SwaggerDoc("v1", new OpenApiInfo { Title = "TalentX", Version = "v1" });
+    options.SwaggerDoc("v1", new OpenApiInfo { Title = "TalentX API", Version = "v1" });
 });
 
 var app = builder.Build();
 
 await IdentitySeeder.SeedAsync(app.Services);
 
-if (app.Environment.IsDevelopment())
+// Swagger enabled in Development or explicitly via ENABLE_SWAGGER=true in .env
+var enableSwagger = app.Environment.IsDevelopment() || builder.Configuration.GetValue<bool>("ENABLE_SWAGGER");
+if (enableSwagger)
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-else
+
+if (!app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();
 }
