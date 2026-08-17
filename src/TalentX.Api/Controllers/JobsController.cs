@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using TalentX.Application.Jobs.Commands.CreateJob;
 using TalentX.Application.Jobs.Commands.UpdateJob;
+using TalentX.Application.Jobs.Queries.GetJob;
 
 namespace TalentX.Api.Controllers;
 
@@ -30,5 +31,15 @@ public class JobsController : ControllerBase
     {
         await _mediator.Send(command with { Id = id });
         return NoContent();
+    }
+
+    [HttpGet("{id}")]
+    public async Task<ActionResult<JobDto>> GetJob(Guid id)
+    {
+        var job = await _mediator.Send(new GetJobQuery(id));
+
+        if (job == null) return NotFound();
+
+        return Ok(job);
     }
 }
