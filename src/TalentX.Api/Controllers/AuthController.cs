@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TalentX.Application.Common.Interfaces;
+using TalentX.Application.Features.Auth.CurrentUser;
 using TalentX.Application.Features.Auth.LogIn;
 using TalentX.Application.Features.Auth.Logout;
 using TalentX.Application.Features.Auth.RefreshToken;
@@ -10,7 +11,7 @@ namespace TalentX.API.Controllers;
 
 [ApiController]
 [Route("api/v1/[controller]")]
-public class AuthController : ControllerBase
+public class AuthController : BaseApiController
 {
     private readonly ISender _sender;
     private readonly ICurrentUserService _currentUserService;
@@ -71,22 +72,16 @@ public class AuthController : ControllerBase
     }
 
     [Authorize]
-    [HttpPost("my-profile")]
-    public async Task<IActionResult> MyProfile()
+    [HttpGet("me")]
+    public async Task<IActionResult> CurrentUser()
     {
-        var userId = _currentUserService.UserId;
-        var email = _currentUserService.Email;
-        var roles = _currentUserService.Roles;
-        var isAuthenticated = _currentUserService.IsAuthenticated;
+        var result = await Sender.Send(new CurrentUserQuery());
 
-        return Ok( new {
-            userId,
-            email,
-            roles,
-            isAuthenticated
-        });
+        if (!result.Success)
+        {
+            return Unauthorized(result.Errors);
+        }
+
+        return Ok(result.Data);
     }
-
-    // testEmail1@gmail.com
-    // 12osA_&fowfoeso
 }
