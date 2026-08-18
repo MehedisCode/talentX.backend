@@ -1,6 +1,6 @@
 using MediatR;
-using TalentX.Application.Common.Identity.Interfaces;
-using TalentX.Application.Common.Identity.Models;
+using TalentX.Application.Identity.Interfaces;
+using TalentX.Application.Identity.Models;
 
 namespace TalentX.Application.Features.Auth.RefreshToken;
 

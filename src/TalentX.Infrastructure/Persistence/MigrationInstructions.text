@@ -1,5 +1,0 @@
-dotnet ef migrations add [migration file name] --project TalentX.Infrastructure --startup-project TalentX.API --output-dir Persistence/Migrations
-
-dotnet ef migrations remove --project TalentX.Infrastructure --startup-project TalentX.API
-
-dotnet ef database update --project TalentX.Infrastructure --startup-project TalentX.API

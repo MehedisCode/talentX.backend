@@ -1,11 +1,8 @@
-using DotNetEnv;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.OpenApi;
-using TalentX.Api.Extensions;
-using TalentX.API.Extensions;
+using TalentX.API.Swagger;
 using TalentX.Application;
 using TalentX.Infrastructure;
 using TalentX.Infrastructure.Identity.Seed;
+using TalentX.Infrastructure.Startup;
 
 // Load .env from the backend root directory (talentx2026q3.backend/.env)
 var envFile = Path.Combine(Directory.GetCurrentDirectory(), ".env");
@@ -63,15 +60,9 @@ builder.Services.AddCors(options =>
     });
 });
 
-
-
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
-builder.Services.AddControllers();
-builder.Services.AddEndpointsApiExplorer();
-
-
-
+builder.Services.AddSwaggerDocumentation();
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
@@ -80,58 +71,31 @@ builder.Services.AddControllers()
             new System.Text.Json.Serialization.JsonStringEnumConverter()
         );
     });
-
 builder.Services.AddEndpointsApiExplorer();
 
-builder.Services.AddSwaggerGen(options =>
-{
-    options.SwaggerDoc("v1", new OpenApiInfo { Title = "TalentX", Version = "v1" });
-
-    // Describes enums as strings in Swagger UI
-    options.UseInlineDefinitionsForEnums();
-
-    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
-    {
-        Name = "Authorization",
-        Type = SecuritySchemeType.Http,
-        Scheme = "bearer",
-        BearerFormat = "JWT",
-        In = ParameterLocation.Header,
-        Description = "Paste the access token here (no 'Bearer ' prefix needed — Swagger adds it automatically)."
-    });
-
-   options.OperationFilter<AuthorizeCheckOperationFilter>();
-});
 
 var app = builder.Build();
-
 
 await IdentitySeeder.SeedAsync(app.Services);
 
 // Swagger enabled in Development or explicitly via ENABLE_SWAGGER=true in .env
-var enableSwagger = app.Environment.IsDevelopment() || builder.Configuration.GetValue<bool>("ENABLE_SWAGGER");
+var enableSwagger = app.Environment.IsDevelopment() 
+    || builder.Configuration.GetValue<bool>("ENABLE_SWAGGER");
 if (enableSwagger)
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
-
 if (!app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();
 }
 
-app.UseGlobalExceptionMiddleware();
-
-app.UseRequestLoggingMiddleware();
-
+app.UseInfrastructureMiddlewares();
 app.UseCors(CorsPolicyName);
-
 app.UseAuthentication();
-
 app.UseAuthorization();
-
 app.MapControllers();
 
 app.Run();

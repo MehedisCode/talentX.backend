@@ -1,6 +1,5 @@
 using MediatR;
-using TalentX.Application.Common.Identity.Models;
-using TalentX.Application.Common.Interfaces;
+using TalentX.Application.Identity.Models;
 
 namespace TalentX.Application.Features.Auth.CurrentUser;
 

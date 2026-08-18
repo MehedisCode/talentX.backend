@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Identity;
-using TalentX.Application.Common.Identity.Interfaces;
-using TalentX.Application.Common.Identity.Models;
+using TalentX.Application.Identity.Interfaces;
+using TalentX.Application.Identity.Models;
 using TalentX.Domain.Enums;
 using TalentX.Infrastructure.Identity.Models;
 

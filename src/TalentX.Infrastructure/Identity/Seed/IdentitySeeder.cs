@@ -21,6 +21,7 @@ public static class IdentitySeeder
         var unitOfWork = scope.ServiceProvider
             .GetRequiredService<IUnitOfWork>();
 
+        // 1. Seed Roles
         var roles = new[]
         {
             UserRole.Employer,
@@ -31,8 +32,32 @@ public static class IdentitySeeder
         {
             if (!await roleManager.RoleExistsAsync(role.ToString()))
             {
-                await roleManager.CreateAsync(
-                    new IdentityRole(role.ToString()));
+                await roleManager.CreateAsync(new IdentityRole(role.ToString()));
+            }
+        }
+
+        // 2. Seed Test Employer User
+        const string testEmail = "employer@talentx.com";
+        const string testPassword = "Password123!"; // Must satisfy Identity password rules
+
+        var existingUser = await userManager.FindByEmailAsync(testEmail);
+
+        if (existingUser == null)
+        {
+            var employerUser = new ApplicationUser
+            {
+                UserName = testEmail,
+                Email = testEmail,
+                EmailConfirmed = true // Bypasses email confirmation requirement for testing
+            };
+
+            // Create user with hashed password
+            var result = await userManager.CreateAsync(employerUser, testPassword);
+
+            if (result.Succeeded)
+            {
+                // Assign Employer role
+                await userManager.AddToRoleAsync(employerUser, UserRole.Employer.ToString());
             }
         }
     }
