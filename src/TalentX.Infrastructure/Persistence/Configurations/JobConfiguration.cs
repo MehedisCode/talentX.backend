@@ -20,6 +20,10 @@ public class JobConfiguration : IEntityTypeConfiguration<Job>
             .IsRequired()
             .HasMaxLength(200);
 
+        builder.Property(j => j.CompanyName)
+            .IsRequired()
+            .HasMaxLength(200);
+
         builder.Property(j => j.Description)
             .IsRequired()
             .HasMaxLength(10000);
@@ -27,6 +31,9 @@ public class JobConfiguration : IEntityTypeConfiguration<Job>
         builder.Property(j => j.Location)
             .IsRequired()
             .HasMaxLength(200);
+
+        builder.Property(j => j.ExpireAt)
+            .IsRequired();
 
         // RequiredSkills list stored as a JSON or a separate table. Since EF Core 8 supports primitive collections,
         // we can store List<string> as JSON if we use HasConversion or simply it's supported depending on the provider.

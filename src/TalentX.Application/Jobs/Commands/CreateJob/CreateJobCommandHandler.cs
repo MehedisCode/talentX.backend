@@ -19,13 +19,15 @@ public class CreateJobCommandHandler : IRequestHandler<CreateJobCommand, Guid>
     {
         var job = Job.CreateDraft(
             request.Title,
+            request.CompanyName,
             request.Description,
             request.EmploymentType,
             request.ExperienceLevel,
             request.Location,
             request.WorkArrangement,
             request.RequiredSkills,
-            request.Vacancies
+            request.Vacancies,
+            request.ExpireAt
         );
 
         if (request.Publish)

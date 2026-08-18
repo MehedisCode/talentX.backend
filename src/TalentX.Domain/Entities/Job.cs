@@ -9,6 +9,7 @@ public class Job : BaseEntity
     // TODO: user id implementation remaining — populate EmployerId from the authenticated employer once ICurrentUserService is implemented.
     public Guid EmployerId { get; private set; }
     public string Title { get; private set; } = string.Empty;
+    public string CompanyName { get; private set; } = string.Empty;
     public string Description { get; private set; } = string.Empty;
     public EmploymentType EmploymentType { get; private set; }
     public string Location { get; private set; } = string.Empty;
@@ -17,24 +18,28 @@ public class Job : BaseEntity
     public List<string> RequiredSkills { get; private set; } = new();
     public JobStatus Status { get; private set; }
     public int Vacancies { get; private set; }
+    public DateTime ExpireAt { get; private set; }
 
 
     private Job() { }
 
     public static Job CreateDraft(
         string title,
+        string companyName,
         string description,
         EmploymentType employmentType,
         ExperienceLevel experienceLevel,
         string location,
         WorkArrangement workArrangement,
         List<string> requiredSkills,
-        int vacancies
+        int vacancies,
+        DateTime expireAt
     )
     {
         var job = new Job
         {
             Title = title.Trim(),
+            CompanyName = companyName.Trim(),
             Description = description.Trim(),
             EmploymentType = employmentType,
             ExperienceLevel = experienceLevel,
@@ -45,6 +50,7 @@ public class Job : BaseEntity
                                              .Distinct(StringComparer.OrdinalIgnoreCase)
                                              .ToList() ?? new List<string>(),
             Vacancies = vacancies,
+            ExpireAt = expireAt,
             Status = JobStatus.Draft,
             CreatedAt = DateTime.UtcNow
         };
@@ -54,16 +60,19 @@ public class Job : BaseEntity
     // Partial update: a null argument leaves the corresponding field unchanged.
     public void UpdateDetails(
         string? title,
+        string? companyName,
         string? description,
         EmploymentType? employmentType,
         ExperienceLevel? experienceLevel,
         string? location,
         WorkArrangement? workArrangement,
         List<string>? requiredSkills,
-        int? vacancies
+        int? vacancies,
+        DateTime? expireAt
     )
     {
         if (title != null) Title = title.Trim();
+        if (companyName != null) CompanyName = companyName.Trim();
         if (description != null) Description = description.Trim();
         if (employmentType.HasValue) EmploymentType = employmentType.Value;
         if (experienceLevel.HasValue) ExperienceLevel = experienceLevel.Value;
@@ -77,6 +86,7 @@ public class Job : BaseEntity
                                             .ToList();
         }
         if (vacancies.HasValue) Vacancies = vacancies.Value;
+        if (expireAt.HasValue) ExpireAt = expireAt.Value;
 
         UpdatedAt = DateTime.UtcNow;
     }
@@ -91,6 +101,9 @@ public class Job : BaseEntity
 
         if (string.IsNullOrWhiteSpace(Title))
             missing.Add(nameof(Title));
+
+        if (string.IsNullOrWhiteSpace(CompanyName))
+            missing.Add(nameof(CompanyName));
 
         if (string.IsNullOrWhiteSpace(Description))
             missing.Add(nameof(Description));
@@ -112,6 +125,9 @@ public class Job : BaseEntity
 
         if (Vacancies <= 0)
             missing.Add(nameof(Vacancies));
+
+        if (ExpireAt <= DateTime.UtcNow)
+            missing.Add(nameof(ExpireAt));
 
         if (missing.Count > 0)
         {

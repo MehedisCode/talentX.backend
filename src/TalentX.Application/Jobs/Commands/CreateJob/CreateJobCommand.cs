@@ -5,6 +5,7 @@ namespace TalentX.Application.Jobs.Commands.CreateJob;
 
 public record CreateJobCommand(
     string Title,
+    string CompanyName,
     string Description,
     EmploymentType EmploymentType,
     ExperienceLevel ExperienceLevel,
@@ -12,5 +13,6 @@ public record CreateJobCommand(
     WorkArrangement WorkArrangement,
     List<string> RequiredSkills,
     int Vacancies,
+    DateTime ExpireAt,
     bool Publish
 ) : IRequest<Guid>;

@@ -21,13 +21,15 @@ public class UpdateJobCommandHandler : IRequestHandler<UpdateJobCommand>
 
         job.UpdateDetails(
             request.Title,
+            request.CompanyName,
             request.Description,
             request.EmploymentType,
             request.ExperienceLevel,
             request.Location,
             request.WorkArrangement,
             request.RequiredSkills,
-            request.Vacancies
+            request.Vacancies,
+            request.ExpireAt
         );
 
         if (request.Publish)

@@ -26,6 +26,13 @@ public class UpdateJobCommandValidator : AbstractValidator<UpdateJobCommand>
             .Must(title => title is null || title.Trim().Length == 0 || title.Trim().Any(char.IsLetter))
                 .WithMessage("Title must contain at least one letter.");
 
+        RuleFor(v => v.CompanyName)
+            .Must(companyName => companyName is null || companyName.Trim().Length >= 2)
+                .WithMessage("Company name must be at least 2 characters.")
+            .MaximumLength(200).WithMessage("Company name must not exceed 200 characters.")
+            .Must(companyName => companyName is null || companyName.Trim().Length == 0 || companyName.Trim().Any(char.IsLetter))
+                .WithMessage("Company name must contain at least one letter.");
+
         RuleFor(v => v.Description)
             .Must(description => description is null || description.Trim().Length >= 20)
                 .WithMessage("Description must be at least 20 characters.")
@@ -54,5 +61,8 @@ public class UpdateJobCommandValidator : AbstractValidator<UpdateJobCommand>
 
         RuleForEach(v => v.RequiredSkills)
             .NotEmpty().WithMessage("Skill entries cannot be blank.");
+
+        RuleFor(v => v.ExpireAt)
+            .GreaterThan(v => DateTime.UtcNow).WithMessage("Expire date must be in the future.");
     }
 }
