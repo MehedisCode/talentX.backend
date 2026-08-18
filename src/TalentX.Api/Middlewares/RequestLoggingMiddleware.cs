@@ -19,16 +19,21 @@ public sealed class RequestLoggingMiddleware
     {
         var stopwatch = Stopwatch.StartNew();
 
-        await _next(context);
+        try
+        {
+            await _next(context);
+        }
+        finally
+        {
+            stopwatch.Stop();
 
-        stopwatch.Stop();
-
-        _logger.LogInformation(
-            "HTTP {Method} {Path} responded {StatusCode} in {ElapsedMillisecond} ms",
-            context.Request.Method,
-            context.Request.Path,
-            context.Response.StatusCode,
-            stopwatch.ElapsedMilliseconds
-        );
+            _logger.LogInformation(
+                "HTTP {Method} {Path} responded {StatusCode} in {ElapsedMilliseconds} ms",
+                context.Request.Method,
+                context.Request.Path,
+                context.Response.StatusCode,
+                stopwatch.ElapsedMilliseconds
+            );
+        }
     }
 }

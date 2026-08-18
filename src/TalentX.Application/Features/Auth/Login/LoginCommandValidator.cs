@@ -18,6 +18,7 @@ public class LoginCommandValidator : AbstractValidator<LoginCommand>
         // 1 lowercase letter [a-z] and 1 digit [0-9]
         // 1 special character
         RuleFor(x => x.Password)
-            .NotEmpty().WithMessage("Password is required.");
+            .NotEmpty().WithMessage("Password is required.")
+            .MaximumLength(256).WithMessage("Password must not exceed 256 characters.");
     }
 }

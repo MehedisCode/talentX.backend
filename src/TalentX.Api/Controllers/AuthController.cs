@@ -1,13 +1,10 @@
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Options;
-using TalentX.Application.Common.Identity.Interfaces;
-using TalentX.Application.Common.Identity.Models;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Features.Auth.LogIn;
 using TalentX.Application.Features.Auth.Logout;
 using TalentX.Application.Features.Auth.RefreshToken;
-using TalentX.Infrastructure.Identity.Models;
 
 namespace TalentX.API.Controllers;
 
@@ -16,27 +13,19 @@ namespace TalentX.API.Controllers;
 public class AuthController : ControllerBase
 {
     private readonly ISender _sender;
-    private readonly JwtSettings _jwtSettings;
-    private readonly IIdentityService _identityService;
-
     private readonly ICurrentUserService _currentUserService;
 
     public AuthController(
         ISender sender,
-        IOptions<JwtSettings> jwtSettings,
-        IIdentityService identityService,
         ICurrentUserService currentUserService
     )
     {
         _sender = sender;
-        _jwtSettings = jwtSettings.Value;
-        _identityService = identityService;
         _currentUserService = currentUserService;
     }
 
     [HttpPost("login")]
-    public async Task<IActionResult> Login(
-        LoginCommand command)
+    public async Task<IActionResult> Login(LoginCommand command)
     {
         var result = await _sender.Send(command);
 
@@ -47,80 +36,41 @@ public class AuthController : ControllerBase
 
         var login = result.Data!;
 
-        SetAuthCookies(login.Tokens);
-
         return Ok(new
         {
             login.UserId,
-            login.Email
+            login.Email,
+            login.Tokens.AccessToken,
+            login.Tokens.RefreshToken
         });
     }
 
 
-    [HttpPost("logout")]
-    public async Task<IActionResult> Logout()
-    {
-        var refreshToken = Request.Cookies["TalentXRefreshToken"];
-
-        if (!string.IsNullOrEmpty(refreshToken))
-        {
-            await _sender.Send(new LogoutCommand(refreshToken));
-            // Result intentionally not checked - logout should succeed from the
-            // client's perspective even if the token was already invalid/expired.
-        }
-
-        ClearAuthCookies();
-
-        return Ok();
-    }
-
     [HttpPost("refresh")]
-    public async Task<IActionResult> Refresh()
+    public async Task<IActionResult> Refresh(RefreshTokenCommand command)
     {
-        var refreshToken = Request.Cookies["TalentXRefreshToken"];
-
-        if (string.IsNullOrEmpty(refreshToken))
-        {
-            return Unauthorized("No refresh token provided.");
-        }
-
-        var result = await _sender.Send(new RefreshTokenCommand(refreshToken));
+        var result = await _sender.Send(command);
 
         if (!result.Success)
         {
-            ClearAuthCookies();
             return Unauthorized(result.Errors);
         }
 
-        SetAuthCookies(result.Data!);
+        return Ok(new
+        {
+            result.Data!.AccessToken,
+            result.Data.RefreshToken
+        });
+    }
 
+    [HttpPost("logout")]
+    public async Task<IActionResult> Logout(LogoutCommand command)
+    {
+        await _sender.Send(command);
         return Ok();
     }
 
-
-    [HttpPost("register")]
-    public async Task<IActionResult> Register()
-    {
-
-        // var result = await _identityService.CreateApplicationUserAsync(
-        //     "testEmail1@gmail.com",
-        //     "12osA_&fowfoeso",
-        //     Domain.Enums.UserRole.Employer);
-
-        var result = await _identityService.CreateApplicationUserAsync(
-        "testEmail2@gmail.com",
-        "12osA_&fowfoeso",
-        Domain.Enums.UserRole.Employer);
-
-        if (!result.Success)
-        {
-           return StatusCode(StatusCodes.Status500InternalServerError, result.Errors);
-        }
-
-        return Ok(result.Data);
-    }
-
-
+    [Authorize]
     [HttpPost("my-profile")]
     public async Task<IActionResult> MyProfile()
     {
@@ -137,43 +87,6 @@ public class AuthController : ControllerBase
         });
     }
 
-
-
-
-    private void SetAuthCookies(TokenResponse tokens)
-    {
-        Response.Cookies.Append(
-            "TalentXAccessToken",
-            tokens.AccessToken,
-            new CookieOptions
-            {
-                HttpOnly = true,
-                Secure = true,
-                SameSite = SameSiteMode.None,
-                Expires = DateTimeOffset.UtcNow.AddMinutes(
-                    _jwtSettings.AccessTokenMinutes),
-                Path = "/"
-            });
-
-        Response.Cookies.Append(
-            "TalentXRefreshToken",
-            tokens.RefreshToken,
-            new CookieOptions
-            {
-                HttpOnly = true,
-                Secure = true,
-                SameSite = SameSiteMode.None,
-                Expires = DateTimeOffset.UtcNow.AddDays(
-                    _jwtSettings.RefreshTokenExpiryDays),
-                Path = "/"
-            });
-    }
-
-
-    private void ClearAuthCookies()
-    {
-        Response.Cookies.Delete("TalentXAccessToken", new CookieOptions { Path = "/" });
-        Response.Cookies.Delete("TalentXRefreshToken", new CookieOptions { Path = "/" });
-    }
-
+    // testEmail1@gmail.com
+    // 12osA_&fowfoeso
 }

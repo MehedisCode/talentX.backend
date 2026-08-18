@@ -1,5 +1,5 @@
 using System.Net;
-using System.Text.Json;
+using FluentValidation;
 using TalentX.Application.Common.Exceptions;
 
 namespace TalentX.API.Middlewares;
@@ -7,12 +7,15 @@ namespace TalentX.API.Middlewares;
 public sealed class GlobalExceptionMiddleware
 {
     private readonly RequestDelegate _next;
+    private readonly ILogger<GlobalExceptionMiddleware> _logger;
 
     public GlobalExceptionMiddleware(
-        RequestDelegate next
+        RequestDelegate next,
+        ILogger<GlobalExceptionMiddleware> logger
     )
     {
         _next = next;
+        _logger = logger;
     }
 
     public async Task InvokeAsync(HttpContext context)
@@ -21,30 +24,40 @@ public sealed class GlobalExceptionMiddleware
         {
             await _next(context);
         }
-        catch(Exception exception)
+        catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested)
         {
-            await HandleExceptionAsync(
-                context,
-                exception
-            );
+            // Client disconnected before the response completed - nothing to write.
+            _logger.LogInformation(
+                "Request {Method} {Path} was cancelled by the client",
+                context.Request.Method,
+                context.Request.Path);
+        }
+        catch (Exception exception)
+        {
+            if (context.Response.HasStarted)
+            {
+                _logger.LogError(
+                    exception,
+                    "Exception occurred after response had already started for {Method} {Path}",
+                    context.Request.Method,
+                    context.Request.Path);
+                throw;
+            }
+
+            await HandleExceptionAsync(context, exception);
         }
     }
 
-    private static async Task HandleExceptionAsync
-    (
-        HttpContext context,
-        Exception exception
-    )
+    private async Task HandleExceptionAsync(HttpContext context, Exception exception)
     {
         context.Response.ContentType = "application/json";
 
-        object response = new { Message = exception.Message};
+        object response;
 
         switch (exception)
         {
-            case FluentValidation.ValidationException validationException:
+            case ValidationException validationException:
                 context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-
                 response = new
                 {
                     Message = "Validation Failed",
@@ -52,34 +65,36 @@ public sealed class GlobalExceptionMiddleware
                         .Select(x => x.ErrorMessage)
                         .ToList()
                 };
+                _logger.LogWarning(
+                    exception,
+                    "Validation failed for {Method} {Path}",
+                    context.Request.Method,
+                    context.Request.Path);
                 break;
-            
-            case ConflictException:
-                context.Response.StatusCode = (int)HttpStatusCode.Conflict;
-                break;
-            
-            case ForbiddenException:
-                context.Response.StatusCode = (int)HttpStatusCode.Forbidden;
-                break;
-            
-            case NotFoundException:
-                context.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                break;
-            
-            case UnauthorizedException:
-                context.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
-                break;
-            
-            case ValidationException:
-                context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+
+            case AppException appException:
+                context.Response.StatusCode = (int)appException.StatusCode;
+                response = new { Message = appException.Message };
+                _logger.LogWarning(
+                    exception,
+                    "Handled {ExceptionType} for {Method} {Path}: {Message}",
+                    exception.GetType().Name,
+                    context.Request.Method,
+                    context.Request.Path,
+                    exception.Message);
                 break;
 
             default:
                 context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+                response = new { Message = "An unexpected error occurred." };
+                _logger.LogError(
+                    exception,
+                    "Unhandled exception for {Method} {Path}",
+                    context.Request.Method,
+                    context.Request.Path);
                 break;
         }
 
-        await context.Response.WriteAsync(
-            JsonSerializer.Serialize(response));
+        await context.Response.WriteAsJsonAsync(response);
     }
 }

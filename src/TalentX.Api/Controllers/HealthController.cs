@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using TalentX.Domain.Enums;
 
 namespace TalentX.Api.Controllers;
 
@@ -10,8 +9,7 @@ namespace TalentX.Api.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/v1/[controller]")]
-// [AllowAnonymous]
-[Authorize(Roles = nameof(UserRole.Employer))]
+[AllowAnonymous]
 public sealed class HealthController : ControllerBase
 {
     private static readonly DateTimeOffset ProcessStartTime = DateTimeOffset.UtcNow;
