@@ -8,7 +8,7 @@ using TalentX.Application.Jobs.Commands.CreateJob;
 using TalentX.Application.Jobs.Commands.UpdateJob;
 using TalentX.Domain.Enums;
 
-namespace TalentX.Api.Tests.Api.Controllers;
+namespace TalentX.Tests.Api.Controllers;
 
 public class JobsControllerTests
 {

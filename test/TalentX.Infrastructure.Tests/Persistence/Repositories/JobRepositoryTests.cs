@@ -5,7 +5,7 @@ using TalentX.Domain.Enums;
 using TalentX.Infrastructure.Persistence.Contexts;
 using TalentX.Infrastructure.Persistence.Repositories;
 
-namespace TalentX.Api.Tests.Infrastructure.Persistence.Repositories;
+namespace TalentX.Tests.Infrastructure.Persistence.Repositories;
 
 public class JobRepositoryTests
 {

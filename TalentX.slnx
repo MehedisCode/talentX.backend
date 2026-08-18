@@ -6,6 +6,6 @@
     <Project Path="src/TalentX.Infrastructure/TalentX.Infrastructure.csproj" />
   </Folder>
   <Folder Name="/test/">
-    <Project Path="test/TalentX.Api.Tests/TalentX.Api.Tests.csproj" />
+    <Project Path="test/TalentX.Tests.csproj" />
   </Folder>
 </Solution>

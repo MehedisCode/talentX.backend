@@ -7,7 +7,7 @@ using TalentX.Application.Jobs.Commands.CreateJob;
 using TalentX.Domain.Entities;
 using TalentX.Domain.Enums;
 
-namespace TalentX.Api.Tests.Application.Jobs.Commands.CreateJob;
+namespace TalentX.Tests.Application.Jobs.Commands.CreateJob;
 
 public class CreateJobCommandHandlerTests
 {

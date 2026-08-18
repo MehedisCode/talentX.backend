@@ -7,7 +7,7 @@ using TalentX.Application.Jobs.Commands.UpdateJob;
 using TalentX.Domain.Entities;
 using TalentX.Domain.Enums;
 
-namespace TalentX.Api.Tests.Application.Jobs.Commands.UpdateJob;
+namespace TalentX.Tests.Application.Jobs.Commands.UpdateJob;
 
 public class UpdateJobCommandHandlerTests
 {

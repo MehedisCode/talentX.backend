@@ -2,7 +2,7 @@ using FluentAssertions;
 using TalentX.Domain.Entities;
 using TalentX.Domain.Enums;
 
-namespace TalentX.Api.Tests.Domain.Entities;
+namespace TalentX.Tests.Domain.Entities;
 
 public class JobTests
 {
