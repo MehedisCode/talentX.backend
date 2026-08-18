@@ -87,6 +87,7 @@ pipelines:
                 -e GEMINI_API_KEY="${GEMINI_API_KEY}" \
                 -e GEMINI_MODEL_NAME="${GEMINI_MODEL_NAME}" \
                 -e GEMINI_BASE_URL="${GEMINI_BASE_URL}" \
+                -e ASPNETCORE_ENVIRONMENT=Development \
                 "\$IMAGE"
 
               echo "TalentX staging deployment completed successfully."
