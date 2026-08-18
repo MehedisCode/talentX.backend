@@ -4,7 +4,7 @@ using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Common.Interfaces.Repositories;
 using TalentX.Application.DTOs.Employers;
 using TalentX.Application.Features.Employers.Commands.GoogleSignIn;
-using TalentX.Domain.Entities;
+using TalentX.Domain;
 using Xunit;
 
 namespace TalentX.Tests.Employers;

@@ -1,7 +1,6 @@
 using MediatR;
 using TalentX.Application.Common.Identity.Interfaces;
 using TalentX.Application.Common.Identity.Models;
-using TalentX.Application.Features.Auth.LogIn;
 
 namespace TalentX.Application.Features.Auth.Login;
 
@@ -21,25 +20,28 @@ public class LoginCommandHandler
 
     public async Task<IdentityResponse<LoginResult>> Handle(LoginCommand request, CancellationToken ct)
     {
-        var validation = await _identityService.ValidatePasswordAsync(request.Email, request.Password);
-        if (!validation.Success)
+        var passwordCheck = await _identityService.ValidatePasswordAsync(
+            request.Email, 
+            request.Password);
+
+        if (!passwordCheck.Success)
         {
-            return IdentityResponse<LoginResult>.Fail(validation.Errors);
+            return IdentityResponse<LoginResult>.Fail(passwordCheck.Errors);
         }
 
-        var userId = validation.Data!.UserId;
+        var tokens = await _tokenService.CreateAsync(passwordCheck.Data!.UserId);
 
-        var tokenResult = await _tokenService.CreateAsync(userId);
-        if (!tokenResult.Success)
+        if (!tokens.Success)
         {
-            return IdentityResponse<LoginResult>.Fail(tokenResult.Errors);
+            return IdentityResponse<LoginResult>.Fail(tokens.Errors);
         }
 
-        return IdentityResponse<LoginResult>.Ok(new LoginResult
-        {
-            UserId = userId,
-            Email = validation.Data.Email,
-            Tokens = tokenResult.Data!
-        });
+        return IdentityResponse<LoginResult>.Ok(
+            new LoginResult
+            {
+                UserId = passwordCheck.Data.UserId,
+                Email = passwordCheck.Data.Email,
+                Tokens = tokens.Data!
+            });
     }
 }

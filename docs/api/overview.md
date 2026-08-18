@@ -24,7 +24,6 @@ https://api.talentx.com/api/v1/[controller]
 | :--- | :--- | :--- | :--- |
 | **Employers** | `/api/v1/employers` | [employers.md](employers.md) | Employer registration, Google sign-in, OTP verification, resend OTP. |
 | **Auth** | `/api/v1/auth` | [auth.md](auth.md) | Password authentication, token refreshing, session logout, current user profile. |
-| **Jobs** | `/api/v1/jobs` | [jobs.md](jobs.md) | Public published job listings and full job details. |
 | **Health** | `/api/v1/health` | [health.md](health.md) | Service uptime, server datetime (UTC), diagnostics. |
 
 ---

@@ -7,7 +7,7 @@ using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Common.Interfaces.Repositories;
 using TalentX.Application.DTOs.Employers;
 using TalentX.Application.Features.Employers.Commands.CreateEmployer;
-using TalentX.Domain.Entities;
+using TalentX.Domain;
 using TalentX.Domain.Enums;
 using Xunit;
 

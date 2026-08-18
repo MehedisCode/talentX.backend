@@ -18,11 +18,6 @@ public interface IUnitOfWork
     IEmployerRepository Employers { get; }
 
     /// <summary>
-    /// Repository for job operations.
-    /// </summary>
-    IJobRepository Jobs { get; }
-
-    /// <summary>
     /// Asynchronously persists all changes made in the context to the database.
     /// </summary>
     /// <param name="cancellationToken">Cancellation token.</param>

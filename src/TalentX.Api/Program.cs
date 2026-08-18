@@ -1,9 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi;
-using TalentX.Api.Extensions;
 using TalentX.Application;
 using TalentX.Infrastructure;
 using TalentX.Infrastructure.Identity.Seed;
+using TalentX.Infrastructure.Middleware;
 
 // Load .env from the backend root directory (talentx2026q3.backend/.env)
 var envFile = Path.Combine(Directory.GetCurrentDirectory(), ".env");
@@ -61,8 +61,8 @@ builder.Services.AddCors(options =>
     });
 });
 
-builder.Services.AddApplication();
-builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddApplicationServices();
+builder.Services.AddInfrastructureServices(builder.Configuration);
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
@@ -111,11 +111,6 @@ if (app.Environment.IsDevelopment())
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<TalentX.Infrastructure.Persistence.Contexts.ApplicationDbContext>();
     db.Database.Migrate();
-    if (!db.Jobs.Any())
-    {
-        db.Jobs.AddRange(TalentX.Infrastructure.Persistence.SeedData.JobSeedData.GetJobs());
-        db.SaveChanges();
-    }
 }
 
 app.Run();

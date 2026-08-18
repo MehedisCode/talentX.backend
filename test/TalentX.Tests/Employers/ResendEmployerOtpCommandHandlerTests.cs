@@ -3,7 +3,7 @@ using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Common.Interfaces.Repositories;
 using TalentX.Application.Features.Employers.Commands.ResendOtp;
-using TalentX.Domain.Entities;
+using TalentX.Domain;
 using Xunit;
 
 namespace TalentX.Tests.Employers;

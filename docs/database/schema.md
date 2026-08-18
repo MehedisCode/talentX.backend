@@ -1,6 +1,6 @@
 # Database Schema & Entity Relationships
 
-TalentX uses **Entity Framework Core (Code-First)** with **PostgreSQL** (or SQL Server depending on connection string). The persistence layer is encapsulated within `TalentX.Infrastructure`.
+TalentX uses **Entity Framework Core (Code-First)** with **PostgreSQL**. The persistence layer is encapsulated within `TalentX.Infrastructure` with migrations managed by `TalentX.Migrations.PostgreSQL`.
 
 ---
 
@@ -10,7 +10,6 @@ TalentX uses **Entity Framework Core (Code-First)** with **PostgreSQL** (or SQL 
 erDiagram
     ApplicationUser ||--o| Employer : "has profile"
     ApplicationUser ||--o{ RefreshToken : "owns"
-    Employer ||--o{ Job : "posts"
 
     ApplicationUser {
         string Id PK
@@ -35,30 +34,9 @@ erDiagram
     RefreshToken {
         uuid Id PK
         string UserId FK
-        string Token
-        string JwtId
+        string TokenHash
         boolean IsRevoked
-        timestamp ExpiryDate
-        timestamp CreatedAt
-    }
-
-    Job {
-        uuid Id PK
-        uuid EmployerId FK
-        string Title
-        string Description
-        string Responsibilities
-        string Requirements
-        string Location
-        int WorkMode
-        int EmploymentType
-        int ExperienceLevel
-        decimal MinSalary
-        decimal MaxSalary
-        string Currency
-        string SkillsJson
-        int Status
-        timestamp PublishedAt
+        timestamp ExpiresAt
         timestamp CreatedAt
     }
 ```
@@ -67,35 +45,24 @@ erDiagram
 
 ## 📊 Core Tables
 
-### 1. `Employers` Table
-- **`Id`** (`uuid`, PK): Unique employer profile ID.
-- **`UserId`** (`varchar(450)`, FK): References ASP.NET Identity `AspNetUsers.Id`.
-- **`Name`** (`varchar(120)`, Not Null): Full name of the employer representative.
-- **`Email`** (`varchar(255)`, Not Null, Indexed): Company email address.
-- **`CompanyName`** (`varchar(200)`, Not Null): Name of the hiring organization.
-- **`Role`** (`varchar(50)`, Default `'Employer'`): User role.
+### 1. `DomainUsers` / `Employers` Tables (TPT Inheritance)
+- **`Id`** (`uuid`, PK): Unique domain entity identifier.
+- **`UserId`** (`varchar(200)`, Not Null): Unique ASP.NET Identity User ID.
+- **`Name`** (`varchar(120)`, Not Null): Full name.
+- **`Email`** (`varchar(255)`, Not Null, Indexed): Email address.
+- **`CompanyName`** (`varchar(200)`, Not Null): Company name (stored on `Employers` table).
+- **`Role`** (`varchar(50)`, Default `'Employer'`): User role (`Employer` or `Talent`).
 - **`IsVerified`** (`boolean`, Default `false`): Verification status (toggled true via OTP or Google OAuth).
-- **`CreatedAt`** (`timestamptz`): Registration timestamp in UTC.
+- **`CreatedAt`** (`timestamptz`): Creation timestamp in UTC.
 - **`UpdatedAt`** (`timestamptz`, Nullable): Last update timestamp in UTC.
 
 ### 2. `RefreshTokens` Table
 - **`Id`** (`uuid`, PK): Unique token record ID.
-- **`UserId`** (`varchar(450)`, FK): Associated user ID.
-- **`Token`** (`text`, Indexed): Opaque cryptographically secure random token string.
-- **`JwtId`** (`varchar(255)`): Corresponding JWT JTI claim.
-- **`IsRevoked`** (`boolean`, Default `false`): Manual revocation flag.
-- **`ExpiryDate`** (`timestamptz`): Absolute expiry date.
+- **`ApplicationUserId`** (`varchar(450)`, FK): Associated Identity user ID.
+- **`TokenHash`** (`text`, Indexed): SHA256 hashed refresh token string.
+- **`RevokedAt`** (`timestamptz`, Nullable): Revocation timestamp if revoked.
+- **`ExpiresAt`** (`timestamptz`): Absolute expiry date.
 - **`CreatedAt`** (`timestamptz`): Issuance timestamp.
-
-### 3. `Jobs` Table
-- **`Id`** (`uuid`, PK): Unique Job identifier.
-- **`EmployerId`** (`uuid`, FK, Nullable): Associated Employer identifier.
-- **`Title`** (`varchar(200)`, Not Null): Position title.
-- **`Description`** (`text`, Not Null): Job description.
-- **`Status`** (`integer`): `0 = Draft`, `1 = Published`, `2 = Closed`, `3 = Archived`.
-- **`WorkMode`** (`integer`): `0 = OnSite`, `1 = Hybrid`, `2 = Remote`.
-- **`EmploymentType`** (`integer`): `0 = FullTime`, `1 = PartTime`, `2 = Contract`, `3 = Freelance`.
-- **`ExperienceLevel`** (`integer`): `0 = EntryLevel`, `1 = MidLevel`, `2 = Senior`, `3 = Lead`, `4 = Executive`.
 
 ---
 
@@ -103,11 +70,8 @@ erDiagram
 
 ```bash
 # Add a new migration (run from talentx2026q3.backend root)
-dotnet ef migrations add <MigrationName> -p src/TalentX.Infrastructure -s src/TalentX.Api
+dotnet ef migrations add <MigrationName> -p src/TalentX.Migrations.PostgreSQL -s src/TalentX.Api
 
 # Update database to latest migration
-dotnet ef database update -p src/TalentX.Infrastructure -s src/TalentX.Api
-
-# Remove last unapplied migration
-dotnet ef migrations remove -p src/TalentX.Infrastructure -s src/TalentX.Api
+dotnet ef database update -p src/TalentX.Migrations.PostgreSQL -s src/TalentX.Api
 ```

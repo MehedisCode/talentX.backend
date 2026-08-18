@@ -33,7 +33,7 @@ FluentValidation  ConflictException NotFoundException Unauthorized    Unhandled
 | `Application.Common.Exceptions.ValidationException` | `400 Bad Request` | `{"message": "<Custom error message>"}` | Invalid or expired OTP code |
 | `Application.Common.Exceptions.UnauthorizedException` | `401 Unauthorized` | `{"message": "<Unauthorized message>"}` | Invalid Google OAuth token, bad credentials |
 | `Application.Common.Exceptions.ForbiddenException` | `403 Forbidden` | `{"message": "<Forbidden message>"}` | Accessing employer resources as candidate |
-| `Application.Common.Exceptions.NotFoundException` | `404 Not Found` | `{"message": "<Not found message>"}` | Employer / Job ID does not exist |
+| `Application.Common.Exceptions.NotFoundException` | `404 Not Found` | `{"message": "<Not found message>"}` | Employer ID or user record does not exist |
 | `Application.Common.Exceptions.ConflictException` | `409 Conflict` | `{"message": "<Conflict details>"}` | Employer email already registered & verified |
 | `System.Exception` (General) | `500 Internal Server Error` | `{"message": "<Sanitized error>"}` | Database timeout, unhandled runtime error |
 

@@ -4,7 +4,7 @@ using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Identity.Interfaces;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.DTOs.Employers;
-using TalentX.Domain.Entities;
+using TalentX.Domain;
 using TalentX.Domain.Enums;
 
 namespace TalentX.Application.Features.Employers.Commands.CreateEmployer;
