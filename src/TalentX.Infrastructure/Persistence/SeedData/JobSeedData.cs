@@ -13,16 +13,22 @@ public static class JobSeedData
         job1.UpdateDetails(
             title: "Frontend Developer",
             companyName: "Acme Inc",
-            roleType: EmploymentType.FullTime,
-            experienceLevel: ExperienceLevel.Mid,
-            locationPref: WorkMode.Hybrid,
+            description: "Build and ship user-facing features across our product.",
+            employmentType: EmploymentType.FullTime,
+            experienceLevel: ExperienceLevel.MidLevel,
+            location: "Dhaka",
+            workArrangement: WorkArrangement.Hybrid,
+            requiredSkills: new[] { "React", "Next.js", "TypeScript" }.ToList(),
+            vacancies: 1,
+            expireAt: DateTime.UtcNow.AddMonths(1),
             city: "Dhaka",
             country: "Bangladesh",
-            minOverlapHours: null,
-            description: "Build and ship user-facing features across our product.",
+            roleType: EmploymentType.FullTime,
             responsibilities: "Own feature delivery from design handoff to production release.",
-            skills: new[] { "React", "Next.js", "TypeScript" },
-            expiresAt: null
+            locationPref: WorkArrangement.Hybrid,
+            minOverlapHours: null,
+            skillRequirements: new[] { "React", "Next.js", "TypeScript" }.ToList(),
+            expiresAt: DateTime.UtcNow.AddMonths(1)
         );
         job1.Publish();
         jobs.Add(job1);
@@ -31,16 +37,22 @@ public static class JobSeedData
         job2.UpdateDetails(
             title: "Backend Engineer (.NET)",
             companyName: "Northwind Labs",
-            roleType: EmploymentType.FullTime,
-            experienceLevel: ExperienceLevel.Senior,
-            locationPref: WorkMode.Remote,
+            description: "Own our core API and data layer.",
+            employmentType: EmploymentType.FullTime,
+            experienceLevel: ExperienceLevel.SeniorLevel,
+            location: "Remote",
+            workArrangement: WorkArrangement.Remote,
+            requiredSkills: new[] { "C#", "EF Core", "SQL Server" }.ToList(),
+            vacancies: 1,
+            expireAt: DateTime.UtcNow.AddMonths(1),
             city: null,
             country: null,
-            minOverlapHours: 4,
-            description: "Own our core API and data layer.",
+            roleType: EmploymentType.FullTime,
             responsibilities: "Design and maintain the Jobs and Employer services.",
-            skills: new[] { "C#", "EF Core", "SQL Server" },
-            expiresAt: null
+            locationPref: WorkArrangement.Remote,
+            minOverlapHours: 4,
+            skillRequirements: new[] { "C#", "EF Core", "SQL Server" }.ToList(),
+            expiresAt: DateTime.UtcNow.AddMonths(1)
         );
         job2.Publish();
         jobs.Add(job2);
@@ -49,16 +61,22 @@ public static class JobSeedData
         job3.UpdateDetails(
             title: "Product Designer",
             companyName: "Acme Inc",
-            roleType: EmploymentType.FullTime,
-            experienceLevel: ExperienceLevel.Mid,
-            locationPref: WorkMode.OnSite,
+            description: "Shape the end-to-end experience for our job seekers.",
+            employmentType: EmploymentType.FullTime,
+            experienceLevel: ExperienceLevel.MidLevel,
+            location: "Dhaka",
+            workArrangement: WorkArrangement.OnSite,
+            requiredSkills: new[] { "Figma", "User Research" }.ToList(),
+            vacancies: 1,
+            expireAt: DateTime.UtcNow.AddMonths(1),
             city: "Dhaka",
             country: "Bangladesh",
-            minOverlapHours: null,
-            description: "Shape the end-to-end experience for our job seekers.",
+            roleType: EmploymentType.FullTime,
             responsibilities: null,
-            skills: new[] { "Figma", "User Research" },
-            expiresAt: null
+            locationPref: WorkArrangement.OnSite,
+            minOverlapHours: null,
+            skillRequirements: new[] { "Figma", "User Research" }.ToList(),
+            expiresAt: DateTime.UtcNow.AddMonths(1)
         );
         job3.Publish();
         jobs.Add(job3);
@@ -67,55 +85,92 @@ public static class JobSeedData
         job4.UpdateDetails(
             title: "QA Engineer",
             companyName: "Northwind Labs",
-            roleType: EmploymentType.Contract,
+            description: "Own quality across our web and API surfaces.",
+            employmentType: EmploymentType.Contract,
             experienceLevel: ExperienceLevel.EntryLevel,
-            locationPref: WorkMode.Remote,
+            location: "Remote",
+            workArrangement: WorkArrangement.Remote,
+            requiredSkills: new[] { "Manual Testing", "Cypress" }.ToList(),
+            vacancies: 1,
+            expireAt: DateTime.UtcNow.AddMonths(1),
             city: null,
             country: null,
-            minOverlapHours: 3,
-            description: "Own quality across our web and API surfaces.",
+            roleType: EmploymentType.Contract,
             responsibilities: null,
-            skills: new[] { "Manual Testing", "Cypress" },
-            expiresAt: null
+            locationPref: WorkArrangement.Remote,
+            minOverlapHours: 3,
+            skillRequirements: new[] { "Manual Testing", "Cypress" }.ToList(),
+            expiresAt: DateTime.UtcNow.AddMonths(1)
         );
         job4.Publish();
         jobs.Add(job4);
 
-        var job5 = new Job(Guid.NewGuid(), "Acme Inc", "Expired Internship (should NOT appear)");
+        // Expired job
+        var job5 = new Job(
+            Guid.NewGuid(),
+            "Acme Inc",
+            "Expired Internship (should NOT appear)"
+        );
+
         job5.UpdateDetails(
             title: "Expired Internship (should NOT appear)",
             companyName: "Acme Inc",
-            roleType: EmploymentType.Internship,
+            description: "Seeded already-expired to verify the eligibility filter works.",
+            employmentType: EmploymentType.Internship,
             experienceLevel: ExperienceLevel.EntryLevel,
-            locationPref: WorkMode.Remote,
+            location: "Remote",
+            workArrangement: WorkArrangement.Remote,
+
+            // Required for Publish()
+            requiredSkills: new[] { "Java", "Spring Boot" }.ToList(),
+
+            vacancies: 1,
+            expireAt: DateTime.UtcNow.AddMonths(1),
             city: null,
             country: null,
-            minOverlapHours: null,
-            description: "Seeded already-expired to verify the eligibility filter works.",
+            roleType: EmploymentType.Internship,
             responsibilities: null,
-            skills: Array.Empty<string>(),
-            expiresAt: null
+            locationPref: WorkArrangement.Remote,
+            minOverlapHours: null,
+
+            // Required for Publish()
+            skillRequirements: new[] { "Java", "Spring Boot" }.ToList(),
+
+            expiresAt: DateTime.UtcNow.AddMonths(1)
         );
+
         job5.Publish();
         job5.Expire();
         jobs.Add(job5);
 
-        var job6 = new Job(Guid.NewGuid(), "Acme Inc", "Draft Role (should NOT appear)");
+        // Draft job
+        var job6 = new Job(
+            Guid.NewGuid(),
+            "Acme Inc",
+            "Draft Role (should NOT appear)"
+        );
+
         job6.UpdateDetails(
             title: "Draft Role (should NOT appear)",
             companyName: "Acme Inc",
-            roleType: EmploymentType.PartTime,
-            experienceLevel: ExperienceLevel.Mid,
-            locationPref: WorkMode.Hybrid,
+            description: "Seeded as Draft to verify it never becomes publicly visible.",
+            employmentType: EmploymentType.PartTime,
+            experienceLevel: ExperienceLevel.MidLevel,
+            location: "Dhaka",
+            workArrangement: WorkArrangement.Hybrid,
+            requiredSkills: new[] { "SQL" }.ToList(),
+            vacancies: 1,
+            expireAt: DateTime.UtcNow.AddMonths(1),
             city: "Dhaka",
             country: "Bangladesh",
-            minOverlapHours: null,
-            description: "Seeded as Draft to verify it never becomes publicly visible.",
+            roleType: EmploymentType.PartTime,
             responsibilities: null,
-            skills: new[] { "SQL" },
-            expiresAt: null
+            locationPref: WorkArrangement.Hybrid,
+            minOverlapHours: null,
+            skillRequirements: new[] { "SQL" }.ToList(),
+            expiresAt: DateTime.UtcNow.AddMonths(1)
         );
-        // Do not publish
+
         jobs.Add(job6);
 
         return jobs;

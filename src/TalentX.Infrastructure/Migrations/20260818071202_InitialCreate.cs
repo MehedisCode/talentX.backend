@@ -1,13 +1,14 @@
 ﻿using System;
+using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace TalentX.Infrastructure.Persistence.Migrations
+namespace TalentX.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialMigration : Migration
+    public partial class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -65,6 +66,39 @@ namespace TalentX.Infrastructure.Persistence.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_DomainUsers", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Jobs",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    EmployerId = table.Column<string>(type: "text", nullable: false),
+                    Title = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    CompanyName = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    Description = table.Column<string>(type: "character varying(10000)", maxLength: 10000, nullable: false),
+                    EmploymentType = table.Column<int>(type: "integer", nullable: false),
+                    Location = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    WorkArrangement = table.Column<int>(type: "integer", nullable: false),
+                    ExperienceLevel = table.Column<string>(type: "text", nullable: true),
+                    RequiredSkills = table.Column<List<string>>(type: "text[]", nullable: false),
+                    Status = table.Column<string>(type: "text", nullable: false),
+                    Vacancies = table.Column<int>(type: "integer", nullable: false),
+                    ExpireAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    ExpiresAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    City = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
+                    Country = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
+                    RoleType = table.Column<string>(type: "text", nullable: true),
+                    Responsibilities = table.Column<string>(type: "text", nullable: true),
+                    LocationPref = table.Column<string>(type: "text", nullable: true),
+                    MinOverlapHours = table.Column<short>(type: "smallint", nullable: true),
+                    SkillRequirements = table.Column<string>(type: "text", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Jobs", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -209,6 +243,26 @@ namespace TalentX.Infrastructure.Persistence.Migrations
                 table: "AspNetUsers",
                 column: "NormalizedUserName",
                 unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Jobs_EmployerId",
+                table: "Jobs",
+                column: "EmployerId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Jobs_ExpiresAt",
+                table: "Jobs",
+                column: "ExpiresAt");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Jobs_Status",
+                table: "Jobs",
+                column: "Status");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Jobs_Status_CreatedAt",
+                table: "Jobs",
+                columns: new[] { "Status", "CreatedAt" });
         }
 
         /// <inheritdoc />
@@ -231,6 +285,9 @@ namespace TalentX.Infrastructure.Persistence.Migrations
 
             migrationBuilder.DropTable(
                 name: "DomainUsers");
+
+            migrationBuilder.DropTable(
+                name: "Jobs");
 
             migrationBuilder.DropTable(
                 name: "AspNetRoles");

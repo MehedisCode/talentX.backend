@@ -5,23 +5,40 @@ namespace TalentX.Domain.Entities;
 
 public class Job : BaseEntity
 {
-    // TODO: user id implementation remaining — populate EmployerId from the authenticated employer once ICurrentUserService is implemented.
-    //EmployerId has been changed to string because of schema design(because userID is string)
-    public string EmployerId { get; private set; }  
+    public string EmployerId { get; private set; } = string.Empty;
     public string Title { get; private set; } = string.Empty;
     public string CompanyName { get; private set; } = string.Empty;
     public string Description { get; private set; } = string.Empty;
     public EmploymentType EmploymentType { get; private set; }
     public string Location { get; private set; } = string.Empty;
     public WorkArrangement WorkArrangement { get; private set; }
-    public ExperienceLevel ExperienceLevel { get; private set; }
+    public ExperienceLevel? ExperienceLevel { get; private set; }
     public List<string> RequiredSkills { get; private set; } = new();
     public JobStatus Status { get; private set; }
     public int Vacancies { get; private set; }
     public DateTime ExpireAt { get; private set; }
-
+    public DateTime? ExpiresAt { get; private set; }
+    public string? City { get; private set; }
+    public string? Country { get; private set; }
+    public EmploymentType? RoleType { get; private set; }
+    public string? Responsibilities { get; private set; }
+    public WorkArrangement? LocationPref { get; private set; }
+    public short? MinOverlapHours { get; private set; }
+    public List<string> SkillRequirements { get; private set; } = new();
 
     private Job() { }
+
+    public Job(
+        Guid id,
+        string employerId,
+        string title
+    )
+    {
+        Id = id;
+        EmployerId = employerId;
+        Title = title;
+        CreatedAt = DateTime.UtcNow;
+    }
 
     public static Job CreateDraft(
         string title,
@@ -57,18 +74,25 @@ public class Job : BaseEntity
         return job;
     }
 
-    // Partial update: a null argument leaves the corresponding field unchanged.
     public void UpdateDetails(
-        string? title,
-        string? companyName,
-        string? description,
-        EmploymentType? employmentType,
-        ExperienceLevel? experienceLevel,
-        string? location,
-        WorkArrangement? workArrangement,
-        List<string>? requiredSkills,
-        int? vacancies,
-        DateTime? expireAt
+        string? title = null,
+        string? companyName = null,
+        string? description = null,
+        EmploymentType? employmentType = null,
+        ExperienceLevel? experienceLevel = null,
+        string? location = null,
+        WorkArrangement? workArrangement = null,
+        List<string>? requiredSkills = null,
+        int? vacancies = null,
+        DateTime? expireAt = null,
+        string? city = null,
+        string? country = null,
+        EmploymentType? roleType = null,
+        string? responsibilities = null,
+        WorkArrangement? locationPref = null,
+        short? minOverlapHours = null,
+        List<string>? skillRequirements = null,
+        DateTime? expiresAt = null
     )
     {
         if (title != null) Title = title.Trim();
@@ -88,9 +112,23 @@ public class Job : BaseEntity
         if (vacancies.HasValue) Vacancies = vacancies.Value;
         if (expireAt.HasValue) ExpireAt = expireAt.Value;
 
+        if (city != null) City = city;
+        if (country != null) Country = country;
+        if (roleType.HasValue) RoleType = roleType.Value;
+        if (responsibilities != null) Responsibilities = responsibilities;
+        if (locationPref.HasValue) LocationPref = locationPref.Value;
+        if (minOverlapHours.HasValue) MinOverlapHours = minOverlapHours.Value;
+        if (skillRequirements != null)
+        {
+            SkillRequirements = skillRequirements.Where(s => !string.IsNullOrWhiteSpace(s))
+                                                 .Select(s => s.Trim())
+                                                 .Distinct(StringComparer.OrdinalIgnoreCase)
+                                                 .ToList();
+        }
+        if (expiresAt.HasValue) ExpiresAt = expiresAt.Value;
+
         UpdatedAt = DateTime.UtcNow;
     }
-
 
     public void EnsureIsPublishable()
     {
@@ -114,7 +152,7 @@ public class Job : BaseEntity
         if (!Enum.IsDefined(EmploymentType))
             missing.Add(nameof(EmploymentType));
 
-        if (!Enum.IsDefined(ExperienceLevel))
+        if (ExperienceLevel is null || !Enum.IsDefined(ExperienceLevel.Value))
             missing.Add(nameof(ExperienceLevel));
 
         if (!Enum.IsDefined(WorkArrangement))
@@ -136,11 +174,15 @@ public class Job : BaseEntity
             );
         }
     }
+
     public void Publish()
     {
         EnsureIsPublishable();
-
         Status = JobStatus.Published;
     }
-}
 
+    public void Expire()
+    {
+        Status = JobStatus.Closed;
+    }
+}

@@ -3,6 +3,7 @@ using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Common.Interfaces.Repositories;
 using TalentX.Application.Features.Jobs.Queries;
 using TalentX.Domain.Entities;
+using TalentX.Domain.Enums;
 using Xunit;
 
 namespace TalentX.Tests.Jobs;
@@ -34,10 +35,18 @@ public class GetJobDetailsQueryTests
         job.UpdateDetails(
             title: "Test Role",
             companyName: "Test Co",
-            roleType: null, experienceLevel: null, locationPref: null,
+            description: "Test description for the role.",
+            employmentType: EmploymentType.FullTime,
+            experienceLevel: ExperienceLevel.MidLevel,
+            location: "Dhaka",
+            workArrangement: WorkArrangement.Hybrid,
+            requiredSkills: new[] { "C#" }.ToList(),
+            vacancies: 1,
+            expireAt: DateTime.UtcNow.AddMonths(1),
+            roleType: null, locationPref: null,
             city: null, country: null, minOverlapHours: null,
-            description: null, responsibilities: null,
-            skills: new[] { "C#" }, expiresAt: null);
+            responsibilities: null,
+            skillRequirements: new[] { "C#" }.ToList(), expiresAt: null);
         job.Publish();
         
         var jobRepo = new Mock<IJobRepository>();

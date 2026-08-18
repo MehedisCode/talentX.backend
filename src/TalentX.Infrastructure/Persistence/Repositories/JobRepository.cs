@@ -1,10 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using TalentX.Application.Common.Interfaces.Repositories;
 using TalentX.Domain.Entities;
-<<<<<<< HEAD
 using TalentX.Domain.Enums;
-=======
->>>>>>> origin/TX26-192-employer-create-publish-job
 using TalentX.Infrastructure.Persistence.Contexts;
 
 namespace TalentX.Infrastructure.Persistence.Repositories;
@@ -12,8 +9,7 @@ namespace TalentX.Infrastructure.Persistence.Repositories;
 public class JobRepository : IJobRepository
 {
     private readonly ApplicationDbContext _context;
-<<<<<<< HEAD
-    
+
     public JobRepository(ApplicationDbContext context) => _context = context;
 
     public async Task<(IReadOnlyList<Job> Items, int TotalCount)> GetPublishedJobsAsync(
@@ -28,7 +24,7 @@ public class JobRepository : IJobRepository
 
         var items = await query
             .OrderByDescending(j => j.CreatedAt)
-            .ThenByDescending(j => j.Id)   
+            .ThenByDescending(j => j.Id)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync(cancellationToken);
@@ -44,12 +40,6 @@ public class JobRepository : IJobRepository
                   && j.Status == JobStatus.Published
                   && (j.ExpiresAt == null || j.ExpiresAt > DateTime.UtcNow),
                 cancellationToken);
-=======
-
-    public JobRepository(ApplicationDbContext context)
-    {
-        _context = context;
-    }
 
     public async Task<Job?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
@@ -65,5 +55,4 @@ public class JobRepository : IJobRepository
     {
         _context.Set<Job>().Update(job);
     }
->>>>>>> origin/TX26-192-employer-create-publish-job
 }

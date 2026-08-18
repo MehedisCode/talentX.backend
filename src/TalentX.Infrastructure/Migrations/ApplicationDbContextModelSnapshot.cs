@@ -3,21 +3,18 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using TalentX.Infrastructure.Persistence.Contexts;
 
 #nullable disable
 
-namespace TalentX.Infrastructure.Persistence.Migrations
+namespace TalentX.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260818051200_AddJobCompanyNameAndExpireAt")]
-    partial class AddJobCompanyNameAndExpireAt
+    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
     {
-        /// <inheritdoc />
-        protected override void BuildTargetModel(ModelBuilder modelBuilder)
+        protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -164,10 +161,18 @@ namespace TalentX.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("City")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
                     b.Property<string>("CompanyName")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Country")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -177,16 +182,20 @@ namespace TalentX.Infrastructure.Persistence.Migrations
                         .HasMaxLength(10000)
                         .HasColumnType("character varying(10000)");
 
-                    b.Property<Guid>("EmployerId")
-                        .HasColumnType("uuid");
+                    b.Property<string>("EmployerId")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<int>("EmploymentType")
                         .HasColumnType("integer");
 
-                    b.Property<int>("ExperienceLevel")
-                        .HasColumnType("integer");
+                    b.Property<string>("ExperienceLevel")
+                        .HasColumnType("text");
 
                     b.Property<DateTime>("ExpireAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("ExpiresAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Location")
@@ -194,12 +203,29 @@ namespace TalentX.Infrastructure.Persistence.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<string>("LocationPref")
+                        .HasColumnType("text");
+
+                    b.Property<short?>("MinOverlapHours")
+                        .HasColumnType("smallint");
+
                     b.PrimitiveCollection<List<string>>("RequiredSkills")
                         .IsRequired()
                         .HasColumnType("text[]");
 
-                    b.Property<int>("Status")
-                        .HasColumnType("integer");
+                    b.Property<string>("Responsibilities")
+                        .HasColumnType("text");
+
+                    b.Property<string>("RoleType")
+                        .HasColumnType("text");
+
+                    b.Property<string>("SkillRequirements")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<string>("Title")
                         .IsRequired()
@@ -218,6 +244,12 @@ namespace TalentX.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("EmployerId");
+
+                    b.HasIndex("ExpiresAt");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("Status", "CreatedAt");
 
                     b.ToTable("Jobs", (string)null);
                 });
@@ -248,7 +280,7 @@ namespace TalentX.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("DomainUsers");
+                    b.ToTable("DomainUsers", (string)null);
                 });
 
             modelBuilder.Entity("TalentX.Infrastructure.Identity.Models.ApplicationUser", b =>

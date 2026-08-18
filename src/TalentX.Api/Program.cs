@@ -25,7 +25,6 @@ builder.Services.AddCors(options =>
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
-        // Converts all enums to string values during JSON serialization/deserialization
         options.JsonSerializerOptions.Converters.Add(
             new System.Text.Json.Serialization.JsonStringEnumConverter()
         );
@@ -34,12 +33,8 @@ builder.Services.AddControllers()
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
     {
-        // Describes enums as strings in Swagger UI
         options.UseInlineDefinitionsForEnums();
     });
-
-
-builder.Services.AddSwaggerGen();
 
 
 var app = builder.Build();
