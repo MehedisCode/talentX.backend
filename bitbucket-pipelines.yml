@@ -2,7 +2,7 @@ image: google/cloud-sdk:slim
 
 pipelines:
   branches:
-    staging-cicd:
+    staging:
       - step:
           name: Build & Push TalentX Backend Image
           services:
