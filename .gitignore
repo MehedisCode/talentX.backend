@@ -1,0 +1,80 @@
+## .NET / Visual Studio / Rider — root-level gitignore for the whole solution
+## Consolidates the per-project .gitignore files under src/*, plus test/ and
+## coverage output, so build artifacts never get committed from any project.
+## Based on `dotnet new gitignore`.
+
+# dotenv files
+.env
+.env.*
+!.env.example
+
+# User-specific files
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# User-specific files (MonoDevelop/Xamarin Studio)
+*.userprefs
+
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# Visual Studio cache/options directory
+.vs/
+
+# Rider
+.idea/
+*.sln.iml
+
+# VS Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# Test results / coverage
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+coverage*.json
+coverage*.xml
+coverage*.info
+coverage*.cobertura.xml
+*.coverage
+*.coveragexml
+
+# NuGet
+*.nupkg
+*.snupkg
+**/[Pp]ackages/*
+!**/[Pp]ackages/build/
+*.nuget.props
+*.nuget.targets
+
+# Build/debug artifacts
+*.pdb
+*.ipdb
+*.log
+*.tlog
+*.binlog
+
+# OS files
+.DS_Store
+Thumbs.db
+**/bin/
+**/obj/

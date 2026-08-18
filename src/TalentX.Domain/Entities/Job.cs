@@ -5,194 +5,142 @@ namespace TalentX.Domain.Entities;
 
 public class Job : BaseEntity
 {
-    private readonly List<string> _skillRequirements = new();
-
-    // Required by EF Core.
-    private Job()
-    {
-    }
-
-    public Job(
-        Guid employerId,
-        string companyName,
-        string title)
-    {
-        if (employerId == Guid.Empty)
-            throw new ArgumentException(
-                "Employer ID is required.",
-                nameof(employerId));
-
-        if (string.IsNullOrWhiteSpace(companyName))
-            throw new ArgumentException(
-                "Company name is required.",
-                nameof(companyName));
-
-        if (string.IsNullOrWhiteSpace(title))
-            throw new ArgumentException(
-                "Job title is required.",
-                nameof(title));
-
-        Id = Guid.NewGuid();
-        EmployerId = employerId;
-        CompanyName = companyName.Trim();
-        Title = title.Trim();
-
-        Status = JobStatus.Draft;
-        CreatedAt = DateTime.UtcNow;
-        UpdatedAt = DateTime.UtcNow;
-    }
-
-    public Guid EmployerId { get; private set; }
-
-    public string CompanyName { get; private set; } = string.Empty;
-
+    // TODO: user id implementation remaining — populate EmployerId from the authenticated employer once ICurrentUserService is implemented.
+    //EmployerId has been changed to string because of schema design(because userID is string)
+    public string EmployerId { get; private set; }  
     public string Title { get; private set; } = string.Empty;
+    public string CompanyName { get; private set; } = string.Empty;
+    public string Description { get; private set; } = string.Empty;
+    public EmploymentType EmploymentType { get; private set; }
+    public string Location { get; private set; } = string.Empty;
+    public WorkArrangement WorkArrangement { get; private set; }
+    public ExperienceLevel ExperienceLevel { get; private set; }
+    public List<string> RequiredSkills { get; private set; } = new();
+    public JobStatus Status { get; private set; }
+    public int Vacancies { get; private set; }
+    public DateTime ExpireAt { get; private set; }
 
-    public EmploymentType? RoleType { get; private set; }
 
-    public ExperienceLevel? ExperienceLevel { get; private set; }
+    private Job() { }
 
-    public WorkMode? LocationPref { get; private set; }
-
-    public string? City { get; private set; }
-
-    public string? Country { get; private set; }
-
-    public short? MinOverlapHours { get; private set; }
-
-    public string? Description { get; private set; }
-
-    public string? Responsibilities { get; private set; }
-
-    public IReadOnlyCollection<string> SkillRequirements =>
-        _skillRequirements.AsReadOnly();
-
-    public JobStatus Status { get; private set; } = JobStatus.Draft;
-
-    public DateTime? ExpiresAt { get; private set; }
-
-    public void UpdateDetails(
+    public static Job CreateDraft(
         string title,
         string companyName,
-        EmploymentType? roleType,
-        ExperienceLevel? experienceLevel,
-        WorkMode? locationPref,
-        string? city,
-        string? country,
-        short? minOverlapHours,
+        string description,
+        EmploymentType employmentType,
+        ExperienceLevel experienceLevel,
+        string location,
+        WorkArrangement workArrangement,
+        List<string> requiredSkills,
+        int vacancies,
+        DateTime expireAt
+    )
+    {
+        var job = new Job
+        {
+            Title = title.Trim(),
+            CompanyName = companyName.Trim(),
+            Description = description.Trim(),
+            EmploymentType = employmentType,
+            ExperienceLevel = experienceLevel,
+            Location = location.Trim(),
+            WorkArrangement = workArrangement,
+            RequiredSkills = requiredSkills?.Where(s => !string.IsNullOrWhiteSpace(s))
+                                             .Select(s => s.Trim())
+                                             .Distinct(StringComparer.OrdinalIgnoreCase)
+                                             .ToList() ?? new List<string>(),
+            Vacancies = vacancies,
+            ExpireAt = expireAt,
+            Status = JobStatus.Draft,
+            CreatedAt = DateTime.UtcNow
+        };
+        return job;
+    }
+
+    // Partial update: a null argument leaves the corresponding field unchanged.
+    public void UpdateDetails(
+        string? title,
+        string? companyName,
         string? description,
-        string? responsibilities,
-        IEnumerable<string>? skills,
-        DateTime? expiresAt)
+        EmploymentType? employmentType,
+        ExperienceLevel? experienceLevel,
+        string? location,
+        WorkArrangement? workArrangement,
+        List<string>? requiredSkills,
+        int? vacancies,
+        DateTime? expireAt
+    )
     {
-        if (string.IsNullOrWhiteSpace(title))
-            throw new ArgumentException(
-                "Job title is required.",
-                nameof(title));
-
-        if (string.IsNullOrWhiteSpace(companyName))
-            throw new ArgumentException(
-                "Company name is required.",
-                nameof(companyName));
-
-        Title = title.Trim();
-        CompanyName = companyName.Trim();
-
-        RoleType = roleType;
-        ExperienceLevel = experienceLevel;
-        LocationPref = locationPref;
-
-        City = city?.Trim();
-        Country = country?.Trim();
-
-        MinOverlapHours = minOverlapHours;
-
-        Description = description;
-        Responsibilities = responsibilities;
-
-        ExpiresAt = expiresAt;
-
-        _skillRequirements.Clear();
-
-        if (skills is not null)
+        if (title != null) Title = title.Trim();
+        if (companyName != null) CompanyName = companyName.Trim();
+        if (description != null) Description = description.Trim();
+        if (employmentType.HasValue) EmploymentType = employmentType.Value;
+        if (experienceLevel.HasValue) ExperienceLevel = experienceLevel.Value;
+        if (location != null) Location = location.Trim();
+        if (workArrangement.HasValue) WorkArrangement = workArrangement.Value;
+        if (requiredSkills != null)
         {
-            foreach (var skill in skills)
-            {
-                AddSkillInternal(skill);
-            }
+            RequiredSkills = requiredSkills.Where(s => !string.IsNullOrWhiteSpace(s))
+                                            .Select(s => s.Trim())
+                                            .Distinct(StringComparer.OrdinalIgnoreCase)
+                                            .ToList();
         }
+        if (vacancies.HasValue) Vacancies = vacancies.Value;
+        if (expireAt.HasValue) ExpireAt = expireAt.Value;
 
-        Touch();
-    }
-
-    public void AddSkill(string skill)
-    {
-        AddSkillInternal(skill);
-        Touch();
-    }
-
-    public void RemoveSkill(string skill)
-    {
-        if (string.IsNullOrWhiteSpace(skill))
-            return;
-
-        var existingSkill = _skillRequirements
-            .FirstOrDefault(s =>
-                string.Equals(
-                    s,
-                    skill,
-                    StringComparison.OrdinalIgnoreCase));
-
-        if (existingSkill is null)
-            return;
-
-        _skillRequirements.Remove(existingSkill);
-        Touch();
-    }
-
-    public void Publish()
-    {
-        if (Status != JobStatus.Draft)
-            throw new InvalidOperationException(
-                "Only draft jobs can be published.");
-
-        Status = JobStatus.Published;
-        Touch();
-    }
-
-    public void Expire()
-    {
-        if (Status != JobStatus.Published)
-            throw new InvalidOperationException(
-                "Only published jobs can be expired.");
-
-        Status = JobStatus.Expired;
-        ExpiresAt = DateTime.UtcNow;
-
-        Touch();
-    }
-
-    private void AddSkillInternal(string skill)
-    {
-        if (string.IsNullOrWhiteSpace(skill))
-            throw new ArgumentException(
-                "Skill cannot be empty.",
-                nameof(skill));
-
-        skill = skill.Trim();
-
-        if (_skillRequirements.Contains(
-                skill,
-                StringComparer.OrdinalIgnoreCase))
-        {
-            return;
-        }
-
-        _skillRequirements.Add(skill);
-    }
-
-    private void Touch()
-    {
         UpdatedAt = DateTime.UtcNow;
     }
+
+
+    public void EnsureIsPublishable()
+    {
+        if (Status != JobStatus.Draft)
+            throw new InvalidOperationException("Only draft jobs can be published.");
+
+        var missing = new List<string>();
+
+        if (string.IsNullOrWhiteSpace(Title))
+            missing.Add(nameof(Title));
+
+        if (string.IsNullOrWhiteSpace(CompanyName))
+            missing.Add(nameof(CompanyName));
+
+        if (string.IsNullOrWhiteSpace(Description))
+            missing.Add(nameof(Description));
+
+        if (string.IsNullOrWhiteSpace(Location))
+            missing.Add(nameof(Location));
+
+        if (!Enum.IsDefined(EmploymentType))
+            missing.Add(nameof(EmploymentType));
+
+        if (!Enum.IsDefined(ExperienceLevel))
+            missing.Add(nameof(ExperienceLevel));
+
+        if (!Enum.IsDefined(WorkArrangement))
+            missing.Add(nameof(WorkArrangement));
+
+        if (RequiredSkills.Count == 0)
+            missing.Add(nameof(RequiredSkills));
+
+        if (Vacancies <= 0)
+            missing.Add(nameof(Vacancies));
+
+        if (ExpireAt <= DateTime.UtcNow)
+            missing.Add(nameof(ExpireAt));
+
+        if (missing.Count > 0)
+        {
+            throw new InvalidOperationException(
+                $"Job cannot be published. Invalid or missing fields: {string.Join(", ", missing)}"
+            );
+        }
+    }
+    public void Publish()
+    {
+        EnsureIsPublishable();
+
+        Status = JobStatus.Published;
+    }
 }
+

@@ -1,7 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using TalentX.Application.Common.Interfaces.Repositories;
 using TalentX.Domain.Entities;
+<<<<<<< HEAD
 using TalentX.Domain.Enums;
+=======
+>>>>>>> origin/TX26-192-employer-create-publish-job
 using TalentX.Infrastructure.Persistence.Contexts;
 
 namespace TalentX.Infrastructure.Persistence.Repositories;
@@ -9,6 +12,7 @@ namespace TalentX.Infrastructure.Persistence.Repositories;
 public class JobRepository : IJobRepository
 {
     private readonly ApplicationDbContext _context;
+<<<<<<< HEAD
     
     public JobRepository(ApplicationDbContext context) => _context = context;
 
@@ -40,4 +44,26 @@ public class JobRepository : IJobRepository
                   && j.Status == JobStatus.Published
                   && (j.ExpiresAt == null || j.ExpiresAt > DateTime.UtcNow),
                 cancellationToken);
+=======
+
+    public JobRepository(ApplicationDbContext context)
+    {
+        _context = context;
+    }
+
+    public async Task<Job?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        return await _context.Set<Job>().FirstOrDefaultAsync(j => j.Id == id, cancellationToken);
+    }
+
+    public async Task AddAsync(Job job, CancellationToken cancellationToken = default)
+    {
+        await _context.Set<Job>().AddAsync(job, cancellationToken);
+    }
+
+    public void Update(Job job)
+    {
+        _context.Set<Job>().Update(job);
+    }
+>>>>>>> origin/TX26-192-employer-create-publish-job
 }
