@@ -6,8 +6,7 @@ namespace TalentX.Domain.Entities;
 
 public class Job : BaseEntity
 {
-    // TODO: user id implementation remaining — populate EmployerId from the authenticated employer once ICurrentUserService is implemented.
-    public Guid EmployerId { get; private set; }
+    public string EmployerId { get; private set; } = string.Empty;
     public string Title { get; private set; } = string.Empty;
     public string CompanyName { get; private set; } = string.Empty;
     public string Description { get; private set; } = string.Empty;
@@ -24,6 +23,7 @@ public class Job : BaseEntity
     private Job() { }
 
     public static Job CreateDraft(
+        string employerId,
         string title,
         string companyName,
         string description,
@@ -38,6 +38,7 @@ public class Job : BaseEntity
     {
         var job = new Job
         {
+            EmployerId = employerId.Trim(),
             Title = title.Trim(),
             CompanyName = companyName.Trim(),
             Description = description.Trim(),

@@ -13,12 +13,14 @@ public class CreateJobCommandHandlerTests
 {
     private readonly Mock<IJobRepository> _jobRepository = new();
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
+    private readonly Mock<ICurrentUserService> _currentUserService = new();
     private readonly CreateJobCommandHandler _handler;
 
     public CreateJobCommandHandlerTests()
     {
         _unitOfWork.SetupGet(u => u.Jobs).Returns(_jobRepository.Object);
-        _handler = new CreateJobCommandHandler(_unitOfWork.Object);
+        _currentUserService.SetupGet(u => u.UserId).Returns("employer-1");
+        _handler = new CreateJobCommandHandler(_unitOfWork.Object, _currentUserService.Object);
     }
 
     private static CreateJobCommand ValidCommand(bool publish = false) => new(
@@ -53,6 +55,7 @@ public class CreateJobCommandHandlerTests
         addedJob.Status.Should().Be(JobStatus.Draft);
         addedJob.Title.Should().Be(command.Title);
         addedJob.CompanyName.Should().Be(command.CompanyName);
+        addedJob.EmployerId.Should().Be("employer-1");
     }
 
     [Fact]

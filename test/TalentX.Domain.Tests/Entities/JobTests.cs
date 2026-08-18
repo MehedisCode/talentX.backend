@@ -7,6 +7,7 @@ namespace TalentX.Tests.Domain.Entities;
 public class JobTests
 {
     private static Job CreateValidDraft(
+        string employerId = "employer-1",
         string title = "Backend Engineer",
         string companyName = "Acme Corp",
         string description = "Build and maintain backend services.",
@@ -20,6 +21,7 @@ public class JobTests
     )
     {
         return Job.CreateDraft(
+            employerId,
             title,
             companyName,
             description,
@@ -98,6 +100,7 @@ public class JobTests
     public void CreateDraft_WithNullRequiredSkills_ResultsInEmptyList()
     {
         var job = Job.CreateDraft(
+            "employer-1",
             "Backend Engineer",
             "Acme Corp",
             "Build and maintain backend services.",
@@ -288,13 +291,11 @@ public class JobTests
     }
 
     [Fact]
-    public void EmployerId_DefaultsToEmptyGuid_UntilAuthenticationIsWiredUp()
+    public void CreateDraft_SetsEmployerIdFromArgument_Trimmed()
     {
-        // TODO in Job.cs: EmployerId isn't populated from the authenticated
-        // employer yet, so every draft currently starts with an empty Guid.
-        var job = CreateValidDraft();
+        var job = CreateValidDraft(employerId: "  employer-42  ");
 
-        job.EmployerId.Should().Be(Guid.Empty);
+        job.EmployerId.Should().Be("employer-42");
     }
 
     [Fact]

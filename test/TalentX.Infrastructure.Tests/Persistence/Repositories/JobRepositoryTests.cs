@@ -21,6 +21,7 @@ public class JobRepositoryTests
     private static Job NewJob()
     {
         return Job.CreateDraft(
+            "employer-1",
             "Backend Engineer",
             "Acme Corp",
             "Build and maintain backend services.",

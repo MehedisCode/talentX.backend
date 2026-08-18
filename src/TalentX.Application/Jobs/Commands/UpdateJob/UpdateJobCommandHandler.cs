@@ -7,17 +7,22 @@ namespace TalentX.Application.Jobs.Commands.UpdateJob;
 public class UpdateJobCommandHandler : IRequestHandler<UpdateJobCommand>
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ICurrentUserService _currentUserService;
 
-    public UpdateJobCommandHandler(IUnitOfWork unitOfWork)
+    public UpdateJobCommandHandler(IUnitOfWork unitOfWork, ICurrentUserService currentUserService)
     {
         _unitOfWork = unitOfWork;
+        _currentUserService = currentUserService;
     }
 
-    // TODO: decide whether a Published job can still be edited via this route.
+    
     public async Task Handle(UpdateJobCommand request, CancellationToken cancellationToken)
     {
         var job = await _unitOfWork.Jobs.GetByIdAsync(request.Id, cancellationToken)
             ?? throw new NotFoundException($"Job '{request.Id}' was not found.");
+
+        if (job.EmployerId != _currentUserService.UserId)
+            throw new ForbiddenException();
 
         job.UpdateDetails(
             request.Title,

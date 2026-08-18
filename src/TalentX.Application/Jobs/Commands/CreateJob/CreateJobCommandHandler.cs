@@ -8,16 +8,18 @@ namespace TalentX.Application.Jobs.Commands.CreateJob;
 public class CreateJobCommandHandler : IRequestHandler<CreateJobCommand, Guid>
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ICurrentUserService _currentUserService;
 
-    public CreateJobCommandHandler(IUnitOfWork unitOfWork)
+    public CreateJobCommandHandler(IUnitOfWork unitOfWork, ICurrentUserService currentUserService)
     {
         _unitOfWork = unitOfWork;
+        _currentUserService = currentUserService;
     }
 
-    // TODO: user id implementation remaining — resolve the authenticated employer via ICurrentUserService and pass it to Job.CreateDraft.
     public async Task<Guid> Handle(CreateJobCommand request, CancellationToken cancellationToken)
     {
         var job = Job.CreateDraft(
+            _currentUserService.UserId,
             request.Title,
             request.CompanyName,
             request.Description,

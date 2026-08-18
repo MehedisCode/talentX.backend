@@ -174,8 +174,9 @@ namespace TalentX.Infrastructure.Persistence.Migrations
                         .HasMaxLength(10000)
                         .HasColumnType("character varying(10000)");
 
-                    b.Property<Guid>("EmployerId")
-                        .HasColumnType("uuid");
+                    b.Property<string>("EmployerId")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<int>("EmploymentType")
                         .HasColumnType("integer");

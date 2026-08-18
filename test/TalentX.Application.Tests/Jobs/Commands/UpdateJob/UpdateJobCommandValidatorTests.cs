@@ -281,6 +281,38 @@ public class UpdateJobCommandValidatorTests
     }
 
     [Fact]
+    public void Validate_WithASkillThatIsASingleDigit_HasError()
+    {
+        var command = EmptyCommand() with { RequiredSkills = new List<string> { "1" } };
+
+        var result = _validator.TestValidate(command);
+
+        result.ShouldHaveValidationErrorFor("RequiredSkills[0]")
+            .WithErrorMessage("Skill entries must contain at least one letter.");
+    }
+
+    [Fact]
+    public void Validate_WithASkillMadeEntirelyOfPunctuation_HasError()
+    {
+        var command = EmptyCommand() with { RequiredSkills = new List<string> { "\"\"\"\"" } };
+
+        var result = _validator.TestValidate(command);
+
+        result.ShouldHaveValidationErrorFor("RequiredSkills[0]")
+            .WithErrorMessage("Skill entries must contain at least one letter.");
+    }
+
+    [Fact]
+    public void Validate_WithASingleLetterSkill_HasNoError()
+    {
+        var command = EmptyCommand() with { RequiredSkills = new List<string> { "R" } };
+
+        var result = _validator.TestValidate(command);
+
+        result.ShouldNotHaveValidationErrorFor("RequiredSkills[0]");
+    }
+
+    [Fact]
     public void Validate_WithExpireAtInThePast_HasError()
     {
         var command = EmptyCommand() with { ExpireAt = DateTime.UtcNow.AddDays(-1) };

@@ -7,6 +7,7 @@ using TalentX.Application.Common.Interfaces;
 using TalentX.Infrastructure.Persistence;
 using TalentX.Infrastructure.Persistence.Contexts;
 using TalentX.Infrastructure.Persistence.Repositories;
+using TalentX.Infrastructure.Services;
 
 namespace TalentX.Infrastructure;
 
@@ -27,7 +28,8 @@ public static class DependencyInjection
 
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
-        // TODO: current-user/employer identity implementation remaining (ICurrentUserService).
+        // TODO: replace with a real implementation once JWT auth is wired up.
+        services.AddScoped<ICurrentUserService, MockCurrentUserService>();
 
         return services;
     }

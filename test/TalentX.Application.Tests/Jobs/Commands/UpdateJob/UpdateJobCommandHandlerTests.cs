@@ -13,17 +13,20 @@ public class UpdateJobCommandHandlerTests
 {
     private readonly Mock<IJobRepository> _jobRepository = new();
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
+    private readonly Mock<ICurrentUserService> _currentUserService = new();
     private readonly UpdateJobCommandHandler _handler;
 
     public UpdateJobCommandHandlerTests()
     {
         _unitOfWork.SetupGet(u => u.Jobs).Returns(_jobRepository.Object);
-        _handler = new UpdateJobCommandHandler(_unitOfWork.Object);
+        _currentUserService.SetupGet(u => u.UserId).Returns("employer-1");
+        _handler = new UpdateJobCommandHandler(_unitOfWork.Object, _currentUserService.Object);
     }
 
     private static Job ExistingDraftJob()
     {
         return Job.CreateDraft(
+            "employer-1",
             "Backend Engineer",
             "Acme Corp",
             "Build and maintain backend services.",
@@ -65,6 +68,39 @@ public class UpdateJobCommandHandlerTests
             await _handler.Handle(CommandFor(id), CancellationToken.None);
         }
         catch (NotFoundException)
+        {
+            // expected — assertion below verifies no save happened.
+        }
+
+        _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_WhenCallerIsNotTheOwningEmployer_ThrowsForbiddenException()
+    {
+        var job = ExistingDraftJob();
+        _jobRepository.Setup(r => r.GetByIdAsync(job.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(job);
+        _currentUserService.SetupGet(u => u.UserId).Returns("some-other-employer");
+
+        var act = () => _handler.Handle(CommandFor(job.Id), CancellationToken.None);
+
+        await act.Should().ThrowAsync<ForbiddenException>();
+    }
+
+    [Fact]
+    public async Task Handle_WhenCallerIsNotTheOwningEmployer_DoesNotSave()
+    {
+        var job = ExistingDraftJob();
+        _jobRepository.Setup(r => r.GetByIdAsync(job.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(job);
+        _currentUserService.SetupGet(u => u.UserId).Returns("some-other-employer");
+
+        try
+        {
+            await _handler.Handle(CommandFor(job.Id), CancellationToken.None);
+        }
+        catch (ForbiddenException)
         {
             // expected — assertion below verifies no save happened.
         }

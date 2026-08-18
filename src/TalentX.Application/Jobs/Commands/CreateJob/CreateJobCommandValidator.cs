@@ -62,7 +62,9 @@ public class CreateJobCommandValidator : AbstractValidator<CreateJobCommand>
             .GreaterThanOrEqualTo(0).WithMessage("Vacancies cannot be negative.");
 
         RuleForEach(v => v.RequiredSkills)
-            .NotEmpty().WithMessage("Skill entries cannot be blank.");
+            .NotEmpty().WithMessage("Skill entries cannot be blank.")
+            .Must(skill => string.IsNullOrWhiteSpace(skill) || skill.Trim().Any(char.IsLetter))
+                .WithMessage("Skill entries must contain at least one letter.");
 
         RuleFor(v => v.ExpireAt)
             .GreaterThan(v => DateTime.UtcNow).WithMessage("Expire date must be in the future.");

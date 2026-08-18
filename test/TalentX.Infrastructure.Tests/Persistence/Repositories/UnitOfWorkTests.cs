@@ -43,6 +43,7 @@ public class UnitOfWorkTests
         await using var context = NewContext();
         var unitOfWork = new UnitOfWork(context);
         var job = TalentX.Domain.Entities.Job.CreateDraft(
+            "employer-1",
             "Backend Engineer",
             "Acme Corp",
             "Build and maintain backend services.",
