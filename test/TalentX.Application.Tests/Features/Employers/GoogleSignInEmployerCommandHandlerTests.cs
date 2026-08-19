@@ -4,6 +4,8 @@ using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Common.Interfaces.Repositories;
 using TalentX.Application.DTOs.Employers;
 using TalentX.Application.Features.Employers.Commands.GoogleSignIn;
+using TalentX.Application.Identity.Interfaces;
+using TalentX.Application.Identity.Models;
 using TalentX.Domain;
 using Xunit;
 
@@ -13,6 +15,7 @@ public sealed class GoogleSignInEmployerCommandHandlerTests
 {
     private readonly Mock<IGoogleAuthService> _googleAuthServiceMock = new();
     private readonly Mock<IExternalIdentityService> _externalIdentityServiceMock = new();
+    private readonly Mock<ITokenService> _tokenServiceMock = new();
     private readonly Mock<IUnitOfWork> _unitOfWorkMock = new();
     private readonly Mock<IEmployerRepository> _employerRepositoryMock = new();
     private readonly Mock<IMapper> _mapperMock = new();
@@ -34,10 +37,18 @@ public sealed class GoogleSignInEmployerCommandHandlerTests
                 e.CreatedAt,
                 e.UpdatedAt
             ));
+
+        _tokenServiceMock
+            .Setup(t => t.CreateAsync(It.IsAny<string>()))
+            .ReturnsAsync(IdentityResponse<TokenResponse>.Ok(new TokenResponse
+            {
+                AccessToken = "mock-access-token",
+                RefreshToken = "mock-refresh-token"
+            }));
     }
 
     [Fact]
-    public async Task Handle_SuccessfullyCreatesNewEmployer_WhenGoogleTokenIsValid()
+    public async Task Handle_SuccessfullyCreatesNewEmployer_AndReturnsTokens_WhenGoogleTokenIsValid()
     {
         // Arrange
         var command = new GoogleSignInEmployerCommand("valid-google-id-token");
@@ -58,6 +69,7 @@ public sealed class GoogleSignInEmployerCommandHandlerTests
         var handler = new GoogleSignInEmployerCommandHandler(
             _googleAuthServiceMock.Object,
             _externalIdentityServiceMock.Object,
+            _tokenServiceMock.Object,
             _unitOfWorkMock.Object,
             _mapperMock.Object
         );
@@ -67,15 +79,18 @@ public sealed class GoogleSignInEmployerCommandHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(googleUser.Email, result.Email);
-        Assert.Equal(googleUser.Name, result.Name);
+        Assert.Equal(googleUser.Email, result.Employer.Email);
+        Assert.Equal(googleUser.Name, result.Employer.Name);
+        Assert.Equal("mock-access-token", result.AccessToken);
+        Assert.Equal("mock-refresh-token", result.RefreshToken);
 
         _employerRepositoryMock.Verify(r => r.AddAsync(It.Is<Employer>(e => e.Email == googleUser.Email && e.IsVerified), It.IsAny<CancellationToken>()), Times.Once);
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _tokenServiceMock.Verify(t => t.CreateAsync("identity-user-123"), Times.Once);
     }
 
     [Fact]
-    public async Task Handle_ReturnsExistingEmployer_AndMarksVerified_WhenExistingUnverified()
+    public async Task Handle_ReturnsExistingEmployer_AndTokens_WhenExistingUnverified()
     {
         // Arrange
         var command = new GoogleSignInEmployerCommand("valid-google-id-token");
@@ -93,6 +108,7 @@ public sealed class GoogleSignInEmployerCommandHandlerTests
         var handler = new GoogleSignInEmployerCommandHandler(
             _googleAuthServiceMock.Object,
             _externalIdentityServiceMock.Object,
+            _tokenServiceMock.Object,
             _unitOfWorkMock.Object,
             _mapperMock.Object
         );
@@ -103,8 +119,12 @@ public sealed class GoogleSignInEmployerCommandHandlerTests
         // Assert
         Assert.NotNull(result);
         Assert.True(existingEmployer.IsVerified);
+        Assert.Equal("existing@google.com", result.Employer.Email);
+        Assert.Equal("mock-access-token", result.AccessToken);
+        Assert.Equal("mock-refresh-token", result.RefreshToken);
 
         _employerRepositoryMock.Verify(r => r.Update(existingEmployer), Times.Once);
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _tokenServiceMock.Verify(t => t.CreateAsync("existing-user-id"), Times.Once);
     }
 }

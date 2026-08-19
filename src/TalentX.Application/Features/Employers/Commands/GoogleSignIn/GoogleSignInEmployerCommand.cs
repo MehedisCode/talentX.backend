@@ -9,4 +9,4 @@ namespace TalentX.Application.Features.Employers.Commands.GoogleSignIn;
 /// <param name="IdToken">The JWT ID token received from the Google Sign-In client.</param>
 public sealed record GoogleSignInEmployerCommand(
     string IdToken
-) : IRequest<EmployerDto>;
+) : IRequest<AuthEmployerDto>;

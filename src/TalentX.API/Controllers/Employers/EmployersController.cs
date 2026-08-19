@@ -50,7 +50,7 @@ public sealed class EmployersController : BaseApiController
     /// <response code="401">Unauthorized Google token.</response>
     [HttpPost("google")]
     [HttpPost("google-signin")]
-    [ProducesResponseType(typeof(EmployerDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(AuthEmployerDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GoogleSignIn(
