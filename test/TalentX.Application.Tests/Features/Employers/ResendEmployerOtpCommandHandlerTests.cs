@@ -6,7 +6,7 @@ using TalentX.Application.Features.Employers.Commands.ResendOtp;
 using TalentX.Domain;
 using Xunit;
 
-namespace TalentX.Tests.Employers;
+namespace TalentX.Application.Tests.Features.Employers;
 
 public sealed class ResendEmployerOtpCommandHandlerTests
 {

@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using TalentX.Application.Common.Exceptions;
 
-namespace TalentX.Infrastructure.Middleware;
+namespace TalentX.Infrastructure.Middlewares;
 
 public sealed class GlobalExceptionMiddleware
 {
@@ -36,8 +36,7 @@ public sealed class GlobalExceptionMiddleware
         }
     }
 
-    private static async Task HandleExceptionAsync
-    (
+    private static async Task HandleExceptionAsync(
         HttpContext context,
         Exception exception
     )

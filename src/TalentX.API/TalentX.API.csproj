@@ -4,6 +4,8 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>TalentX.API</RootNamespace>
+    <AssemblyName>TalentX.API</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>
@@ -19,7 +21,7 @@
   <ItemGroup>
     <ProjectReference Include="..\TalentX.Application\TalentX.Application.csproj" />
     <ProjectReference Include="..\TalentX.Infrastructure\TalentX.Infrastructure.csproj" />
-    <ProjectReference Include="..\TalentX.Migrations.PostgreSQL\TalentX.Migrations.PostgreSQL.csproj" />
+    <ProjectReference Include="..\TalentX.Migrations\TalentX.Migrations.csproj" />
   </ItemGroup>
 
 </Project>

@@ -7,7 +7,7 @@ using TalentX.Application.Features.Employers.Commands.GoogleSignIn;
 using TalentX.Domain;
 using Xunit;
 
-namespace TalentX.Tests.Employers;
+namespace TalentX.Application.Tests.Features.Employers;
 
 public sealed class GoogleSignInEmployerCommandHandlerTests
 {

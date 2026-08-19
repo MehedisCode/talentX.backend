@@ -1,7 +1,7 @@
 using TalentX.Application.Features.Employers.Commands.CreateEmployer;
 using Xunit;
 
-namespace TalentX.Tests.Employers;
+namespace TalentX.Application.Tests.Features.Employers;
 
 public sealed class CreateEmployerCommandValidatorTests
 {

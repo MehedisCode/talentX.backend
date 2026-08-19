@@ -6,13 +6,12 @@ using TalentX.Application.Common.Behaviours;
 
 namespace TalentX.Application;
 
-public static class Startup
+public static class ApplicationStartup
 {
-    public static IServiceCollection AddApplicationServices(this IServiceCollection services)
+    public static IServiceCollection AddApplication(this IServiceCollection services)
     {
         var assembly = Assembly.GetExecutingAssembly();
 
-        // Register MediatR handlers from the Application assembly
         services.AddMediatR(cfg =>
         {
             cfg.RegisterServicesFromAssembly(assembly);
@@ -20,18 +19,14 @@ public static class Startup
             cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(ValidationBehaviour<,>));
         });
 
-        // Register all FluentValidation validators from the Application assembly
         services.AddValidatorsFromAssembly(assembly);
-
-        // Register AutoMapper profiles across assemblies
-        services.AddAutoMapper(cfg => cfg.AddMaps(AppDomain.CurrentDomain.GetAssemblies()));
 
         return services;
     }
 
     /// <summary>
-    /// Backward-compatible alias for AddApplicationServices.
+    /// Backward-compatible alias for AddApplication.
     /// </summary>
-    public static IServiceCollection AddApplication(this IServiceCollection services)
-        => services.AddApplicationServices();
+    public static IServiceCollection AddApplicationServices(this IServiceCollection services)
+        => services.AddApplication();
 }

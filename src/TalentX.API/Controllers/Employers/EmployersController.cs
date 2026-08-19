@@ -7,13 +7,15 @@ using TalentX.Application.Features.Employers.Commands.GoogleSignIn;
 using TalentX.Application.Features.Employers.Commands.ResendOtp;
 using TalentX.Application.Features.Employers.Commands.VerifyEmail;
 
-namespace TalentX.Api.Controllers.Registration;
+namespace TalentX.API.Controllers.Employers;
 
 /// <summary>
 /// Handles employer onboarding, registration, Google authentication, and email OTP verification.
 /// </summary>
+[ApiController]
+[Route("api/v1/employers")]
 [AllowAnonymous]
-public sealed class EmployersController : VersionedApiController
+public sealed class EmployersController : BaseApiController
 {
     /// <summary>
     /// Registers a new employer with an email, company name, and password. Dispatches an OTP verification email.
@@ -25,6 +27,7 @@ public sealed class EmployersController : VersionedApiController
     /// <response code="400">Validation errors.</response>
     /// <response code="409">An employer with this email is already registered.</response>
     [HttpPost]
+    [HttpPost("register")]
     [ProducesResponseType(typeof(EmployerDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
@@ -32,7 +35,7 @@ public sealed class EmployersController : VersionedApiController
         [FromBody] CreateEmployerCommand command,
         CancellationToken cancellationToken)
     {
-        var result = await Mediator.Send(command, cancellationToken);
+        var result = await Sender.Send(command, cancellationToken);
         return CreatedAtAction(nameof(CreateEmployer), new { id = result.Id }, result);
     }
 
@@ -46,6 +49,7 @@ public sealed class EmployersController : VersionedApiController
     /// <response code="400">Invalid Google ID token.</response>
     /// <response code="401">Unauthorized Google token.</response>
     [HttpPost("google")]
+    [HttpPost("google-signin")]
     [ProducesResponseType(typeof(EmployerDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -53,7 +57,7 @@ public sealed class EmployersController : VersionedApiController
         [FromBody] GoogleSignInEmployerCommand command,
         CancellationToken cancellationToken)
     {
-        var result = await Mediator.Send(command, cancellationToken);
+        var result = await Sender.Send(command, cancellationToken);
         return Ok(result);
     }
 
@@ -74,7 +78,7 @@ public sealed class EmployersController : VersionedApiController
         [FromBody] VerifyEmployerEmailCommand command,
         CancellationToken cancellationToken)
     {
-        await Mediator.Send(command, cancellationToken);
+        await Sender.Send(command, cancellationToken);
         return Ok(new { message = "Email verified successfully." });
     }
 
@@ -95,7 +99,7 @@ public sealed class EmployersController : VersionedApiController
         [FromBody] ResendEmployerOtpCommand command,
         CancellationToken cancellationToken)
     {
-        await Mediator.Send(command, cancellationToken);
+        await Sender.Send(command, cancellationToken);
         return Ok(new { message = "A new verification code has been sent to your email." });
     }
 }

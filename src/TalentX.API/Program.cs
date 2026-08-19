@@ -1,11 +1,11 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.OpenApi;
+using TalentX.API.Swagger;
 using TalentX.Application;
 using TalentX.Infrastructure;
 using TalentX.Infrastructure.Identity.Seed;
-using TalentX.Infrastructure.Middleware;
+using TalentX.Infrastructure.Middlewares;
 
-// Load .env from the backend root directory (talentx2026q3.backend/.env)
+// 1. Walk up directory tree to discover and load .env from solution root (talentx2026q3.backend/.env)
 var envFile = Path.Combine(Directory.GetCurrentDirectory(), ".env");
 var depth = 0;
 while (!File.Exists(envFile) && depth++ < 5)
@@ -31,14 +31,14 @@ if (File.Exists(envFile))
 var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddEnvironmentVariables();
 
-// Dynamic Port / Hosting URL Configuration (Support PORT or ASPNETCORE_URLS from DevOps .env)
+// 2. Dynamic Port / Hosting URL Configuration (Support PORT or ASPNETCORE_URLS from DevOps .env)
 var customPort = Environment.GetEnvironmentVariable("PORT") ?? builder.Configuration["PORT"];
 if (!string.IsNullOrWhiteSpace(customPort))
 {
     builder.WebHost.UseUrls($"http://0.0.0.0:{customPort}");
 }
 
-// Dynamic CORS Policy (Support comma-separated origins from CORS_ALLOWED_ORIGINS in .env)
+// 3. Dynamic CORS Policy (Support comma-separated origins from CORS_ALLOWED_ORIGINS in .env)
 const string CorsPolicyName = "AllowFrontend";
 var rawCors = builder.Configuration["CORS_ALLOWED_ORIGINS"]
            ?? builder.Configuration["Cors:AllowedOrigins"]
@@ -61,8 +61,10 @@ builder.Services.AddCors(options =>
     });
 });
 
-builder.Services.AddApplicationServices();
-builder.Services.AddInfrastructureServices(builder.Configuration);
+// 4. Modular Service Registrations
+builder.Services.AddApplication();
+builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddSwaggerDocumentation();
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
@@ -73,19 +75,12 @@ builder.Services.AddControllers()
         );
     });
 
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(options =>
-{
-    // Describes enums as strings in Swagger UI
-    options.UseInlineDefinitionsForEnums();
-    options.SwaggerDoc("v1", new OpenApiInfo { Title = "TalentX API", Version = "v1" });
-});
-
 var app = builder.Build();
 
+// 5. Database & Identity Seeding
 await IdentitySeeder.SeedAsync(app.Services);
 
-// Swagger enabled in Development or explicitly via ENABLE_SWAGGER=true in .env
+// 6. Swagger (Development or explicit ENABLE_SWAGGER=true in .env)
 var enableSwagger = app.Environment.IsDevelopment() || builder.Configuration.GetValue<bool>("ENABLE_SWAGGER");
 if (enableSwagger)
 {
@@ -98,8 +93,8 @@ if (!app.Environment.IsDevelopment())
     app.UseHttpsRedirection();
 }
 
-app.UseGlobalExceptionMiddleware();
-app.UseRequestLoggingMiddleware();
+// 7. Middlewares & Routing
+app.UseInfrastructureMiddlewares();
 app.UseCors(CorsPolicyName);
 app.UseAuthentication();
 app.UseAuthorization();

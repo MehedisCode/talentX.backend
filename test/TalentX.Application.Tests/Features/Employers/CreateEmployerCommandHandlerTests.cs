@@ -11,7 +11,7 @@ using TalentX.Domain;
 using TalentX.Domain.Enums;
 using Xunit;
 
-namespace TalentX.Tests.Employers;
+namespace TalentX.Application.Tests.Features.Employers;
 
 public sealed class CreateEmployerCommandHandlerTests
 {
