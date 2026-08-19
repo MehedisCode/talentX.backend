@@ -65,6 +65,7 @@ builder.Services.AddCors(options =>
 // 4. Modular Service Registrations
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerDocumentation();
 
 builder.Services.AddControllers()
