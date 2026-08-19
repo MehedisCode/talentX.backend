@@ -19,6 +19,7 @@
   <ItemGroup>
     <ProjectReference Include="..\TalentX.Application\TalentX.Application.csproj" />
     <ProjectReference Include="..\TalentX.Infrastructure\TalentX.Infrastructure.csproj" />
+    <ProjectReference Include="..\TalentX.Migrations\TalentX.Migrations.csproj" />
   </ItemGroup>
 
 </Project>
