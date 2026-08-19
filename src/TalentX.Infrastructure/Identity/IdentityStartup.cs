@@ -5,7 +5,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using TalentX.Application.Identity.Interfaces;
-using TalentX.Application.Identity.Models;
+using TalentX.Application.Identity.Services;
 using TalentX.Infrastructure.Identity.Models;
 using TalentX.Infrastructure.Identity.Services;
 using TalentX.Infrastructure.Persistence.Contexts;
@@ -62,10 +62,8 @@ public static class IdentityStartup
             };
         });
 
-        services.AddAuthorization();
-
         services.AddHttpContextAccessor();
-
+        services.AddAuthorization();
         services.AddScoped<ICurrentUserService, CurrentUserService>();
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<IIdentityService, IdentityService>();

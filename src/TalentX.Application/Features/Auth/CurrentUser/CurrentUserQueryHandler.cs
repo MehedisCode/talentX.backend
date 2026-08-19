@@ -1,6 +1,6 @@
 using MediatR;
 using TalentX.Application.Identity.Models;
-
+using TalentX.Application.Identity.Services;
 namespace TalentX.Application.Features.Auth.CurrentUser;
 
 public class CurrentUserQueryHandler

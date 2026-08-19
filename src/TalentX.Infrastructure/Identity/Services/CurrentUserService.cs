@@ -1,6 +1,6 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
-using TalentX.Application.Identity.Models;
+using TalentX.Application.Identity.Services;
 
 namespace TalentX.Infrastructure.Identity.Services;
 public class CurrentUserService : ICurrentUserService
