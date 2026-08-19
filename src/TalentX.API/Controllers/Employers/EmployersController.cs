@@ -62,24 +62,24 @@ public sealed class EmployersController : BaseApiController
     }
 
     /// <summary>
-    /// Verifies the employer's email using the 6-digit OTP code received via email.
+    /// Verifies the employer's email using the 6-digit OTP code received via email and returns JWT session tokens.
     /// </summary>
     /// <param name="command">Verification payload containing email and OTP code.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>Confirmation message.</returns>
-    /// <response code="200">Email verified successfully.</response>
+    /// <returns>The authenticated employer profile and JWT tokens.</returns>
+    /// <response code="200">Email verified successfully with JWT tokens returned.</response>
     /// <response code="400">Invalid or expired OTP code.</response>
     /// <response code="404">Employer not found.</response>
     [HttpPost("verify-email")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(AuthEmployerDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> VerifyEmail(
         [FromBody] VerifyEmployerEmailCommand command,
         CancellationToken cancellationToken)
     {
-        await Sender.Send(command, cancellationToken);
-        return Ok(new { message = "Email verified successfully." });
+        var result = await Sender.Send(command, cancellationToken);
+        return Ok(result);
     }
 
     /// <summary>
