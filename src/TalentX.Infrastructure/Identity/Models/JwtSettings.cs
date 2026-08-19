@@ -1,4 +1,4 @@
-namespace TalentX.Infrastructure.Auth;
+namespace TalentX.Infrastructure.Identity.Models;
 
 public class JwtSettings
 {

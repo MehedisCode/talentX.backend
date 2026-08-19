@@ -42,15 +42,23 @@ public static class PersistenceStartup
         var username = Environment.GetEnvironmentVariable("DB_USER_NAME")
                        ?? Environment.GetEnvironmentVariable("DB_USERNAME")
                        ?? Environment.GetEnvironmentVariable("DB_USER")
-                       ?? configuration["DB_USER_NAME"];
+                       ?? configuration["DB_USER_NAME"]
+                       ?? configuration["DB_USERNAME"];
         var password = Environment.GetEnvironmentVariable("DB_PASSWORD") ?? configuration["DB_PASSWORD"];
 
-        if (!string.IsNullOrWhiteSpace(host) &&
-            !string.IsNullOrWhiteSpace(database) &&
-            !string.IsNullOrWhiteSpace(username) &&
-            !string.IsNullOrWhiteSpace(password))
+        if (!string.IsNullOrWhiteSpace(host) && !string.IsNullOrWhiteSpace(database))
         {
-            return $"Host={host};Port={port};Database={database};Username={username};Password={password};Include Error Detail=true";
+            var builder = new Npgsql.NpgsqlConnectionStringBuilder
+            {
+                Host = host,
+                Port = int.TryParse(port, out var parsedPort) ? parsedPort : 5432,
+                Database = database,
+                Username = username ?? "postgres",
+                Password = password ?? string.Empty,
+                IncludeErrorDetail = true
+            };
+
+            return builder.ConnectionString;
         }
 
         var connStr = configuration.GetConnectionString("DefaultConnection")

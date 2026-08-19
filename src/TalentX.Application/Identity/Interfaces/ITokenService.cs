@@ -1,5 +1,6 @@
-using TalentX.Application.Common.Identity.Models;
-namespace TalentX.Application.Common.Identity.Interfaces;
+using TalentX.Application.Identity.Models;
+
+namespace TalentX.Application.Identity.Interfaces;
 
 public interface ITokenService
 {

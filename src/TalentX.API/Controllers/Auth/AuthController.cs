@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using TalentX.Application.Features.Auth.CurrentUser;
 using TalentX.Application.Features.Auth.Login;
 using TalentX.Application.Features.Auth.Logout;
 using TalentX.Application.Features.Auth.RefreshToken;
@@ -53,5 +54,17 @@ public class AuthController : BaseApiController
     {
         await Sender.Send(command);
         return Ok();
+    }
+
+    [Authorize]
+    [HttpGet("user")]
+    public async Task<IActionResult> CurrentUser()
+    {
+        var result = await Sender.Send(new CurrentUserQuery());
+
+        if (!result.Success)
+            return Unauthorized(result.Errors);
+
+        return Ok(result.Data);
     }
 }

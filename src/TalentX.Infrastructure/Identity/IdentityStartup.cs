@@ -4,8 +4,9 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
-using TalentX.Application.Common.Identity.Interfaces;
 using TalentX.Application.Common.Interfaces;
+using TalentX.Application.Identity.Interfaces;
+using TalentX.Application.Identity.Services;
 using TalentX.Infrastructure.Auth;
 using TalentX.Infrastructure.Common;
 using TalentX.Infrastructure.Identity.Models;
@@ -23,7 +24,7 @@ public static class IdentityStartup
         IConfiguration configuration
     )
     {
-        // Identity Core / Identity configuration
+        // Identity Core with Roles
         services.AddIdentity<ApplicationUser, IdentityRole>(options =>
             {
                 options.Password.RequireDigit = true;
@@ -39,6 +40,7 @@ public static class IdentityStartup
             .AddEntityFrameworkStores<ApplicationDbContext>()
             .AddDefaultTokenProviders();
 
+        // JWT Settings
         var jwtSettings = GetJwtSettings(configuration);
 
         services.Configure<JwtSettings>(options =>
@@ -66,7 +68,8 @@ public static class IdentityStartup
                 ValidateIssuerSigningKey = true,
                 ValidIssuer = jwtSettings.Issuer,
                 ValidAudience = jwtSettings.Audience,
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Secret))
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Secret)),
+                ClockSkew = TimeSpan.FromSeconds(30)
             };
 
             options.Events = new JwtBearerEvents
@@ -83,6 +86,7 @@ public static class IdentityStartup
         });
 
         services.AddHttpContextAccessor();
+        services.AddAuthorization();
 
         // Email Settings
         services.Configure<EmailSettings>(configuration.GetSection(EmailSettings.SectionName));
@@ -90,7 +94,7 @@ public static class IdentityStartup
         // AutoMapper
         services.AddAutoMapper(cfg => cfg.AddMaps(typeof(EmployerMappingProfile).Assembly));
 
-        // Application Identity & External Services
+        // Services
         services.AddScoped<IIdentityService, IdentityService>();
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<ICurrentUserService, CurrentUserService>();
@@ -102,6 +106,10 @@ public static class IdentityStartup
         return services;
     }
 
+    /// <summary>
+    /// Constructs JWT settings from environment variables (JWT_SECRET, JWT_ISSUER, JWT_AUDIENCE),
+    /// falling back to the "Jwt" configuration section in appsettings.json.
+    /// </summary>
     private static JwtSettings GetJwtSettings(IConfiguration configuration)
     {
         var secret = Environment.GetEnvironmentVariable("JWT_SECRET")
@@ -119,21 +127,22 @@ public static class IdentityStartup
                        ?? configuration["Jwt:Audience"]
                        ?? "TalentX.Client";
 
-        var accessMinutes = int.TryParse(Environment.GetEnvironmentVariable("JWT_ACCESS_TOKEN_MINUTES") ?? Environment.GetEnvironmentVariable("JWT_EXPIRY_MINUTES"), out var parsedMin)
-            ? parsedMin
-            : configuration.GetValue<int?>("Jwt:AccessTokenMinutes") ?? 15;
+        var accessMinutes = Environment.GetEnvironmentVariable("JWT_ACCESS_TOKEN_MINUTES")
+                            ?? Environment.GetEnvironmentVariable("JWT_EXPIRY_MINUTES")
+                            ?? configuration["JWT_ACCESS_TOKEN_MINUTES"]
+                            ?? configuration["Jwt:AccessTokenMinutes"];
 
-        var refreshDays = int.TryParse(Environment.GetEnvironmentVariable("JWT_REFRESH_TOKEN_EXPIRY_DAYS"), out var parsedDays)
-            ? parsedDays
-            : configuration.GetValue<int?>("Jwt:RefreshTokenExpiryDays") ?? 7;
+        var refreshDays = Environment.GetEnvironmentVariable("JWT_REFRESH_TOKEN_EXPIRY_DAYS")
+                          ?? configuration["JWT_REFRESH_TOKEN_EXPIRY_DAYS"]
+                          ?? configuration["Jwt:RefreshTokenExpiryDays"];
 
         return new JwtSettings
         {
             Secret = secret,
             Issuer = issuer,
             Audience = audience,
-            AccessTokenMinutes = accessMinutes,
-            RefreshTokenExpiryDays = refreshDays
+            AccessTokenMinutes = int.TryParse(accessMinutes, out var mins) ? mins : 15,
+            RefreshTokenExpiryDays = int.TryParse(refreshDays, out var days) ? days : 7
         };
     }
 }

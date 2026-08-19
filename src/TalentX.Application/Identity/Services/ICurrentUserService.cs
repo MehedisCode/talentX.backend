@@ -1,4 +1,4 @@
-namespace TalentX.Application.Common.Interfaces;
+namespace TalentX.Application.Identity.Services;
 
 public interface ICurrentUserService
 {

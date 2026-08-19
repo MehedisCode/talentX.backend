@@ -1,7 +1,8 @@
-using TalentX.Application.Common.Identity.Models;
+
+using TalentX.Application.Identity.Models;
 using TalentX.Domain.Enums;
 
-namespace TalentX.Application.Common.Identity.Interfaces;
+namespace TalentX.Application.Identity.Interfaces;
 
 public interface IIdentityService
 {

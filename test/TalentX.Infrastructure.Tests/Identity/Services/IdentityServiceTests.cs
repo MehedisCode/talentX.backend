@@ -1,0 +1,749 @@
+using FluentAssertions;
+using Microsoft.AspNetCore.Identity;
+using Moq;
+using TalentX.Application.Identity.Models;
+using TalentX.Domain.Enums;
+using TalentX.Infrastructure.Identity.Models;
+using TalentX.Infrastructure.Identity.Services;
+using Xunit;
+
+namespace TalentX.Infrastructure.Tests.Identity.Services;
+
+/// <summary>
+/// Unit tests for IdentityService
+/// Tests cover user creation, password validation, email management, and user deletion
+/// Uses AAA (Arrange-Act-Assert) pattern with mocked Identity components
+/// </summary>
+public class IdentityServiceTests
+{
+    private readonly Mock<UserManager<ApplicationUser>> _userManagerMock;
+    private readonly Mock<RoleManager<IdentityRole>> _roleManagerMock;
+    private readonly IdentityService _identityService;
+
+    public IdentityServiceTests()
+    {
+        _userManagerMock = new Mock<UserManager<ApplicationUser>>(
+            new Mock<IUserStore<ApplicationUser>>().Object,
+            null, null, null, null, null, null, null, null);
+
+        _roleManagerMock = new Mock<RoleManager<IdentityRole>>(
+            new Mock<IRoleStore<IdentityRole>>().Object,
+            null, null, null, null);
+
+        _identityService = new IdentityService(_userManagerMock.Object, _roleManagerMock.Object);
+    }
+
+    #region CreateApplicationUserAsync - Happy Path
+
+    [Fact]
+    public async Task CreateApplicationUserAsync_WithValidParameters_ShouldCreateUserSuccessfully()
+    {
+        // Arrange
+        var email = "newuser@example.com";
+        var password = "ValidPassword123!";
+        var role = UserRole.Employer;
+
+        var identityResult = IdentityResult.Success;
+
+        _roleManagerMock
+            .Setup(x => x.RoleExistsAsync(role.ToString()))
+            .ReturnsAsync(true);
+
+        _userManagerMock
+            .Setup(x => x.FindByEmailAsync(email))
+            .ReturnsAsync((ApplicationUser)null!);
+
+        _userManagerMock
+            .Setup(x => x.CreateAsync(It.IsAny<ApplicationUser>(), password))
+            .ReturnsAsync(identityResult);
+
+        _userManagerMock
+            .Setup(x => x.AddToRoleAsync(It.IsAny<ApplicationUser>(), role.ToString()))
+            .ReturnsAsync(identityResult);
+
+        // Act
+        var result = await _identityService.CreateApplicationUserAsync(email, password, role);
+
+        // Assert
+        result.Success.Should().BeTrue();
+        result.Errors.Should().BeEmpty();
+        result.Data.Should().NotBeNull();
+        result.Data!.UserId.Should().NotBeNullOrEmpty();
+
+        _roleManagerMock.Verify(x => x.RoleExistsAsync(role.ToString()), Times.Once);
+        _userManagerMock.Verify(x => x.FindByEmailAsync(email), Times.Once);
+        _userManagerMock.Verify(x => x.CreateAsync(It.IsAny<ApplicationUser>(), password), Times.Once);
+        _userManagerMock.Verify(x => x.AddToRoleAsync(It.IsAny<ApplicationUser>(), role.ToString()), Times.Once);
+    }
+
+    [Theory]
+    [InlineData(UserRole.Employer)]
+    [InlineData(UserRole.Talent)]
+    public async Task CreateApplicationUserAsync_WithDifferentRoles_ShouldAssignCorrectRole(UserRole role)
+    {
+        // Arrange
+        var email = "user@example.com";
+        var password = "Password123!";
+
+        _roleManagerMock
+            .Setup(x => x.RoleExistsAsync(role.ToString()))
+            .ReturnsAsync(true);
+
+        _userManagerMock
+            .Setup(x => x.FindByEmailAsync(email))
+            .ReturnsAsync((ApplicationUser)null!);
+
+        _userManagerMock
+            .Setup(x => x.CreateAsync(It.IsAny<ApplicationUser>(), password))
+            .ReturnsAsync(IdentityResult.Success);
+
+        _userManagerMock
+            .Setup(x => x.AddToRoleAsync(It.IsAny<ApplicationUser>(), role.ToString()))
+            .ReturnsAsync(IdentityResult.Success);
+
+        // Act
+        var result = await _identityService.CreateApplicationUserAsync(email, password, role);
+
+        // Assert
+        result.Success.Should().BeTrue();
+        _userManagerMock.Verify(
+            x => x.AddToRoleAsync(It.IsAny<ApplicationUser>(), role.ToString()),
+            Times.Once);
+    }
+
+    #endregion
+
+    #region CreateApplicationUserAsync - Error Conditions
+
+    [Fact]
+    public async Task CreateApplicationUserAsync_WithInvalidRole_ShouldReturnFailure()
+    {
+        // Arrange
+        var email = "user@example.com";
+        var password = "Password123!";
+        var role = UserRole.Employer;
+
+        _roleManagerMock
+            .Setup(x => x.RoleExistsAsync(role.ToString()))
+            .ReturnsAsync(false);
+
+        // Act
+        var result = await _identityService.CreateApplicationUserAsync(email, password, role);
+
+        // Assert
+        result.Success.Should().BeFalse();
+        result.Errors.Should().Contain("Invalid user role.");
+        result.Data.Should().BeNull();
+
+        _userManagerMock.Verify(x => x.FindByEmailAsync(It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task CreateApplicationUserAsync_WithDuplicateEmail_ShouldReturnFailure()
+    {
+        // Arrange
+        var email = "existing@example.com";
+        var password = "Password123!";
+        var role = UserRole.Employer;
+
+        var existingUser = new ApplicationUser { Email = email };
+
+        _roleManagerMock
+            .Setup(x => x.RoleExistsAsync(role.ToString()))
+            .ReturnsAsync(true);
+
+        _userManagerMock
+            .Setup(x => x.FindByEmailAsync(email))
+            .ReturnsAsync(existingUser);
+
+        // Act
+        var result = await _identityService.CreateApplicationUserAsync(email, password, role);
+
+        // Assert
+        result.Success.Should().BeFalse();
+        result.Errors.Should().Contain("Email is already in use.");
+        result.Data.Should().BeNull();
+
+        _userManagerMock.Verify(x => x.CreateAsync(It.IsAny<ApplicationUser>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task CreateApplicationUserAsync_WhenUserCreationFails_ShouldReturnFailure()
+    {
+        // Arrange
+        var email = "user@example.com";
+        var password = "WeakPassword";
+        var role = UserRole.Employer;
+
+        var identityError = new IdentityError { Description = "Password too weak." };
+        var createResult = IdentityResult.Failed(identityError);
+
+        _roleManagerMock
+            .Setup(x => x.RoleExistsAsync(role.ToString()))
+            .ReturnsAsync(true);
+
+        _userManagerMock
+            .Setup(x => x.FindByEmailAsync(email))
+            .ReturnsAsync((ApplicationUser)null!);
+
+        _userManagerMock
+            .Setup(x => x.CreateAsync(It.IsAny<ApplicationUser>(), password))
+            .ReturnsAsync(createResult);
+
+        // Act
+        var result = await _identityService.CreateApplicationUserAsync(email, password, role);
+
+        // Assert
+        result.Success.Should().BeFalse();
+        result.Errors.Should().Contain("Password too weak.");
+        result.Data.Should().BeNull();
+
+        _userManagerMock.Verify(x => x.AddToRoleAsync(It.IsAny<ApplicationUser>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task CreateApplicationUserAsync_WhenRoleAssignmentFails_ShouldDeleteUserAndReturnFailure()
+    {
+        // Arrange
+        var email = "user@example.com";
+        var password = "Password123!";
+        var role = UserRole.Employer;
+
+        var user = new ApplicationUser { Id = "user-id", Email = email };
+        var roleError = new IdentityError { Description = "Failed to assign role." };
+
+        _roleManagerMock
+            .Setup(x => x.RoleExistsAsync(role.ToString()))
+            .ReturnsAsync(true);
+
+        _userManagerMock
+            .Setup(x => x.FindByEmailAsync(email))
+            .ReturnsAsync((ApplicationUser)null!);
+
+        _userManagerMock
+            .Setup(x => x.CreateAsync(It.IsAny<ApplicationUser>(), password))
+            .Callback<ApplicationUser, string>((u, p) => u.Id = user.Id)
+            .ReturnsAsync(IdentityResult.Success);
+
+        _userManagerMock
+            .Setup(x => x.AddToRoleAsync(It.IsAny<ApplicationUser>(), role.ToString()))
+            .ReturnsAsync(IdentityResult.Failed(roleError));
+
+        _userManagerMock
+            .Setup(x => x.DeleteAsync(It.IsAny<ApplicationUser>()))
+            .ReturnsAsync(IdentityResult.Success);
+
+        // Act
+        var result = await _identityService.CreateApplicationUserAsync(email, password, role);
+
+        // Assert
+        result.Success.Should().BeFalse();
+        result.Errors.Should().Contain("Failed to assign role.");
+        result.Data.Should().BeNull();
+
+        _userManagerMock.Verify(x => x.DeleteAsync(It.IsAny<ApplicationUser>()), Times.Once);
+    }
+
+    #endregion
+
+    #region ValidatePasswordAsync - Happy Path
+
+    [Fact]
+    public async Task ValidatePasswordAsync_WithValidCredentials_ShouldReturnSuccessWithUserData()
+    {
+        // Arrange
+        var email = "user@example.com";
+        var password = "ValidPassword123!";
+        var userId = "user-id";
+
+        var user = new ApplicationUser { Id = userId, Email = email };
+
+        _userManagerMock
+            .Setup(x => x.FindByEmailAsync(email))
+            .ReturnsAsync(user);
+
+        _userManagerMock
+            .Setup(x => x.IsLockedOutAsync(user))
+            .ReturnsAsync(false);
+
+        _userManagerMock
+            .Setup(x => x.CheckPasswordAsync(user, password))
+            .ReturnsAsync(true);
+
+        _userManagerMock
+            .Setup(x => x.ResetAccessFailedCountAsync(user))
+            .ReturnsAsync(IdentityResult.Success);
+
+        _userManagerMock
+            .Setup(x => x.GetRolesAsync(user))
+            .ReturnsAsync(new List<string> { "User" });
+
+        // Act
+        var result = await _identityService.ValidatePasswordAsync(email, password);
+
+        // Assert
+        result.Success.Should().BeTrue();
+        result.Errors.Should().BeEmpty();
+        result.Data.Should().NotBeNull();
+        result.Data!.UserId.Should().Be(userId);
+        result.Data.Email.Should().Be(email);
+        result.Data.Roles.Should().Contain("User");
+
+        _userManagerMock.Verify(x => x.ResetAccessFailedCountAsync(user), Times.Once);
+    }
+
+    [Fact]
+    public async Task ValidatePasswordAsync_WithCorrectPassword_ShouldResetAccessFailedCount()
+    {
+        // Arrange
+        var email = "user@example.com";
+        var password = "ValidPassword123!";
+        var userId = "user-id";
+
+        var user = new ApplicationUser { Id = userId, Email = email, AccessFailedCount = 3 };
+
+        _userManagerMock
+            .Setup(x => x.FindByEmailAsync(email))
+            .ReturnsAsync(user);
+
+        _userManagerMock
+            .Setup(x => x.IsLockedOutAsync(user))
+            .ReturnsAsync(false);
+
+        _userManagerMock
+            .Setup(x => x.CheckPasswordAsync(user, password))
+            .ReturnsAsync(true);
+
+        _userManagerMock
+            .Setup(x => x.ResetAccessFailedCountAsync(user))
+            .ReturnsAsync(IdentityResult.Success);
+
+        _userManagerMock
+            .Setup(x => x.GetRolesAsync(user))
+            .ReturnsAsync(new List<string>());
+
+        // Act
+        await _identityService.ValidatePasswordAsync(email, password);
+
+        // Assert
+        _userManagerMock.Verify(x => x.ResetAccessFailedCountAsync(user), Times.Once);
+    }
+
+    #endregion
+
+    #region ValidatePasswordAsync - Error Conditions
+
+    [Fact]
+    public async Task ValidatePasswordAsync_WithNonExistentUser_ShouldReturnFailure()
+    {
+        // Arrange
+        var email = "nonexistent@example.com";
+        var password = "Password123!";
+
+        _userManagerMock
+            .Setup(x => x.FindByEmailAsync(email))
+            .ReturnsAsync((ApplicationUser)null!);
+
+        // Act
+        var result = await _identityService.ValidatePasswordAsync(email, password);
+
+        // Assert
+        result.Success.Should().BeFalse();
+        result.Errors.Should().Contain("Invalid credentials.");
+        result.Data.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task ValidatePasswordAsync_WithLockedOutAccount_ShouldReturnFailure()
+    {
+        // Arrange
+        var email = "locked@example.com";
+        var password = "Password123!";
+
+        var user = new ApplicationUser { Email = email };
+
+        _userManagerMock
+            .Setup(x => x.FindByEmailAsync(email))
+            .ReturnsAsync(user);
+
+        _userManagerMock
+            .Setup(x => x.IsLockedOutAsync(user))
+            .ReturnsAsync(true);
+
+        // Act
+        var result = await _identityService.ValidatePasswordAsync(email, password);
+
+        // Assert
+        result.Success.Should().BeFalse();
+        result.Errors.Should().Contain("Account is locked out. Try again later.");
+
+        _userManagerMock.Verify(x => x.CheckPasswordAsync(It.IsAny<ApplicationUser>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ValidatePasswordAsync_WithIncorrectPassword_ShouldIncrementAccessFailedCount()
+    {
+        // Arrange
+        var email = "user@example.com";
+        var password = "WrongPassword";
+
+        var user = new ApplicationUser { Email = email };
+
+        _userManagerMock
+            .Setup(x => x.FindByEmailAsync(email))
+            .ReturnsAsync(user);
+
+        _userManagerMock
+            .Setup(x => x.IsLockedOutAsync(user))
+            .ReturnsAsync(false);
+
+        _userManagerMock
+            .Setup(x => x.CheckPasswordAsync(user, password))
+            .ReturnsAsync(false);
+
+        _userManagerMock
+            .Setup(x => x.AccessFailedAsync(user))
+            .ReturnsAsync(IdentityResult.Success);
+
+        // Act
+        var result = await _identityService.ValidatePasswordAsync(email, password);
+
+        // Assert
+        result.Success.Should().BeFalse();
+        result.Errors.Should().Contain("Invalid credentials.");
+
+        _userManagerMock.Verify(x => x.AccessFailedAsync(user), Times.Once);
+        _userManagerMock.Verify(x => x.ResetAccessFailedCountAsync(It.IsAny<ApplicationUser>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ValidatePasswordAsync_ShouldNotResetCountOnIncorrectPassword()
+    {
+        // Arrange
+        var email = "user@example.com";
+        var password = "WrongPassword";
+
+        var user = new ApplicationUser { Email = email };
+
+        _userManagerMock
+            .Setup(x => x.FindByEmailAsync(email))
+            .ReturnsAsync(user);
+
+        _userManagerMock
+            .Setup(x => x.IsLockedOutAsync(user))
+            .ReturnsAsync(false);
+
+        _userManagerMock
+            .Setup(x => x.CheckPasswordAsync(user, password))
+            .ReturnsAsync(false);
+
+        _userManagerMock
+            .Setup(x => x.AccessFailedAsync(user))
+            .ReturnsAsync(IdentityResult.Success);
+
+        // Act
+        await _identityService.ValidatePasswordAsync(email, password);
+
+        // Assert
+        _userManagerMock.Verify(x => x.ResetAccessFailedCountAsync(It.IsAny<ApplicationUser>()), Times.Never);
+    }
+
+    #endregion
+
+    #region GetApplicationUserEmailByUserIdAsync - Happy Path
+
+    [Fact]
+    public async Task GetApplicationUserEmailByUserIdAsync_WithValidUserId_ShouldReturnEmail()
+    {
+        // Arrange
+        var userId = "user-123";
+        var email = "user@example.com";
+
+        var user = new ApplicationUser { Id = userId, Email = email };
+
+        _userManagerMock
+            .Setup(x => x.FindByIdAsync(userId))
+            .ReturnsAsync(user);
+
+        // Act
+        var result = await _identityService.GetApplicationUserEmailByUserIdAsync(userId);
+
+        // Assert
+        result.Success.Should().BeTrue();
+        result.Errors.Should().BeEmpty();
+        result.Data.Should().Be(email);
+    }
+
+    #endregion
+
+    #region GetApplicationUserEmailByUserIdAsync - Error Conditions
+
+    [Fact]
+    public async Task GetApplicationUserEmailByUserIdAsync_WithNonExistentUserId_ShouldReturnFailure()
+    {
+        // Arrange
+        var userId = "nonexistent-id";
+
+        _userManagerMock
+            .Setup(x => x.FindByIdAsync(userId))
+            .ReturnsAsync((ApplicationUser)null!);
+
+        // Act
+        var result = await _identityService.GetApplicationUserEmailByUserIdAsync(userId);
+
+        // Assert
+        result.Success.Should().BeFalse();
+        result.Errors.Should().Contain("User not found.");
+        result.Data.Should().BeNull();
+    }
+
+    #endregion
+
+    #region UpdateApplicationUserEmailAsync - Happy Path
+
+    [Fact]
+    public async Task UpdateApplicationUserEmailAsync_WithValidUserIdAndNewEmail_ShouldUpdateSuccessfully()
+    {
+        // Arrange
+        var userId = "user-123";
+        var oldEmail = "old@example.com";
+        var newEmail = "new@example.com";
+
+        var user = new ApplicationUser { Id = userId, Email = oldEmail };
+
+        _userManagerMock
+            .Setup(x => x.FindByIdAsync(userId))
+            .ReturnsAsync(user);
+
+        _userManagerMock
+            .Setup(x => x.GenerateChangeEmailTokenAsync(user, newEmail))
+            .ReturnsAsync("change-token");
+
+        _userManagerMock
+            .Setup(x => x.ChangeEmailAsync(user, newEmail, "change-token"))
+            .ReturnsAsync(IdentityResult.Success);
+
+        _userManagerMock
+            .Setup(x => x.SetUserNameAsync(user, newEmail))
+            .ReturnsAsync(IdentityResult.Success);
+
+        // Act
+        var result = await _identityService.UpdateApplicationUserEmailAsync(userId, newEmail);
+
+        // Assert
+        result.Success.Should().BeTrue();
+        result.Errors.Should().BeEmpty();
+
+        _userManagerMock.Verify(x => x.ChangeEmailAsync(user, newEmail, "change-token"), Times.Once);
+        _userManagerMock.Verify(x => x.SetUserNameAsync(user, newEmail), Times.Once);
+    }
+
+    #endregion
+
+    #region UpdateApplicationUserEmailAsync - Error Conditions
+
+    [Fact]
+    public async Task UpdateApplicationUserEmailAsync_WithNonExistentUserId_ShouldReturnFailure()
+    {
+        // Arrange
+        var userId = "nonexistent-id";
+        var newEmail = "new@example.com";
+
+        _userManagerMock
+            .Setup(x => x.FindByIdAsync(userId))
+            .ReturnsAsync((ApplicationUser)null!);
+
+        // Act
+        var result = await _identityService.UpdateApplicationUserEmailAsync(userId, newEmail);
+
+        // Assert
+        result.Success.Should().BeFalse();
+        result.Errors.Should().Contain("User not found.");
+    }
+
+    [Fact]
+    public async Task UpdateApplicationUserEmailAsync_WhenChangeEmailFails_ShouldReturnFailure()
+    {
+        // Arrange
+        var userId = "user-123";
+        var newEmail = "new@example.com";
+
+        var user = new ApplicationUser { Id = userId, Email = "old@example.com" };
+        var error = new IdentityError { Description = "Email change failed." };
+
+        _userManagerMock
+            .Setup(x => x.FindByIdAsync(userId))
+            .ReturnsAsync(user);
+
+        _userManagerMock
+            .Setup(x => x.GenerateChangeEmailTokenAsync(user, newEmail))
+            .ReturnsAsync("token");
+
+        _userManagerMock
+            .Setup(x => x.ChangeEmailAsync(user, newEmail, "token"))
+            .ReturnsAsync(IdentityResult.Failed(error));
+
+        // Act
+        var result = await _identityService.UpdateApplicationUserEmailAsync(userId, newEmail);
+
+        // Assert
+        result.Success.Should().BeFalse();
+        result.Errors.Should().Contain("Email change failed.");
+
+        _userManagerMock.Verify(x => x.SetUserNameAsync(It.IsAny<ApplicationUser>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task UpdateApplicationUserEmailAsync_WhenSetUserNameFails_ShouldReturnFailure()
+    {
+        // Arrange
+        var userId = "user-123";
+        var newEmail = "new@example.com";
+
+        var user = new ApplicationUser { Id = userId, Email = "old@example.com" };
+        var error = new IdentityError { Description = "Username update failed." };
+
+        _userManagerMock
+            .Setup(x => x.FindByIdAsync(userId))
+            .ReturnsAsync(user);
+
+        _userManagerMock
+            .Setup(x => x.GenerateChangeEmailTokenAsync(user, newEmail))
+            .ReturnsAsync("token");
+
+        _userManagerMock
+            .Setup(x => x.ChangeEmailAsync(user, newEmail, "token"))
+            .ReturnsAsync(IdentityResult.Success);
+
+        _userManagerMock
+            .Setup(x => x.SetUserNameAsync(user, newEmail))
+            .ReturnsAsync(IdentityResult.Failed(error));
+
+        // Act
+        var result = await _identityService.UpdateApplicationUserEmailAsync(userId, newEmail);
+
+        // Assert
+        result.Success.Should().BeFalse();
+        result.Errors.Should().Contain("Username update failed.");
+    }
+
+    #endregion
+
+    #region DeleteApplicationUserAsync - Happy Path
+
+    [Fact]
+    public async Task DeleteApplicationUserAsync_WithValidUserId_ShouldDeleteSuccessfully()
+    {
+        // Arrange
+        var userId = "user-123";
+        var user = new ApplicationUser { Id = userId };
+
+        _userManagerMock
+            .Setup(x => x.FindByIdAsync(userId))
+            .ReturnsAsync(user);
+
+        _userManagerMock
+            .Setup(x => x.DeleteAsync(user))
+            .ReturnsAsync(IdentityResult.Success);
+
+        // Act
+        var result = await _identityService.DeleteApplicationUserAsync(userId);
+
+        // Assert
+        result.Success.Should().BeTrue();
+        result.Errors.Should().BeEmpty();
+
+        _userManagerMock.Verify(x => x.DeleteAsync(user), Times.Once);
+    }
+
+    #endregion
+
+    #region DeleteApplicationUserAsync - Error Conditions
+
+    [Fact]
+    public async Task DeleteApplicationUserAsync_WithNonExistentUserId_ShouldReturnFailure()
+    {
+        // Arrange
+        var userId = "nonexistent-id";
+
+        _userManagerMock
+            .Setup(x => x.FindByIdAsync(userId))
+            .ReturnsAsync((ApplicationUser)null!);
+
+        // Act
+        var result = await _identityService.DeleteApplicationUserAsync(userId);
+
+        // Assert
+        result.Success.Should().BeFalse();
+        result.Errors.Should().Contain("User not found.");
+
+        _userManagerMock.Verify(x => x.DeleteAsync(It.IsAny<ApplicationUser>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task DeleteApplicationUserAsync_WhenDeletionFails_ShouldReturnFailure()
+    {
+        // Arrange
+        var userId = "user-123";
+        var user = new ApplicationUser { Id = userId };
+
+        var error = new IdentityError { Description = "Delete operation failed." };
+
+        _userManagerMock
+            .Setup(x => x.FindByIdAsync(userId))
+            .ReturnsAsync(user);
+
+        _userManagerMock
+            .Setup(x => x.DeleteAsync(user))
+            .ReturnsAsync(IdentityResult.Failed(error));
+
+        // Act
+        var result = await _identityService.DeleteApplicationUserAsync(userId);
+
+        // Assert
+        result.Success.Should().BeFalse();
+        result.Errors.Should().Contain("Delete operation failed.");
+    }
+
+    #endregion
+
+    #region Boundary Value Tests
+
+    [Theory]
+    [InlineData("a@b.c")]
+    [InlineData("verylongemailaddresswithlotsofcharacters@verylongdomainname.extension.com")]
+    public async Task ValidatePasswordAsync_WithBoundaryEmailValues_ShouldProcessCorrectly(string email)
+    {
+        // Arrange
+        var password = "Password123!";
+        var user = new ApplicationUser { Id = "id", Email = email };
+
+        _userManagerMock
+            .Setup(x => x.FindByEmailAsync(email))
+            .ReturnsAsync(user);
+
+        _userManagerMock
+            .Setup(x => x.IsLockedOutAsync(user))
+            .ReturnsAsync(false);
+
+        _userManagerMock
+            .Setup(x => x.CheckPasswordAsync(user, password))
+            .ReturnsAsync(true);
+
+        _userManagerMock
+            .Setup(x => x.ResetAccessFailedCountAsync(user))
+            .ReturnsAsync(IdentityResult.Success);
+
+        _userManagerMock
+            .Setup(x => x.GetRolesAsync(user))
+            .ReturnsAsync(new List<string>());
+
+        // Act
+        var result = await _identityService.ValidatePasswordAsync(email, password);
+
+        // Assert
+        result.Success.Should().BeTrue();
+    }
+
+    #endregion
+}

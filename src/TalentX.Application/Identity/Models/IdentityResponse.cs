@@ -1,4 +1,4 @@
-namespace TalentX.Application.Common.Identity.Models;
+namespace TalentX.Application.Identity.Models;
 
 public class IdentityResponse
 {

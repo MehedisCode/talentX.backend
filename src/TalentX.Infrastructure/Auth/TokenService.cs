@@ -6,8 +6,8 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
-using TalentX.Application.Common.Identity.Interfaces;
-using TalentX.Application.Common.Identity.Models;
+using TalentX.Application.Identity.Interfaces;
+using TalentX.Application.Identity.Models;
 using TalentX.Infrastructure.Identity.Models;
 using TalentX.Infrastructure.Persistence.Contexts;
 

@@ -1,8 +1,8 @@
 using AutoMapper;
 using Moq;
 using TalentX.Application.Common.Exceptions;
-using TalentX.Application.Common.Identity.Interfaces;
-using TalentX.Application.Common.Identity.Models;
+using TalentX.Application.Identity.Interfaces;
+using TalentX.Application.Identity.Models;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Common.Interfaces.Repositories;
 using TalentX.Application.DTOs.Employers;
