@@ -1,7 +1,7 @@
 using AutoMapper;
 using TalentX.Domain.Entities;
 
-namespace TalentX.Application.Jobs.Queries.GetJob;
+namespace TalentX.Application.Features.Jobs.Queries.GetJob;
 
 public class JobMappingProfile : Profile
 {

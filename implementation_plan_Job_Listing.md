@@ -41,7 +41,7 @@ Your project already has a well-established architecture:
 > [!IMPORTANT]
 > 1. **PostgreSQL vs SQL Server** — Your infra uses Npgsql/PostgreSQL. The ticket says SQL Server. Should I keep PostgreSQL? *(I'm assuming yes.)*
 > 2. **Seed data** — The ticket seeds via `Program.cs` on startup. Should I add the seed data the same way, or would you prefer a migration-based seed? *(I'll use the `Program.cs` dev-only approach as the ticket suggests.)*
-> 3. **Test project location** — Your solution has `test/` (with a `.gitkeep`), but the ticket says `tests/TalentX.Tests/`. Should I use your existing `test/` folder? *(I'll use `test/TalentX.Tests/`.)*
+> 3. **Test project location** — Your solution has `test/` (with a `.gitkeep`), but the ticket says `tests/TalentX.Tests/`. Should I use your existing `test/` folder? *(I'll use `test/TalentX.Application.Tests/`.)*
 
 ## Proposed Changes
 
@@ -128,14 +128,14 @@ Your [Job.cs](file:///c:/dev/TalentX/talentx2026q3.backend/src/TalentX.Domain/En
 
 ### Test Project
 
-#### [NEW] `test/TalentX.Tests/TalentX.Tests.csproj`
+#### [NEW] `test/TalentX.Application.Tests/TalentX.Application.Tests.csproj`
 - xUnit test project referencing `TalentX.Application`
 
-#### [NEW] `test/TalentX.Tests/Jobs/GetPublishedJobsQueryTests.cs`
+#### [NEW] `test/TalentX.Application.Tests/Jobs/GetPublishedJobsQueryTests.cs`
 - Tests page clamping logic
 - Tests null return for missing job
 
-#### [NEW] `test/TalentX.Tests/Jobs/GetJobDetailsQueryTests.cs`
+#### [NEW] `test/TalentX.Application.Tests/Jobs/GetJobDetailsQueryTests.cs`
 - Tests mapping from entity to DTO
 - Tests null propagation
 
@@ -148,7 +148,7 @@ Your [Job.cs](file:///c:/dev/TalentX/talentx2026q3.backend/src/TalentX.Domain/En
 
 ### Automated Tests
 ```bash
-dotnet test test/TalentX.Tests
+dotnet test test/TalentX.Application.Tests
 ```
 
 ### Build Verification

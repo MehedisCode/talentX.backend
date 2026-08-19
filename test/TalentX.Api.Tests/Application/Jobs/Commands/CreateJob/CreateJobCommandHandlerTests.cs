@@ -3,11 +3,11 @@ using Moq;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Common.Interfaces.Repositories;
-using TalentX.Application.Jobs.Commands.CreateJob;
+using TalentX.Application.Features.Jobs.Commands.CreateJob;
 using TalentX.Domain.Entities;
 using TalentX.Domain.Enums;
 
-namespace TalentX.Api.Tests.Application.Jobs.Commands.CreateJob;
+namespace TalentX.Api.Tests.Application.Features.Jobs.Commands.CreateJob;
 
 public class CreateJobCommandHandlerTests
 {

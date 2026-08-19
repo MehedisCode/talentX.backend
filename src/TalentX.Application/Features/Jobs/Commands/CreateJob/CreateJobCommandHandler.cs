@@ -3,7 +3,7 @@ using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Domain.Entities;
 
-namespace TalentX.Application.Jobs.Commands.CreateJob;
+namespace TalentX.Application.Features.Jobs.Commands.CreateJob;
 
 public class CreateJobCommandHandler : IRequestHandler<CreateJobCommand, Guid>
 {

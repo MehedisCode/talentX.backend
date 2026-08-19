@@ -1,11 +1,11 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace TalentX.Infrastructure.Migrations
+namespace TalentX.Migrations
 {
     /// <inheritdoc />
     public partial class InitialCreate : Migration

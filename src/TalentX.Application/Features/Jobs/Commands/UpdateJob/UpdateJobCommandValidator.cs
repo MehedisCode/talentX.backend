@@ -1,7 +1,7 @@
 using System.Linq;
 using FluentValidation;
 
-namespace TalentX.Application.Jobs.Commands.UpdateJob;
+namespace TalentX.Application.Features.Jobs.Commands.UpdateJob;
 
 public class UpdateJobCommandValidator : AbstractValidator<UpdateJobCommand>
 {

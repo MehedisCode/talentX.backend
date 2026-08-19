@@ -2,7 +2,7 @@ using AutoMapper;
 using MediatR;
 using TalentX.Application.Common.Interfaces;
 
-namespace TalentX.Application.Jobs.Queries.GetJob;
+namespace TalentX.Application.Features.Jobs.Queries.GetJob;
 
 public class GetJobQueryHandler : IRequestHandler<GetJobQuery, JobDto?>
 {

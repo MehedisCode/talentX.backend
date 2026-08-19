@@ -294,7 +294,7 @@ public class JobTests
         // employer yet, so every draft currently starts with an empty Guid.
         var job = CreateValidDraft();
 
-        job.EmployerId.Should().Be(Guid.Empty);
+        job.EmployerId.Should().Be(string.Empty);
     }
 
     [Fact]

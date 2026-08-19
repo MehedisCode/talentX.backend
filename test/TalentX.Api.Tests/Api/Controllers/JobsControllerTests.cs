@@ -4,20 +4,20 @@ using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
 using TalentX.Api.Controllers;
-using TalentX.Application.Jobs.Commands.CreateJob;
-using TalentX.Application.Jobs.Commands.UpdateJob;
+using TalentX.Application.Features.Jobs.Commands.CreateJob;
+using TalentX.Application.Features.Jobs.Commands.UpdateJob;
 using TalentX.Domain.Enums;
 
 namespace TalentX.Api.Tests.Api.Controllers;
 
 public class JobsControllerTests
 {
-    private readonly Mock<IMediator> _mediator = new();
+    private readonly Mock<ISender> _sender = new();
     private readonly JobsController _controller;
 
     public JobsControllerTests()
     {
-        _controller = new JobsController(_mediator.Object);
+        _controller = new JobsController(_sender.Object);
     }
 
     private static CreateJobCommand ValidCreateCommand() => new(
@@ -39,11 +39,11 @@ public class JobsControllerTests
     {
         var command = ValidCreateCommand();
         var jobId = Guid.NewGuid();
-        _mediator.Setup(m => m.Send(command, It.IsAny<CancellationToken>())).ReturnsAsync(jobId);
+        _sender.Setup(m => m.Send(command, It.IsAny<CancellationToken>())).ReturnsAsync(jobId);
 
         await _controller.CreateJob(command);
 
-        _mediator.Verify(m => m.Send(command, It.IsAny<CancellationToken>()), Times.Once);
+        _sender.Verify(m => m.Send(command, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -51,7 +51,7 @@ public class JobsControllerTests
     {
         var command = ValidCreateCommand();
         var jobId = Guid.NewGuid();
-        _mediator.Setup(m => m.Send(command, It.IsAny<CancellationToken>())).ReturnsAsync(jobId);
+        _sender.Setup(m => m.Send(command, It.IsAny<CancellationToken>())).ReturnsAsync(jobId);
 
         var result = await _controller.CreateJob(command);
 
@@ -66,7 +66,7 @@ public class JobsControllerTests
         var routeId = Guid.NewGuid();
         var command = new UpdateJobCommand(Guid.NewGuid(), "New Title", null, null, null, null, null, null, null, null, null);
         UpdateJobCommand? sentCommand = null;
-        _mediator
+        _sender
             .Setup(m => m.Send(It.IsAny<UpdateJobCommand>(), It.IsAny<CancellationToken>()))
             .Callback<UpdateJobCommand, CancellationToken>((req, _) => sentCommand = req)
             .Returns(Task.CompletedTask);
@@ -83,7 +83,7 @@ public class JobsControllerTests
     {
         var routeId = Guid.NewGuid();
         var command = new UpdateJobCommand(Guid.NewGuid(), "New Title", null, null, null, null, null, null, null, null, null);
-        _mediator
+        _sender
             .Setup(m => m.Send(It.IsAny<UpdateJobCommand>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 

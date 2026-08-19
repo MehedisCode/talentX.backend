@@ -2,7 +2,7 @@ using MediatR;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
 
-namespace TalentX.Application.Jobs.Commands.UpdateJob;
+namespace TalentX.Application.Features.Jobs.Commands.UpdateJob;
 
 public class UpdateJobCommandHandler : IRequestHandler<UpdateJobCommand>
 {

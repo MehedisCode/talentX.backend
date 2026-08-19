@@ -36,9 +36,7 @@ builder.Services.AddSwaggerGen(options =>
         options.UseInlineDefinitionsForEnums();
     });
 
-
 var app = builder.Build();
-
 
 if (app.Environment.IsDevelopment())
 {
@@ -60,8 +58,6 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-// Development convenience only — production migrations run via the deployment
-// pipeline, not app startup.
 if (app.Environment.IsDevelopment())
 {
     using var scope = app.Services.CreateScope();

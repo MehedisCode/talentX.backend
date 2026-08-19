@@ -3,11 +3,11 @@ using Moq;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Common.Interfaces.Repositories;
-using TalentX.Application.Jobs.Commands.UpdateJob;
+using TalentX.Application.Features.Jobs.Commands.UpdateJob;
 using TalentX.Domain.Entities;
 using TalentX.Domain.Enums;
 
-namespace TalentX.Api.Tests.Application.Jobs.Commands.UpdateJob;
+namespace TalentX.Api.Tests.Application.Features.Jobs.Commands.UpdateJob;
 
 public class UpdateJobCommandHandlerTests
 {

@@ -1,7 +1,7 @@
 using MediatR;
 using TalentX.Domain.Enums;
 
-namespace TalentX.Application.Jobs.Commands.UpdateJob;
+namespace TalentX.Application.Features.Jobs.Commands.UpdateJob;
 
 public record UpdateJobCommand(
     Guid Id,

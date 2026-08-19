@@ -1,9 +1,9 @@
 using FluentAssertions;
 using FluentValidation.TestHelper;
-using TalentX.Application.Jobs.Commands.CreateJob;
+using TalentX.Application.Features.Jobs.Commands.CreateJob;
 using TalentX.Domain.Enums;
 
-namespace TalentX.Api.Tests.Application.Jobs.Commands.CreateJob;
+namespace TalentX.Api.Tests.Application.Features.Jobs.Commands.CreateJob;
 
 public class CreateJobCommandValidatorTests
 {

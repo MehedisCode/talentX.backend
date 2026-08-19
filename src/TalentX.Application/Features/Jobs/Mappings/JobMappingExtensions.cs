@@ -1,7 +1,7 @@
-using TalentX.Application.DTOs.Jobs;
+using TalentX.Application.Features.Jobs.DTOs;
 using TalentX.Domain.Entities;
 
-namespace TalentX.Application.Mappings;
+namespace TalentX.Application.Features.Jobs.Mappings;
 
 public static class JobMappingExtensions
 {

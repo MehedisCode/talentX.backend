@@ -33,7 +33,7 @@ I've made sure to commit incrementally as requested, so your history looks like 
 - Updated `Program.cs` to run EF migrations on startup in the `Development` environment and seed the data.
 
 ### Tests
-- Created an xUnit test project (`TalentX.Tests`).
+- Created an xUnit test project (`TalentX.Application.Tests`).
 - Successfully wrote and ran tests for pagination bounds and missing entity propagation.
 
 ## Verification Run
@@ -41,10 +41,10 @@ I've made sure to commit incrementally as requested, so your history looks like 
 All tests run flawlessly:
 
 ```bash
-Test run for C:\dev\TalentX\talentx2026q3.backend\test\TalentX.Tests\bin\Debug\net10.0\TalentX.Tests.dll (.NETCoreApp,Version=v10.0)
+Test run for C:\dev\TalentX\talentx2026q3.backend\test\TalentX.Application.Tests\bin\Debug\net10.0\TalentX.Application.Tests.dll (.NETCoreApp,Version=v10.0)
 A total of 1 test files matched the specified pattern.
 
-Passed!  - Failed:     0, Passed:     6, Skipped:     0, Total:     6, Duration: 194 ms - TalentX.Tests.dll (net10.0)
+Passed!  - Failed:     0, Passed:     6, Skipped:     0, Total:     6, Duration: 194 ms - TalentX.Application.Tests.dll (net10.0)
 ```
 
 The feature branch `feat/TX26-193-job-listing` is now clean, tested, and ready for you to create a pull request! Let me know if you want me to spin up the API or perform further manual API testing.

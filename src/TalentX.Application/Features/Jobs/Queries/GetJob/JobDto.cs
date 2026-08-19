@@ -1,6 +1,6 @@
 using TalentX.Domain.Enums;
 
-namespace TalentX.Application.Jobs.Queries.GetJob;
+namespace TalentX.Application.Features.Jobs.Queries.GetJob;
 
 public class JobDto
 {

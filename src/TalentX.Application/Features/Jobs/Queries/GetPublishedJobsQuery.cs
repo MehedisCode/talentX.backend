@@ -1,8 +1,8 @@
 using MediatR;
 using TalentX.Application.Common;
 using TalentX.Application.Common.Interfaces;
-using TalentX.Application.DTOs.Jobs;
-using TalentX.Application.Mappings;
+using TalentX.Application.Features.Jobs.DTOs;
+using TalentX.Application.Features.Jobs.Mappings;
 
 namespace TalentX.Application.Features.Jobs.Queries;
 

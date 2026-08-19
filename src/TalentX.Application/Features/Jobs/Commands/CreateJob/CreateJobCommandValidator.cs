@@ -1,7 +1,7 @@
 using System.Linq;
 using FluentValidation;
 
-namespace TalentX.Application.Jobs.Commands.CreateJob;
+namespace TalentX.Application.Features.Jobs.Commands.CreateJob;
 
 public class CreateJobCommandValidator : AbstractValidator<CreateJobCommand>
 {

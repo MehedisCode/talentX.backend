@@ -1,4 +1,4 @@
-namespace TalentX.Application.DTOs.Jobs;
+namespace TalentX.Application.Features.Jobs.DTOs;
 
 public class JobListItemDto
 {

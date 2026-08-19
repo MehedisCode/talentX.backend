@@ -1,18 +1,16 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using TalentX.Application.Features.Jobs.Queries;
-using TalentX.Application.Jobs.Commands.CreateJob;
-using TalentX.Application.Jobs.Commands.UpdateJob;
+using TalentX.Application.Features.Jobs.Commands.CreateJob;
+using TalentX.Application.Features.Jobs.Commands.UpdateJob;
 
 namespace TalentX.Api.Controllers;
 
-[ApiController]
-[Route("api/v1/[controller]")]
-public class JobsController : ControllerBase
+public class JobsController : BaseController
 {
-    private readonly IMediator _mediator;
-
-    public JobsController(IMediator mediator) => _mediator = mediator;
+    public JobsController(ISender sender) : base(sender)
+    {
+    }
 
     [HttpGet]
     public async Task<IActionResult> GetJobs(
@@ -20,14 +18,14 @@ public class JobsController : ControllerBase
         [FromQuery] int pageSize = 20,
         CancellationToken cancellationToken = default)
     {
-        var result = await _mediator.Send(new GetPublishedJobsQuery(page, pageSize), cancellationToken);
+        var result = await Sender.Send(new GetPublishedJobsQuery(page, pageSize), cancellationToken);
         return Ok(result);
     }
 
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> GetJobById(Guid id, CancellationToken cancellationToken)
     {
-        var job = await _mediator.Send(new GetJobDetailsQuery(id), cancellationToken);
+        var job = await Sender.Send(new GetJobDetailsQuery(id), cancellationToken);
         if (job is null)
             return NotFound(new { message = "Job not found" });
         return Ok(job);
@@ -37,7 +35,7 @@ public class JobsController : ControllerBase
     // [Authorize(Roles = "Employer")] // Authorization will be implemented by someone else as stated by user
     public async Task<ActionResult<Guid>> CreateJob([FromBody] CreateJobCommand command)
     {
-        var jobId = await _mediator.Send(command);
+        var jobId = await Sender.Send(command);
         return StatusCode(StatusCodes.Status201Created, jobId);
     }
 
@@ -45,7 +43,7 @@ public class JobsController : ControllerBase
     // [Authorize(Roles = "Employer")] // Authorization will be implemented by someone else as stated by user
     public async Task<IActionResult> UpdateJob(Guid id, [FromBody] UpdateJobCommand command)
     {
-        await _mediator.Send(command with { Id = id });
+        await Sender.Send(command with { Id = id });
         return NoContent();
     }
 
