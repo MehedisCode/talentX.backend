@@ -6,7 +6,7 @@ using TalentX.Application.Features.Auth.Login;
 using TalentX.Application.Features.Auth.Logout;
 using TalentX.Application.Features.Auth.RefreshToken;
 
-namespace TalentX.API.Controllers.Auth;
+namespace TalentX.API.Controllers;
 
 [ApiController]
 [Route("api/v1/[controller]")]
@@ -14,7 +14,7 @@ public class AuthController : BaseApiController
 {
     [AllowAnonymous]
     [HttpPost("login")]
-    public async Task<IActionResult> Login([FromBody] LoginCommand command)
+    public async Task<IActionResult> Login(LoginCommand command)
     {
         var result = await Sender.Send(command);
 
@@ -34,7 +34,7 @@ public class AuthController : BaseApiController
 
     [AllowAnonymous]
     [HttpPost("refresh")]
-    public async Task<IActionResult> Refresh([FromBody] RefreshTokenCommand command)
+    public async Task<IActionResult> Refresh(RefreshTokenCommand command)
     {
         var result = await Sender.Send(command);
 
@@ -50,7 +50,7 @@ public class AuthController : BaseApiController
 
     [AllowAnonymous]
     [HttpPost("logout")]
-    public async Task<IActionResult> Logout([FromBody] LogoutCommand command)
+    public async Task<IActionResult> Logout(LogoutCommand command)
     {
         await Sender.Send(command);
         return Ok();

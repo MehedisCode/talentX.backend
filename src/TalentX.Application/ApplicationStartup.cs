@@ -12,21 +12,12 @@ public static class ApplicationStartup
     {
         var assembly = Assembly.GetExecutingAssembly();
 
-        services.AddMediatR(cfg =>
-        {
-            cfg.RegisterServicesFromAssembly(assembly);
-            cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(LoggingBehaviour<,>));
-            cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(ValidationBehaviour<,>));
-        });
-
+        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(assembly));
         services.AddValidatorsFromAssembly(assembly);
+
+        services.AddTransient(typeof(IPipelineBehavior<,>), typeof(LoggingBehaviour<,>));
+        services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehaviour<,>));
 
         return services;
     }
-
-    /// <summary>
-    /// Backward-compatible alias for AddApplication.
-    /// </summary>
-    public static IServiceCollection AddApplicationServices(this IServiceCollection services)
-        => services.AddApplication();
 }

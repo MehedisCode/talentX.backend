@@ -1,10 +1,11 @@
 namespace TalentX.Infrastructure.Identity.Models;
 
-public class JwtSettings
+public sealed class JwtSettings
 {
-    public string Secret { get; set; } = string.Empty;
-    public string Issuer { get; set; } = string.Empty;
-    public string Audience { get; set; } = string.Empty;
+    public const string SectionName = "Jwt";
+    public string Secret { get; set; } = default!;
+    public string Issuer { get; set; } = default!;
+    public string Audience { get; set; } = default!;
     public int AccessTokenMinutes { get; set; } = 15;
     public int RefreshTokenExpiryDays { get; set; } = 7;
 }

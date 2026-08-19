@@ -11,7 +11,7 @@ using TalentX.Application.Identity.Models;
 using TalentX.Infrastructure.Identity.Models;
 using TalentX.Infrastructure.Persistence.Contexts;
 
-namespace TalentX.Infrastructure.Auth;
+namespace TalentX.Infrastructure.Identity.Services;
 
 public class TokenService : ITokenService
 {

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -8,15 +9,15 @@ namespace TalentX.API.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/v1/[controller]")]
-[Route("[controller]")]
 [AllowAnonymous]
-public sealed class HealthController : BaseApiController
+public sealed class HealthController : ControllerBase
 {
     private static readonly DateTimeOffset ProcessStartTime = DateTimeOffset.UtcNow;
 
     /// <summary>
     /// Returns the health status, server date/time (UTC), and server uptime.
     /// </summary>
+    /// <returns>Health and diagnostic information.</returns>
     [HttpGet]
     public IActionResult Health()
     {
