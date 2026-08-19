@@ -1,87 +1,93 @@
-# Authentication API (`/api/v1/auth`)
+# Authentication API
 
-Controller: [`AuthController`](file:///Users/jubair/Developer/asthait/talentx/talentx2026q3.backend/src/TalentX.Api/Controllers/AuthController.cs)
-
-Manages standard email/password authentication sessions, cookie management, silent token rotation, and current session inspection.
+The Authentication API provides endpoints for user login, token refresh, session logout, and retrieving current user profile information.
 
 ---
 
 ## 1. User Login
 
-Validates credentials against ASP.NET Core Identity, generates a JWT Access Token and Refresh Token, stores them in secure **HttpOnly cookies**, and returns user metadata.
+Authenticates user credentials and returns JWT access and refresh tokens.
 
-- **URL**: `/api/v1/auth/login`
-- **Method**: `POST`
-- **Headers**: `Content-Type: application/json`
+* **Method**: `POST`
+* **Route**: `/api/v1/auth/login`
+* **Auth**: Public (`[AllowAnonymous]`)
 
 ### Request Body
 ```json
 {
-  "email": "sarah@cyberdyne.ai",
-  "password": "SecurePassword123!"
+  "email": "employer@talentx.com",
+  "password": "Password123!"
 }
 ```
 
-### Response `200 OK`
-- **Set-Cookie Headers**:
-  - `TalentXAccessToken=<token>; HttpOnly; Secure; SameSite=None; Max-Age=900; Path=/`
-  - `TalentXRefreshToken=<token>; HttpOnly; Secure; SameSite=None; Max-Age=604800; Path=/`
-- **Body**:
+### Response (`200 OK`)
 ```json
 {
-  "userId": "d7b4e3e2-8b41-48e2-b7b5-1234567890ab",
-  "email": "sarah@cyberdyne.ai"
+  "userId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "email": "employer@talentx.com",
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6...",
+  "refreshToken": "4a71b2d0..."
 }
 ```
 
-### Error Responses:
-- `401 Unauthorized`: Invalid email or password.
+### Error Responses
+* `400 Bad Request`: Validation failure.
+* `401 Unauthorized`: Invalid credentials.
 
 ---
 
-## 2. Refresh Token Session
+## 2. Refresh Token
 
-Silently rotates the access token and refresh token using the incoming `TalentXRefreshToken` cookie.
+Issues a new access token and rotated refresh token using an unexpired refresh token.
 
-- **URL**: `/api/v1/auth/refresh`
-- **Method**: `POST`
-- **Cookies Required**: `TalentXRefreshToken`
+* **Method**: `POST`
+* **Route**: `/api/v1/auth/refresh`
+* **Auth**: Public (`[AllowAnonymous]`)
 
-### Response `200 OK`
-- Re-issues fresh `TalentXAccessToken` and `TalentXRefreshToken` cookie headers.
-
-### Error Responses:
-- `401 Unauthorized`: Missing, expired, or revoked refresh token. (Clears cookies).
-
----
-
-## 3. Logout Session
-
-Revokes the refresh token in the database and wipes both authentication cookies.
-
-- **URL**: `/api/v1/auth/logout`
-- **Method**: `POST`
-
-### Response `200 OK`
-- Response clears `TalentXAccessToken` and `TalentXRefreshToken` cookies.
-
----
-
-## 4. Current User Profile
-
-Returns information about the currently authenticated session via `ICurrentUserService`.
-
-- **URL**: `/api/v1/auth/my-profile`
-- **Method**: `POST`
-
-### Response `200 OK`
+### Request Body
 ```json
 {
-  "userId": "d7b4e3e2-8b41-48e2-b7b5-1234567890ab",
-  "email": "sarah@cyberdyne.ai",
+  "refreshToken": "4a71b2d0..."
+}
+```
+
+### Response (`200 OK`)
+```json
+{
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6...",
+  "refreshToken": "8f33c1a9..."
+}
+```
+
+---
+
+## 3. Current User Profile
+
+Returns profile and role claims for the currently authenticated caller.
+
+* **Method**: `GET`
+* **Route**: `/api/v1/auth/user`
+* **Auth**: Required (`[Authorize]`)
+* **Headers**: `Authorization: Bearer <access_token>`
+
+### Response (`200 OK`)
+```json
+{
+  "userId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "email": "employer@talentx.com",
   "roles": [
     "Employer"
-  ],
-  "isAuthenticated": true
+  ]
 }
 ```
+
+---
+
+## 4. User Logout
+
+Invalidates active user refresh tokens.
+
+* **Method**: `POST`
+* **Route**: `/api/v1/auth/logout`
+* **Auth**: Public / Bearer
+* **Response**: `200 OK`

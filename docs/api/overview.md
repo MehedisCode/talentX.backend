@@ -1,53 +1,56 @@
-# API Specifications & Standards
+# API Overview
 
-The TalentX API is a RESTful web service built with ASP.NET Core (.NET 10). It utilizes standard HTTP methods, JSON payloads, and predictable HTTP status codes.
-
----
-
-## 🌐 Base URL & Versioning
-
-All API endpoints follow URL-based versioning:
-
-```
-http://localhost:5000/api/v1/[controller]
-https://api.talentx.com/api/v1/[controller]
-```
-
-- **Local Development Port**: Dynamic port via `PORT` environment variable (defaults to `5000` or `5152` in `launchSettings.json`).
-- **Interactive Swagger / OpenAPI UI**: `http://localhost:5000/swagger` (Enabled in Development).
+The TalentX REST API is built on **ASP.NET Core (.NET 10)** following RESTful design principles and JSON formatting standards.
 
 ---
 
-## 📋 Available Controller Modules
+## 🌐 Base URL & Routing
 
-| Controller | Route | Documentation | Description |
+* **Base URL**: `http://localhost:5035/api/v1` (or configured `PORT` in `.env`)
+* **Swagger UI**: `http://localhost:5035/swagger`
+* **Health Endpoint**: `http://localhost:5035/health` or `http://localhost:5035/api/v1/health`
+
+---
+
+## 📋 API Endpoints Index
+
+### 1. Employers API (`/api/v1/employers`)
+| Method | Endpoint | Description | Auth Required |
 | :--- | :--- | :--- | :--- |
-| **Employers** | `/api/v1/employers` | [employers.md](employers.md) | Employer registration, Google sign-in, OTP verification, resend OTP. |
-| **Auth** | `/api/v1/auth` | [auth.md](auth.md) | Password authentication, token refreshing, session logout, current user profile. |
-| **Health** | `/api/v1/health` | [health.md](health.md) | Service uptime, server datetime (UTC), diagnostics. |
+| `POST` | `/api/v1/employers/register` | Register new employer account & dispatch OTP | No |
+| `POST` | `/api/v1/employers/verify-email` | Verify email with 6-digit OTP | No |
+| `POST` | `/api/v1/employers/resend-otp` | Resend fresh 6-digit OTP code | No |
+| `POST` | `/api/v1/employers/google` | Google OAuth sign-in / registration with ID token | No |
+
+### 2. Authentication API (`/api/v1/auth`)
+| Method | Endpoint | Description | Auth Required |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/api/v1/auth/login` | Authenticate with email/password and obtain JWT | No |
+| `POST` | `/api/v1/auth/refresh` | Refresh access token using refresh token | No |
+| `POST` | `/api/v1/auth/logout` | Logout and invalidate refresh token | No |
+| `GET` | `/api/v1/auth/user` | Get current authenticated user details | **Yes (`Bearer`)** |
+
+### 3. Diagnostics & Health (`/api/v1/health`)
+| Method | Endpoint | Description | Auth Required |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/health` / `/api/v1/health` | Server health status, UTC timestamp & uptime | No |
 
 ---
 
-## 🔒 Authentication & Headers
-
-Protected endpoints require a valid JWT Access Token.
-- In browser clients: Tokens are delivered automatically via **HttpOnly Secure Cookies** (`TalentXAccessToken`).
-- In non-browser / external clients: Standard Authorization header can be supplied:
-  ```http
-  Authorization: Bearer <jwt-token>
-  ```
+## 🔐 Authorization Header Format
+For protected endpoints, include the JWT token in the `Authorization` request header:
+```http
+Authorization: Bearer <access_token_here>
+```
 
 ---
 
-## 📦 Standard HTTP Status Codes
-
-| Code | Status | Meaning |
-| :---: | :--- | :--- |
-| `200` | **OK** | Request succeeded; response contains the requested resource. |
-| `201` | **Created** | Resource created successfully (e.g. initial employer registration). |
-| `400` | **Bad Request** | Validation failed, missing required fields, or invalid format. |
-| `401` | **Unauthorized** | Missing, expired, or invalid authentication credentials. |
-| `403` | **Forbidden** | Authenticated user lacks required role/permissions. |
-| `404` | **Not Found** | The requested resource ID or email was not found. |
-| `409` | **Conflict** | Resource already exists (e.g. duplicate verified employer email). |
-| `500` | **Internal Server Error** | Unexpected server-side failure. |
+## 📄 Standard Status Codes
+* **`200 OK`**: Request succeeded with response payload.
+* **`201 Created`**: Resource created successfully.
+* **`400 Bad Request`**: Validation failure or malformed payload.
+* **`401 Unauthorized`**: Authentication missing, invalid, or expired.
+* **`403 Forbidden`**: Insufficient permissions.
+* **`404 Not Found`**: Target entity not found.
+* **`409 Conflict`**: Resource conflict (e.g., duplicate email address).
+* **`500 Internal Server Error`**: Unexpected server-side error.

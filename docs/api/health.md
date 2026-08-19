@@ -1,27 +1,25 @@
-# Health & Diagnostics API (`/api/v1/health`)
+# Health & Diagnostics API
 
-Controller: [`HealthController`](file:///Users/jubair/Developer/asthait/talentx/talentx2026q3.backend/src/TalentX.Api/Controllers/HealthController.cs)
-
-Provides uptime metrics, server date/time in UTC, and system operational health.
+The Health API provides lightweight diagnostic monitoring for uptime checks, container orchestrators (Kubernetes liveness/readiness probes), and deployment verification.
 
 ---
 
-## 1. System Health & Uptime
+## 1. System Health Check
 
-Returns the operational status, current server time, process start timestamp, and total formatted uptime.
+Returns the operational status, current UTC time, process start time, and human-readable uptime.
 
-- **URL**: `/api/v1/health`
-- **Method**: `GET`
-- **Authorization**: `[Authorize(Roles = "Employer")]` (or `[AllowAnonymous]` during load balancer probing).
+* **Method**: `GET`
+* **Route**: `/health` or `/api/v1/health`
+* **Auth**: Public (`[AllowAnonymous]`)
 
-### Response `200 OK`
+### Response (`200 OK`)
 ```json
 {
   "status": "Healthy",
-  "serverDate": "2026-08-18",
-  "serverTimeUtc": "2026-08-18T17:00:00.1234567Z",
-  "startTimeUtc": "2026-08-18T10:00:00.0000000Z",
-  "uptime": "0d 07h 00m 00s",
-  "uptimeSeconds": 25200.12
+  "serverDate": "2026-08-19",
+  "serverTimeUtc": "2026-08-19T10:30:00.123456Z",
+  "startTimeUtc": "2026-08-19T08:00:00.000000Z",
+  "uptime": "0d 02h 30m 00s",
+  "uptimeSeconds": 9000.12
 }
 ```

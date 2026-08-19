@@ -8,7 +8,7 @@ The TalentX Backend is designed using **Clean Architecture** principles and **CQ
 
 ```
                        ┌───────────────────────────────┐
-                       │          TalentX.Api          │
+                       │          TalentX.API          │
                        │   (Controllers, Routing)      │
                        └──────────────┬────────────────┘
                                       │
@@ -31,7 +31,7 @@ The TalentX Backend is designed using **Clean Architecture** principles and **CQ
                        └──────────────▲────────────────┘
                                       │
                        ┌──────────────┴────────────────┐
-                       │ TalentX.Migrations.PostgreSQL │
+                       │       TalentX.Migrations      │
                        │ (Dedicated Migrations Project)│
                        └───────────────────────────────┘
 ```
@@ -46,62 +46,65 @@ talentx2026q3.backend/
 │   ├── TalentX.Domain/                     # Pure enterprise domain layer
 │   │   ├── Common/                         # Base entities & shared domain models
 │   │   │   ├── BaseEntity.cs               # Audit fields (Id, CreatedAt, UpdatedAt)
-│   │   │   └── Enums/                      # Domain enums grouped by category
-│   │   │       └── UserEnums/
-│   │   │           └── UserRole.cs         # Platform user roles (Employer, Talent)
+│   │   │   └── Enums/                      # Domain enums (UserRole: Employer, Talent)
+│   │   │       └── UserRole.cs
 │   │   ├── Employer.cs                     # Root Employer domain entity
 │   │   └── User.cs                         # Root User domain entity
 │   │
 │   ├── TalentX.Application/                # CQRS application business logic
 │   │   ├── Common/                         # Cross-cutting application interfaces & pipelines
 │   │   │   ├── Behaviours/                 # MediatR pipeline behaviours (Logging, Validation)
-│   │   │   ├── Exceptions/                 # Domain/App exceptions (Conflict, NotFound, etc.)
-│   │   │   ├── Identity/                   # Identity interfaces & models (ITokenService, etc.)
-│   │   │   └── Interfaces/                 # Service & repository contracts
-│   │   │       └── Repositories/           # IEmployerRepository, IUserRepository, IUnitOfWork
-│   │   ├── DTOs/                           # Data Transfer Objects
-│   │   │   └── Employers/                  # EmployerDto
+│   │   │   ├── Exceptions/                 # Domain/App exceptions (AppException, Conflict, etc.)
+│   │   │   └── Interfaces/                 # Service & repository contracts (IUnitOfWork, IEmployerRepository)
+│   │   ├── DTOs/                           # Data Transfer Objects (Employers)
 │   │   ├── Features/                       # Feature slices organized by domain area
-│   │   │   ├── Auth/                       # Login, Logout, RefreshToken handlers & validators
+│   │   │   ├── Auth/                       # CurrentUser, Login, Logout, RefreshToken handlers & validators
 │   │   │   └── Employers/Commands/         # CreateEmployer, GoogleSignIn, ResendOtp, VerifyEmail
-│   │   ├── GlobalUsings.cs                 # Application-wide global using directives
-│   │   └── Startup.cs                      # Application DI service registration extensions
+│   │   ├── Identity/                       # Identity contracts & models (IIdentityService, ITokenService)
+│   │   ├── ApplicationStartup.cs           # Application DI service registration extensions (AddApplication)
+│   │   └── GlobalUsings.cs                 # Application-wide global using directives
 │   │
 │   ├── TalentX.Infrastructure/             # Technical capabilities & external implementations
-│   │   ├── Auth/                           # Auth services (CurrentUserService, GoogleAuthService, TokenService, JwtSettings)
+│   │   ├── Auth/                           # External auth (GoogleAuthService, TokenService)
 │   │   ├── Common/                         # Cross-cutting infrastructure services (OtpService)
 │   │   ├── Identity/                       # ASP.NET Core Identity setup, models & seeders
 │   │   │   ├── Configurations/             # RefreshToken entity configuration
-│   │   │   ├── Models/                     # ApplicationUser, RefreshToken
+│   │   │   ├── Models/                     # ApplicationUser, RefreshToken, JwtSettings
 │   │   │   ├── Seed/                       # IdentitySeeder (Roles, Initial Admin)
-│   │   │   └── Services/                   # IdentityService, ExternalIdentityService
+│   │   │   ├── Services/                   # IdentityService, ExternalIdentityService, CurrentUserService
+│   │   │   └── IdentityStartup.cs          # Identity DI extension (AddIdentityServices)
 │   │   ├── Mailing/                        # MailKit SMTP email service & settings
 │   │   ├── Mappings/                       # AutoMapper profiles (EmployerMappingProfile)
-│   │   ├── Middleware/                     # HTTP middlewares (GlobalException, RequestLogging) & extensions
+│   │   ├── Middlewares/                    # HTTP middlewares (ExceptionMiddleware, RequestLoggingMiddleware)
+│   │   │   └── MiddlewareStartup.cs        # Middleware pipeline extension (UseInfrastructureMiddlewares)
 │   │   ├── Persistence/                    # EF Core database access
-│   │   │   ├── Configurations/             # Entity type configurations (Employer, User)
+│   │   │   ├── Configurations/             # Entity type configurations (Employer, User, RefreshToken)
 │   │   │   ├── Contexts/                   # ApplicationDbContext
-│   │   │   └── Repositories/               # EmployerRepository, UserRepository, UnitOfWork
-│   │   ├── GlobalUsings.cs                 # Infrastructure-wide global using directives
-│   │   └── Startup.cs                      # Infrastructure DI & DbContext assembly registration
+│   │   │   ├── Repositories/               # EmployerRepository, UserRepository, UnitOfWork
+│   │   │   └── PersistenceStartup.cs       # Persistence DI extension (AddPersistence)
+│   │   ├── InfrastructureStartup.cs        # Infrastructure master DI extension (AddInfrastructure)
+│   │   └── GlobalUsings.cs                 # Infrastructure-wide global using directives
 │   │
-│   ├── TalentX.Migrations.PostgreSQL/      # Dedicated database migrations assembly
-│   │   └── Migrations/                     # EF Core migration snapshots and historical scripts
+│   ├── TalentX.Migrations/                 # Dedicated database migrations assembly
+│   │   ├── Migrations/                     # EF Core migration snapshots and historical scripts
+│   │   └── TalentX.Migrations.csproj
 │   │
-│   └── TalentX.Api/                        # Presentation & HTTP API entry point
+│   └── TalentX.API/                        # Presentation & HTTP API entry point
 │       ├── Controllers/                    # HTTP Controllers organized by module
-│       │   ├── Admin/                      # Administrative & diagnostic endpoints (HealthController)
-│       │   ├── Identity/                   # Authentication endpoints (AuthController)
-│       │   ├── Registration/               # Registration & onboarding (EmployersController)
-│       │   ├── BaseApiController.cs        # Base controller injecting ISender Mediator
-│       │   └── VersionedApiController.cs   # Versioned API controller with [Route("api/v1/[controller]")]
-│       ├── GlobalUsings.cs                 # API-wide global using directives
+│       │   ├── Auth/                       # Authentication endpoints (AuthController)
+│       │   ├── Employers/                  # Registration & onboarding (EmployersController)
+│       │   ├── BaseApiController.cs        # Base controller injecting ISender
+│       │   └── HealthController.cs         # Administrative & diagnostic endpoints
+│       ├── Swagger/                        # OpenAPI / Swagger configuration (SwaggerStartup)
 │       ├── Program.cs                      # Application bootstrapping & middleware configuration
+│       ├── TalentX.API.csproj
 │       └── appsettings.json                # Runtime configuration settings
 │
 └── test/
-    └── TalentX.Tests/                      # Automated unit testing suite
-        └── Employers/                      # Unit tests for Employer CQRS commands & validators
+    ├── TalentX.Application.Tests/          # Automated unit tests for CQRS features & validation
+    │   └── Features/                       # Unit tests for Auth & Employer CQRS commands
+    └── TalentX.Infrastructure.Tests/       # Automated unit tests for Identity, TokenService & Repositories
+        └── Identity/Services/              # IdentityServiceTests, TokenServiceTests
 ```
 
 ---
@@ -116,10 +119,10 @@ talentx2026q3.backend/
 2. **Application (`TalentX.Application`)**:
    - Depends **only on Domain**.
    - Implements CQRS via MediatR:
-     - **Commands** modify state (e.g. `CreateEmployerCommand`, `GoogleSignInEmployerCommand`, `VerifyEmployerEmailCommand`, `ResendEmployerOtpCommand`).
-     - **Queries** read state.
+     - **Commands** modify state (e.g. `CreateEmployerCommand`, `GoogleSignInEmployerCommand`, `VerifyEmployerEmailCommand`, `ResendEmployerOtpCommand`, `LoginCommand`, `LogoutCommand`, `RefreshTokenCommand`).
+     - **Queries** read state (e.g. `CurrentUserQuery`).
    - Validates all input commands using **FluentValidation** before execution.
-   - Defines abstract repository and service interfaces (`IUnitOfWork`, `IEmployerRepository`, `IOtpService`, `IIdentityService`).
+   - Defines abstract repository and service interfaces (`IUnitOfWork`, `IEmployerRepository`, `IIdentityService`, `ITokenService`).
 
 3. **Infrastructure (`TalentX.Infrastructure`)**:
    - Implements the interfaces defined in the Application layer.
@@ -130,16 +133,16 @@ talentx2026q3.backend/
      - **Mailing**: SMTP email service via MailKit / MimeKit.
      - **Common**: Thread-safe in-memory OTP engine.
      - **Mappings**: AutoMapper profile configurations.
-     - **Middleware**: Global exception handling and structured request logging.
+     - **Middleware**: Exception handling (`ExceptionMiddleware`) and structured request logging.
 
-4. **Migrations (`TalentX.Migrations.PostgreSQL`)**:
+4. **Migrations (`TalentX.Migrations`)**:
    - Dedicated EF Core migrations project maintaining database migration history.
    - Decoupled from application runtime logic to support streamlined schema evolutions.
 
-5. **API (`TalentX.Api`)**:
+5. **API (`TalentX.API`)**:
    - The presentation entry point.
-   - Configures Dependency Injection (DI) via layer `Startup.cs` extensions, registers middleware pipelines from `TalentX.Infrastructure.Middleware`, CORS, and OpenAPI.
-   - Contains slim controllers grouped by feature module inheriting from `VersionedApiController`.
+   - Configures Dependency Injection (DI) via layer `*Startup.cs` extensions, registers middleware pipelines, CORS, and OpenAPI.
+   - Contains slim controllers inheriting from `BaseApiController`.
 
 ---
 
@@ -151,7 +154,7 @@ When an HTTP request enters the system:
 [ HTTP Request ]
        │
        ▼
-1. Controller (e.g. EmployersController) receives DTO
+1. Controller (e.g. EmployersController / AuthController) receives DTO
        │
        ▼
 2. MediatR Pipeline: LoggingBehaviour (Logs execution & duration)
@@ -160,11 +163,11 @@ When an HTTP request enters the system:
 3. MediatR Pipeline: ValidationBehaviour (Runs FluentValidation)
        │   └── (If invalid, throws FluentValidation.ValidationException -> 400 Bad Request)
        ▼
-4. Command Handler executes business logic:
+4. Command / Query Handler executes business logic:
        ├── Modifies tracked Domain Entities
        ├── Uses Repositories via IUnitOfWork
        └── Calls _unitOfWork.SaveChangesAsync()
        │
        ▼
-5. Controller returns mapped DTO with appropriate HTTP status (200 OK, 201 Created)
+5. Controller returns result / DTO with appropriate HTTP status (200 OK, 201 Created)
 ```

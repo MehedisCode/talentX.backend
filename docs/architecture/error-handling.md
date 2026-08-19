@@ -1,67 +1,103 @@
 # Error Handling & Problem Details
 
-TalentX uses a centralized exception handling architecture powered by **`GlobalExceptionMiddleware`** and custom domain/application exceptions. 
-
-Errors are serialized into structured JSON responses following **RFC 7807** principles without exposing sensitive stack traces or internal infrastructure details.
+The TalentX Backend implements a standardized, centralized exception handling strategy via custom middleware and a clean application exception hierarchy.
 
 ---
 
-## 🛠️ Global Exception Middleware
+## 🏛️ Exception Handling Architecture
 
-The middleware [`GlobalExceptionMiddleware`](file:///Users/jubair/Developer/asthait/talentx/talentx2026q3.backend/src/TalentX.Api/Middlewares/GlobalExceptionMiddleware.cs) catches all uncaught exceptions thrown during request execution and translates them to HTTP status codes.
+All exceptions thrown during request execution are intercepted by [`ExceptionMiddleware`](file:///Users/jubair/Developer/asthait/talentx/talentx2026q3.backend/src/TalentX.Infrastructure/Middlewares/ExceptionMiddleware.cs) in the Infrastructure layer before reaching the client:
 
 ```
-Exception Thrown in Handler / Pipeline
-                   │
-                   ▼
-       GlobalExceptionMiddleware
-                   │
-  ┌────────────────┼────────────────┬────────────────┬────────────────┐
-  │                │                │                │                │
-  ▼                ▼                ▼                ▼                ▼
-FluentValidation  ConflictException NotFoundException Unauthorized    Unhandled
-  (400 Bad Req)    (409 Conflict)   (404 Not Found)  (401 Unauth)    (500 Error)
+[ HTTP Request ]
+       │
+       ▼
+[ ExceptionMiddleware ]
+       │
+       ├─► [ Next Middleware / Controller / MediatR Handler ]
+       │          │
+       │          └── Throws Exception
+       │                     │
+       ◄─────────────────────┘
+       ▼
+[ HandleExceptionAsync ]
+       │
+       ├── FluentValidation.ValidationException ──► HTTP 400 (Bad Request + Validation Errors)
+       ├── AppException (ConflictException)      ──► HTTP 409 (Conflict)
+       ├── AppException (NotFoundException)      ──► HTTP 404 (Not Found)
+       ├── AppException (UnauthorizedException)  ──► HTTP 401 (Unauthorized)
+       ├── AppException (ForbiddenException)     ──► HTTP 403 (Forbidden)
+       ├── AppException (BadRequestException)    ──► HTTP 400 (Bad Request)
+       └── Unhandled Exception                   ──► HTTP 500 (Internal Server Error)
 ```
 
 ---
 
-## 📊 Exception to HTTP Status Code Mapping
+## 🧱 Application Exception Hierarchy
 
-| Exception Type | HTTP Status | Response Structure | Example Scenario |
-| :--- | :---: | :--- | :--- |
-| `FluentValidation.ValidationException` | `400 Bad Request` | `{"message": "Validation Failed", "errors": ["Email is required"]}` | Invalid email format, weak password |
-| `Application.Common.Exceptions.ValidationException` | `400 Bad Request` | `{"message": "<Custom error message>"}` | Invalid or expired OTP code |
-| `Application.Common.Exceptions.UnauthorizedException` | `401 Unauthorized` | `{"message": "<Unauthorized message>"}` | Invalid Google OAuth token, bad credentials |
-| `Application.Common.Exceptions.ForbiddenException` | `403 Forbidden` | `{"message": "<Forbidden message>"}` | Accessing employer resources as candidate |
-| `Application.Common.Exceptions.NotFoundException` | `404 Not Found` | `{"message": "<Not found message>"}` | Employer ID or user record does not exist |
-| `Application.Common.Exceptions.ConflictException` | `409 Conflict` | `{"message": "<Conflict details>"}` | Employer email already registered & verified |
-| `System.Exception` (General) | `500 Internal Server Error` | `{"message": "<Sanitized error>"}` | Database timeout, unhandled runtime error |
+Located under `src/TalentX.Application/Common/Exceptions/`:
+
+```
+AppException (abstract, base class with HttpStatusCode)
+├── BadRequestException    (HTTP 400)
+├── ValidationException    (HTTP 400)
+├── UnauthorizedException  (HTTP 401)
+├── ForbiddenException     (HTTP 403)
+├── NotFoundException      (HTTP 404)
+└── ConflictException      (HTTP 409)
+```
+
+### Example: Throwing Domain/Business Exceptions in Handlers
+
+```csharp
+// Duplicate email conflict
+var existingUser = await _unitOfWork.Users.GetByEmailAsync(request.Email);
+if (existingUser != null)
+{
+    throw new ConflictException("An account with this email address already exists.");
+}
+
+// Resource not found
+var employer = await _unitOfWork.Employers.GetByIdAsync(request.EmployerId);
+if (employer == null)
+{
+    throw new NotFoundException("Employer not found.");
+}
+```
 
 ---
 
-## 🔍 Standard Error Payloads
+## 📋 Response Payloads
 
-### 1. Validation Error Response (400 Bad Request)
+### 1. Validation Error (HTTP 400 Bad Request)
 ```json
 {
   "message": "Validation Failed",
   "errors": [
-    "Email must not exceed 255 characters.",
-    "Password must contain at least one uppercase letter."
+    "Email address is required.",
+    "Password must be at least 8 characters long and contain uppercase, lowercase, digit, and special character."
   ]
 }
 ```
 
-### 2. Conflict Error Response (409 Conflict)
+### 2. Conflict Error (HTTP 409 Conflict)
 ```json
 {
-  "message": "An employer with email 'hr@acme.com' is already registered and verified. Please sign in."
+  "message": "An account with this email address already exists."
 }
 ```
 
-### 3. Not Found Error Response (404 Not Found)
+### 3. Unauthorized Error (HTTP 401 Unauthorized)
 ```json
 {
-  "message": "Employer with email 'unknown@acme.com' not found."
+  "message": "Invalid credentials."
+}
+```
+
+### 4. Internal Server Error (HTTP 500)
+In production, internal error details and stack traces are suppressed to avoid security disclosures:
+```json
+{
+  "message": "An unexpected error occurred."
 }
 ```

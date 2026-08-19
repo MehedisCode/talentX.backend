@@ -1,77 +1,88 @@
 # Database Schema & Entity Relationships
 
-TalentX uses **Entity Framework Core (Code-First)** with **PostgreSQL**. The persistence layer is encapsulated within `TalentX.Infrastructure` with migrations managed by `TalentX.Migrations.PostgreSQL`.
+The TalentX database is hosted on **PostgreSQL 16+** and managed via **Entity Framework Core 10 (Code-First)** with Table-Per-Type (TPT) inheritance mapping.
 
 ---
 
-## 🗄️ Entity Relationship Diagram
+## 🏛️ Entity Relationship Diagram
 
 ```mermaid
 erDiagram
-    ApplicationUser ||--o| Employer : "has profile"
-    ApplicationUser ||--o{ RefreshToken : "owns"
-
-    ApplicationUser {
-        string Id PK
-        string Email
-        string UserName
-        string PasswordHash
-        bool EmailConfirmed
-    }
-
-    Employer {
+    AspNetUsers ||--o{ RefreshTokens : "has many"
+    AspNetUsers ||--o{ AspNetUserRoles : "has many"
+    AspNetRoles ||--o{ AspNetUserRoles : "has many"
+    DomainUsers ||--o| Employers : "inherited by (TPT)"
+    
+    DomainUsers {
         uuid Id PK
-        string UserId FK
-        string Name
-        string Email
-        string CompanyName
-        string Role
+        varchar(200) UserId
+        varchar(120) Name
+        varchar(255) Email
+        varchar(50) Role
         boolean IsVerified
         timestamp CreatedAt
         timestamp UpdatedAt
     }
+    
+    Employers {
+        uuid Id PK, FK
+        varchar(200) CompanyName
+    }
 
-    RefreshToken {
+    AspNetUsers {
+        text Id PK
+        varchar(256) UserName
+        varchar(256) Email
+        boolean EmailConfirmed
+        text PasswordHash
+        text SecurityStamp
+        int AccessFailedCount
+        timestamp LockoutEnd
+        boolean LockoutEnabled
+    }
+
+    RefreshTokens {
         uuid Id PK
-        string UserId FK
-        string TokenHash
-        boolean IsRevoked
-        timestamp ExpiresAt
+        text ApplicationUserId FK
+        varchar(256) TokenHash
         timestamp CreatedAt
+        timestamp ExpiresAt
+        timestamp RevokedAt
     }
 ```
 
 ---
 
-## 📊 Core Tables
+## 🗄️ Database Tables Specification
 
-### 1. `DomainUsers` / `Employers` Tables (TPT Inheritance)
-- **`Id`** (`uuid`, PK): Unique domain entity identifier.
-- **`UserId`** (`varchar(200)`, Not Null): Unique ASP.NET Identity User ID.
-- **`Name`** (`varchar(120)`, Not Null): Full name.
-- **`Email`** (`varchar(255)`, Not Null, Indexed): Email address.
-- **`CompanyName`** (`varchar(200)`, Not Null): Company name (stored on `Employers` table).
-- **`Role`** (`varchar(50)`, Default `'Employer'`): User role (`Employer` or `Talent`).
-- **`IsVerified`** (`boolean`, Default `false`): Verification status (toggled true via OTP or Google OAuth).
-- **`CreatedAt`** (`timestamptz`): Creation timestamp in UTC.
-- **`UpdatedAt`** (`timestamptz`, Nullable): Last update timestamp in UTC.
-
-### 2. `RefreshTokens` Table
-- **`Id`** (`uuid`, PK): Unique token record ID.
-- **`ApplicationUserId`** (`varchar(450)`, FK): Associated Identity user ID.
-- **`TokenHash`** (`text`, Indexed): SHA256 hashed refresh token string.
-- **`RevokedAt`** (`timestamptz`, Nullable): Revocation timestamp if revoked.
-- **`ExpiresAt`** (`timestamptz`): Absolute expiry date.
-- **`CreatedAt`** (`timestamptz`): Issuance timestamp.
+### 1. `DomainUsers` (Table-per-Type Base Table)
+| Column | Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `Id` | `uuid` | `PRIMARY KEY` | Domain unique identifier |
+| `UserId` | `varchar(200)` | `NOT NULL` | Linked Identity User identifier |
+| `Name` | `varchar(120)` | `NOT NULL` | Full display name |
+| `Email` | `varchar(255)` | `NOT NULL` | Primary email address |
+| `Role` | `varchar(50)` | `NOT NULL` | User role (`Employer`, `Talent`) |
+| `IsVerified` | `boolean` | `NOT NULL, DEFAULT false` | Email verification status |
+| `CreatedAt` | `timestamptz` | `NOT NULL` | Account creation timestamp (UTC) |
+| `UpdatedAt` | `timestamptz` | `NULL` | Last modification timestamp (UTC) |
 
 ---
 
-## ⚙️ Migrations & Database Commands
+### 2. `Employers` (Table-per-Type Derived Table)
+| Column | Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `Id` | `uuid` | `PRIMARY KEY, FK -> DomainUsers(Id)` | Shared identifier with `DomainUsers` |
+| `CompanyName` | `varchar(200)` | `NOT NULL` | Employer company or organization name |
 
-```bash
-# Add a new migration (run from talentx2026q3.backend root)
-dotnet ef migrations add <MigrationName> -p src/TalentX.Migrations.PostgreSQL -s src/TalentX.Api
+---
 
-# Update database to latest migration
-dotnet ef database update -p src/TalentX.Migrations.PostgreSQL -s src/TalentX.Api
-```
+### 3. `RefreshTokens`
+| Column | Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `Id` | `uuid` | `PRIMARY KEY` | Token unique identifier |
+| `ApplicationUserId`| `varchar(256)` | `NOT NULL, FK -> AspNetUsers(Id)` | Owner user ID |
+| `TokenHash` | `varchar(256)` | `NOT NULL, UNIQUE` | SHA-256 hash of refresh token |
+| `CreatedAt` | `timestamptz` | `NOT NULL, DEFAULT CURRENT_TIMESTAMP` | Token creation timestamp |
+| `ExpiresAt` | `timestamptz` | `NOT NULL` | Token expiry timestamp (7 days) |
+| `RevokedAt` | `timestamptz` | `NULL` | Revocation timestamp if logged out |

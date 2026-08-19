@@ -1,6 +1,6 @@
 # TalentX Backend Documentation
 
-Welcome to the comprehensive technical documentation for the **TalentX Backend** solution.
+Welcome to the technical documentation for the **TalentX Backend** solution.
 
 TalentX is an AI-assisted job marketplace connecting tech companies with verified AI, ML, and engineering experts. The backend is built with **C# 13 / .NET 10** following strict **Clean Architecture**, **Domain-Driven Design (DDD)**, and **CQRS (MediatR)** patterns.
 
@@ -20,12 +20,12 @@ docs/
 ├── api/                               # REST API Endpoints Specification
 │   ├── overview.md                    # Base URLs, Versioning, Request/Response Standards
 │   ├── employers.md                   # Employer Registration, Google Sign-In, OTP Endpoints
-│   ├── auth.md                        # User Authentication, Refresh Tokens, Cookie Sessions
+│   ├── auth.md                        # User Authentication, Refresh Tokens, Current User
 │   └── health.md                      # Diagnostics & Health Monitoring
 │
 ├── database/                          # Persistence & Database Design
 │   ├── schema.md                      # EF Core Entities, Relationships & Tables
-│   └── migrations.md                  # Migrations Guide (TalentX.Migrations.PostgreSQL)
+│   └── migrations.md                  # Migrations Guide (TalentX.Migrations)
 │
 └── setup/                             # Developer Setup & Deployment
     ├── configuration.md               # Environment Variables, AppSettings, Secrets
@@ -39,11 +39,12 @@ docs/
 | Layer | Project | Purpose | Dependencies |
 | :--- | :--- | :--- | :--- |
 | **Domain** | `TalentX.Domain` | Enterprise business entities (`Employer`, `User`), domain enums (`UserRole`), base models | *None* |
-| **Application** | `TalentX.Application` | CQRS commands & validators, DTOs, interfaces, `Startup.cs` DI | Domain |
-| **Infrastructure** | `TalentX.Infrastructure` | EF Core `ApplicationDbContext`, Identity, Auth, Mappings, Middlewares, Mailing, OTP, `Startup.cs` DI | Application, Domain |
-| **Migrations** | `TalentX.Migrations.PostgreSQL` | Dedicated EF Core migrations assembly and schema snapshots | Infrastructure |
-| **API / Presentation** | `TalentX.Api` | Modular REST controllers (`Admin`, `Identity`, `Registration`), `Program.cs` pipeline | Application, Infrastructure, Migrations |
-| **Testing** | `TalentX.Tests` | Automated unit test suites (xUnit + Moq) | Application, Domain |
+| **Application** | `TalentX.Application` | CQRS commands, queries & validators, DTOs, interfaces, `ApplicationStartup.cs` DI | Domain |
+| **Infrastructure** | `TalentX.Infrastructure` | EF Core `ApplicationDbContext`, Identity, Auth, Mappings, Middlewares, Mailing, OTP, `InfrastructureStartup.cs` DI | Application, Domain |
+| **Migrations** | `TalentX.Migrations` | Dedicated EF Core PostgreSQL migrations assembly and schema snapshots | Infrastructure |
+| **API / Presentation** | `TalentX.API` | Modular REST controllers (`Employers`, `Auth`, `Health`), `Program.cs` pipeline | Application, Infrastructure, Migrations |
+| **Application Tests** | `TalentX.Application.Tests` | Automated unit tests for Application CQRS commands, queries, and validators | Application, Domain |
+| **Infrastructure Tests** | `TalentX.Infrastructure.Tests` | Automated unit tests for Identity, TokenService, and repositories | Application, Infrastructure |
 
 ---
 

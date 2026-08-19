@@ -1,86 +1,80 @@
-# Authentication & User Lifecycle Architecture
+# Authentication & User Lifecycle Flow
 
-This document details the authentication and identity model in TalentX, covering Employer Registration, Google OAuth, Email OTP verification, JWT sessions, and the JIT Talent lifecycle.
-
----
-
-## 👥 User Roles & Lifecycle Models
-
-The system defines distinct roles through `UserRole`:
-- `Employer`: Registers via `/api/v1/employers`, verifies email via 6-digit OTP, creates and manages job postings.
-- `Talent`: Job candidates. (Do **not** register via public sign-up; provisioned Just-In-Time on application).
-- `Admin`: Platform administrators.
+The TalentX Backend implements a robust authentication model utilizing **JWT Bearer Tokens**, **ASP.NET Core Identity**, **Google OAuth 2.0 (ID Tokens)**, and **Time-based OTP Email Verification**.
 
 ---
 
-## 1. Employer Registration & OTP Flow
+## 🏛️ Authentication Strategies
 
-```
-[ Frontend ]               [ Backend API / EmployersController ]          [ Infrastructure ]
-     │                                     │                                      │
-     │─── POST /api/v1/employers ─────────>│                                      │
-     │    (Name, Email, Co, Pass)          │─── Create ApplicationUser (Identity)─>│
-     │                                     │─── Add Employer Domain Entity ──────>│
-     │                                     │─── Generate 6-Digit OTP ────────────>│ (OtpService)
-     │                                     │─── Send OTP Email ──────────────────>│ (EmailService / SMTP)
-     │<── 201 Created (EmployerDto) ───────│                                      │
-     │                                     │                                      │
-     │─── POST /api/v1/employers/verify-email ─>                                  │
-     │    (Email, 6-digit OTP)             │─── Verify OTP in Memory ────────────>│
-     │                                     │─── employer.MarkAsVerified() ────────>│ (Db update)
-     │<── 200 OK ("Email verified") ───────│                                      │
-```
-
-### Key Logic & Edge Cases:
-1. **Duplicate Email Prevention**:
-   - If an employer with that email is already registered **and verified**, the system throws `ConflictException` (mapped to `409 Conflict`).
-2. **Unverified Re-Registration**:
-   - If a user registered previously but never completed OTP verification, submitting the form again updates their profile details and generates a fresh OTP code without failing.
-3. **Secure OTP Generation**:
-   - Cryptographically random 6-digit number via `RandomNumberGenerator.GetInt32(100000, 1000000)`.
-   - Thread-safe storage with 10-minute automatic expiration.
-   - Single-use invalidation (`TryRemove`) on verification prevents replay attacks.
-   - Development bypass: `"000000"` magic code enabled only when `ASPNETCORE_ENVIRONMENT=Development`.
+1. **JWT Bearer Tokens (RFC 7519)**:
+   - **Access Token**: Short-lived (default 15 minutes), signed with `HMAC-SHA256`. Contains `sub`, `email`, `role`, `jti`, and standard security claims.
+   - **Refresh Token**: Stored securely in database table `RefreshTokens` with SHA-256 token hashing, expiry tracking, and revocation support.
+2. **Google OAuth 2.0 Integration**:
+   - Accepts Google ID token from frontend client.
+   - Verified server-side via Google's `GoogleJsonWebSignature` cryptographic validator.
+   - Automatically provisions/links Identity user and domain Employer entity.
+3. **One-Time Password (OTP) Email Verification**:
+   - 6-digit cryptographic random OTP code.
+   - Valid for 10 minutes with rate limiting.
+   - In `Development` environment, code `000000` is supported for automated testing.
 
 ---
 
-## 2. Google OAuth Sign-In Flow
+## 🔄 Employer Registration & Onboarding Lifecycle
 
-Employers can authenticate via Google with zero manual password management.
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Client as Employer Frontend
+    participant API as EmployersController
+    participant Handler as CreateEmployerCommandHandler
+    participant Identity as IdentityService
+    participant OTP as OtpService
+    participant Mail as EmailService
+    participant DB as PostgreSQL (ApplicationDbContext)
 
-```
-[ Frontend (Google SDK) ]      [ EmployersController.GoogleSignIn ]       [ Infrastructure / Google API ]
-         │                                      │                                      │
-         │─── POST /api/v1/employers/google ───>│                                      │
-         │    (idToken)                         │─── Verify Token Signature ──────────>│ (GoogleJsonWebSignature)
-         │                                      │<── Claims (sub, email, name) ────────│
-         │                                      │                                      │
-         │                                      │─── FindOrCreateExternalUserAsync ───>│ (IdentityService)
-         │                                      │─── Upsert Employer (IsVerified=true)─>│
-         │<── 200 OK (EmployerDto) ─────────────│                                      │
+    Client->>API: POST /api/v1/employers/register (Name, Email, Password, CompanyName)
+    API->>Handler: Send(CreateEmployerCommand)
+    Handler->>DB: Check if email already registered
+    alt Email already verified
+        Handler-->>API: Throw ConflictException (409 Conflict)
+    else Email unverified (Previous incomplete attempt)
+        Handler->>Identity: Reset/Update password
+    else New Registration
+        Handler->>Identity: CreateUserAsync(email, password, role: Employer)
+        Handler->>DB: Create User & Employer entities (IsVerified = false)
+    end
+    Handler->>OTP: GenerateOtp(email)
+    Handler->>Mail: SendVerificationOtpAsync(email, name, otp)
+    Handler-->>API: Return 201 Created (EmployerDto)
+    API-->>Client: 201 Created
+
+    Client->>API: POST /api/v1/employers/verify-email (Email, Otp)
+    API->>Handler: Send(VerifyEmployerEmailCommand)
+    Handler->>OTP: ValidateOtp(email, otp)
+    Handler->>DB: Set IsVerified = true, EmailConfirmed = true
+    Handler->>DB: SaveChangesAsync()
+    Handler-->>API: Return 200 OK
+    API-->>Client: 200 OK (Email Verified)
 ```
 
 ---
 
-## 3. JWT & Refresh Token Cookie Architecture
+## 🔑 Authentication Endpoints Flow
 
-Authentication sessions use short-lived access tokens accompanied by long-lived refresh tokens stored securely in **HttpOnly, Secure, SameSite=None** cookies.
+### 1. User Login (`POST /api/v1/auth/login`)
+- Validates credentials via `IdentityService.ValidatePasswordAsync`.
+- Generates access token (15 min) and refresh token (7 days) via `TokenService.CreateAsync`.
+- Returns `{ userId, email, accessToken, refreshToken }`.
 
-| Token | Storage | Lifetime | Purpose |
-| :--- | :--- | :--- | :--- |
-| **Access Token** (`TalentXAccessToken`) | HttpOnly Cookie | 15 Minutes | Authenticates API requests via standard JWT Bearer validation. |
-| **Refresh Token** (`TalentXRefreshToken`) | HttpOnly Cookie + Database | 7 Days | Silent background rotation to issue fresh access tokens without re-prompting user login. |
+### 2. Token Refresh (`POST /api/v1/auth/refresh`)
+- Accepts valid refresh token string.
+- Validates token against database `RefreshTokens` table.
+- Rotates refresh token and returns a new access token and fresh refresh token pair.
 
-### Refresh & Revocation Endpoints:
-- `POST /api/v1/auth/login` ➔ Validates credentials, creates `RefreshToken` record in database, attaches cookies.
-- `POST /api/v1/auth/refresh` ➔ Validates existing refresh token cookie, rotates it, and updates cookies.
-- `POST /api/v1/auth/logout` ➔ Revokes refresh token in database and deletes cookies from the client response.
+### 3. Current User (`GET /api/v1/auth/user`)
+- Requires `[Authorize]` with `Bearer <token>` header.
+- Retrieves caller's `UserId`, `Email`, and `Roles` via `CurrentUserQuery` and `ICurrentUserService`.
 
----
-
-## 4. Candidate / Talent Just-In-Time (JIT) Provisioning
-
-As specified in the TalentX Requirements:
-- Candidates never register via a public `/signup` page.
-- When an unregistered guest candidate applies to a job, the backend provisions a `User` record (`Role: Talent`, `IsVerified: false`) and dispatches a temporary password via email.
-- Upon first login with the temporary password, the system forces a password reset redirect (`/change-password`), which activates the account (`IsVerified: true`).
+### 4. Logout (`POST /api/v1/auth/logout`)
+- Revokes user's active refresh tokens in database.
