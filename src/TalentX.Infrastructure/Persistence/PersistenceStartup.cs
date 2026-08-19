@@ -24,6 +24,7 @@ public static class PersistenceStartup
 
 
         services.AddScoped<IUnitOfWork, UnitOfWork>();
+        services.AddScoped<IJobRepository, JobRepository>();
 
         return services;
     }

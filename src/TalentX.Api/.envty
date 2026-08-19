@@ -1,0 +1,1 @@
+ConnectionStrings__DefaultConnection=Host=localhost;Port=5433;Database=TalentX_DB;Username=postgres;Password=yourpassword
