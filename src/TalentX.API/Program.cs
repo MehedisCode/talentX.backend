@@ -4,6 +4,7 @@ using TalentX.Application;
 using TalentX.Infrastructure;
 using TalentX.Infrastructure.Identity.Seed;
 using TalentX.Infrastructure.Middlewares;
+using TalentX.Infrastructure.Persistence.Contexts;
 
 // 1. Walk up directory tree to discover and load .env from solution root (talentx2026q3.backend/.env)
 var envFile = Path.Combine(Directory.GetCurrentDirectory(), ".env");
@@ -77,8 +78,24 @@ builder.Services.AddControllers()
 
 var app = builder.Build();
 
-// 5. Database & Identity Seeding
-await IdentitySeeder.SeedAsync(app.Services);
+// 5. Safe Database Migration & Identity Seeding (Runs migrations first, then seeds)
+try
+{
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    
+    if (app.Environment.IsDevelopment())
+    {
+        await db.Database.MigrateAsync();
+    }
+
+    await IdentitySeeder.SeedAsync(app.Services);
+}
+catch (Exception ex)
+{
+    var logger = app.Services.GetRequiredService<ILogger<Program>>();
+    logger.LogWarning(ex, "Database migration or seeding skipped or failed during startup: {Message}", ex.Message);
+}
 
 // 6. Swagger (Development or explicit ENABLE_SWAGGER=true in .env)
 var enableSwagger = app.Environment.IsDevelopment() || builder.Configuration.GetValue<bool>("ENABLE_SWAGGER");
@@ -100,12 +117,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
-// Development convenience only — production migrations run via the deployment pipeline
-if (app.Environment.IsDevelopment())
-{
-    using var scope = app.Services.CreateScope();
-    var db = scope.ServiceProvider.GetRequiredService<TalentX.Infrastructure.Persistence.Contexts.ApplicationDbContext>();
-    db.Database.Migrate();
-}
-
 app.Run();
+
+public partial class Program { }
