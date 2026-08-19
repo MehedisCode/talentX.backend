@@ -20,28 +20,25 @@ public class LoginCommandHandler
 
     public async Task<IdentityResponse<LoginResult>> Handle(LoginCommand request, CancellationToken ct)
     {
-        var passwordCheck = await _identityService.ValidatePasswordAsync(
-            request.Email, 
-            request.Password);
-
-        if (!passwordCheck.Success)
+        var validation = await _identityService.ValidatePasswordAsync(request.Email, request.Password);
+        if (!validation.Success)
         {
-            return IdentityResponse<LoginResult>.Fail(passwordCheck.Errors);
+            return IdentityResponse<LoginResult>.Fail(validation.Errors);
         }
 
-        var tokens = await _tokenService.CreateAsync(passwordCheck.Data!.UserId);
+        var userId = validation.Data!.UserId;
 
-        if (!tokens.Success)
+        var tokenResult = await _tokenService.CreateAsync(userId);
+        if (!tokenResult.Success)
         {
-            return IdentityResponse<LoginResult>.Fail(tokens.Errors);
+            return IdentityResponse<LoginResult>.Fail(tokenResult.Errors);
         }
 
-        return IdentityResponse<LoginResult>.Ok(
-            new LoginResult
-            {
-                UserId = passwordCheck.Data.UserId,
-                Email = passwordCheck.Data.Email,
-                Tokens = tokens.Data!
-            });
+        return IdentityResponse<LoginResult>.Ok(new LoginResult
+        {
+            UserId = userId,
+            Email = validation.Data.Email,
+            Tokens = tokenResult.Data!
+        });
     }
 }
