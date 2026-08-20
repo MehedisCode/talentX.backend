@@ -1,7 +1,6 @@
 using FluentAssertions;
 using Microsoft.AspNetCore.Identity;
 using Moq;
-using TalentX.Application.Common.Identity.Models;
 using TalentX.Domain.Enums;
 using TalentX.Infrastructure.Identity.Models;
 using TalentX.Infrastructure.Identity.Services;
