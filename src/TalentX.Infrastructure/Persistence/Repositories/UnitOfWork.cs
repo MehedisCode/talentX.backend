@@ -6,7 +6,6 @@ namespace TalentX.Infrastructure.Persistence.Repositories;
 public class UnitOfWork : IUnitOfWork
 {
     private readonly ApplicationDbContext _context;
-    public IUserRepository Users { get; }
     public IJobRepository Jobs { get; }
 
     public UnitOfWork(
@@ -14,7 +13,6 @@ public class UnitOfWork : IUnitOfWork
     )
     {
         _context = context;
-        Users = new UserRepository(_context);
         Jobs = new JobRepository(_context);
     }
 

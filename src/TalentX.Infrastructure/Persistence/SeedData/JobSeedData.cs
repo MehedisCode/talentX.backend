@@ -20,15 +20,7 @@ public static class JobSeedData
             workArrangement: WorkArrangement.Hybrid,
             requiredSkills: new[] { "React", "Next.js", "TypeScript" }.ToList(),
             vacancies: 1,
-            expireAt: DateTime.UtcNow.AddMonths(1),
-            city: "Dhaka",
-            country: "Bangladesh",
-            roleType: EmploymentType.FullTime,
-            responsibilities: "Own feature delivery from design handoff to production release.",
-            locationPref: WorkArrangement.Hybrid,
-            minOverlapHours: null,
-            skillRequirements: new[] { "React", "Next.js", "TypeScript" }.ToList(),
-            expiresAt: DateTime.UtcNow.AddMonths(1)
+            expireAt: DateTime.UtcNow.AddMonths(1)
         );
         job1.Publish();
         jobs.Add(job1);
@@ -44,15 +36,7 @@ public static class JobSeedData
             workArrangement: WorkArrangement.Remote,
             requiredSkills: new[] { "C#", "EF Core", "SQL Server" }.ToList(),
             vacancies: 1,
-            expireAt: DateTime.UtcNow.AddMonths(1),
-            city: null,
-            country: null,
-            roleType: EmploymentType.FullTime,
-            responsibilities: "Design and maintain the Jobs and Employer services.",
-            locationPref: WorkArrangement.Remote,
-            minOverlapHours: 4,
-            skillRequirements: new[] { "C#", "EF Core", "SQL Server" }.ToList(),
-            expiresAt: DateTime.UtcNow.AddMonths(1)
+            expireAt: DateTime.UtcNow.AddMonths(1)
         );
         job2.Publish();
         jobs.Add(job2);
@@ -68,15 +52,7 @@ public static class JobSeedData
             workArrangement: WorkArrangement.OnSite,
             requiredSkills: new[] { "Figma", "User Research" }.ToList(),
             vacancies: 1,
-            expireAt: DateTime.UtcNow.AddMonths(1),
-            city: "Dhaka",
-            country: "Bangladesh",
-            roleType: EmploymentType.FullTime,
-            responsibilities: null,
-            locationPref: WorkArrangement.OnSite,
-            minOverlapHours: null,
-            skillRequirements: new[] { "Figma", "User Research" }.ToList(),
-            expiresAt: DateTime.UtcNow.AddMonths(1)
+            expireAt: DateTime.UtcNow.AddMonths(1)
         );
         job3.Publish();
         jobs.Add(job3);
@@ -92,15 +68,7 @@ public static class JobSeedData
             workArrangement: WorkArrangement.Remote,
             requiredSkills: new[] { "Manual Testing", "Cypress" }.ToList(),
             vacancies: 1,
-            expireAt: DateTime.UtcNow.AddMonths(1),
-            city: null,
-            country: null,
-            roleType: EmploymentType.Contract,
-            responsibilities: null,
-            locationPref: WorkArrangement.Remote,
-            minOverlapHours: 3,
-            skillRequirements: new[] { "Manual Testing", "Cypress" }.ToList(),
-            expiresAt: DateTime.UtcNow.AddMonths(1)
+            expireAt: DateTime.UtcNow.AddMonths(1)
         );
         job4.Publish();
         jobs.Add(job4);
@@ -120,23 +88,9 @@ public static class JobSeedData
             experienceLevel: ExperienceLevel.EntryLevel,
             location: "Remote",
             workArrangement: WorkArrangement.Remote,
-
-            // Required for Publish()
             requiredSkills: new[] { "Java", "Spring Boot" }.ToList(),
-
             vacancies: 1,
-            expireAt: DateTime.UtcNow.AddMonths(1),
-            city: null,
-            country: null,
-            roleType: EmploymentType.Internship,
-            responsibilities: null,
-            locationPref: WorkArrangement.Remote,
-            minOverlapHours: null,
-
-            // Required for Publish()
-            skillRequirements: new[] { "Java", "Spring Boot" }.ToList(),
-
-            expiresAt: DateTime.UtcNow.AddMonths(1)
+            expireAt: DateTime.UtcNow.AddMonths(1)
         );
 
         job5.Publish();
@@ -160,15 +114,7 @@ public static class JobSeedData
             workArrangement: WorkArrangement.Hybrid,
             requiredSkills: new[] { "SQL" }.ToList(),
             vacancies: 1,
-            expireAt: DateTime.UtcNow.AddMonths(1),
-            city: "Dhaka",
-            country: "Bangladesh",
-            roleType: EmploymentType.PartTime,
-            responsibilities: null,
-            locationPref: WorkArrangement.Hybrid,
-            minOverlapHours: null,
-            skillRequirements: new[] { "SQL" }.ToList(),
-            expiresAt: DateTime.UtcNow.AddMonths(1)
+            expireAt: DateTime.UtcNow.AddMonths(1)
         );
 
         jobs.Add(job6);

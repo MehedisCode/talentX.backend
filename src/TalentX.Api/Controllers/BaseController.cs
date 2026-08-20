@@ -5,11 +5,11 @@ namespace TalentX.Api.Controllers;
 
 [ApiController]
 [Route("api/v1/[controller]")]
-public abstract class BaseController : ControllerBase
+public abstract class BaseApiController : ControllerBase
 {
     protected readonly ISender Sender;
 
-    protected BaseController(ISender sender)
+    protected BaseApiController(ISender sender)
     {
         Sender = sender;
     }

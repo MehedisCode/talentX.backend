@@ -42,11 +42,8 @@ public class GetJobDetailsQueryTests
             workArrangement: WorkArrangement.Hybrid,
             requiredSkills: new[] { "C#" }.ToList(),
             vacancies: 1,
-            expireAt: DateTime.UtcNow.AddMonths(1),
-            roleType: null, locationPref: null,
-            city: null, country: null, minOverlapHours: null,
-            responsibilities: null,
-            skillRequirements: new[] { "C#" }.ToList(), expiresAt: null);
+            expireAt: DateTime.UtcNow.AddMonths(1)
+        );
         job.Publish();
         
         var jobRepo = new Mock<IJobRepository>();

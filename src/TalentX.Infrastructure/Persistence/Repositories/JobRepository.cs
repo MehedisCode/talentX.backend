@@ -18,7 +18,7 @@ public class JobRepository : IJobRepository
         var query = _context.Jobs
             .AsNoTracking()
             .Where(j => j.Status == JobStatus.Published
-                     && (j.ExpiresAt == null || j.ExpiresAt > DateTime.UtcNow));
+                     && j.ExpireAt > DateTime.UtcNow);
 
         var totalCount = await query.CountAsync(cancellationToken);
 
@@ -38,7 +38,7 @@ public class JobRepository : IJobRepository
             .FirstOrDefaultAsync(
                 j => j.Id == id
                   && j.Status == JobStatus.Published
-                  && (j.ExpiresAt == null || j.ExpiresAt > DateTime.UtcNow),
+                  && j.ExpireAt > DateTime.UtcNow,
                 cancellationToken);
 
     public async Task<Job?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)

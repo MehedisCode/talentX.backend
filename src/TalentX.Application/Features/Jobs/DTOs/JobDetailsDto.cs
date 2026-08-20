@@ -6,14 +6,12 @@ public class JobDetailsDto
     public string Title { get; set; } = string.Empty;
     public string CompanyName { get; set; } = string.Empty;
     public string? Description { get; set; }
-    public string? Responsibilities { get; set; }
-    public string? City { get; set; }
-    public string? Country { get; set; }
-    public string? RoleType { get; set; }
+    public string Location { get; set; } = string.Empty;
+    public string? EmploymentType { get; set; }
     public string? ExperienceLevel { get; set; }
-    public string? LocationPref { get; set; }
-    public short? MinOverlapHours { get; set; }
-    public IReadOnlyList<string> SkillRequirements { get; set; } = new List<string>();
+    public string? WorkArrangement { get; set; }
+    public IReadOnlyList<string> RequiredSkills { get; set; } = new List<string>();
+    public int Vacancies { get; set; }
     public DateTime CreatedAt { get; set; }
-    public DateTime? ExpiresAt { get; set; }
+    public DateTime ExpireAt { get; set; }
 }

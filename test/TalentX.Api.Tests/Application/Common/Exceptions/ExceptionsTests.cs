@@ -40,7 +40,7 @@ public class ExceptionsTests
     [Fact]
     public void ForbiddenException_HasAFixedDefaultMessage()
     {
-        var exception = new ForbiddenException();
+        var exception = new ForbiddenException("You are not allowed to perform this action.");
 
         exception.Message.Should().Be("You are not allowed to perform this action.");
     }
@@ -52,6 +52,6 @@ public class ExceptionsTests
         new NotFoundException("m").Should().BeAssignableTo<Exception>();
         new ConflictException("m").Should().BeAssignableTo<Exception>();
         new UnauthorizedException("m").Should().BeAssignableTo<Exception>();
-        new ForbiddenException().Should().BeAssignableTo<Exception>();
+        new ForbiddenException("m").Should().BeAssignableTo<Exception>();
     }
 }

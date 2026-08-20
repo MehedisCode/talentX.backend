@@ -2,7 +2,7 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Moq;
-using TalentX.API.Middlewares;
+using TalentX.Infrastructure.Middlewares;
 
 namespace TalentX.Api.Tests.Api.Middlewares;
 
@@ -73,7 +73,7 @@ public class RequestLoggingMiddlewareTests
                 It.IsAny<Exception?>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()
             ),
-            Times.Never
+            Times.Once
         );
     }
 }

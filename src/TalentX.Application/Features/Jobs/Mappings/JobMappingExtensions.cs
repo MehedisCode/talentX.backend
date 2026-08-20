@@ -10,9 +10,8 @@ public static class JobMappingExtensions
         Id = job.Id,
         Title = job.Title,
         CompanyName = job.CompanyName,
-        City = job.City,
-        Country = job.Country,
-        RoleType = job.RoleType?.ToString()
+        Location = job.Location,
+        EmploymentType = job.EmploymentType.ToString()
     };
 
     public static JobDetailsDto ToDetailsDto(this Job job) => new()
@@ -21,15 +20,13 @@ public static class JobMappingExtensions
         Title = job.Title,
         CompanyName = job.CompanyName,
         Description = job.Description,
-        Responsibilities = job.Responsibilities,
-        City = job.City,
-        Country = job.Country,
-        RoleType = job.RoleType?.ToString(),
+        Location = job.Location,
+        EmploymentType = job.EmploymentType.ToString(),
         ExperienceLevel = job.ExperienceLevel?.ToString(),
-        LocationPref = job.LocationPref?.ToString(),
-        MinOverlapHours = job.MinOverlapHours,
-        SkillRequirements = job.SkillRequirements.ToList(),
+        WorkArrangement = job.WorkArrangement.ToString(),
+        RequiredSkills = job.RequiredSkills.ToList(),
+        Vacancies = job.Vacancies,
         CreatedAt = job.CreatedAt,
-        ExpiresAt = job.ExpiresAt
+        ExpireAt = job.ExpireAt
     };
 }

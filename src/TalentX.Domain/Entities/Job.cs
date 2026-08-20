@@ -17,14 +17,6 @@ public class Job : BaseEntity
     public JobStatus Status { get; private set; }
     public int Vacancies { get; private set; }
     public DateTime ExpireAt { get; private set; }
-    public DateTime? ExpiresAt { get; private set; }
-    public string? City { get; private set; }
-    public string? Country { get; private set; }
-    public EmploymentType? RoleType { get; private set; }
-    public string? Responsibilities { get; private set; }
-    public WorkArrangement? LocationPref { get; private set; }
-    public short? MinOverlapHours { get; private set; }
-    public List<string> SkillRequirements { get; private set; } = new();
 
     private Job() { }
 
@@ -84,15 +76,7 @@ public class Job : BaseEntity
         WorkArrangement? workArrangement = null,
         List<string>? requiredSkills = null,
         int? vacancies = null,
-        DateTime? expireAt = null,
-        string? city = null,
-        string? country = null,
-        EmploymentType? roleType = null,
-        string? responsibilities = null,
-        WorkArrangement? locationPref = null,
-        short? minOverlapHours = null,
-        List<string>? skillRequirements = null,
-        DateTime? expiresAt = null
+        DateTime? expireAt = null
     )
     {
         if (title != null) Title = title.Trim();
@@ -112,20 +96,6 @@ public class Job : BaseEntity
         if (vacancies.HasValue) Vacancies = vacancies.Value;
         if (expireAt.HasValue) ExpireAt = expireAt.Value;
 
-        if (city != null) City = city;
-        if (country != null) Country = country;
-        if (roleType.HasValue) RoleType = roleType.Value;
-        if (responsibilities != null) Responsibilities = responsibilities;
-        if (locationPref.HasValue) LocationPref = locationPref.Value;
-        if (minOverlapHours.HasValue) MinOverlapHours = minOverlapHours.Value;
-        if (skillRequirements != null)
-        {
-            SkillRequirements = skillRequirements.Where(s => !string.IsNullOrWhiteSpace(s))
-                                                 .Select(s => s.Trim())
-                                                 .Distinct(StringComparer.OrdinalIgnoreCase)
-                                                 .ToList();
-        }
-        if (expiresAt.HasValue) ExpiresAt = expiresAt.Value;
 
         UpdatedAt = DateTime.UtcNow;
     }

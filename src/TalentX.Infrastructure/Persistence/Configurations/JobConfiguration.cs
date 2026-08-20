@@ -36,21 +36,19 @@ public class JobConfiguration : IEntityTypeConfiguration<Job>
         builder.Property(j => j.ExpireAt)
             .IsRequired();
 
-        builder.Property(j => j.City).HasMaxLength(100);
-        builder.Property(j => j.Country).HasMaxLength(100);
-
-        builder.Property(j => j.RoleType).HasConversion<string>();
+        builder.Property(j => j.EmploymentType).HasConversion<string>();
+        builder.Property(j => j.WorkArrangement).HasConversion<string>();
         builder.Property(j => j.ExperienceLevel).HasConversion<string>();
-        builder.Property(j => j.LocationPref).HasConversion<string>();
         builder.Property(j => j.Status).HasConversion<string>().IsRequired();
 
-        builder.Property(j => j.SkillRequirements)
+        builder.Property(j => j.RequiredSkills)
             .HasConversion(
                 v => System.Text.Json.JsonSerializer.Serialize(v, (System.Text.Json.JsonSerializerOptions?)null),
                 v => System.Text.Json.JsonSerializer.Deserialize<List<string>>(v, (System.Text.Json.JsonSerializerOptions?)null) ?? new List<string>());
 
         builder.HasIndex(j => j.Status);
-        builder.HasIndex(j => j.ExpiresAt);
+        builder.HasIndex(j => j.ExpireAt);
         builder.HasIndex(j => new { j.Status, j.CreatedAt });
     }
 }
+

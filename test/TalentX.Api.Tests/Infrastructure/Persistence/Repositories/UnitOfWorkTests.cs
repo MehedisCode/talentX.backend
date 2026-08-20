@@ -27,15 +27,7 @@ public class UnitOfWorkTests
         unitOfWork.Jobs.Should().NotBeNull().And.BeAssignableTo<IJobRepository>();
     }
 
-    [Fact]
-    public void Constructor_ExposesAUserRepository()
-    {
-        using var context = NewContext();
 
-        var unitOfWork = new UnitOfWork(context);
-
-        unitOfWork.Users.Should().NotBeNull().And.BeAssignableTo<IUserRepository>();
-    }
 
     [Fact]
     public async Task SaveChangesAsync_DelegatesToTheUnderlyingContext()

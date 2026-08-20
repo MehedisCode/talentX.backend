@@ -8,7 +8,7 @@ namespace TalentX.Api.Controllers;
 /// Provides health and diagnostic endpoints for the API service.
 /// </summary>
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/v1/[controller]")]
 [AllowAnonymous]
 public sealed class HealthController : ControllerBase
 {
