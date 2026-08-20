@@ -1,23 +1,24 @@
 using System.Collections.Concurrent;
 using System.Security.Cryptography;
-using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using TalentX.Application.Common.Interfaces;
 
 namespace TalentX.Infrastructure.Common;
 
 /// <summary>
 /// Thread-safe in-memory implementation of <see cref="IOtpService"/>.
-/// Completely standalone and decoupled from ASP.NET Core Identity.
+/// Generates 6-digit cryptographic OTPs, outputs them prominently to the application log
+/// across all environments for developer/QA verification, and manages time-based expiry.
 /// </summary>
 public sealed class OtpService : IOtpService
 {
     private static readonly TimeSpan DefaultExpiry = TimeSpan.FromMinutes(10);
     private readonly ConcurrentDictionary<string, (string Code, DateTime ExpiresAtUtc)> _otpStore = new(StringComparer.OrdinalIgnoreCase);
-    private readonly IHostEnvironment _environment;
+    private readonly ILogger<OtpService> _logger;
 
-    public OtpService(IHostEnvironment environment)
+    public OtpService(ILogger<OtpService> logger)
     {
-        _environment = environment;
+        _logger = logger;
     }
 
     public Task<string> GenerateOtpAsync(
@@ -26,9 +27,16 @@ public sealed class OtpService : IOtpService
         CancellationToken cancellationToken = default)
     {
         var code = RandomNumberGenerator.GetInt32(100000, 1000000).ToString();
-        var expiresAt = DateTime.UtcNow.Add(expiry ?? DefaultExpiry);
+        var effectiveExpiry = expiry ?? DefaultExpiry;
+        var expiresAt = DateTime.UtcNow.Add(effectiveExpiry);
 
         _otpStore[key] = (code, expiresAt);
+
+        _logger.LogInformation(
+            "\n======================================================\n🔑 [TALENTX OTP DISPATCH]\n👉 Target Email : {Email}\n👉 OTP CODE     : {OtpCode}\n⏳ Expires In   : {Minutes} minutes\n======================================================\n",
+            key,
+            code,
+            effectiveExpiry.TotalMinutes);
 
         return Task.FromResult(code);
     }
@@ -38,30 +46,28 @@ public sealed class OtpService : IOtpService
         string otpCode,
         CancellationToken cancellationToken = default)
     {
-        // In Development environment, bypass with magic OTP "000000"
-        if (_environment.IsDevelopment() && otpCode == "000000")
-        {
-            _otpStore.TryRemove(key, out _);
-            return Task.FromResult(true);
-        }
-
         if (!_otpStore.TryGetValue(key, out var record))
         {
+            _logger.LogWarning("⚠️ [TALENTX OTP] Verification failed for '{Email}': No active OTP record found.", key);
             return Task.FromResult(false);
         }
 
         if (DateTime.UtcNow > record.ExpiresAtUtc)
         {
+            _logger.LogWarning("⚠️ [TALENTX OTP] Verification failed for '{Email}': OTP code has expired.", key);
             _otpStore.TryRemove(key, out _);
             return Task.FromResult(false);
         }
 
         if (!string.Equals(record.Code, otpCode, StringComparison.Ordinal))
         {
+            _logger.LogWarning("⚠️ [TALENTX OTP] Verification failed for '{Email}': Code mismatch.", key);
             return Task.FromResult(false);
         }
 
-        // Invalidate OTP after successful verification
+        _logger.LogInformation("✅ [TALENTX OTP] Verification successful for '{Email}'.", key);
+
+        // Invalidate OTP immediately after successful verification
         _otpStore.TryRemove(key, out _);
         return Task.FromResult(true);
     }
