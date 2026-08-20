@@ -1,8 +1,8 @@
 using FluentAssertions;
 using Moq;
-using TalentX.Application.Features.Auth.RefreshToken;
 using TalentX.Application.Identity.Interfaces;
 using TalentX.Application.Identity.Models;
+using TalentX.Application.Features.Auth.RefreshToken;
 using Xunit;
 
 namespace TalentX.Application.Tests.Features.Auth.RefreshToken;

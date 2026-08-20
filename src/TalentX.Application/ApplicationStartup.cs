@@ -1,11 +1,12 @@
-using MediatR;
+using System.Reflection;
 using FluentValidation;
+using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 using TalentX.Application.Common.Behaviours;
-using System.Reflection;
 
 namespace TalentX.Application;
-public static class DependencyInjection
+
+public static class ApplicationStartup
 {
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {

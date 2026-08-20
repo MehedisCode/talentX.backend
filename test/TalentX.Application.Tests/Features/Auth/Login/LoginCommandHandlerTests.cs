@@ -1,6 +1,5 @@
 using FluentAssertions;
 using Moq;
-using TalentX.Application.Features.Auth.LogIn;
 using TalentX.Application.Features.Auth.Login;
 using Xunit;
 using TalentX.Application.Identity.Models;
