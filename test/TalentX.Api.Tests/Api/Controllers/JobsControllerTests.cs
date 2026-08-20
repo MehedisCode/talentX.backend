@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Http;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
-using TalentX.Api.Controllers;
+using TalentX.API.Controllers;
 using TalentX.Application.Features.Jobs.Commands.CreateJob;
 using TalentX.Application.Features.Jobs.Commands.UpdateJob;
 using TalentX.Domain.Enums;
@@ -17,7 +17,23 @@ public class JobsControllerTests
 
     public JobsControllerTests()
     {
-        _controller = new JobsController(_sender.Object);
+        var serviceProviderMock = new Mock<IServiceProvider>();
+        serviceProviderMock
+            .Setup(s => s.GetService(typeof(ISender)))
+            .Returns(_sender.Object);
+
+        var httpContext = new DefaultHttpContext
+        {
+            RequestServices = serviceProviderMock.Object
+        };
+
+        _controller = new JobsController
+        {
+            ControllerContext = new ControllerContext
+            {
+                HttpContext = httpContext
+            }
+        };
     }
 
     private static CreateJobCommand ValidCreateCommand() => new(

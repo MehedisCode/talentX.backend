@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -22,7 +22,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\TalentX.Api\TalentX.Api.csproj" />
+    <ProjectReference Include="..\..\src\TalentX.API\TalentX.API.csproj" />
+    <ProjectReference Include="..\..\src\TalentX.Application\TalentX.Application.csproj" />
+    <ProjectReference Include="..\..\src\TalentX.Domain\TalentX.Domain.csproj" />
+    <ProjectReference Include="..\..\src\TalentX.Infrastructure\TalentX.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using TalentX.Application.Identity.Services;
 
 namespace TalentX.Infrastructure.Identity.Services;
+
 public class CurrentUserService : ICurrentUserService
 {
     private readonly IHttpContextAccessor _httpContextAccessor;

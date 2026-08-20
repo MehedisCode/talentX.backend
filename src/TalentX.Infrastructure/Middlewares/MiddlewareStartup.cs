@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Builder;
 using TalentX.Infrastructure.Middlewares;
 
-namespace TalentX.Infrastructure.Startup;
+namespace TalentX.Infrastructure.Middlewares;
 
 public static class MiddlewareStartup
 {

@@ -1,5 +1,4 @@
 using MediatR;
-using TalentX.Application.Features.Auth.LogIn;
 using TalentX.Application.Identity.Interfaces;
 using TalentX.Application.Identity.Models;
 

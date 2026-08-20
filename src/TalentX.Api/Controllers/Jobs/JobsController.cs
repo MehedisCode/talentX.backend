@@ -4,11 +4,12 @@ using TalentX.Application.Features.Jobs.Queries;
 using TalentX.Application.Features.Jobs.Commands.CreateJob;
 using TalentX.Application.Features.Jobs.Commands.UpdateJob;
 
-namespace TalentX.Api.Controllers;
+namespace TalentX.API.Controllers;
 
+[Route("api/v1/jobs")]
 public class JobsController : BaseApiController
 {
-    public JobsController(ISender sender) : base(sender)
+    public JobsController()
     {
     }
 

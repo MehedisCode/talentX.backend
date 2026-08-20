@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 
 namespace TalentX.Infrastructure.Middlewares;
+
 public sealed class RequestLoggingMiddleware
 {
     private readonly RequestDelegate _next;

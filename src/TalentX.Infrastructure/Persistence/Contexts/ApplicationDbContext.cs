@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using TalentX.Domain;
 using TalentX.Domain.Entities;
 using TalentX.Infrastructure.Identity.Models;
 
@@ -16,6 +17,8 @@ public class ApplicationDbContext
 
     public DbSet<Job> Jobs => Set<Job>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    public DbSet<User> DomainUsers => Set<User>();
+    public DbSet<Employer> Employers => Set<Employer>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

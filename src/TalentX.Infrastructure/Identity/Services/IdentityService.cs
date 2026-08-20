@@ -5,6 +5,7 @@ using TalentX.Domain.Enums;
 using TalentX.Infrastructure.Identity.Models;
 
 namespace TalentX.Infrastructure.Identity.Services;
+
 public class IdentityService : IIdentityService
 {
     private readonly UserManager<ApplicationUser> _userManager;
