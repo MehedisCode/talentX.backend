@@ -8,8 +8,9 @@ using TalentX.Application.Identity.Interfaces;
 namespace TalentX.Application.Features.Employers.Commands.VerifyEmail;
 
 /// <summary>
-/// Handler for <see cref="VerifyEmployerEmailCommand"/> to verify email OTP, mark employer account as verified,
-/// and issue JWT session tokens for immediate automatic login.
+/// Handler for <see cref="VerifyEmployerEmailCommand"/> to verify email OTP.
+/// If an employer record exists, marks it verified and mints JWT session tokens.
+/// If not yet registered, verifies OTP and allows the user to proceed to onboarding.
 /// </summary>
 public sealed class VerifyEmployerEmailCommandHandler : IRequestHandler<VerifyEmployerEmailCommand, AuthEmployerDto>
 {
@@ -32,16 +33,21 @@ public sealed class VerifyEmployerEmailCommandHandler : IRequestHandler<VerifyEm
 
     public async Task<AuthEmployerDto> Handle(VerifyEmployerEmailCommand request, CancellationToken cancellationToken)
     {
-        var employer = await _unitOfWork.Employers.GetByEmailAsync(request.Email, cancellationToken);
-        if (employer == null)
-        {
-            throw new NotFoundException($"Employer with email '{request.Email}' not found.");
-        }
-
         var isValid = await _otpService.VerifyOtpAsync(request.Email, request.Otp, cancellationToken);
         if (!isValid)
         {
             throw new ValidationException("Invalid or expired OTP code.");
+        }
+
+        var employer = await _unitOfWork.Employers.GetByEmailAsync(request.Email, cancellationToken);
+        if (employer == null)
+        {
+            // Valid OTP for a new email prior to profile onboarding completion
+            return new AuthEmployerDto(
+                Employer: null,
+                AccessToken: string.Empty,
+                RefreshToken: string.Empty
+            );
         }
 
         employer.MarkAsVerified();

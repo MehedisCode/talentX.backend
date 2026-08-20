@@ -16,8 +16,7 @@ namespace TalentX.Application.Tests.Features.Employers;
 public sealed class CreateEmployerCommandHandlerTests
 {
     private readonly Mock<IIdentityService> _identityServiceMock = new();
-    private readonly Mock<IOtpService> _otpServiceMock = new();
-    private readonly Mock<IEmailService> _emailServiceMock = new();
+    private readonly Mock<ITokenService> _tokenServiceMock = new();
     private readonly Mock<IUnitOfWork> _unitOfWorkMock = new();
     private readonly Mock<IEmployerRepository> _employerRepositoryMock = new();
     private readonly Mock<IMapper> _mapperMock = new();
@@ -39,10 +38,18 @@ public sealed class CreateEmployerCommandHandlerTests
                 e.CreatedAt,
                 e.UpdatedAt
             ));
+
+        _tokenServiceMock
+            .Setup(t => t.CreateAsync(It.IsAny<string>()))
+            .ReturnsAsync(IdentityResponse<TokenResponse>.Ok(new TokenResponse
+            {
+                AccessToken = "test-access-token",
+                RefreshToken = "test-refresh-token"
+            }));
     }
 
     [Fact]
-    public async Task Handle_SuccessfullyCreatesEmployer_WhenValidCommandProvided()
+    public async Task Handle_SuccessfullyCreatesEmployerAndMintsTokens_WhenValidCommandProvided()
     {
         // Arrange
         var command = new CreateEmployerCommand(
@@ -65,14 +72,9 @@ public sealed class CreateEmployerCommandHandlerTests
             .Setup(i => i.CreateApplicationUserAsync(command.Email, command.Password, UserRole.Employer))
             .ReturnsAsync(identityResult);
 
-        _otpServiceMock
-            .Setup(o => o.GenerateOtpAsync(command.Email, null, It.IsAny<CancellationToken>()))
-            .ReturnsAsync("123456");
-
         var handler = new CreateEmployerCommandHandler(
             _identityServiceMock.Object,
-            _otpServiceMock.Object,
-            _emailServiceMock.Object,
+            _tokenServiceMock.Object,
             _unitOfWorkMock.Object,
             _mapperMock.Object
         );
@@ -82,13 +84,16 @@ public sealed class CreateEmployerCommandHandlerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(command.Email, result.Email);
-        Assert.Equal(command.Name, result.Name);
-        Assert.Equal(command.CompanyName, result.CompanyName);
+        Assert.NotNull(result.Employer);
+        Assert.Equal(command.Email, result.Employer.Email);
+        Assert.Equal(command.Name, result.Employer.Name);
+        Assert.Equal(command.CompanyName, result.Employer.CompanyName);
+        Assert.Equal("test-access-token", result.AccessToken);
+        Assert.Equal("test-refresh-token", result.RefreshToken);
 
         _employerRepositoryMock.Verify(r => r.AddAsync(It.IsAny<Employer>(), It.IsAny<CancellationToken>()), Times.Once);
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
-        _emailServiceMock.Verify(e => e.SendOtpEmailAsync(command.Email, command.Name, "123456", It.IsAny<CancellationToken>()), Times.Once);
+        _tokenServiceMock.Verify(t => t.CreateAsync(It.IsAny<string>()), Times.Once);
     }
 
     [Fact]
@@ -112,8 +117,7 @@ public sealed class CreateEmployerCommandHandlerTests
 
         var handler = new CreateEmployerCommandHandler(
             _identityServiceMock.Object,
-            _otpServiceMock.Object,
-            _emailServiceMock.Object,
+            _tokenServiceMock.Object,
             _unitOfWorkMock.Object,
             _mapperMock.Object
         );
@@ -124,7 +128,7 @@ public sealed class CreateEmployerCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_UpdatesAndResendsOtp_WhenEmployerExistsButIsNotVerified()
+    public async Task Handle_UpdatesAndMintsTokens_WhenEmployerExistsButIsNotVerified()
     {
         // Arrange
         var command = new CreateEmployerCommand(
@@ -141,14 +145,9 @@ public sealed class CreateEmployerCommandHandlerTests
             .Setup(r => r.GetByEmailAsync(command.Email, It.IsAny<CancellationToken>()))
             .ReturnsAsync(existingEmployer);
 
-        _otpServiceMock
-            .Setup(o => o.GenerateOtpAsync(command.Email, null, It.IsAny<CancellationToken>()))
-            .ReturnsAsync("654321");
-
         var handler = new CreateEmployerCommandHandler(
             _identityServiceMock.Object,
-            _otpServiceMock.Object,
-            _emailServiceMock.Object,
+            _tokenServiceMock.Object,
             _unitOfWorkMock.Object,
             _mapperMock.Object
         );
@@ -158,12 +157,14 @@ public sealed class CreateEmployerCommandHandlerTests
 
         // Assert
         Assert.NotNull(result);
+        Assert.NotNull(result.Employer);
         Assert.Equal("Jane Updated", existingEmployer.Name);
         Assert.Equal("New Company Name", existingEmployer.CompanyName);
+        Assert.True(existingEmployer.IsVerified);
+        Assert.Equal("test-access-token", result.AccessToken);
 
         _employerRepositoryMock.Verify(r => r.Update(existingEmployer), Times.Once);
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
-        _emailServiceMock.Verify(e => e.SendOtpEmailAsync(command.Email, "Jane Updated", "654321", It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -190,8 +191,7 @@ public sealed class CreateEmployerCommandHandlerTests
 
         var handler = new CreateEmployerCommandHandler(
             _identityServiceMock.Object,
-            _otpServiceMock.Object,
-            _emailServiceMock.Object,
+            _tokenServiceMock.Object,
             _unitOfWorkMock.Object,
             _mapperMock.Object
         );

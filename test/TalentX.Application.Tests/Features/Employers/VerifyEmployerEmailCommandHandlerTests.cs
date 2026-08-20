@@ -74,6 +74,7 @@ public sealed class VerifyEmployerEmailCommandHandlerTests
 
         // Assert
         Assert.NotNull(result);
+        Assert.NotNull(result.Employer);
         Assert.True(employer.IsVerified);
         Assert.Equal("employer@acme.com", result.Employer.Email);
         Assert.Equal("mock-access-token", result.AccessToken);
@@ -85,14 +86,18 @@ public sealed class VerifyEmployerEmailCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_ThrowsNotFoundException_WhenEmployerDoesNotExist()
+    public async Task Handle_ReturnsEmptyTokens_WhenEmployerDoesNotExistPriorToOnboarding_AndOtpIsValid()
     {
-        // Arrange
-        var command = new VerifyEmployerEmailCommand("nonexistent@acme.com", "123456");
+        // Arrange - New email entering OTP step before profile completion
+        var command = new VerifyEmployerEmailCommand("newuser@acme.com", "123456");
 
         _employerRepositoryMock
             .Setup(r => r.GetByEmailAsync(command.Email, It.IsAny<CancellationToken>()))
             .ReturnsAsync((Employer?)null);
+
+        _otpServiceMock
+            .Setup(o => o.VerifyOtpAsync(command.Email, command.Otp, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
 
         var handler = new VerifyEmployerEmailCommandHandler(
             _otpServiceMock.Object,
@@ -101,8 +106,13 @@ public sealed class VerifyEmployerEmailCommandHandlerTests
             _mapperMock.Object
         );
 
-        // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(() => handler.Handle(command, CancellationToken.None));
+        // Act
+        var result = await handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Null(result.Employer);
+        Assert.Equal(string.Empty, result.AccessToken);
     }
 
     [Fact]
@@ -110,11 +120,6 @@ public sealed class VerifyEmployerEmailCommandHandlerTests
     {
         // Arrange
         var command = new VerifyEmployerEmailCommand("employer@acme.com", "999999");
-        var employer = new Employer("user-1", "Jane Doe", "employer@acme.com", "Acme Corp");
-
-        _employerRepositoryMock
-            .Setup(r => r.GetByEmailAsync(command.Email, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(employer);
 
         _otpServiceMock
             .Setup(o => o.VerifyOtpAsync(command.Email, command.Otp, It.IsAny<CancellationToken>()))
@@ -130,6 +135,5 @@ public sealed class VerifyEmployerEmailCommandHandlerTests
         // Act & Assert
         var ex = await Assert.ThrowsAsync<ValidationException>(() => handler.Handle(command, CancellationToken.None));
         Assert.Contains("Invalid or expired OTP code", ex.Message);
-        Assert.False(employer.IsVerified);
     }
 }

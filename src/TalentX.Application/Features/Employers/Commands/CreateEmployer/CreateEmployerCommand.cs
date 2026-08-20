@@ -4,7 +4,7 @@ using TalentX.Application.DTOs.Employers;
 namespace TalentX.Application.Features.Employers.Commands.CreateEmployer;
 
 /// <summary>
-/// Command to register and create a new employer account and profile.
+/// Command to register and create a new employer account and profile, returning authenticated JWT tokens.
 /// </summary>
 /// <param name="Name">The full name of the employer.</param>
 /// <param name="Email">The email address of the employer.</param>
@@ -17,4 +17,4 @@ public sealed record CreateEmployerCommand(
     string CompanyName,
     string Password,
     string ConfirmPassword
-) : IRequest<EmployerDto>;
+) : IRequest<AuthEmployerDto>;
