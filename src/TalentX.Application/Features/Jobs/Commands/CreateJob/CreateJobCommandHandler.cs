@@ -25,9 +25,8 @@ public class CreateJobCommandHandler : IRequestHandler<CreateJobCommand, Guid>
 
     public async Task<Guid> Handle(CreateJobCommand request, CancellationToken cancellationToken)
     {
-        // var employerId = _currentUserService.UserId
-        //     ?? throw new UnauthorizedException("You must be signed in to post a job.");
-        var employerId = "0000000000010010";
+        var employerId = _currentUserService.UserId
+            ?? throw new UnauthorizedException("You must be signed in to post a job.");
 
         var job = Job.CreateDraft(
             employerId,
@@ -51,7 +50,7 @@ public class CreateJobCommandHandler : IRequestHandler<CreateJobCommand, Guid>
             }
             catch (InvalidOperationException ex)
             {
-                throw new ValidationException(ex.Message);
+                throw new FluentValidation.ValidationException(ex.Message);
             }
         }
 

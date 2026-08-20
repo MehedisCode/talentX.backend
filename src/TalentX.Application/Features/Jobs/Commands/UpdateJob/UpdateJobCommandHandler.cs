@@ -22,12 +22,11 @@ public class UpdateJobCommandHandler : IRequestHandler<UpdateJobCommand>
         _currentUserService = currentUserService;
     }
 
-    // TODO: decide whether a Published job can still be edited via this route.
+    
     public async Task Handle(UpdateJobCommand request, CancellationToken cancellationToken)
     {
-        // var employerId = _currentUserService.UserId
-        //     ?? throw new UnauthorizedException("You must be signed in to edit a job.");
-        var employerId = "0000000000010010";
+        var employerId = _currentUserService.UserId
+            ?? throw new UnauthorizedException("You must be signed in to edit a job.");
 
         var job = await _jobRepository.GetByIdAsync(request.Id, cancellationToken)
             ?? throw new NotFoundException($"Job '{request.Id}' was not found.");
@@ -56,7 +55,7 @@ public class UpdateJobCommandHandler : IRequestHandler<UpdateJobCommand>
             }
             catch (InvalidOperationException ex)
             {
-                throw new ValidationException(ex.Message);
+                throw new FluentValidation.ValidationException(ex.Message);
             }
         }
 

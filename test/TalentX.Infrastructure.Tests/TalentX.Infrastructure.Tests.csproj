@@ -2,9 +2,9 @@
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
-    <IsTestProject>true</IsTestProject>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
   </PropertyGroup>
 
   <ItemGroup>
@@ -20,7 +20,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\TalentX.Application\TalentX.Application.csproj" />
     <ProjectReference Include="..\..\src\TalentX.Infrastructure\TalentX.Infrastructure.csproj" />
   </ItemGroup>
 

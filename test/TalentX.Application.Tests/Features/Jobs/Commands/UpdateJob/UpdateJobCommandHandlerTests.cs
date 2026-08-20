@@ -149,7 +149,7 @@ public class UpdateJobCommandHandlerTests
 
         var act = () => _handler.Handle(invalidCommand, CancellationToken.None);
 
-        await act.Should().ThrowAsync<ValidationException>();
+        await act.Should().ThrowAsync<FluentValidation.ValidationException>();
     }
 
     [Fact]
@@ -167,7 +167,7 @@ public class UpdateJobCommandHandlerTests
         {
             await _handler.Handle(invalidCommand, CancellationToken.None);
         }
-        catch (ValidationException)
+        catch (FluentValidation.ValidationException)
         {
             // expected — assertion below verifies no save happened.
         }

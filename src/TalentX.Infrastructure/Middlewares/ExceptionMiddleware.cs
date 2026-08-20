@@ -58,7 +58,7 @@ public sealed class ExceptionMiddleware
 
         switch (exception)
         {
-            case ValidationException validationException:
+            case FluentValidation.ValidationException validationException:
                 context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
                 response = new
                 {

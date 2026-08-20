@@ -92,7 +92,7 @@ public class CreateJobCommandHandlerTests
 
         var act = () => _handler.Handle(command, CancellationToken.None);
 
-        await act.Should().ThrowAsync<ValidationException>();
+        await act.Should().ThrowAsync<FluentValidation.ValidationException>();
     }
 
     [Fact]
@@ -104,7 +104,7 @@ public class CreateJobCommandHandlerTests
         {
             await _handler.Handle(command, CancellationToken.None);
         }
-        catch (ValidationException)
+        catch (FluentValidation.ValidationException)
         {
             // expected — assertions below verify no side effects occurred.
         }

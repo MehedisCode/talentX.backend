@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using TalentX.Application.Common.Interfaces;
+using TalentX.Application.Common.Interfaces.Repositories;
 using TalentX.Infrastructure.Persistence.Contexts;
 using TalentX.Infrastructure.Persistence.Repositories;
 
@@ -11,9 +12,9 @@ public static class PersistenceStartup
 {
     public static IServiceCollection AddPersistence(
         this IServiceCollection services,
-        IConfiguration configuration)
+        IConfiguration configuration
+    )
     {
-        // Database Connection (Granular DevOps environment variables or connection string fallback)
         var connectionString = GetDatabaseConnectionString(configuration);
 
         services.AddDbContext<ApplicationDbContext>(options =>
@@ -22,14 +23,13 @@ public static class PersistenceStartup
                 npgsqlOptions =>
                     npgsqlOptions.MigrationsAssembly("TalentX.Migrations")));
 
-
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<IJobRepository, JobRepository>();
+        services.AddScoped<IEmployerRepository, EmployerRepository>();
+        services.AddScoped<IUserRepository, UserRepository>();
 
         return services;
     }
-
-    
 
     /// <summary>
     /// Constructs a PostgreSQL connection string from individual DevOps environment variables
@@ -38,12 +38,13 @@ public static class PersistenceStartup
     private static string GetDatabaseConnectionString(IConfiguration configuration)
     {
         var host = Environment.GetEnvironmentVariable("DB_HOST") ?? configuration["DB_HOST"];
-        var port = Environment.GetEnvironmentVariable("DB_PORT") ?? configuration["DB_PORT"];
+        var port = Environment.GetEnvironmentVariable("DB_PORT") ?? configuration["DB_PORT"] ?? "5432";
         var database = Environment.GetEnvironmentVariable("DB_NAME") ?? configuration["DB_NAME"];
         var username = Environment.GetEnvironmentVariable("DB_USER_NAME")
                        ?? Environment.GetEnvironmentVariable("DB_USERNAME")
                        ?? Environment.GetEnvironmentVariable("DB_USER")
-                       ?? configuration["DB_USER_NAME"];
+                       ?? configuration["DB_USER_NAME"]
+                       ?? configuration["DB_USERNAME"];
         var password = Environment.GetEnvironmentVariable("DB_PASSWORD") ?? configuration["DB_PASSWORD"];
 
         if (!string.IsNullOrWhiteSpace(host) && !string.IsNullOrWhiteSpace(database))
@@ -54,14 +55,21 @@ public static class PersistenceStartup
                 Port = int.TryParse(port, out var parsedPort) ? parsedPort : 5432,
                 Database = database,
                 Username = username ?? "postgres",
-                Password = password ?? string.Empty
+                Password = password ?? string.Empty,
+                IncludeErrorDetail = true
             };
 
             return builder.ConnectionString;
         }
 
-        return configuration.GetConnectionString("DefaultConnection")
-               ?? Environment.GetEnvironmentVariable("DATABASE_URL")
-               ?? string.Empty;
+        var connStr = configuration.GetConnectionString("DefaultConnection")
+                   ?? Environment.GetEnvironmentVariable("DATABASE_URL");
+
+        if (!string.IsNullOrWhiteSpace(connStr))
+        {
+            return connStr;
+        }
+
+        return "Host=localhost;Port=5432;Database=talentx;Username=postgres;Password=postgres;Include Error Detail=true";
     }
 }

@@ -1,5 +1,4 @@
 using FluentAssertions;
-using TalentX.Application.Features.Auth.LogIn;
 using TalentX.Application.Features.Auth.Login;
 using Xunit;
 

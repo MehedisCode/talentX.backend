@@ -1,0 +1,98 @@
+@TalentX.Api_HostAddress = http://localhost:5035
+
+### Health Check
+GET {{TalentX.Api_HostAddress}}/api/Health
+Accept: application/json
+
+###
+
+### Create Employer (Valid - Registers and dispatches OTP email)
+POST {{TalentX.Api_HostAddress}}/api/v1/employers
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "Sarah Connor",
+  "email": "sarah.connor@cyberdyne.com",
+  "companyName": "Cyberdyne Systems",
+  "password": "Password123!",
+  "confirmPassword": "Password123!"
+}
+
+###
+
+### Google Sign-In Employer (Valid Google ID Token)
+POST {{TalentX.Api_HostAddress}}/api/v1/employers/google
+Content-Type: application/json
+Accept: application/json
+
+{
+  "idToken": "YOUR_GOOGLE_ID_TOKEN_HERE"
+}
+
+###
+
+### Verify Employer Email with OTP (Valid)
+POST {{TalentX.Api_HostAddress}}/api/v1/employers/verify-email
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "sarah.connor@cyberdyne.com",
+  "otp": "123456"
+}
+
+###
+
+### Resend Verification OTP (Valid for unverified account)
+POST {{TalentX.Api_HostAddress}}/api/v1/employers/resend-otp
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "sarah.connor@cyberdyne.com"
+}
+
+###
+
+### Verify Employer Email (Invalid OTP format)
+POST {{TalentX.Api_HostAddress}}/api/v1/employers/verify-email
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "sarah.connor@cyberdyne.com",
+  "otp": "abc"
+}
+
+###
+
+### Create Employer (Validation Failure - Password Mismatch)
+POST {{TalentX.Api_HostAddress}}/api/v1/employers
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "Sarah Connor",
+  "email": "sarah.connor@cyberdyne.com",
+  "companyName": "Cyberdyne Systems",
+  "password": "Password123!",
+  "confirmPassword": "DifferentPassword123!"
+}
+
+###
+
+### Create Employer (Validation Failure - Weak Password & Invalid Email)
+POST {{TalentX.Api_HostAddress}}/api/v1/employers
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "",
+  "email": "invalid-email",
+  "companyName": "",
+  "password": "weak",
+  "confirmPassword": "weak"
+}
+
+###

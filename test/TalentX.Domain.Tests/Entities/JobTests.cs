@@ -79,14 +79,13 @@ public class JobTests
     }
 
     [Fact]
-    public void CreateDraft_DoesNotAssignAnIdUpFront()
+    public void CreateDraft_AssignsAnIdImmediately()
     {
-        // Job's Id is a Guid primary key, so EF Core's client-side value
-        // generator assigns it only once the entity is tracked via Add —
-        // CreateDraft() alone (no persistence involved) leaves it unset.
+        // BaseEntity's constructor generates the Id client-side, so it's set
+        // as soon as the object exists — no persistence required.
         var job = CreateValidDraft();
 
-        job.Id.Should().Be(Guid.Empty);
+        job.Id.Should().NotBe(Guid.Empty);
     }
 
     [Fact]

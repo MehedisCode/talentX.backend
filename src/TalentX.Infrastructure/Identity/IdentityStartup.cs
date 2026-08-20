@@ -4,10 +4,15 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
+using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Identity.Interfaces;
 using TalentX.Application.Identity.Services;
+using TalentX.Infrastructure.Auth;
+using TalentX.Infrastructure.Common;
 using TalentX.Infrastructure.Identity.Models;
 using TalentX.Infrastructure.Identity.Services;
+using TalentX.Infrastructure.Mailing;
+using TalentX.Infrastructure.Mappings;
 using TalentX.Infrastructure.Persistence.Contexts;
 
 namespace TalentX.Infrastructure.Identity;
@@ -16,20 +21,26 @@ public static class IdentityStartup
 {
     public static IServiceCollection AddIdentityServices(
         this IServiceCollection services,
-        IConfiguration configuration)
+        IConfiguration configuration
+    )
     {
-        // Identity
-        services.AddIdentityCore<ApplicationUser>(options =>
+        // Identity Core with Roles
+        services.AddIdentity<ApplicationUser, IdentityRole>(options =>
             {
+                options.Password.RequireDigit = true;
+                options.Password.RequireLowercase = true;
+                options.Password.RequireUppercase = true;
+                options.Password.RequireNonAlphanumeric = true;
+                options.Password.RequiredLength = 8;
+                options.User.RequireUniqueEmail = true;
                 options.Lockout.MaxFailedAccessAttempts = 5;
                 options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
                 options.Lockout.AllowedForNewUsers = true;
             })
-            .AddRoles<IdentityRole>()
             .AddEntityFrameworkStores<ApplicationDbContext>()
             .AddDefaultTokenProviders();
 
-        // JWT settings
+        // JWT Settings
         var jwtSettings = GetJwtSettings(configuration);
 
         services.Configure<JwtSettings>(options =>
@@ -41,7 +52,7 @@ public static class IdentityStartup
             options.RefreshTokenExpiryDays = jwtSettings.RefreshTokenExpiryDays;
         });
 
-        // Authentication - tokens arrive as a standard Authorization: Bearer header,
+        // Authentication & JWT Bearer
         services.AddAuthentication(options =>
         {
             options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -60,19 +71,40 @@ public static class IdentityStartup
                 IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Secret)),
                 ClockSkew = TimeSpan.FromSeconds(30)
             };
+
+            options.Events = new JwtBearerEvents
+            {
+                OnMessageReceived = context =>
+                {
+                    if (context.Request.Cookies.TryGetValue("TalentXAccessToken", out var token))
+                    {
+                        context.Token = token;
+                    }
+                    return Task.CompletedTask;
+                }
+            };
         });
 
         services.AddHttpContextAccessor();
         services.AddAuthorization();
-        services.AddScoped<ICurrentUserService, CurrentUserService>();
-        services.AddScoped<ITokenService, TokenService>();
+
+        // Email Settings
+        services.Configure<EmailSettings>(configuration.GetSection(EmailSettings.SectionName));
+
+        // AutoMapper
+        services.AddAutoMapper(cfg => cfg.AddMaps(typeof(EmployerMappingProfile).Assembly));
+
+        // Services
         services.AddScoped<IIdentityService, IdentityService>();
+        services.AddScoped<ITokenService, TokenService>();
+        services.AddScoped<ICurrentUserService, CurrentUserService>();
+        services.AddScoped<IExternalIdentityService, ExternalIdentityService>();
+        services.AddScoped<IGoogleAuthService, GoogleAuthService>();
+        services.AddSingleton<IOtpService, OtpService>();
+        services.AddSingleton<IEmailService, EmailService>();
 
         return services;
     }
-
-
-
 
     /// <summary>
     /// Constructs JWT settings from environment variables (JWT_SECRET, JWT_ISSUER, JWT_AUDIENCE),
@@ -83,7 +115,7 @@ public static class IdentityStartup
         var secret = Environment.GetEnvironmentVariable("JWT_SECRET")
                      ?? configuration["JWT_SECRET"]
                      ?? configuration["Jwt:Secret"]
-                     ?? string.Empty;
+                     ?? "TalentXDefaultSecretKey123456789012345678901234567890";
 
         var issuer = Environment.GetEnvironmentVariable("JWT_ISSUER")
                      ?? configuration["JWT_ISSUER"]
@@ -91,11 +123,12 @@ public static class IdentityStartup
                      ?? "TalentX";
 
         var audience = Environment.GetEnvironmentVariable("JWT_AUDIENCE")
-                      ?? configuration["JWT_AUDIENCE"]
-                      ?? configuration["Jwt:Audience"]
-                      ?? "TalentX.Client";
+                       ?? configuration["JWT_AUDIENCE"]
+                       ?? configuration["Jwt:Audience"]
+                       ?? "TalentX.Client";
 
         var accessMinutes = Environment.GetEnvironmentVariable("JWT_ACCESS_TOKEN_MINUTES")
+                            ?? Environment.GetEnvironmentVariable("JWT_EXPIRY_MINUTES")
                             ?? configuration["JWT_ACCESS_TOKEN_MINUTES"]
                             ?? configuration["Jwt:AccessTokenMinutes"];
 

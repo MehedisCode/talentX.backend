@@ -76,16 +76,19 @@ public class JobRepositoryTests
     }
 
     [Fact]
-    public async Task AddAsync_AssignsAGeneratedIdOnceTracked()
+    public async Task AddAsync_DoesNotChangeTheAlreadyAssignedId()
     {
+        // BaseEntity generates the Id client-side at construction, so
+        // AddAsync just tracks the entity — it doesn't assign anything.
         await using var context = NewContext();
         var repository = new JobRepository(context);
         var job = NewJob();
-        job.Id.Should().Be(Guid.Empty);
+        var originalId = job.Id;
+        originalId.Should().NotBe(Guid.Empty);
 
         await repository.AddAsync(job);
 
-        job.Id.Should().NotBe(Guid.Empty);
+        job.Id.Should().Be(originalId);
     }
 
     [Fact]
