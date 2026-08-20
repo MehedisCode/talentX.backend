@@ -1,5 +1,4 @@
 using FluentValidation;
-using TalentX.Application.Features.Auth.LogIn;
 
 namespace TalentX.Application.Features.Auth.Login;
 

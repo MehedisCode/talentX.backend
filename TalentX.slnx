@@ -1,9 +1,13 @@
 <Solution>
   <Folder Name="/src/">
-    <Project Path="src/TalentX.Api/TalentX.Api.csproj" />
+    <Project Path="src/TalentX.API/TalentX.API.csproj" />
     <Project Path="src/TalentX.Application/TalentX.Application.csproj" />
     <Project Path="src/TalentX.Domain/TalentX.Domain.csproj" />
     <Project Path="src/TalentX.Infrastructure/TalentX.Infrastructure.csproj" />
     <Project Path="src/TalentX.Migrations/TalentX.Migrations.csproj" />
+  </Folder>
+  <Folder Name="/test/">
+    <Project Path="test/TalentX.Application.Tests/TalentX.Application.Tests.csproj" />
+    <Project Path="test/TalentX.Infrastructure.Tests/TalentX.Infrastructure.Tests.csproj" />
   </Folder>
 </Solution>

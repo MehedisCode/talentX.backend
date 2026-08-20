@@ -5,7 +5,7 @@ using Microsoft.Extensions.Options;
 using Moq;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using TalentX.Application.Common.Identity.Models;
+using TalentX.Application.Identity.Models;
 using TalentX.Infrastructure.Identity.Models;
 using TalentX.Infrastructure.Identity.Services;
 using TalentX.Infrastructure.Persistence.Contexts;
