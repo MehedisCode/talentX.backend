@@ -1,8 +1,9 @@
 using FluentAssertions;
 using TalentX.Domain.Entities;
 using TalentX.Domain.Enums;
+using Xunit;
 
-namespace TalentX.Tests.Domain.Entities;
+namespace TalentX.Domain.Tests.Entities;
 
 public class JobTests
 {

@@ -4,8 +4,9 @@ using TalentX.Domain.Entities;
 using TalentX.Domain.Enums;
 using TalentX.Infrastructure.Persistence.Contexts;
 using TalentX.Infrastructure.Persistence.Repositories;
+using Xunit;
 
-namespace TalentX.Tests.Infrastructure.Persistence.Repositories;
+namespace TalentX.Infrastructure.Tests.Persistence.Repositories;
 
 public class JobRepositoryTests
 {

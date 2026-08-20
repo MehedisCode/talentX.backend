@@ -1,5 +1,5 @@
 using Microsoft.EntityFrameworkCore;
-using TalentX.Application.Common.Interfaces.Repositories;
+using TalentX.Application.Common.Interfaces;
 using TalentX.Domain.Entities;
 using TalentX.Infrastructure.Persistence.Contexts;
 

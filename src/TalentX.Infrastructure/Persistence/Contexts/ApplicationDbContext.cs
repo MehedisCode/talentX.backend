@@ -14,7 +14,7 @@ public class ApplicationDbContext
     {
     }
 
-    public DbSet<User> DomainUsers => Set<User>();
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<Job> Jobs => Set<Job>();
 
     protected override void OnModelCreating(ModelBuilder builder)
