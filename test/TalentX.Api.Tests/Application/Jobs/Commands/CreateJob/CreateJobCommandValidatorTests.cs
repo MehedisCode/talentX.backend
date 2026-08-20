@@ -34,7 +34,7 @@ public class CreateJobCommandValidatorTests
     [Theory]
     [InlineData(null)]
     [InlineData("")]
-    [InlineData("QA")]
+    [InlineData("Q")]
     public void Validate_WithInvalidTitle_HasError(string? title)
     {
         var command = ValidCommand() with { Title = title! };
@@ -84,7 +84,7 @@ public class CreateJobCommandValidatorTests
         var result = _validator.TestValidate(command);
 
         result.Errors.Where(e => e.PropertyName == nameof(CreateJobCommand.Title))
-            .Should().ContainSingle(e => e.ErrorMessage == "Title must be at least 5 characters.");
+            .Should().ContainSingle(e => e.ErrorMessage == "Title must be at least 2 characters.");
     }
 
     [Theory]
@@ -178,7 +178,7 @@ public class CreateJobCommandValidatorTests
     [Theory]
     [InlineData(null)]
     [InlineData("")]
-    [InlineData("NY")]
+    [InlineData("N")]
     public void Validate_WithInvalidLocation_HasError(string? location)
     {
         var command = ValidCommand() with { Location = location! };
