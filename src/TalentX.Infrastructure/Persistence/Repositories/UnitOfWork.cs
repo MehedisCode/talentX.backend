@@ -4,9 +4,6 @@ using TalentX.Infrastructure.Persistence.Contexts;
 
 namespace TalentX.Infrastructure.Persistence.Repositories;
 
-/// <summary>
-/// Entity Framework Core implementation of <see cref="IUnitOfWork"/>.
-/// </summary>
 public sealed class UnitOfWork : IUnitOfWork
 {
     private readonly ApplicationDbContext _context;

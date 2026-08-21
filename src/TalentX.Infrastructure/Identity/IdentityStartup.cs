@@ -24,7 +24,6 @@ public static class IdentityStartup
         IConfiguration configuration
     )
     {
-        // Identity Core with Roles
         services.AddIdentity<ApplicationUser, IdentityRole>(options =>
             {
                 options.Password.RequireDigit = true;
@@ -40,7 +39,6 @@ public static class IdentityStartup
             .AddEntityFrameworkStores<ApplicationDbContext>()
             .AddDefaultTokenProviders();
 
-        // JWT Settings
         var jwtSettings = GetJwtSettings(configuration);
 
         services.Configure<JwtSettings>(options =>
@@ -52,7 +50,6 @@ public static class IdentityStartup
             options.RefreshTokenExpiryDays = jwtSettings.RefreshTokenExpiryDays;
         });
 
-        // Authentication & JWT Bearer
         services.AddAuthentication(options =>
         {
             options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -88,13 +85,10 @@ public static class IdentityStartup
         services.AddHttpContextAccessor();
         services.AddAuthorization();
 
-        // Email Settings
         services.Configure<EmailSettings>(configuration.GetSection(EmailSettings.SectionName));
 
-        // AutoMapper
         services.AddAutoMapper(cfg => cfg.AddMaps(typeof(EmployerMappingProfile).Assembly));
 
-        // Services
         services.AddScoped<IIdentityService, IdentityService>();
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<ICurrentUserService, CurrentUserService>();
@@ -106,10 +100,8 @@ public static class IdentityStartup
         return services;
     }
 
-    /// <summary>
-    /// Constructs JWT settings from environment variables (JWT_SECRET, JWT_ISSUER, JWT_AUDIENCE),
-    /// falling back to the "Jwt" configuration section in appsettings.json.
-    /// </summary>
+    // Environment variables (JWT_SECRET, JWT_ISSUER, JWT_AUDIENCE) take precedence over
+    // the "Jwt" configuration section in appsettings.json.
     private static JwtSettings GetJwtSettings(IConfiguration configuration)
     {
         var secret = Environment.GetEnvironmentVariable("JWT_SECRET")

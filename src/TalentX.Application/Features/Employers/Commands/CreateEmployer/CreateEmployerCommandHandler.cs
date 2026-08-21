@@ -9,10 +9,6 @@ using TalentX.Domain.Enums;
 
 namespace TalentX.Application.Features.Employers.Commands.CreateEmployer;
 
-/// <summary>
-/// Handler for <see cref="CreateEmployerCommand"/> to register user in Identity, persist employer profile,
-/// issue JWT session tokens, and return authenticated profile DTO.
-/// </summary>
 public sealed class CreateEmployerCommandHandler : IRequestHandler<CreateEmployerCommand, AuthEmployerDto>
 {
     private readonly IIdentityService _identityService;
@@ -42,23 +38,22 @@ public sealed class CreateEmployerCommandHandler : IRequestHandler<CreateEmploye
                 throw new ConflictException($"An employer with email '{request.Email}' is already registered and verified. Please sign in.");
             }
 
-            // Update profile with submitted details and mark verified
             existingEmployer.Update(request.Name);
             existingEmployer.UpdateCompany(request.CompanyName);
             existingEmployer.MarkAsVerified();
             _unitOfWork.Employers.Update(existingEmployer);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            var tokenRes = await _tokenService.CreateAsync(existingEmployer.UserId);
-            if (!tokenRes.Success || tokenRes.Data is null)
+            var existingTokenResult = await _tokenService.CreateAsync(existingEmployer.UserId);
+            if (!existingTokenResult.Success || existingTokenResult.Data is null)
             {
-                throw new ValidationException(string.Join("; ", tokenRes.Errors));
+                throw new ValidationException(string.Join("; ", existingTokenResult.Errors));
             }
 
             return new AuthEmployerDto(
                 Employer: _mapper.Map<EmployerDto>(existingEmployer),
-                AccessToken: tokenRes.Data.AccessToken,
-                RefreshToken: tokenRes.Data.RefreshToken
+                AccessToken: existingTokenResult.Data.AccessToken,
+                RefreshToken: existingTokenResult.Data.RefreshToken
             );
         }
 
@@ -84,7 +79,6 @@ public sealed class CreateEmployerCommandHandler : IRequestHandler<CreateEmploye
         await _unitOfWork.Employers.AddAsync(employer, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        // Mint JWT access and refresh tokens for immediate logged-in session
         var tokenResult = await _tokenService.CreateAsync(employer.UserId);
         if (!tokenResult.Success || tokenResult.Data is null)
         {

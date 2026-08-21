@@ -4,11 +4,6 @@ using TalentX.Application.Common.Interfaces;
 
 namespace TalentX.Application.Features.Employers.Commands.SendOtp;
 
-/// <summary>
-/// Handler for <see cref="SendEmployerOtpCommand"/> to dispatch a verification OTP email.
-/// Supports both new unverified emails and existing unverified employers.
-/// Throws <see cref="ConflictException"/> if the email is already registered and verified.
-/// </summary>
 public sealed class SendEmployerOtpCommandHandler : IRequestHandler<SendEmployerOtpCommand, bool>
 {
     private readonly IOtpService _otpService;

@@ -2,9 +2,6 @@ using FluentValidation;
 
 namespace TalentX.Application.Features.Employers.Commands.SendOtp;
 
-/// <summary>
-/// Validator for <see cref="SendEmployerOtpCommand"/>.
-/// </summary>
 public sealed class SendEmployerOtpCommandValidator : AbstractValidator<SendEmployerOtpCommand>
 {
     public SendEmployerOtpCommandValidator()

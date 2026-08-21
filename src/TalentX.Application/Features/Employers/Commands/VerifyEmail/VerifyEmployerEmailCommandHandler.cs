@@ -7,11 +7,6 @@ using TalentX.Application.Identity.Interfaces;
 
 namespace TalentX.Application.Features.Employers.Commands.VerifyEmail;
 
-/// <summary>
-/// Handler for <see cref="VerifyEmployerEmailCommand"/> to verify email OTP.
-/// If an employer record exists, marks it verified and mints JWT session tokens.
-/// If not yet registered, verifies OTP and allows the user to proceed to onboarding.
-/// </summary>
 public sealed class VerifyEmployerEmailCommandHandler : IRequestHandler<VerifyEmployerEmailCommand, AuthEmployerDto>
 {
     private readonly IOtpService _otpService;
@@ -54,7 +49,6 @@ public sealed class VerifyEmployerEmailCommandHandler : IRequestHandler<VerifyEm
         _unitOfWork.Employers.Update(employer);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        // Mint JWT access and refresh tokens for automatic login upon verification
         var tokenResult = await _tokenService.CreateAsync(employer.UserId);
         if (!tokenResult.Success || tokenResult.Data is null)
         {
