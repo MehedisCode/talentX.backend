@@ -211,7 +211,7 @@ namespace TalentX.Migrations.Migrations
                     b.Property<int>("Vacancies")
                         .HasColumnType("integer");
 
-                    b.Property<string>("WorkArrangement")
+                    b.Property<string>("WorkMode")
                         .IsRequired()
                         .HasColumnType("text");
 

@@ -1,18 +1,12 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using TalentX.Application.Features.Jobs.Queries;
-using TalentX.Application.Features.Jobs.Commands.CreateJob;
-using TalentX.Application.Features.Jobs.Commands.UpdateJob;
 
-namespace TalentX.API.Controllers;
+namespace TalentX.API.Controllers.Jobs;
 
 [Route("api/v1/jobs")]
 public class JobsController : BaseApiController
 {
-    public JobsController()
-    {
-    }
-
     [HttpGet]
     public async Task<IActionResult> GetJobs(
         [FromQuery] int page = 1,
@@ -27,25 +21,6 @@ public class JobsController : BaseApiController
     public async Task<IActionResult> GetJobById(Guid id, CancellationToken cancellationToken)
     {
         var job = await Sender.Send(new GetJobDetailsQuery(id), cancellationToken);
-        if (job is null)
-            return NotFound(new { message = "Job not found" });
         return Ok(job);
     }
-    
-    [HttpPost]
-    // [Authorize(Roles = "Employer")] // Authorization will be implemented by someone else as stated by user
-    public async Task<ActionResult<Guid>> CreateJob([FromBody] CreateJobCommand command)
-    {
-        var jobId = await Sender.Send(command);
-        return StatusCode(StatusCodes.Status201Created, jobId);
-    }
-
-    [HttpPatch("{id}")]
-    // [Authorize(Roles = "Employer")] // Authorization will be implemented by someone else as stated by user
-    public async Task<IActionResult> UpdateJob(Guid id, [FromBody] UpdateJobCommand command)
-    {
-        await Sender.Send(command with { Id = id });
-        return NoContent();
-    }
-
 }

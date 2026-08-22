@@ -6,6 +6,7 @@ using TalentX.Infrastructure;
 using TalentX.Infrastructure.Identity.Seed;
 using TalentX.Infrastructure.Middlewares;
 using TalentX.Infrastructure.Persistence.Contexts;
+using TalentX.Infrastructure.Persistence;
 
 // 1. Walk up directory tree to discover and load .env from solution root (talentx2026q3.backend/.env)
 var envFile = Path.Combine(Directory.GetCurrentDirectory(), ".env");
@@ -79,52 +80,16 @@ builder.Services.AddControllers()
 
 var app = builder.Build();
 
-// 5. Safe Database Migration & Seeding (Runs migrations first, then seeds Identity & Jobs)
+// 5. Safe Database Migration & Seeding (logic moved to DatabaseInitializer.cs)
 try
 {
-    using var scope = app.Services.CreateScope();
-    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-
-    if (app.Environment.IsDevelopment())
-    {
-        try
-        {
-            await db.Database.MigrateAsync();
-
-            if (!await db.Jobs.AnyAsync())
-            {
-                db.Jobs.AddRange(TalentX.Infrastructure.Persistence.SeedData.JobSeedData.GetJobs());
-                await db.SaveChangesAsync();
-            }
-
-            await IdentitySeeder.SeedAsync(app.Services);
-        }
-        catch (PostgresException ex) when (ex.SqlState is "42P07" or "42P01")
-        {
-            var logger = app.Services.GetRequiredService<ILogger<Program>>();
-            logger.LogWarning("Outdated database schema detected ({SqlState}). Re-creating database...", ex.SqlState);
-            await db.Database.EnsureDeletedAsync();
-            await db.Database.MigrateAsync();
-
-            if (!await db.Jobs.AnyAsync())
-            {
-                db.Jobs.AddRange(TalentX.Infrastructure.Persistence.SeedData.JobSeedData.GetJobs());
-                await db.SaveChangesAsync();
-            }
-
-            await IdentitySeeder.SeedAsync(app.Services);
-        }
-    }
-    else
-    {
-        await db.Database.MigrateAsync();
-        await IdentitySeeder.SeedAsync(app.Services);
-    }
+    await app.Services.InitializeDatabaseAsync(app.Environment);
 }
 catch (Exception ex)
 {
     var logger = app.Services.GetRequiredService<ILogger<Program>>();
-    logger.LogWarning(ex, "Database migration or seeding skipped or failed during startup: {Message}", ex.Message);
+    logger.LogCritical(ex, "Database initialization failed. The application will not start.");
+    throw;
 }
 
 // 6. Swagger (Development or explicit ENABLE_SWAGGER=true in .env)

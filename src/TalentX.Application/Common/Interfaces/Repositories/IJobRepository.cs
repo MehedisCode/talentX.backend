@@ -1,14 +1,11 @@
+using TalentX.Application.Common.Models;
 using TalentX.Domain.Entities;
 
 namespace TalentX.Application.Common.Interfaces.Repositories;
 
-public interface IJobRepository
+public interface IJobRepository : IRepository<Job>
 {
-    Task<(IReadOnlyList<Job> Items, int TotalCount)> GetPublishedJobsAsync(
-        int page, int pageSize, CancellationToken cancellationToken);
+    Task<PaginatedList<Job>> GetPublishedJobsAsync(int page, int pageSize, CancellationToken cancellationToken);
 
-    Task<Job?> GetPublishedByIdAsync(Guid id, CancellationToken cancellationToken);
-    Task<Job?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
-    Task AddAsync(Job job, CancellationToken cancellationToken = default);
-    void Update(Job job);
+    Task<Job?> GetPublishedJobByIdAsync(Guid id, CancellationToken cancellationToken);
 }

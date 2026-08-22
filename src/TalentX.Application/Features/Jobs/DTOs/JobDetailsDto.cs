@@ -9,7 +9,7 @@ public class JobDetailsDto
     public string Location { get; set; } = string.Empty;
     public string? EmploymentType { get; set; }
     public string? ExperienceLevel { get; set; }
-    public string? WorkArrangement { get; set; }
+    public string? WorkMode { get; set; }
     public IReadOnlyList<string> RequiredSkills { get; set; } = new List<string>();
     public int Vacancies { get; set; }
     public DateTime CreatedAt { get; set; }

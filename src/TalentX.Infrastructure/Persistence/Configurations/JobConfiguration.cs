@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using TalentX.Domain.Entities;
 using TalentX.Domain.Enums;
 
@@ -37,11 +38,11 @@ public class JobConfiguration : IEntityTypeConfiguration<Job>
             .IsRequired();
 
         builder.Property(j => j.EmploymentType).HasConversion<string>();
-        builder.Property(j => j.WorkArrangement).HasConversion<string>();
+        builder.Property(j => j.WorkMode).HasConversion<string>();
         builder.Property(j => j.ExperienceLevel).HasConversion<string>();
         builder.Property(j => j.Status).HasConversion<string>().IsRequired();
 
-        var stringListComparer = new Microsoft.EntityFrameworkCore.ChangeTracking.ValueComparer<List<string>>(
+        var stringListComparer = new ValueComparer<List<string>>(
             (c1, c2) => c1 != null && c2 != null ? c1.SequenceEqual(c2) : c1 == c2,
             c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
             c => c.ToList());
