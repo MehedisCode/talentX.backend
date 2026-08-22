@@ -12,7 +12,7 @@ using TalentX.Infrastructure.Persistence.Contexts;
 namespace TalentX.Migrations.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260820105351_InitialCreate")]
+    [Migration("20260822123552_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -165,16 +165,14 @@ namespace TalentX.Migrations.Migrations
 
                     b.Property<string>("CompanyName")
                         .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
+                        .HasColumnType("text");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Description")
                         .IsRequired()
-                        .HasMaxLength(10000)
-                        .HasColumnType("character varying(10000)");
+                        .HasColumnType("text");
 
                     b.Property<string>("EmployerId")
                         .IsRequired()
@@ -192,8 +190,7 @@ namespace TalentX.Migrations.Migrations
 
                     b.Property<string>("Location")
                         .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
+                        .HasColumnType("text");
 
                     b.Property<string>("RequiredSkills")
                         .IsRequired()
@@ -205,8 +202,7 @@ namespace TalentX.Migrations.Migrations
 
                     b.Property<string>("Title")
                         .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
+                        .HasColumnType("text");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -214,7 +210,7 @@ namespace TalentX.Migrations.Migrations
                     b.Property<int>("Vacancies")
                         .HasColumnType("integer");
 
-                    b.Property<string>("WorkArrangement")
+                    b.Property<string>("WorkMode")
                         .IsRequired()
                         .HasColumnType("text");
 

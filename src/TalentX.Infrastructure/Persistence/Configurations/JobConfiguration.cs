@@ -19,20 +19,16 @@ public class JobConfiguration : IEntityTypeConfiguration<Job>
         builder.HasIndex(j => j.EmployerId);
 
         builder.Property(j => j.Title)
-            .IsRequired()
-            .HasMaxLength(200);
+            .IsRequired();
 
         builder.Property(j => j.CompanyName)
-            .IsRequired()
-            .HasMaxLength(200);
+            .IsRequired();
 
         builder.Property(j => j.Description)
-            .IsRequired()
-            .HasMaxLength(10000);
+            .IsRequired();
 
         builder.Property(j => j.Location)
-            .IsRequired()
-            .HasMaxLength(200);
+            .IsRequired();
 
         builder.Property(j => j.ExpireAt)
             .IsRequired();
