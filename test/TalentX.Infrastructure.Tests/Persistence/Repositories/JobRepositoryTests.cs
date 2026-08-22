@@ -21,7 +21,7 @@ public class JobRepositoryTests
 
     private static Job NewJob()
     {
-        return Job.CreateDraft(
+        return Job.Create(
             "employer-1",
             "Backend Engineer",
             "Acme Corp",
@@ -101,7 +101,11 @@ public class JobRepositoryTests
         context.SaveChanges();
         context.Entry(job).State = EntityState.Detached;
 
-        job.UpdateDetails("Updated Title", null, null, null, null, null, null, null, null, null);
+        job.SetDetails(
+            "Updated Title", job.CompanyName, job.Description, job.EmploymentType,
+            job.ExperienceLevel, job.Location, job.WorkArrangement, job.RequiredSkills,
+            job.Vacancies, job.ExpireAt
+        );
         repository.Update(job);
 
         context.Entry(job).State.Should().Be(EntityState.Modified);

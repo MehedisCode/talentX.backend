@@ -7,10 +7,6 @@ public class UpdateJobCommandValidator : AbstractValidator<UpdateJobCommand>
 {
     public UpdateJobCommandValidator()
     {
-        // null = leave this field alone, so rules only fire on fields actually sent.
-        // Everything's checked against .Trim() so whitespace can't pass as content.
-        // "Ready to publish" is Job.EnsureIsPublishable()'s job, not this validator's.
-
         RuleFor(v => v.Title)
             .Must(title => title is null || title.Trim().Length >= 5)
                 .WithMessage("Title must be at least 5 characters.")

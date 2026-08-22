@@ -34,24 +34,25 @@ public class UpdateJobCommandHandler : IRequestHandler<UpdateJobCommand>
         if (job.EmployerId != employerId)
             throw new ForbiddenException("You do not have permission to edit this job.");
 
-        job.UpdateDetails(
-            request.Title,
-            request.CompanyName,
-            request.Description,
-            request.EmploymentType,
-            request.ExperienceLevel,
-            request.Location,
-            request.WorkArrangement,
-            request.RequiredSkills,
-            request.Vacancies,
-            request.ExpireAt
+        job.SetDetails(
+            request.Title != null ? JobRules.NormalizeText(request.Title) : job.Title,
+            request.CompanyName != null ? JobRules.NormalizeText(request.CompanyName) : job.CompanyName,
+            request.Description != null ? JobRules.NormalizeText(request.Description) : job.Description,
+            request.EmploymentType ?? job.EmploymentType,
+            request.ExperienceLevel ?? job.ExperienceLevel,
+            request.Location != null ? JobRules.NormalizeText(request.Location) : job.Location,
+            request.WorkArrangement ?? job.WorkArrangement,
+            request.RequiredSkills != null ? JobRules.NormalizeSkills(request.RequiredSkills) : job.RequiredSkills,
+            request.Vacancies ?? job.Vacancies,
+            request.ExpireAt ?? job.ExpireAt
         );
 
         if (request.Publish)
         {
             try
             {
-                job.Publish();
+                JobRules.EnsurePublishable(job);
+                job.MarkAsPublished();
             }
             catch (InvalidOperationException ex)
             {

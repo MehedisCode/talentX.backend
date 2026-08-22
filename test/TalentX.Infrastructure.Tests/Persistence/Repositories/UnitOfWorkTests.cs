@@ -24,7 +24,7 @@ public class UnitOfWorkTests
     {
         await using var context = NewContext();
         var unitOfWork = new UnitOfWork(context);
-        var job = Job.CreateDraft(
+        var job = Job.Create(
             "employer-1",
             "Backend Engineer",
             "Acme Corp",

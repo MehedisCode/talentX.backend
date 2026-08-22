@@ -1,4 +1,3 @@
-using FluentValidation;
 using MediatR;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
@@ -28,16 +27,16 @@ public class CreateJobCommandHandler : IRequestHandler<CreateJobCommand, Guid>
         var employerId = _currentUserService.UserId
             ?? throw new UnauthorizedException("You must be signed in to post a job.");
 
-        var job = Job.CreateDraft(
-            employerId,
-            request.Title,
-            request.CompanyName,
-            request.Description,
+        var job = Job.Create(
+            JobRules.NormalizeText(employerId),
+            JobRules.NormalizeText(request.Title),
+            JobRules.NormalizeText(request.CompanyName),
+            JobRules.NormalizeText(request.Description),
             request.EmploymentType,
             request.ExperienceLevel,
-            request.Location,
+            JobRules.NormalizeText(request.Location),
             request.WorkArrangement,
-            request.RequiredSkills,
+            JobRules.NormalizeSkills(request.RequiredSkills),
             request.Vacancies,
             request.ExpireAt
         );
@@ -46,7 +45,8 @@ public class CreateJobCommandHandler : IRequestHandler<CreateJobCommand, Guid>
         {
             try
             {
-                job.Publish();
+                JobRules.EnsurePublishable(job);
+                job.MarkAsPublished();
             }
             catch (InvalidOperationException ex)
             {

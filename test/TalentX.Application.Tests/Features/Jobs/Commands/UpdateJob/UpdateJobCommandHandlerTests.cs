@@ -26,7 +26,7 @@ public class UpdateJobCommandHandlerTests
 
     private static Job ExistingDraftJob()
     {
-        return Job.CreateDraft(
+        return Job.Create(
             "employer-1",
             "Backend Engineer",
             "Acme Corp",
