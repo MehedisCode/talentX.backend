@@ -54,31 +54,28 @@ public class Job : BaseEntity
     }
 
     public void UpdateDetails(
-        string? title = null,
-        string? companyName = null,
-        string? description = null,
-        EmploymentType? employmentType = null,
-        string? location = null,
-        WorkMode? workMode = null,
-        ExperienceLevel? experienceLevel = null,
-        List<string>? requiredSkills = null,
-        int? vacancies = null,
-        DateTime? expireAt = null
+        string title,
+        string companyName,
+        string description,
+        EmploymentType employmentType,
+        string location,
+        WorkMode workMode,
+        ExperienceLevel? experienceLevel,
+        List<string>? requiredSkills,
+        int vacancies,
+        DateTime expireAt
     )
     {
-        if (title is not null) Title = title;
-        if (companyName is not null) CompanyName = companyName;
-        if (description is not null) Description = description;
-        if (employmentType.HasValue) EmploymentType = employmentType.Value;
-        if (location is not null) Location = location;
-        if (workMode.HasValue) WorkMode = workMode.Value;
-        if (experienceLevel.HasValue) ExperienceLevel = experienceLevel.Value;
-        if (requiredSkills is not null) RequiredSkills = requiredSkills;
-        if (vacancies.HasValue) Vacancies = vacancies.Value;
-        if (expireAt.HasValue) ExpireAt = expireAt.Value;
-
-        MarkUpdated();
+        Title = title;
+        CompanyName = companyName;
+        Description = description;
+        EmploymentType = employmentType;
+        Location = location;
+        WorkMode = workMode;
+        ExperienceLevel = experienceLevel;
+        RequiredSkills = requiredSkills ?? new List<string>();
+        Vacancies = vacancies;
+        ExpireAt = expireAt;
+        UpdatedAt = DateTime.UtcNow;
     }
-
-    public void MarkUpdated() => UpdatedAt = DateTime.UtcNow;
 }
