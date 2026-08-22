@@ -7,59 +7,53 @@ public static class JobSeedData
 {
     public static List<Job> GetJobs() => new()
     {
-        new Job
-        {
-            EmployerId = "seed-acme", Title = "Frontend Developer", CompanyName = "Acme Inc",
-            Description = "Build and ship user-facing features across our product.",
-            EmploymentType = EmploymentType.FullTime, ExperienceLevel = ExperienceLevel.MidLevel,
-            Location = "Dhaka", WorkMode = WorkMode.Hybrid,
-            RequiredSkills = new List<string> { "React", "Next.js", "TypeScript" },
-            Vacancies = 1, ExpireAt = DateTime.UtcNow.AddMonths(1), Status = JobStatus.Published
-        },
-        new Job
-        {
-            EmployerId = "seed-northwind", Title = "Backend Engineer (.NET)", CompanyName = "Northwind Labs",
-            Description = "Own our core API and data layer.",
-            EmploymentType = EmploymentType.FullTime, ExperienceLevel = ExperienceLevel.SeniorLevel,
-            Location = "Remote", WorkMode = WorkMode.Remote,
-            RequiredSkills = new List<string> { "C#", "EF Core", "SQL Server" },
-            Vacancies = 1, ExpireAt = DateTime.UtcNow.AddMonths(1), Status = JobStatus.Published
-        },
-        new Job
-        {
-            EmployerId = "seed-acme", Title = "Product Designer", CompanyName = "Acme Inc",
-            Description = "Shape the end-to-end experience for our job seekers.",
-            EmploymentType = EmploymentType.FullTime, ExperienceLevel = ExperienceLevel.MidLevel,
-            Location = "Dhaka", WorkMode = WorkMode.OnSite,
-            RequiredSkills = new List<string> { "Figma", "User Research" },
-            Vacancies = 1, ExpireAt = DateTime.UtcNow.AddMonths(1), Status = JobStatus.Published
-        },
-        new Job
-        {
-            EmployerId = "seed-northwind", Title = "QA Engineer", CompanyName = "Northwind Labs",
-            Description = "Own quality across our web and API surfaces.",
-            EmploymentType = EmploymentType.Contract, ExperienceLevel = ExperienceLevel.EntryLevel,
-            Location = "Remote", WorkMode = WorkMode.Remote,
-            RequiredSkills = new List<string> { "Manual Testing", "Cypress" },
-            Vacancies = 1, ExpireAt = DateTime.UtcNow.AddMonths(1), Status = JobStatus.Published
-        },
-        new Job
-        {
-            EmployerId = "seed-acme", Title = "Expired Internship (should NOT appear)", CompanyName = "Acme Inc",
-            Description = "Seeded already-closed to verify the eligibility filter works.",
-            EmploymentType = EmploymentType.Internship, ExperienceLevel = ExperienceLevel.EntryLevel,
-            Location = "Remote", WorkMode = WorkMode.Remote,
-            RequiredSkills = new List<string> { "Java", "Spring Boot" },
-            Vacancies = 1, ExpireAt = DateTime.UtcNow.AddMonths(1), Status = JobStatus.Closed
-        },
-        new Job
-        {
-            EmployerId = "seed-acme", Title = "Draft Role (should NOT appear)", CompanyName = "Acme Inc",
-            Description = "Seeded as Draft to verify it never becomes publicly visible.",
-            EmploymentType = EmploymentType.PartTime, ExperienceLevel = ExperienceLevel.MidLevel,
-            Location = "Dhaka", WorkMode = WorkMode.Hybrid,
-            RequiredSkills = new List<string> { "SQL" },
-            Vacancies = 1, ExpireAt = DateTime.UtcNow.AddMonths(1), Status = JobStatus.Draft
-        }
+        new Job(
+            title: "Frontend Developer", companyName: "Acme Inc",
+            description: "Build and ship user-facing features across our product.",
+            employmentType: EmploymentType.FullTime, location: "Dhaka", workMode: WorkMode.Hybrid,
+            experienceLevel: ExperienceLevel.MidLevel,
+            requiredSkills: new List<string> { "React", "Next.js", "TypeScript" },
+            vacancies: 1, expireAt: DateTime.UtcNow.AddMonths(1), employerId: "seed-acme", status: JobStatus.Published
+        ),
+        new Job(
+            title: "Backend Engineer (.NET)", companyName: "Northwind Labs",
+            description: "Own our core API and data layer.",
+            employmentType: EmploymentType.FullTime, location: "Remote", workMode: WorkMode.Remote,
+            experienceLevel: ExperienceLevel.SeniorLevel,
+            requiredSkills: new List<string> { "C#", "EF Core", "SQL Server" },
+            vacancies: 1, expireAt: DateTime.UtcNow.AddMonths(1), employerId: "seed-northwind", status: JobStatus.Published
+        ),
+        new Job(
+            title: "Product Designer", companyName: "Acme Inc",
+            description: "Shape the end-to-end experience for our job seekers.",
+            employmentType: EmploymentType.FullTime, location: "Dhaka", workMode: WorkMode.OnSite,
+            experienceLevel: ExperienceLevel.MidLevel,
+            requiredSkills: new List<string> { "Figma", "User Research" },
+            vacancies: 1, expireAt: DateTime.UtcNow.AddMonths(1), employerId: "seed-acme", status: JobStatus.Published
+        ),
+        new Job(
+            title: "QA Engineer", companyName: "Northwind Labs",
+            description: "Own quality across our web and API surfaces.",
+            employmentType: EmploymentType.Contract, location: "Remote", workMode: WorkMode.Remote,
+            experienceLevel: ExperienceLevel.EntryLevel,
+            requiredSkills: new List<string> { "Manual Testing", "Cypress" },
+            vacancies: 1, expireAt: DateTime.UtcNow.AddMonths(1), employerId: "seed-northwind", status: JobStatus.Published
+        ),
+        new Job(
+            title: "Expired Internship (should NOT appear)", companyName: "Acme Inc",
+            description: "Seeded already-closed to verify the eligibility filter works.",
+            employmentType: EmploymentType.Internship, location: "Remote", workMode: WorkMode.Remote,
+            experienceLevel: ExperienceLevel.EntryLevel,
+            requiredSkills: new List<string> { "Java", "Spring Boot" },
+            vacancies: 1, expireAt: DateTime.UtcNow.AddMonths(1), employerId: "seed-acme", status: JobStatus.Closed
+        ),
+        new Job(
+            title: "Draft Role (should NOT appear)", companyName: "Acme Inc",
+            description: "Seeded as Draft to verify it never becomes publicly visible.",
+            employmentType: EmploymentType.PartTime, location: "Dhaka", workMode: WorkMode.Hybrid,
+            experienceLevel: ExperienceLevel.MidLevel,
+            requiredSkills: new List<string> { "SQL" },
+            vacancies: 1, expireAt: DateTime.UtcNow.AddMonths(1), employerId: "seed-acme", status: JobStatus.Draft
+        )
     };
 }

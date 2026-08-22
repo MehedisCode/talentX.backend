@@ -28,8 +28,8 @@ public class GetPublishedJobsQueryTests
     {
         var jobs = new List<Job>
         {
-            new Job { Title = "Job 1", Status = JobStatus.Published },
-            new Job { Title = "Job 2", Status = JobStatus.Published }
+            new Job("Job 1", "Co 1", "Desc 1", EmploymentType.FullTime, "Dhaka", WorkMode.Remote, ExperienceLevel.MidLevel, new List<string>(), 1, DateTime.UtcNow.AddDays(10), status: JobStatus.Published),
+            new Job("Job 2", "Co 2", "Desc 2", EmploymentType.FullTime, "Dhaka", WorkMode.Remote, ExperienceLevel.MidLevel, new List<string>(), 1, DateTime.UtcNow.AddDays(10), status: JobStatus.Published)
         };
 
         var paginatedJobs = new PaginatedList<Job>(jobs, 1, 20, 2);
