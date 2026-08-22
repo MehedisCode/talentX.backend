@@ -4,7 +4,7 @@ using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Common.Interfaces.Repositories;
 using TalentX.Application.Features.Jobs.DTOs;
-using TalentX.Application.Features.Jobs.Queries;
+using TalentX.Application.Features.Jobs.Queries.GetJobDetails;
 using TalentX.Domain.Entities;
 using TalentX.Domain.Enums;
 using AutoMapper;

@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using TalentX.Application.Features.Jobs.Queries;
+using TalentX.Application.Features.Jobs.Queries.GetJobDetails;
+using TalentX.Application.Features.Jobs.Queries.GetPublishedJobs;
 
 namespace TalentX.API.Controllers.Jobs;
 
