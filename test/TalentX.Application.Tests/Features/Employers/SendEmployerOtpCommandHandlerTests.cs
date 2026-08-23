@@ -23,7 +23,6 @@ public sealed class SendEmployerOtpCommandHandlerTests
     [Fact]
     public async Task Handle_SuccessfullySendsNewOtp_WhenEmployerIsUnverified()
     {
-        // Arrange
         var command = new SendEmployerOtpCommand("unverified@acme.com");
         var employer = new Employer("user-1", "Jane Doe", "unverified@acme.com", "Acme Corp");
 
@@ -41,11 +40,10 @@ public sealed class SendEmployerOtpCommandHandlerTests
             _unitOfWorkMock.Object
         );
 
-        // Act
         var result = await handler.Handle(command, CancellationToken.None);
 
-        // Assert
         Assert.True(result);
+        _otpServiceMock.Verify(o => o.ConsumeEmailVerificationAsync(command.Email, It.IsAny<CancellationToken>()), Times.Once);
         _otpServiceMock.Verify(o => o.GenerateOtpAsync(command.Email, null, It.IsAny<CancellationToken>()), Times.Once);
         _emailServiceMock.Verify(e => e.SendOtpEmailAsync(command.Email, "Jane Doe", "789012", It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -53,7 +51,6 @@ public sealed class SendEmployerOtpCommandHandlerTests
     [Fact]
     public async Task Handle_SuccessfullySendsOtp_WhenEmployerDoesNotExistYet()
     {
-        // Arrange - New email entering step 1 of signup
         var command = new SendEmployerOtpCommand("newuser@acme.com");
 
         _employerRepositoryMock
@@ -70,11 +67,10 @@ public sealed class SendEmployerOtpCommandHandlerTests
             _unitOfWorkMock.Object
         );
 
-        // Act
         var result = await handler.Handle(command, CancellationToken.None);
 
-        // Assert
         Assert.True(result);
+        _otpServiceMock.Verify(o => o.ConsumeEmailVerificationAsync(command.Email, It.IsAny<CancellationToken>()), Times.Once);
         _otpServiceMock.Verify(o => o.GenerateOtpAsync(command.Email, null, It.IsAny<CancellationToken>()), Times.Once);
         _emailServiceMock.Verify(e => e.SendOtpEmailAsync(command.Email, "Employer", "123456", It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -82,7 +78,6 @@ public sealed class SendEmployerOtpCommandHandlerTests
     [Fact]
     public async Task Handle_ThrowsConflictException_WhenEmployerAlreadyVerified()
     {
-        // Arrange
         var command = new SendEmployerOtpCommand("verified@acme.com");
         var employer = new Employer("user-1", "Jane Doe", "verified@acme.com", "Acme Corp");
         employer.MarkAsVerified();
@@ -97,9 +92,8 @@ public sealed class SendEmployerOtpCommandHandlerTests
             _unitOfWorkMock.Object
         );
 
-        // Act & Assert
-        var ex = await Assert.ThrowsAsync<ConflictException>(() => handler.Handle(command, CancellationToken.None));
-        Assert.Contains("already registered and verified", ex.Message);
+        var exception = await Assert.ThrowsAsync<ConflictException>(() => handler.Handle(command, CancellationToken.None));
+        Assert.Contains("already registered and verified", exception.Message);
         _otpServiceMock.Verify(o => o.GenerateOtpAsync(It.IsAny<string>(), null, It.IsAny<CancellationToken>()), Times.Never);
     }
 }

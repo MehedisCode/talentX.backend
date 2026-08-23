@@ -34,10 +34,11 @@ public sealed class VerifyEmployerEmailCommandHandler : IRequestHandler<VerifyEm
             throw new ValidationException("Invalid or expired OTP code.");
         }
 
+        await _otpService.MarkEmailVerifiedAsync(request.Email, cancellationToken: cancellationToken);
+
         var employer = await _unitOfWork.Employers.GetByEmailAsync(request.Email, cancellationToken);
         if (employer == null)
         {
-            // Valid OTP for a new email prior to profile onboarding completion
             return new AuthEmployerDto(
                 Employer: null,
                 AccessToken: string.Empty,

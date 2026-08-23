@@ -28,6 +28,8 @@ public sealed class SendEmployerOtpCommandHandler : IRequestHandler<SendEmployer
             throw new ConflictException($"An employer with email '{request.Email}' is already registered and verified. Please sign in.");
         }
 
+        await _otpService.ConsumeEmailVerificationAsync(request.Email, cancellationToken);
+
         var recipientName = employer?.Name ?? "Employer";
         var otp = await _otpService.GenerateOtpAsync(request.Email, cancellationToken: cancellationToken);
         await _emailService.SendOtpEmailAsync(request.Email, recipientName, otp, cancellationToken);
