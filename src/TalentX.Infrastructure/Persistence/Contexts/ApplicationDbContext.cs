@@ -15,8 +15,8 @@ public class ApplicationDbContext
     {
     }
 
-    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<Job> Jobs => Set<Job>();
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<User> DomainUsers => Set<User>();
     public DbSet<Employer> Employers => Set<Employer>();
 

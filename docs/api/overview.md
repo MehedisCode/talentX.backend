@@ -17,9 +17,9 @@ The TalentX REST API is built on **ASP.NET Core (.NET 10)** following RESTful de
 ### 1. Employers API (`/api/v1/employers`)
 | Method | Endpoint | Description | Auth Required |
 | :--- | :--- | :--- | :--- |
-| `POST` | `/api/v1/employers/register` | Register new employer account & dispatch OTP | No |
+| `POST` | `/api/v1/employers/register` | Register new employer account & complete profile | No |
 | `POST` | `/api/v1/employers/verify-email` | Verify email with 6-digit OTP | No |
-| `POST` | `/api/v1/employers/resend-otp` | Resend fresh 6-digit OTP code | No |
+| `POST` | `/api/v1/employers/send-otp` | Send fresh 6-digit OTP verification code | No |
 | `POST` | `/api/v1/employers/google` | Google OAuth sign-in / registration with ID token | No |
 
 ### 2. Authentication API (`/api/v1/auth`)

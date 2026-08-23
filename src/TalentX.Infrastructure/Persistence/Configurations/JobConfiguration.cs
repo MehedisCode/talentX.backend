@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using TalentX.Domain.Entities;
+using TalentX.Domain.Enums;
 
 namespace TalentX.Infrastructure.Persistence.Configurations;
 
@@ -17,27 +19,39 @@ public class JobConfiguration : IEntityTypeConfiguration<Job>
         builder.HasIndex(j => j.EmployerId);
 
         builder.Property(j => j.Title)
-            .IsRequired()
-            .HasMaxLength(200);
+            .IsRequired();
 
         builder.Property(j => j.CompanyName)
-            .IsRequired()
-            .HasMaxLength(200);
+            .IsRequired();
 
         builder.Property(j => j.Description)
-            .IsRequired()
-            .HasMaxLength(10000);
+            .IsRequired();
 
         builder.Property(j => j.Location)
-            .IsRequired()
-            .HasMaxLength(200);
+            .IsRequired();
 
         builder.Property(j => j.ExpireAt)
             .IsRequired();
 
-        // RequiredSkills list stored as a JSON or a separate table. Since EF Core 8 supports primitive collections,
-        // we can store List<string> as JSON if we use HasConversion or simply it's supported depending on the provider.
-        // For SQL Server in EF Core 8+, primitive collections are mapped to JSON arrays by default.
-        // No explicit configuration needed for primitive collection unless needed.
+        builder.Property(j => j.EmploymentType).HasConversion<string>();
+        builder.Property(j => j.WorkArrangement).HasConversion<string>();
+        builder.Property(j => j.ExperienceLevel).HasConversion<string>();
+        builder.Property(j => j.Status).HasConversion<string>().IsRequired();
+
+        var stringListComparer = new ValueComparer<List<string>>(
+            (c1, c2) => c1 != null && c2 != null ? c1.SequenceEqual(c2) : c1 == c2,
+            c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
+            c => c.ToList());
+
+        builder.Property(j => j.RequiredSkills)
+            .HasConversion(
+                v => System.Text.Json.JsonSerializer.Serialize(v, (System.Text.Json.JsonSerializerOptions?)null),
+                v => System.Text.Json.JsonSerializer.Deserialize<List<string>>(v, (System.Text.Json.JsonSerializerOptions?)null) ?? new List<string>())
+            .Metadata.SetValueComparer(stringListComparer);
+
+        builder.HasIndex(j => j.Status);
+        builder.HasIndex(j => j.ExpireAt);
+        builder.HasIndex(j => new { j.Status, j.CreatedAt });
     }
 }
+

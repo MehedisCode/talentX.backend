@@ -1,61 +1,71 @@
 using AutoMapper;
 using MediatR;
 using TalentX.Application.Common.Exceptions;
-using TalentX.Application.Identity.Interfaces;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.DTOs.Employers;
+using TalentX.Application.Identity.Interfaces;
 using TalentX.Domain;
 using TalentX.Domain.Enums;
 
 namespace TalentX.Application.Features.Employers.Commands.CreateEmployer;
 
-/// <summary>
-/// Handler for <see cref="CreateEmployerCommand"/> to register user in Identity, persist employer profile, dispatch verification OTP, and return projected DTO.
-/// Handles the edge case of unverified users re-registering by refreshing OTP and profile data.
-/// </summary>
-public sealed class CreateEmployerCommandHandler : IRequestHandler<CreateEmployerCommand, EmployerDto>
+public sealed class CreateEmployerCommandHandler : IRequestHandler<CreateEmployerCommand, AuthEmployerDto>
 {
     private readonly IIdentityService _identityService;
+    private readonly ITokenService _tokenService;
     private readonly IOtpService _otpService;
-    private readonly IEmailService _emailService;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
 
     public CreateEmployerCommandHandler(
         IIdentityService identityService,
+        ITokenService tokenService,
         IOtpService otpService,
-        IEmailService emailService,
         IUnitOfWork unitOfWork,
         IMapper mapper)
     {
         _identityService = identityService;
+        _tokenService = tokenService;
         _otpService = otpService;
-        _emailService = emailService;
         _unitOfWork = unitOfWork;
         _mapper = mapper;
     }
 
-    public async Task<EmployerDto> Handle(CreateEmployerCommand request, CancellationToken cancellationToken)
+    public async Task<AuthEmployerDto> Handle(CreateEmployerCommand request, CancellationToken cancellationToken)
     {
         var existingEmployer = await _unitOfWork.Employers.GetByEmailAsync(request.Email, cancellationToken);
+        if (existingEmployer != null && existingEmployer.IsVerified)
+        {
+            throw new ConflictException($"An employer with email '{request.Email}' is already registered and verified. Please sign in.");
+        }
+
+        var isEmailVerified = await _otpService.IsEmailVerifiedAsync(request.Email, cancellationToken);
+        if (!isEmailVerified)
+        {
+            throw new ValidationException("Email verification is required or your verification session has expired. Please verify your email with OTP first.");
+        }
+
         if (existingEmployer != null)
         {
-            if (existingEmployer.IsVerified)
-            {
-                throw new ConflictException($"An employer with email '{request.Email}' is already registered and verified. Please sign in.");
-            }
-
-            // Edge Case: User registered but did not complete email verification.
-            // Update profile with latest submitted details and dispatch a fresh OTP.
             existingEmployer.Update(request.Name);
             existingEmployer.UpdateCompany(request.CompanyName);
+            existingEmployer.MarkAsVerified();
             _unitOfWork.Employers.Update(existingEmployer);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            var newOtp = await _otpService.GenerateOtpAsync(request.Email, cancellationToken: cancellationToken);
-            await _emailService.SendOtpEmailAsync(request.Email, request.Name, newOtp, cancellationToken);
+            await _otpService.ConsumeEmailVerificationAsync(request.Email, cancellationToken);
 
-            return _mapper.Map<EmployerDto>(existingEmployer);
+            var existingTokenResult = await _tokenService.CreateAsync(existingEmployer.UserId);
+            if (!existingTokenResult.Success || existingTokenResult.Data is null)
+            {
+                throw new ValidationException(string.Join("; ", existingTokenResult.Errors));
+            }
+
+            return new AuthEmployerDto(
+                Employer: _mapper.Map<EmployerDto>(existingEmployer),
+                AccessToken: existingTokenResult.Data.AccessToken,
+                RefreshToken: existingTokenResult.Data.RefreshToken
+            );
         }
 
         var identityResponse = await _identityService.CreateApplicationUserAsync(
@@ -76,12 +86,22 @@ public sealed class CreateEmployerCommandHandler : IRequestHandler<CreateEmploye
             request.CompanyName
         );
 
+        employer.MarkAsVerified();
         await _unitOfWork.Employers.AddAsync(employer, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        var otp = await _otpService.GenerateOtpAsync(request.Email, cancellationToken: cancellationToken);
-        await _emailService.SendOtpEmailAsync(request.Email, request.Name, otp, cancellationToken);
+        await _otpService.ConsumeEmailVerificationAsync(request.Email, cancellationToken);
 
-        return _mapper.Map<EmployerDto>(employer);
+        var tokenResult = await _tokenService.CreateAsync(employer.UserId);
+        if (!tokenResult.Success || tokenResult.Data is null)
+        {
+            throw new ValidationException(string.Join("; ", tokenResult.Errors));
+        }
+
+        return new AuthEmployerDto(
+            Employer: _mapper.Map<EmployerDto>(employer),
+            AccessToken: tokenResult.Data.AccessToken,
+            RefreshToken: tokenResult.Data.RefreshToken
+        );
     }
 }

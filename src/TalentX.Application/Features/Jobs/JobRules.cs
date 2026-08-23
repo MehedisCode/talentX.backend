@@ -3,7 +3,9 @@ using TalentX.Domain.Enums;
 
 namespace TalentX.Application.Features.Jobs;
 
-// all the business rules and validation checks for create, edit and publish a job  
+// Normalization and business rules for Job that used to live on the entity.
+// Centralized here (rather than duplicated per-handler) so CreateJob and
+// UpdateJob can't drift out of sync on what "valid" or "publishable" means.
 public static class JobRules
 {
     public static string NormalizeText(string value) => value.Trim();

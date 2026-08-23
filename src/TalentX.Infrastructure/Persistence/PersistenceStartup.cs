@@ -21,7 +21,8 @@ public static class PersistenceStartup
             options.UseNpgsql(
                 connectionString,
                 npgsqlOptions =>
-                    npgsqlOptions.MigrationsAssembly("TalentX.Migrations")));
+                    npgsqlOptions.MigrationsAssembly("TalentX.Migrations"))
+                   .ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning)));
 
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<IJobRepository, JobRepository>();
@@ -31,10 +32,8 @@ public static class PersistenceStartup
         return services;
     }
 
-    /// <summary>
-    /// Constructs a PostgreSQL connection string from individual DevOps environment variables
-    /// (DB_HOST, DB_PORT, DB_NAME, DB_USER_NAME, DB_PASSWORD), falling back to ConnectionStrings:DefaultConnection.
-    /// </summary>
+    // Individual DevOps environment variables (DB_HOST, DB_PORT, DB_NAME, DB_USER_NAME, DB_PASSWORD)
+    // take precedence over ConnectionStrings:DefaultConnection.
     private static string GetDatabaseConnectionString(IConfiguration configuration)
     {
         var host = Environment.GetEnvironmentVariable("DB_HOST") ?? configuration["DB_HOST"];

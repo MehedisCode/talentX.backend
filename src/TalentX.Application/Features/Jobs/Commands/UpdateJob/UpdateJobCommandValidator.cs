@@ -8,8 +8,8 @@ public class UpdateJobCommandValidator : AbstractValidator<UpdateJobCommand>
     public UpdateJobCommandValidator()
     {
         RuleFor(v => v.Title)
-            .Must(title => title is null || title.Trim().Length >= 5)
-                .WithMessage("Title must be at least 5 characters.")
+            .Must(title => title is null || title.Trim().Length >= 2)
+                .WithMessage("Title must be at least 2 characters.")
             .MaximumLength(200).WithMessage("Title must not exceed 200 characters.")
             .Must(title => title is null || title.Trim().Length == 0 || !char.IsDigit(title.Trim()[0]))
                 .WithMessage("Title cannot start with a number.")
@@ -31,8 +31,8 @@ public class UpdateJobCommandValidator : AbstractValidator<UpdateJobCommand>
                 .WithMessage("Description must contain at least one letter.");
 
         RuleFor(v => v.Location)
-            .Must(location => location is null || location.Trim().Length >= 5)
-                .WithMessage("Location must be at least 5 characters.")
+            .Must(location => location is null || location.Trim().Length >= 2)
+                .WithMessage("Location must be at least 2 characters.")
             .MaximumLength(200).WithMessage("Location must not exceed 200 characters.")
             .Must(location => location is null || location.Trim().Length == 0 || location.Trim().Any(char.IsLetter))
                 .WithMessage("Location cannot be purely numeric.");

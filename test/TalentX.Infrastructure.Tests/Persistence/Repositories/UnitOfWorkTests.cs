@@ -1,5 +1,6 @@
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
+using TalentX.Application.Common.Interfaces;
 using TalentX.Domain.Entities;
 using TalentX.Domain.Enums;
 using TalentX.Infrastructure.Persistence.Contexts;
@@ -17,6 +18,16 @@ public class UnitOfWorkTests
             .Options;
 
         return new ApplicationDbContext(options);
+    }
+
+    [Fact]
+    public void Constructor_ExposesAJobRepository()
+    {
+        using var context = NewContext();
+
+        var unitOfWork = new UnitOfWork(context);
+
+        unitOfWork.Jobs.Should().NotBeNull().And.BeAssignableTo<IJobRepository>();
     }
 
     [Fact]

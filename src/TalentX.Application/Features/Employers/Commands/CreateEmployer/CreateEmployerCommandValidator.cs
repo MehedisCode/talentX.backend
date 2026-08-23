@@ -2,9 +2,6 @@ using FluentValidation;
 
 namespace TalentX.Application.Features.Employers.Commands.CreateEmployer;
 
-/// <summary>
-/// Validator for <see cref="CreateEmployerCommand"/>.
-/// </summary>
 public sealed class CreateEmployerCommandValidator : AbstractValidator<CreateEmployerCommand>
 {
     public CreateEmployerCommandValidator()

@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TalentX.Application.Features.Jobs.Commands.CreateJob;
 using TalentX.Application.Features.Jobs.Commands.UpdateJob;
+using TalentX.Application.Features.Jobs.Queries.GetJobDetails;
+using TalentX.Application.Features.Jobs.Queries.GetPublishedJobs;
 
 namespace TalentX.API.Controllers;
 
@@ -24,4 +26,21 @@ public class JobsController : BaseApiController
         await Sender.Send(command with { Id = id });
         return NoContent();
     }
+    [HttpGet]
+    public async Task<IActionResult> GetJobs(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await Sender.Send(new GetPublishedJobsQuery(page, pageSize), cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpGet("{id:guid}")]
+    public async Task<IActionResult> GetJobById(Guid id, CancellationToken cancellationToken)
+    {
+        var job = await Sender.Send(new GetJobDetailsQuery(id), cancellationToken);
+        return Ok(job);
+    }
 }
+

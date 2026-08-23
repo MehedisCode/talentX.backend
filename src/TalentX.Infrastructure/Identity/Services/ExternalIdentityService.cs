@@ -4,9 +4,6 @@ using TalentX.Infrastructure.Identity.Models;
 
 namespace TalentX.Infrastructure.Identity.Services;
 
-/// <summary>
-/// Implementation of <see cref="IExternalIdentityService"/> using ASP.NET Core Identity for passwordless external OAuth accounts.
-/// </summary>
 public sealed class ExternalIdentityService : IExternalIdentityService
 {
     private readonly UserManager<ApplicationUser> _userManager;
@@ -20,7 +17,6 @@ public sealed class ExternalIdentityService : IExternalIdentityService
         _roleManager = roleManager;
     }
 
-    /// <inheritdoc/>
     public async Task<(bool IsNewUser, string UserId)> FindOrCreateExternalUserAsync(
         string email,
         string role,

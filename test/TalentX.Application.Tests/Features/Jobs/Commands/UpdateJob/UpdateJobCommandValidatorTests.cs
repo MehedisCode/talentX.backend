@@ -24,7 +24,7 @@ public class UpdateJobCommandValidatorTests
     }
 
     [Theory]
-    [InlineData("QA")]
+    [InlineData("Q")]
     [InlineData("")]
     public void Validate_WithTitleTooShort_HasError(string title)
     {
@@ -173,7 +173,7 @@ public class UpdateJobCommandValidatorTests
     [Fact]
     public void Validate_WithLocationTooShort_HasError()
     {
-        var command = EmptyCommand() with { Location = "NY" };
+        var command = EmptyCommand() with { Location = "N" };
 
         var result = _validator.TestValidate(command);
 

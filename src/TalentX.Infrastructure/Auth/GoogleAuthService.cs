@@ -6,10 +6,6 @@ using TalentX.Application.Common.Interfaces;
 
 namespace TalentX.Infrastructure.Auth;
 
-/// <summary>
-/// Implementation of <see cref="IGoogleAuthService"/> that validates Google ID tokens
-/// against Google's public key infrastructure and extracts profile claims.
-/// </summary>
 public sealed class GoogleAuthService : IGoogleAuthService
 {
     private readonly ILogger<GoogleAuthService> _logger;
@@ -24,7 +20,6 @@ public sealed class GoogleAuthService : IGoogleAuthService
             ?? string.Empty;
     }
 
-    /// <inheritdoc/>
     public async Task<GoogleUserInfo> VerifyIdTokenAsync(string idToken, CancellationToken cancellationToken = default)
     {
         try

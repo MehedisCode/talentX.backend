@@ -5,8 +5,12 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using TalentX.API.Controllers;
+using TalentX.Application.Common.Models;
 using TalentX.Application.Features.Jobs.Commands.CreateJob;
 using TalentX.Application.Features.Jobs.Commands.UpdateJob;
+using TalentX.Application.Features.Jobs.DTOs;
+using TalentX.Application.Features.Jobs.Queries.GetJobDetails;
+using TalentX.Application.Features.Jobs.Queries.GetPublishedJobs;
 using TalentX.Domain.Enums;
 using Xunit;
 
@@ -102,5 +106,32 @@ public class JobsControllerTests
         var result = await _controller.UpdateJob(routeId, command);
 
         result.Should().BeOfType<NoContentResult>();
+    }
+
+    [Fact]
+    public async Task GetJobs_ReturnsOkResult_WithPaginatedList()
+    {
+        var paginatedList = new PaginatedList<JobListItemDto>(new List<JobListItemDto>(), 1, 20, 0);
+        _sender.Setup(s => s.Send(It.IsAny<GetPublishedJobsQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(paginatedList);
+
+        var result = await _controller.GetJobs();
+
+        var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
+        okResult.Value.Should().BeEquivalentTo(paginatedList);
+    }
+
+    [Fact]
+    public async Task GetJobById_ReturnsOkResult_WithJobDetails()
+    {
+        var jobId = Guid.NewGuid();
+        var jobDetails = new JobDetailsDto { Id = jobId, Title = "Test Job" };
+        _sender.Setup(s => s.Send(It.Is<GetJobDetailsQuery>(q => q.Id == jobId), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(jobDetails);
+
+        var result = await _controller.GetJobById(jobId, CancellationToken.None);
+
+        var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
+        okResult.Value.Should().BeEquivalentTo(jobDetails);
     }
 }

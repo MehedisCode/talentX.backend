@@ -1,31 +1,41 @@
 using Microsoft.EntityFrameworkCore;
 using TalentX.Application.Common.Interfaces;
+using TalentX.Application.Common.Interfaces.Repositories;
+using TalentX.Application.Common.Models;
 using TalentX.Domain.Entities;
+using TalentX.Domain.Enums;
 using TalentX.Infrastructure.Persistence.Contexts;
 
 namespace TalentX.Infrastructure.Persistence.Repositories;
 
-public class JobRepository : IJobRepository
+public sealed class JobRepository : RepositoryBase<Job>, IJobRepository
 {
-    private readonly ApplicationDbContext _context;
-
-    public JobRepository(ApplicationDbContext context)
+    public JobRepository(ApplicationDbContext context) : base(context)
     {
-        _context = context;
     }
 
-    public async Task<Job?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    public async Task<PaginatedList<Job>> GetPublishedJobsAsync(int page, int pageSize, CancellationToken cancellationToken)
     {
-        return await _context.Set<Job>().FirstOrDefaultAsync(j => j.Id == id, cancellationToken);
+        var query = Context.Jobs
+            .AsNoTracking()
+            .Where(j => j.Status == JobStatus.Published && j.ExpireAt > DateTime.UtcNow);
+
+        var totalCount = await query.CountAsync(cancellationToken);
+
+        var items = await query
+            .OrderByDescending(j => j.CreatedAt)
+            .ThenByDescending(j => j.Id)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return new PaginatedList<Job>(items, page, pageSize, totalCount);
     }
 
-    public async Task AddAsync(Job job, CancellationToken cancellationToken = default)
-    {
-        await _context.Set<Job>().AddAsync(job, cancellationToken);
-    }
-
-    public void Update(Job job)
-    {
-        _context.Set<Job>().Update(job);
-    }
+    public async Task<Job?> GetPublishedJobByIdAsync(Guid id, CancellationToken cancellationToken) =>
+        await Context.Jobs
+            .AsNoTracking()
+            .FirstOrDefaultAsync(
+                j => j.Id == id && j.Status == JobStatus.Published && j.ExpireAt > DateTime.UtcNow,
+                cancellationToken);
 }

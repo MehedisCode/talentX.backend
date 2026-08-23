@@ -18,9 +18,7 @@ public static class InfrastructureStartup
         return services;
     }
 
-    /// <summary>
-    /// Backward-compatible alias for AddInfrastructure.
-    /// </summary>
+    // Backward-compatible alias for AddInfrastructure.
     public static IServiceCollection AddInfrastructureServices(
         this IServiceCollection services,
         IConfiguration configuration

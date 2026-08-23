@@ -4,19 +4,17 @@ using TalentX.Infrastructure.Persistence.Contexts;
 
 namespace TalentX.Infrastructure.Persistence.Repositories;
 
-/// <summary>
-/// Entity Framework Core implementation of <see cref="IUnitOfWork"/>.
-/// </summary>
 public sealed class UnitOfWork : IUnitOfWork
 {
     private readonly ApplicationDbContext _context;
-
+    public IJobRepository Jobs { get; }
     public IUserRepository Users { get; }
     public IEmployerRepository Employers { get; }
 
     public UnitOfWork(ApplicationDbContext context)
     {
         _context = context;
+        Jobs = new JobRepository(_context);
         Users = new UserRepository(_context);
         Employers = new EmployerRepository(_context);
     }
