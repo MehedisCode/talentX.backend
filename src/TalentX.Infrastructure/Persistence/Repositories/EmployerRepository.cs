@@ -5,9 +5,6 @@ using TalentX.Infrastructure.Persistence.Contexts;
 
 namespace TalentX.Infrastructure.Persistence.Repositories;
 
-/// <summary>
-/// Entity Framework Core implementation of <see cref="IEmployerRepository"/>.
-/// </summary>
 public sealed class EmployerRepository : IEmployerRepository
 {
     private readonly ApplicationDbContext _context;

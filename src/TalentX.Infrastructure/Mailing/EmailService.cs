@@ -1,19 +1,16 @@
 using MailKit.Net.Smtp;
 using MailKit.Security;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using MimeKit;
 using TalentX.Application.Common.Interfaces;
 
 namespace TalentX.Infrastructure.Mailing;
 
-/// <summary>
-/// SMTP email service using MailKit. All configuration is sourced from environment variables.
-/// Supports Gmail on port 587 (STARTTLS) and 465 (SSL). Dispatches emails fire-and-forget
-/// so the HTTP response is never blocked by SMTP I/O.
-/// </summary>
 public sealed class EmailService : IEmailService
 {
     private readonly ILogger<EmailService> _logger;
+    private readonly IHostEnvironment _environment;
     private readonly string _smtpHost;
     private readonly int _smtpPort;
     private readonly string _smtpUser;
@@ -21,9 +18,10 @@ public sealed class EmailService : IEmailService
     private readonly string _senderEmail;
     private readonly string _senderName;
 
-    public EmailService(ILogger<EmailService> logger)
+    public EmailService(ILogger<EmailService> logger, IHostEnvironment environment)
     {
         _logger = logger;
+        _environment = environment;
 
         _smtpHost    = Env("SMTP_HOST");
         _smtpPort    = int.TryParse(Env("SMTP_PORT"), out var p) ? p : 587;
@@ -33,20 +31,28 @@ public sealed class EmailService : IEmailService
         _senderName  = Env("SENDER_NAME") is { Length: > 0 } n ? n : "TalentX Support";
     }
 
-    /// <inheritdoc/>
     public Task SendOtpEmailAsync(
         string toEmail,
         string recipientName,
         string otpCode,
         CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation(
-            "[EMAIL] OTP dispatch → {RecipientName} <{ToEmail}> | Code: {OtpCode}",
-            recipientName, toEmail, otpCode);
+        if (_environment.IsDevelopment())
+        {
+            _logger.LogInformation(
+                "[EMAIL] OTP dispatch to {RecipientName} <{ToEmail}>: {OtpCode}",
+                recipientName, toEmail, otpCode);
+        }
+        else
+        {
+            _logger.LogInformation(
+                "[EMAIL] OTP dispatch to {RecipientName} <{ToEmail}>",
+                recipientName, toEmail);
+        }
 
         if (string.IsNullOrWhiteSpace(_smtpHost) || string.IsNullOrWhiteSpace(_smtpUser))
         {
-            _logger.LogWarning("SMTP not configured — email logged only (host={Host}, user={User}).", _smtpHost, _smtpUser);
+            _logger.LogWarning("SMTP not configured, email logged only (host={Host}, user={User})", _smtpHost, _smtpUser);
             return Task.CompletedTask;
         }
 

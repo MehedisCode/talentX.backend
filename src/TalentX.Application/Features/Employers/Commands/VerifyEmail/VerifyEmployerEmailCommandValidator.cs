@@ -2,9 +2,6 @@ using FluentValidation;
 
 namespace TalentX.Application.Features.Employers.Commands.VerifyEmail;
 
-/// <summary>
-/// Validator for <see cref="VerifyEmployerEmailCommand"/>.
-/// </summary>
 public sealed class VerifyEmployerEmailCommandValidator : AbstractValidator<VerifyEmployerEmailCommand>
 {
     public VerifyEmployerEmailCommandValidator()

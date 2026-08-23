@@ -2,9 +2,6 @@ using FluentValidation;
 
 namespace TalentX.Application.Features.Employers.Commands.GoogleSignIn;
 
-/// <summary>
-/// Validator for <see cref="GoogleSignInEmployerCommand"/>.
-/// </summary>
 public sealed class GoogleSignInEmployerCommandValidator : AbstractValidator<GoogleSignInEmployerCommand>
 {
     public GoogleSignInEmployerCommandValidator()

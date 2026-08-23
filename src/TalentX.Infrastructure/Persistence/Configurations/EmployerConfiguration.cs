@@ -4,10 +4,7 @@ using TalentX.Domain;
 
 namespace TalentX.Infrastructure.Persistence.Configurations;
 
-/// <summary>
-/// Entity Framework Core configuration for <see cref="Employer"/>.
-/// Maps Employer to Employers table using Table-Per-Type (TPT) inheritance.
-/// </summary>
+// Mapping Employer to its own table makes EF Core use Table-Per-Type (TPT) inheritance from User.
 public sealed class EmployerConfiguration : IEntityTypeConfiguration<Employer>
 {
     public void Configure(EntityTypeBuilder<Employer> builder)

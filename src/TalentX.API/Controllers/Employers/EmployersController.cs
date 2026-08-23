@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using TalentX.Application.DTOs.Employers;
 using TalentX.Application.Features.Employers.Commands.CreateEmployer;
 using TalentX.Application.Features.Employers.Commands.GoogleSignIn;
-using TalentX.Application.Features.Employers.Commands.ResendOtp;
+using TalentX.Application.Features.Employers.Commands.SendOtp;
 using TalentX.Application.Features.Employers.Commands.VerifyEmail;
 
 namespace TalentX.API.Controllers.Employers;
@@ -22,13 +22,13 @@ public sealed class EmployersController : BaseApiController
     /// </summary>
     /// <param name="command">Registration payload.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>The created employer details.</returns>
+    /// <returns>The created employer details and JWT session tokens.</returns>
     /// <response code="201">Employer created successfully.</response>
     /// <response code="400">Validation errors.</response>
     /// <response code="409">An employer with this email is already registered.</response>
     [HttpPost]
     [HttpPost("register")]
-    [ProducesResponseType(typeof(EmployerDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(AuthEmployerDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> CreateEmployer(
@@ -36,7 +36,7 @@ public sealed class EmployersController : BaseApiController
         CancellationToken cancellationToken)
     {
         var result = await Sender.Send(command, cancellationToken);
-        return CreatedAtAction(nameof(CreateEmployer), new { id = result.Id }, result);
+        return CreatedAtAction(nameof(CreateEmployer), new { id = result.Employer?.Id }, result);
     }
 
     /// <summary>
@@ -83,23 +83,23 @@ public sealed class EmployersController : BaseApiController
     }
 
     /// <summary>
-    /// Resends a fresh 6-digit OTP code to the employer's email address.
+    /// Sends a 6-digit OTP verification code to the specified email address.
     /// </summary>
     /// <param name="command">Payload containing the employer's email.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Confirmation message.</returns>
     /// <response code="200">OTP code dispatched successfully.</response>
-    /// <response code="400">Employer is already verified.</response>
-    /// <response code="404">Employer not found.</response>
-    [HttpPost("resend-otp")]
+    /// <response code="400">Validation errors.</response>
+    /// <response code="409">Employer account is already registered and verified.</response>
+    [HttpPost("send-otp")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> ResendOtp(
-        [FromBody] ResendEmployerOtpCommand command,
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> SendOtp(
+        [FromBody] SendEmployerOtpCommand command,
         CancellationToken cancellationToken)
     {
         await Sender.Send(command, cancellationToken);
-        return Ok(new { message = "A new verification code has been sent to your email." });
+        return Ok(new { message = "A verification code has been sent to your email." });
     }
 }

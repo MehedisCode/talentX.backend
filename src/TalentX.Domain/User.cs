@@ -3,9 +3,6 @@ using TalentX.Domain.Enums;
 
 namespace TalentX.Domain;
 
-/// <summary>
-/// Domain model for User.
-/// </summary>
 public class User : BaseEntity
 {
     public string UserId { get; private set; } = string.Empty;

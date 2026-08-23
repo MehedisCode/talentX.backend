@@ -4,9 +4,6 @@ using TalentX.Domain;
 
 namespace TalentX.Infrastructure.Persistence.Configurations;
 
-/// <summary>
-/// Entity Framework Core configuration for <see cref="User"/>.
-/// </summary>
 public sealed class UserConfiguration : IEntityTypeConfiguration<User>
 {
     public void Configure(EntityTypeBuilder<User> builder)
