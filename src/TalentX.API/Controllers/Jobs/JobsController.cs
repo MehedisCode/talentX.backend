@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using TalentX.Application.Features.Jobs.Commands.CreateJob;
 using TalentX.Application.Features.Jobs.Commands.UpdateJob;
 using TalentX.Application.Features.Jobs.Queries.GetJobDetails;
+using TalentX.Application.Features.Jobs.Queries.GetMyJob;
 using TalentX.Application.Features.Jobs.Queries.GetPublishedJobs;
 
 namespace TalentX.API.Controllers;
@@ -40,6 +41,14 @@ public class JobsController : BaseApiController
     public async Task<IActionResult> GetJobById(Guid id, CancellationToken cancellationToken)
     {
         var job = await Sender.Send(new GetJobDetailsQuery(id), cancellationToken);
+        return Ok(job);
+    }
+    
+    [HttpGet("mine/{id:guid}")]
+    [Authorize(Roles = "Employer")]
+    public async Task<IActionResult> GetMyJob(Guid id, CancellationToken cancellationToken)
+    {
+        var job = await Sender.Send(new GetMyJobQuery(id), cancellationToken);
         return Ok(job);
     }
 }
