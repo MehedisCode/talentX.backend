@@ -52,6 +52,37 @@ bld/
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
+
+# Test results / coverage
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+coverage*.json
+coverage*.xml
+coverage*.info
+coverage*.cobertura.xml
+*.coverage
+*.coveragexml
+
+# NuGet
+*.nupkg
+*.snupkg
+**/[Pp]ackages/*
+!**/[Pp]ackages/build/
+*.nuget.props
+*.nuget.targets
+
+# Build/debug artifacts
+*.pdb
+*.ipdb
+*.log
+*.tlog
+*.binlog
+
+# OS files
+.DS_Store
+Thumbs.db
+**/bin/
+**/obj/
 *.code-workspace
 
 # Test results & coverage
@@ -112,3 +143,5 @@ $RECYCLE.BIN/
 *.lnk
 *.swp
 *~
+
+After_review_Job_listing.md

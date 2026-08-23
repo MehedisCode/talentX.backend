@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -67,6 +67,31 @@ namespace TalentX.Migrations.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_DomainUsers", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Jobs",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    EmployerId = table.Column<string>(type: "text", nullable: false),
+                    Title = table.Column<string>(type: "text", nullable: false),
+                    CompanyName = table.Column<string>(type: "text", nullable: false),
+                    Description = table.Column<string>(type: "text", nullable: false),
+                    EmploymentType = table.Column<string>(type: "text", nullable: false),
+                    Location = table.Column<string>(type: "text", nullable: false),
+                    WorkMode = table.Column<string>(type: "text", nullable: false),
+                    ExperienceLevel = table.Column<string>(type: "text", nullable: true),
+                    RequiredSkills = table.Column<string>(type: "text", nullable: false),
+                    Status = table.Column<string>(type: "text", nullable: false),
+                    Vacancies = table.Column<int>(type: "integer", nullable: false),
+                    ExpireAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Jobs", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -253,6 +278,26 @@ namespace TalentX.Migrations.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_Jobs_EmployerId",
+                table: "Jobs",
+                column: "EmployerId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Jobs_ExpireAt",
+                table: "Jobs",
+                column: "ExpireAt");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Jobs_Status",
+                table: "Jobs",
+                column: "Status");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Jobs_Status_CreatedAt",
+                table: "Jobs",
+                columns: new[] { "Status", "CreatedAt" });
+
+            migrationBuilder.CreateIndex(
                 name: "IX_RefreshTokens_ApplicationUserId_ExpiresAt",
                 table: "RefreshTokens",
                 columns: new[] { "ApplicationUserId", "ExpiresAt" });
@@ -284,6 +329,9 @@ namespace TalentX.Migrations.Migrations
 
             migrationBuilder.DropTable(
                 name: "Employers");
+
+            migrationBuilder.DropTable(
+                name: "Jobs");
 
             migrationBuilder.DropTable(
                 name: "RefreshTokens");

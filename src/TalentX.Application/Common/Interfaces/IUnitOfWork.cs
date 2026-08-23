@@ -7,6 +7,7 @@ namespace TalentX.Application.Common.Interfaces;
 /// </summary>
 public interface IUnitOfWork
 {
+    IJobRepository Jobs {get;}
     /// <summary>
     /// Repository for user operations.
     /// </summary>

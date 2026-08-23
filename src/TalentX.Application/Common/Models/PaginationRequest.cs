@@ -1,0 +1,17 @@
+namespace TalentX.Application.Common.Models;
+
+/// <summary>
+/// Page/pageSize clamping lives here once, instead of being re-implemented per handler.
+/// </summary>
+public static class PaginationRequest
+{
+    public const int DefaultPageSize = 20;
+    public const int MaxPageSize = 100;
+
+    public static (int Page, int PageSize) Normalize(int page, int pageSize)
+    {
+        var normalizedPage = page < 1 ? 1 : page;
+        var normalizedPageSize = pageSize is < 1 or > MaxPageSize ? DefaultPageSize : pageSize;
+        return (normalizedPage, normalizedPageSize);
+    }
+}

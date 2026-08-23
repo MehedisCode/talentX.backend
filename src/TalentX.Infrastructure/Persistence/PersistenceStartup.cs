@@ -21,7 +21,8 @@ public static class PersistenceStartup
             options.UseNpgsql(
                 connectionString,
                 npgsqlOptions =>
-                    npgsqlOptions.MigrationsAssembly("TalentX.Migrations")));
+                    npgsqlOptions.MigrationsAssembly("TalentX.Migrations"))
+                   .ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning)));
 
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<IEmployerRepository, EmployerRepository>();
