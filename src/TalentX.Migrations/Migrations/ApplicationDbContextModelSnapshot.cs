@@ -180,6 +180,7 @@ namespace TalentX.Migrations.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("ExperienceLevel")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<DateTime>("ExpireAt")
@@ -207,7 +208,7 @@ namespace TalentX.Migrations.Migrations
                     b.Property<int>("Vacancies")
                         .HasColumnType("integer");
 
-                    b.Property<string>("WorkMode")
+                    b.Property<string>("WorkArrangement")
                         .IsRequired()
                         .HasColumnType("text");
 

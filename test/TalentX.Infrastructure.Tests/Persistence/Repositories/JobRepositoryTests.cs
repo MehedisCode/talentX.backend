@@ -4,8 +4,9 @@ using TalentX.Domain.Entities;
 using TalentX.Domain.Enums;
 using TalentX.Infrastructure.Persistence.Contexts;
 using TalentX.Infrastructure.Persistence.Repositories;
+using Xunit;
 
-namespace TalentX.Api.Tests.Infrastructure.Persistence.Repositories;
+namespace TalentX.Infrastructure.Tests.Persistence.Repositories;
 
 public class JobRepositoryTests
 {
@@ -20,7 +21,8 @@ public class JobRepositoryTests
 
     private static Job NewJob()
     {
-        return Job.CreateDraft(
+        return Job.Create(
+            "employer-1",
             "Backend Engineer",
             "Acme Corp",
             "Build and maintain backend services.",
@@ -74,16 +76,19 @@ public class JobRepositoryTests
     }
 
     [Fact]
-    public async Task AddAsync_AssignsAGeneratedIdOnceTracked()
+    public async Task AddAsync_DoesNotChangeTheAlreadyAssignedId()
     {
+        // BaseEntity generates the Id client-side at construction, so
+        // AddAsync just tracks the entity — it doesn't assign anything.
         await using var context = NewContext();
         var repository = new JobRepository(context);
         var job = NewJob();
-        job.Id.Should().Be(Guid.Empty);
+        var originalId = job.Id;
+        originalId.Should().NotBe(Guid.Empty);
 
         await repository.AddAsync(job);
 
-        job.Id.Should().NotBe(Guid.Empty);
+        job.Id.Should().Be(originalId);
     }
 
     [Fact]
@@ -96,7 +101,11 @@ public class JobRepositoryTests
         context.SaveChanges();
         context.Entry(job).State = EntityState.Detached;
 
-        job.UpdateDetails("Updated Title", null, null, null, null, null, null, null, null, null);
+        job.SetDetails(
+            "Updated Title", job.CompanyName, job.Description, job.EmploymentType,
+            job.ExperienceLevel, job.Location, job.WorkArrangement, job.RequiredSkills,
+            job.Vacancies, job.ExpireAt
+        );
         repository.Update(job);
 
         context.Entry(job).State.Should().Be(EntityState.Modified);

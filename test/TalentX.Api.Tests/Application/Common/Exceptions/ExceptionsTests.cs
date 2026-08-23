@@ -1,5 +1,6 @@
 using FluentAssertions;
 using TalentX.Application.Common.Exceptions;
+using Xunit;
 
 namespace TalentX.Api.Tests.Application.Common.Exceptions;
 

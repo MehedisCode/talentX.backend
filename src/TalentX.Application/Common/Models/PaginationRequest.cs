@@ -1,8 +1,6 @@
 namespace TalentX.Application.Common.Models;
 
-/// <summary>
-/// Page/pageSize clamping lives here once, instead of being re-implemented per handler.
-/// </summary>
+// Page/pageSize clamping lives here once, instead of being re-implemented per handler.
 public static class PaginationRequest
 {
     public const int DefaultPageSize = 20;

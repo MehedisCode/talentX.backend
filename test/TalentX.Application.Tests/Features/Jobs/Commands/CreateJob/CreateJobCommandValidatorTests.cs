@@ -2,8 +2,9 @@ using FluentAssertions;
 using FluentValidation.TestHelper;
 using TalentX.Application.Features.Jobs.Commands.CreateJob;
 using TalentX.Domain.Enums;
+using Xunit;
 
-namespace TalentX.Api.Tests.Application.Features.Jobs.Commands.CreateJob;
+namespace TalentX.Application.Tests.Features.Jobs.Commands.CreateJob;
 
 public class CreateJobCommandValidatorTests
 {
@@ -287,6 +288,38 @@ public class CreateJobCommandValidatorTests
         var result = _validator.TestValidate(command);
 
         result.ShouldNotHaveValidationErrorFor(c => c.RequiredSkills);
+    }
+
+    [Fact]
+    public void Validate_WithASkillThatIsASingleDigit_HasError()
+    {
+        var command = ValidCommand() with { RequiredSkills = new List<string> { "1" } };
+
+        var result = _validator.TestValidate(command);
+
+        result.ShouldHaveValidationErrorFor("RequiredSkills[0]")
+            .WithErrorMessage("Skill entries must contain at least one letter.");
+    }
+
+    [Fact]
+    public void Validate_WithASkillMadeEntirelyOfPunctuation_HasError()
+    {
+        var command = ValidCommand() with { RequiredSkills = new List<string> { "\"\"\"\"" } };
+
+        var result = _validator.TestValidate(command);
+
+        result.ShouldHaveValidationErrorFor("RequiredSkills[0]")
+            .WithErrorMessage("Skill entries must contain at least one letter.");
+    }
+
+    [Fact]
+    public void Validate_WithASingleLetterSkill_HasNoError()
+    {
+        var command = ValidCommand() with { RequiredSkills = new List<string> { "R" } };
+
+        var result = _validator.TestValidate(command);
+
+        result.ShouldNotHaveValidationErrorFor("RequiredSkills[0]");
     }
 
     [Fact]

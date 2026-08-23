@@ -7,16 +7,6 @@ public class UpdateJobCommandValidator : AbstractValidator<UpdateJobCommand>
 {
     public UpdateJobCommandValidator()
     {
-        // A null field means "don't change this field" — every rule below is a
-        // no-op when the value is null, so only fields actually sent get checked.
-        // Completeness ("is this ready to go live") is enforced solely by
-        // Job.EnsureIsPublishable() in the domain, triggered when Publish: true.
-
-        // Every content check below runs against value.Trim(), not the raw
-        // value, so an update that sets a field to whitespace-only (e.g. five
-        // spaces) can't slip past by counting padding as content. Untouched
-        // (null) fields still pass straight through, preserving the
-        // "null = don't change" contract.
         RuleFor(v => v.Title)
             .Must(title => title is null || title.Trim().Length >= 2)
                 .WithMessage("Title must be at least 2 characters.")
@@ -60,7 +50,9 @@ public class UpdateJobCommandValidator : AbstractValidator<UpdateJobCommand>
             .GreaterThanOrEqualTo(0).WithMessage("Vacancies cannot be negative.");
 
         RuleForEach(v => v.RequiredSkills)
-            .NotEmpty().WithMessage("Skill entries cannot be blank.");
+            .NotEmpty().WithMessage("Skill entries cannot be blank.")
+            .Must(skill => string.IsNullOrWhiteSpace(skill) || skill.Trim().Any(char.IsLetter))
+                .WithMessage("Skill entries must contain at least one letter.");
 
         RuleFor(v => v.ExpireAt)
             .GreaterThan(v => DateTime.UtcNow).WithMessage("Expire date must be in the future.");

@@ -25,6 +25,7 @@ public static class PersistenceStartup
                    .ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning)));
 
         services.AddScoped<IUnitOfWork, UnitOfWork>();
+        services.AddScoped<IJobRepository, JobRepository>();
         services.AddScoped<IEmployerRepository, EmployerRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
 

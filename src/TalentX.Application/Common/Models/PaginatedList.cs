@@ -1,9 +1,5 @@
 namespace TalentX.Application.Common.Models;
 
-/// <summary>
-/// One pagination envelope, reused at the repository boundary (paging entities) and the
-/// API boundary (paging DTOs).
-/// </summary>
 public sealed class PaginatedList<T>
 {
     public IReadOnlyList<T> Items { get; }

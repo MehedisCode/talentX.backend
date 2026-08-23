@@ -12,7 +12,7 @@ using TalentX.Infrastructure.Persistence.Contexts;
 namespace TalentX.Migrations.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260822123552_InitialCreate")]
+    [Migration("20260823070645_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -183,6 +183,7 @@ namespace TalentX.Migrations.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("ExperienceLevel")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<DateTime>("ExpireAt")
@@ -210,7 +211,7 @@ namespace TalentX.Migrations.Migrations
                     b.Property<int>("Vacancies")
                         .HasColumnType("integer");
 
-                    b.Property<string>("WorkMode")
+                    b.Property<string>("WorkArrangement")
                         .IsRequired()
                         .HasColumnType("text");
 

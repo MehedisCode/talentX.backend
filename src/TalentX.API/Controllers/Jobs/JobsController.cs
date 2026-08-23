@@ -1,13 +1,31 @@
-using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using TalentX.Application.Features.Jobs.Commands.CreateJob;
+using TalentX.Application.Features.Jobs.Commands.UpdateJob;
 using TalentX.Application.Features.Jobs.Queries.GetJobDetails;
 using TalentX.Application.Features.Jobs.Queries.GetPublishedJobs;
 
-namespace TalentX.API.Controllers.Jobs;
+namespace TalentX.API.Controllers;
 
-[Route("api/v1/jobs")]
+[ApiController]
+[Route("api/v1/[controller]")]
 public class JobsController : BaseApiController
 {
+    [HttpPost]
+    [Authorize(Roles = "Employer")]
+    public async Task<ActionResult<Guid>> CreateJob([FromBody] CreateJobCommand command)
+    {
+        var jobId = await Sender.Send(command);
+        return StatusCode(StatusCodes.Status201Created, jobId);
+    }
+
+    [HttpPatch("{id}")]
+    [Authorize(Roles = "Employer")]
+    public async Task<IActionResult> UpdateJob(Guid id, [FromBody] UpdateJobCommand command)
+    {
+        await Sender.Send(command with { Id = id });
+        return NoContent();
+    }
     [HttpGet]
     public async Task<IActionResult> GetJobs(
         [FromQuery] int page = 1,
@@ -25,3 +43,4 @@ public class JobsController : BaseApiController
         return Ok(job);
     }
 }
+

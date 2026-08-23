@@ -1,29 +1,33 @@
 using FluentAssertions;
+using FluentValidation;
 using Moq;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
-using TalentX.Application.Common.Interfaces.Repositories;
 using TalentX.Application.Features.Jobs.Commands.UpdateJob;
+using TalentX.Application.Identity.Services;
 using TalentX.Domain.Entities;
 using TalentX.Domain.Enums;
+using Xunit;
 
-namespace TalentX.Api.Tests.Application.Features.Jobs.Commands.UpdateJob;
+namespace TalentX.Application.Tests.Features.Jobs.Commands.UpdateJob;
 
 public class UpdateJobCommandHandlerTests
 {
     private readonly Mock<IJobRepository> _jobRepository = new();
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
+    private readonly Mock<ICurrentUserService> _currentUserService = new();
     private readonly UpdateJobCommandHandler _handler;
 
     public UpdateJobCommandHandlerTests()
     {
-        _unitOfWork.SetupGet(u => u.Jobs).Returns(_jobRepository.Object);
-        _handler = new UpdateJobCommandHandler(_unitOfWork.Object);
+        _currentUserService.SetupGet(u => u.UserId).Returns("employer-1");
+        _handler = new UpdateJobCommandHandler(_jobRepository.Object, _unitOfWork.Object, _currentUserService.Object);
     }
 
     private static Job ExistingDraftJob()
     {
-        return Job.CreateDraft(
+        return Job.Create(
+            "employer-1",
             "Backend Engineer",
             "Acme Corp",
             "Build and maintain backend services.",
@@ -73,6 +77,39 @@ public class UpdateJobCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_WhenCallerIsNotTheOwningEmployer_ThrowsForbiddenException()
+    {
+        var job = ExistingDraftJob();
+        _jobRepository.Setup(r => r.GetByIdAsync(job.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(job);
+        _currentUserService.SetupGet(u => u.UserId).Returns("some-other-employer");
+
+        var act = () => _handler.Handle(CommandFor(job.Id), CancellationToken.None);
+
+        await act.Should().ThrowAsync<ForbiddenException>();
+    }
+
+    [Fact]
+    public async Task Handle_WhenCallerIsNotTheOwningEmployer_DoesNotSave()
+    {
+        var job = ExistingDraftJob();
+        _jobRepository.Setup(r => r.GetByIdAsync(job.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(job);
+        _currentUserService.SetupGet(u => u.UserId).Returns("some-other-employer");
+
+        try
+        {
+            await _handler.Handle(CommandFor(job.Id), CancellationToken.None);
+        }
+        catch (ForbiddenException)
+        {
+            // expected — assertion below verifies no save happened.
+        }
+
+        _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
     public async Task Handle_WhenJobExists_AppliesUpdatesAndSaves()
     {
         var job = ExistingDraftJob();
@@ -112,7 +149,7 @@ public class UpdateJobCommandHandlerTests
 
         var act = () => _handler.Handle(invalidCommand, CancellationToken.None);
 
-        await act.Should().ThrowAsync<ValidationException>();
+        await act.Should().ThrowAsync<FluentValidation.ValidationException>();
     }
 
     [Fact]
@@ -130,7 +167,34 @@ public class UpdateJobCommandHandlerTests
         {
             await _handler.Handle(invalidCommand, CancellationToken.None);
         }
-        catch (ValidationException)
+        catch (FluentValidation.ValidationException)
+        {
+            // expected — assertion below verifies no save happened.
+        }
+
+        _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_WhenCallerIsNotAuthenticated_ThrowsUnauthorizedException()
+    {
+        _currentUserService.SetupGet(u => u.UserId).Returns((string?)null);
+
+        var act = () => _handler.Handle(CommandFor(Guid.NewGuid()), CancellationToken.None);
+
+        await act.Should().ThrowAsync<UnauthorizedException>();
+    }
+
+    [Fact]
+    public async Task Handle_WhenCallerIsNotAuthenticated_DoesNotSave()
+    {
+        _currentUserService.SetupGet(u => u.UserId).Returns((string?)null);
+
+        try
+        {
+            await _handler.Handle(CommandFor(Guid.NewGuid()), CancellationToken.None);
+        }
+        catch (UnauthorizedException)
         {
             // expected — assertion below verifies no save happened.
         }

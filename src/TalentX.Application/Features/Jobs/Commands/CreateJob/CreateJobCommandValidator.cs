@@ -7,14 +7,6 @@ public class CreateJobCommandValidator : AbstractValidator<CreateJobCommand>
 {
     public CreateJobCommandValidator()
     {
-        // Structural/type-safety rules only — always enforced, draft or publish.
-        // Completeness ("is this ready to go live") is enforced solely by
-        // Job.EnsureIsPublishable() in the domain, triggered when Publish: true.
-
-        // Every content check below runs against value.Trim(), not the raw
-        // value, so whitespace-only input (e.g. five spaces) can't slip past
-        // by counting padding as content — it's validated against the same
-        // trimmed value the domain entity actually persists.
         RuleFor(v => v.Title)
             .NotNull().WithMessage("Title is required.")
             .Must(title => title is null || title.Trim().Length >= 2)
@@ -62,7 +54,9 @@ public class CreateJobCommandValidator : AbstractValidator<CreateJobCommand>
             .GreaterThanOrEqualTo(0).WithMessage("Vacancies cannot be negative.");
 
         RuleForEach(v => v.RequiredSkills)
-            .NotEmpty().WithMessage("Skill entries cannot be blank.");
+            .NotEmpty().WithMessage("Skill entries cannot be blank.")
+            .Must(skill => string.IsNullOrWhiteSpace(skill) || skill.Trim().Any(char.IsLetter))
+                .WithMessage("Skill entries must contain at least one letter.");
 
         RuleFor(v => v.ExpireAt)
             .GreaterThan(v => DateTime.UtcNow).WithMessage("Expire date must be in the future.");

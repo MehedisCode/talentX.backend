@@ -21,6 +21,7 @@ docs/
 │   ├── overview.md                    # Base URLs, Versioning, Request/Response Standards
 │   ├── employers.md                   # Employer Registration, Google Sign-In, OTP Endpoints
 │   ├── auth.md                        # User Authentication, Refresh Tokens, Current User
+│   ├── jobs.md                        # Job Listing Creation, Update & Publishing
 │   └── health.md                      # Diagnostics & Health Monitoring
 │
 ├── database/                          # Persistence & Database Design
@@ -38,11 +39,11 @@ docs/
 
 | Layer | Project | Purpose | Dependencies |
 | :--- | :--- | :--- | :--- |
-| **Domain** | `TalentX.Domain` | Enterprise business entities (`Employer`, `User`), domain enums (`UserRole`), base models | *None* |
+| **Domain** | `TalentX.Domain` | Enterprise business entities (`Employer`, `User`, `Job`), domain enums (`UserRole`, `JobStatus`, etc.), base models | *None* |
 | **Application** | `TalentX.Application` | CQRS commands, queries & validators, DTOs, interfaces, `ApplicationStartup.cs` DI | Domain |
 | **Infrastructure** | `TalentX.Infrastructure` | EF Core `ApplicationDbContext`, Identity, Auth, Mappings, Middlewares, Mailing, OTP, `InfrastructureStartup.cs` DI | Application, Domain |
 | **Migrations** | `TalentX.Migrations` | Dedicated EF Core PostgreSQL migrations assembly and schema snapshots | Infrastructure |
-| **API / Presentation** | `TalentX.API` | Modular REST controllers (`Employers`, `Auth`, `Health`), `Program.cs` pipeline | Application, Infrastructure, Migrations |
+| **API / Presentation** | `TalentX.API` | Modular REST controllers (`Employers`, `Auth`, `Jobs`, `Health`), `Program.cs` pipeline | Application, Infrastructure, Migrations |
 | **Application Tests** | `TalentX.Application.Tests` | Automated unit tests for Application CQRS commands, queries, and validators | Application, Domain |
 | **Infrastructure Tests** | `TalentX.Infrastructure.Tests` | Automated unit tests for Identity, TokenService, and repositories | Application, Infrastructure |
 

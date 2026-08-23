@@ -44,19 +44,20 @@ public class GetJobDetailsQueryTests
     [Fact]
     public async Task Handle_ReturnsDto_WhenJobExists()
     {
-        var job = new Job(
-            title: "Test Role",
-            companyName: "Test Co",
-            description: "Test description for the role.",
-            employmentType: EmploymentType.FullTime,
-            location: "Dhaka",
-            workMode: WorkMode.Hybrid,
-            experienceLevel: ExperienceLevel.MidLevel,
-            requiredSkills: new List<string> { "C#" },
-            vacancies: 1,
-            expireAt: DateTime.UtcNow.AddMonths(1),
-            status: JobStatus.Published
+        var job = Job.Create(
+            "employer-1",
+            "Test Role",
+            "Test Co",
+            "Test description for the role.",
+            EmploymentType.FullTime,
+            ExperienceLevel.MidLevel,
+            "Dhaka",
+            WorkArrangement.Hybrid,
+            new List<string> { "C#" },
+            1,
+            DateTime.UtcNow.AddMonths(1)
         );
+        job.MarkAsPublished();
 
         var jobRepo = new Mock<IJobRepository>();
         jobRepo.Setup(r => r.GetPublishedJobByIdAsync(job.Id, It.IsAny<CancellationToken>()))

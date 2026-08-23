@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Moq;
 using TalentX.Infrastructure.Middlewares;
+using Xunit;
 
 namespace TalentX.Api.Tests.Api.Middlewares;
 

@@ -1,10 +1,13 @@
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
-using TalentX.Application.Common.Interfaces.Repositories;
+using TalentX.Application.Common.Interfaces;
+using TalentX.Domain.Entities;
+using TalentX.Domain.Enums;
 using TalentX.Infrastructure.Persistence.Contexts;
 using TalentX.Infrastructure.Persistence.Repositories;
+using Xunit;
 
-namespace TalentX.Api.Tests.Infrastructure.Persistence.Repositories;
+namespace TalentX.Infrastructure.Tests.Persistence.Repositories;
 
 public class UnitOfWorkTests
 {
@@ -27,21 +30,20 @@ public class UnitOfWorkTests
         unitOfWork.Jobs.Should().NotBeNull().And.BeAssignableTo<IJobRepository>();
     }
 
-
-
     [Fact]
     public async Task SaveChangesAsync_DelegatesToTheUnderlyingContext()
     {
         await using var context = NewContext();
         var unitOfWork = new UnitOfWork(context);
-        var job = TalentX.Domain.Entities.Job.CreateDraft(
+        var job = Job.Create(
+            "employer-1",
             "Backend Engineer",
             "Acme Corp",
             "Build and maintain backend services.",
-            TalentX.Domain.Enums.EmploymentType.FullTime,
-            TalentX.Domain.Enums.ExperienceLevel.MidLevel,
+            EmploymentType.FullTime,
+            ExperienceLevel.MidLevel,
             "Dhaka",
-            TalentX.Domain.Enums.WorkArrangement.Remote,
+            WorkArrangement.Remote,
             new List<string> { "C#" },
             2,
             DateTime.UtcNow.AddDays(30)

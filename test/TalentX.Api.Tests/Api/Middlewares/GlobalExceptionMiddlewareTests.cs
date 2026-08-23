@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using TalentX.Infrastructure.Middlewares;
 using TalentX.Application.Common.Exceptions;
+using Xunit;
 
 namespace TalentX.Api.Tests.Api.Middlewares;
 
@@ -100,7 +101,7 @@ public class GlobalExceptionMiddlewareTests
     {
         var (context, body) = await InvokeWithAsync(_ => throw new ValidationException("Only draft jobs can be published."));
 
-        context.Response.StatusCode.Should().Be((int)HttpStatusCode.UnprocessableEntity);
+        context.Response.StatusCode.Should().Be((int)HttpStatusCode.BadRequest);
         body.RootElement.GetProperty("message").GetString().Should().Be("Only draft jobs can be published.");
     }
 

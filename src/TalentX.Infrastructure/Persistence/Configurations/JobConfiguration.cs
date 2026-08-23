@@ -34,7 +34,7 @@ public class JobConfiguration : IEntityTypeConfiguration<Job>
             .IsRequired();
 
         builder.Property(j => j.EmploymentType).HasConversion<string>();
-        builder.Property(j => j.WorkMode).HasConversion<string>();
+        builder.Property(j => j.WorkArrangement).HasConversion<string>();
         builder.Property(j => j.ExperienceLevel).HasConversion<string>();
         builder.Property(j => j.Status).HasConversion<string>().IsRequired();
 

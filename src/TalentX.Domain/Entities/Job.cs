@@ -3,9 +3,6 @@ using TalentX.Domain.Enums;
 
 namespace TalentX.Domain.Entities;
 
-/// <summary>
-/// Domain model for Job posting.
-/// </summary>
 public class Job : BaseEntity
 {
     public string EmployerId { get; private set; } = string.Empty;
@@ -14,54 +11,56 @@ public class Job : BaseEntity
     public string Description { get; private set; } = string.Empty;
     public EmploymentType EmploymentType { get; private set; }
     public string Location { get; private set; } = string.Empty;
-    public WorkMode WorkMode { get; private set; }
-    public ExperienceLevel? ExperienceLevel { get; private set; }
+    public WorkArrangement WorkArrangement { get; private set; }
+    public ExperienceLevel ExperienceLevel { get; private set; }
     public List<string> RequiredSkills { get; private set; } = new();
-    public JobStatus Status { get; private set; } = JobStatus.Draft;
+    public JobStatus Status { get; private set; }
     public int Vacancies { get; private set; }
     public DateTime ExpireAt { get; private set; }
 
-    protected Job() { }
+    private Job() { }
 
-    public Job(
+    public static Job Create(
+        string employerId,
         string title,
         string companyName,
         string description,
         EmploymentType employmentType,
+        ExperienceLevel experienceLevel,
         string location,
-        WorkMode workMode,
-        ExperienceLevel? experienceLevel,
-        List<string>? requiredSkills,
+        WorkArrangement workArrangement,
+        List<string> requiredSkills,
         int vacancies,
-        DateTime expireAt,
-        string employerId = "",
-        JobStatus status = JobStatus.Draft
+        DateTime expireAt
     )
     {
-        Title = title;
-        CompanyName = companyName;
-        Description = description;
-        EmploymentType = employmentType;
-        Location = location;
-        WorkMode = workMode;
-        ExperienceLevel = experienceLevel;
-        RequiredSkills = requiredSkills ?? new List<string>();
-        Vacancies = vacancies;
-        ExpireAt = expireAt;
-        EmployerId = employerId;
-        Status = status;
-        CreatedAt = DateTime.UtcNow;
+        return new Job
+        {
+            EmployerId = employerId,
+            Title = title,
+            CompanyName = companyName,
+            Description = description,
+            EmploymentType = employmentType,
+            ExperienceLevel = experienceLevel,
+            Location = location,
+            WorkArrangement = workArrangement,
+            RequiredSkills = requiredSkills,
+            Vacancies = vacancies,
+            ExpireAt = expireAt,
+            Status = JobStatus.Draft,
+            CreatedAt = DateTime.UtcNow
+        };
     }
 
-    public void UpdateDetails(
+    public void SetDetails(
         string title,
         string companyName,
         string description,
         EmploymentType employmentType,
+        ExperienceLevel experienceLevel,
         string location,
-        WorkMode workMode,
-        ExperienceLevel? experienceLevel,
-        List<string>? requiredSkills,
+        WorkArrangement workArrangement,
+        List<string> requiredSkills,
         int vacancies,
         DateTime expireAt
     )
@@ -70,12 +69,17 @@ public class Job : BaseEntity
         CompanyName = companyName;
         Description = description;
         EmploymentType = employmentType;
-        Location = location;
-        WorkMode = workMode;
         ExperienceLevel = experienceLevel;
-        RequiredSkills = requiredSkills ?? new List<string>();
+        Location = location;
+        WorkArrangement = workArrangement;
+        RequiredSkills = requiredSkills;
         Vacancies = vacancies;
         ExpireAt = expireAt;
         UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void MarkAsPublished()
+    {
+        Status = JobStatus.Published;
     }
 }

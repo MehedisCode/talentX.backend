@@ -1,6 +1,6 @@
 namespace TalentX.Domain.Enums;
 
-public enum WorkMode
+public enum WorkArrangement
 {
     OnSite = 0,
     Remote = 1,

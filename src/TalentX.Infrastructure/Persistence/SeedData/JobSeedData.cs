@@ -5,55 +5,64 @@ namespace TalentX.Infrastructure.Persistence.SeedData;
 
 public static class JobSeedData
 {
-    public static List<Job> GetJobs() => new()
+    public static List<Job> GetJobs()
     {
-        new Job(
-            title: "Frontend Developer", companyName: "Acme Inc",
-            description: "Build and ship user-facing features across our product.",
-            employmentType: EmploymentType.FullTime, location: "Dhaka", workMode: WorkMode.Hybrid,
-            experienceLevel: ExperienceLevel.MidLevel,
-            requiredSkills: new List<string> { "React", "Next.js", "TypeScript" },
-            vacancies: 1, expireAt: DateTime.UtcNow.AddMonths(1), employerId: "seed-acme", status: JobStatus.Published
-        ),
-        new Job(
-            title: "Backend Engineer (.NET)", companyName: "Northwind Labs",
-            description: "Own our core API and data layer.",
-            employmentType: EmploymentType.FullTime, location: "Remote", workMode: WorkMode.Remote,
-            experienceLevel: ExperienceLevel.SeniorLevel,
-            requiredSkills: new List<string> { "C#", "EF Core", "SQL Server" },
-            vacancies: 1, expireAt: DateTime.UtcNow.AddMonths(1), employerId: "seed-northwind", status: JobStatus.Published
-        ),
-        new Job(
-            title: "Product Designer", companyName: "Acme Inc",
-            description: "Shape the end-to-end experience for our job seekers.",
-            employmentType: EmploymentType.FullTime, location: "Dhaka", workMode: WorkMode.OnSite,
-            experienceLevel: ExperienceLevel.MidLevel,
-            requiredSkills: new List<string> { "Figma", "User Research" },
-            vacancies: 1, expireAt: DateTime.UtcNow.AddMonths(1), employerId: "seed-acme", status: JobStatus.Published
-        ),
-        new Job(
-            title: "QA Engineer", companyName: "Northwind Labs",
-            description: "Own quality across our web and API surfaces.",
-            employmentType: EmploymentType.Contract, location: "Remote", workMode: WorkMode.Remote,
-            experienceLevel: ExperienceLevel.EntryLevel,
-            requiredSkills: new List<string> { "Manual Testing", "Cypress" },
-            vacancies: 1, expireAt: DateTime.UtcNow.AddMonths(1), employerId: "seed-northwind", status: JobStatus.Published
-        ),
-        new Job(
-            title: "Expired Internship (should NOT appear)", companyName: "Acme Inc",
-            description: "Seeded already-closed to verify the eligibility filter works.",
-            employmentType: EmploymentType.Internship, location: "Remote", workMode: WorkMode.Remote,
-            experienceLevel: ExperienceLevel.EntryLevel,
-            requiredSkills: new List<string> { "Java", "Spring Boot" },
-            vacancies: 1, expireAt: DateTime.UtcNow.AddMonths(1), employerId: "seed-acme", status: JobStatus.Closed
-        ),
-        new Job(
-            title: "Draft Role (should NOT appear)", companyName: "Acme Inc",
-            description: "Seeded as Draft to verify it never becomes publicly visible.",
-            employmentType: EmploymentType.PartTime, location: "Dhaka", workMode: WorkMode.Hybrid,
-            experienceLevel: ExperienceLevel.MidLevel,
-            requiredSkills: new List<string> { "SQL" },
-            vacancies: 1, expireAt: DateTime.UtcNow.AddMonths(1), employerId: "seed-acme", status: JobStatus.Draft
-        )
-    };
+        var jobs = new List<Job>
+        {
+            Job.Create(
+                "seed-acme", "Frontend Developer", "Acme Inc",
+                "Build and ship user-facing features across our product.",
+                EmploymentType.FullTime, ExperienceLevel.MidLevel, "Dhaka", WorkArrangement.Hybrid,
+                new List<string> { "React", "Next.js", "TypeScript" },
+                1, DateTime.UtcNow.AddMonths(1)
+            ),
+            Job.Create(
+                "seed-northwind", "Backend Engineer (.NET)", "Northwind Labs",
+                "Own our core API and data layer.",
+                EmploymentType.FullTime, ExperienceLevel.SeniorLevel, "Remote", WorkArrangement.Remote,
+                new List<string> { "C#", "EF Core", "SQL Server" },
+                1, DateTime.UtcNow.AddMonths(1)
+            ),
+            Job.Create(
+                "seed-acme", "Product Designer", "Acme Inc",
+                "Shape the end-to-end experience for our job seekers.",
+                EmploymentType.FullTime, ExperienceLevel.MidLevel, "Dhaka", WorkArrangement.OnSite,
+                new List<string> { "Figma", "User Research" },
+                1, DateTime.UtcNow.AddMonths(1)
+            ),
+            Job.Create(
+                "seed-northwind", "QA Engineer", "Northwind Labs",
+                "Own quality across our web and API surfaces.",
+                EmploymentType.Contract, ExperienceLevel.EntryLevel, "Remote", WorkArrangement.Remote,
+                new List<string> { "Manual Testing", "Cypress" },
+                1, DateTime.UtcNow.AddMonths(1)
+            ),
+            // Already-expired on purpose, to verify the "published but expired" eligibility filter works.
+            Job.Create(
+                "seed-acme", "Expired Internship (should NOT appear)", "Acme Inc",
+                "Seeded already-expired to verify the eligibility filter works.",
+                EmploymentType.Internship, ExperienceLevel.EntryLevel, "Remote", WorkArrangement.Remote,
+                new List<string> { "Java", "Spring Boot" },
+                1, DateTime.UtcNow.AddDays(-1)
+            ),
+            // Left as Draft on purpose, to verify it never becomes publicly visible.
+            Job.Create(
+                "seed-acme", "Draft Role (should NOT appear)", "Acme Inc",
+                "Seeded as Draft to verify it never becomes publicly visible.",
+                EmploymentType.PartTime, ExperienceLevel.MidLevel, "Dhaka", WorkArrangement.Hybrid,
+                new List<string> { "SQL" },
+                1, DateTime.UtcNow.AddMonths(1)
+            )
+        };
+
+        // First four are published so they show up in the public listing; the
+        // expired one publishes too (to prove the filter excludes it on ExpireAt,
+        // not on Status) — the last one stays a Draft.
+        for (var i = 0; i < 5; i++)
+        {
+            jobs[i].MarkAsPublished();
+        }
+
+        return jobs;
+    }
 }

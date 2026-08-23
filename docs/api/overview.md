@@ -30,7 +30,13 @@ The TalentX REST API is built on **ASP.NET Core (.NET 10)** following RESTful de
 | `POST` | `/api/v1/auth/logout` | Logout and invalidate refresh token | No |
 | `GET` | `/api/v1/auth/user` | Get current authenticated user details | **Yes (`Bearer`)** |
 
-### 3. Diagnostics & Health (`/api/v1/health`)
+### 3. Jobs API (`/api/v1/Jobs`)
+| Method | Endpoint | Description | Auth Required |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/api/v1/Jobs` | Create a job listing as a draft or published | **Yes (`Bearer`, Employer)** |
+| `PATCH` | `/api/v1/Jobs/{id}` | Partially update / publish an owned job listing | **Yes (`Bearer`, Employer)** |
+
+### 4. Diagnostics & Health (`/api/v1/health`)
 | Method | Endpoint | Description | Auth Required |
 | :--- | :--- | :--- | :--- |
 | `GET` | `/health` / `/api/v1/health` | Server health status, UTC timestamp & uptime | No |

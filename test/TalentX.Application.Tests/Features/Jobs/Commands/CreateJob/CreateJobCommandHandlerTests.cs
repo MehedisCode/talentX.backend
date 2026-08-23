@@ -1,24 +1,27 @@
 using FluentAssertions;
+using FluentValidation;
 using Moq;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
-using TalentX.Application.Common.Interfaces.Repositories;
 using TalentX.Application.Features.Jobs.Commands.CreateJob;
+using TalentX.Application.Identity.Services;
 using TalentX.Domain.Entities;
 using TalentX.Domain.Enums;
+using Xunit;
 
-namespace TalentX.Api.Tests.Application.Features.Jobs.Commands.CreateJob;
+namespace TalentX.Application.Tests.Features.Jobs.Commands.CreateJob;
 
 public class CreateJobCommandHandlerTests
 {
     private readonly Mock<IJobRepository> _jobRepository = new();
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
+    private readonly Mock<ICurrentUserService> _currentUserService = new();
     private readonly CreateJobCommandHandler _handler;
 
     public CreateJobCommandHandlerTests()
     {
-        _unitOfWork.SetupGet(u => u.Jobs).Returns(_jobRepository.Object);
-        _handler = new CreateJobCommandHandler(_unitOfWork.Object);
+        _currentUserService.SetupGet(u => u.UserId).Returns("employer-1");
+        _handler = new CreateJobCommandHandler(_jobRepository.Object, _unitOfWork.Object, _currentUserService.Object);
     }
 
     private static CreateJobCommand ValidCommand(bool publish = false) => new(
@@ -53,6 +56,7 @@ public class CreateJobCommandHandlerTests
         addedJob.Status.Should().Be(JobStatus.Draft);
         addedJob.Title.Should().Be(command.Title);
         addedJob.CompanyName.Should().Be(command.CompanyName);
+        addedJob.EmployerId.Should().Be("employer-1");
     }
 
     [Fact]
@@ -88,7 +92,7 @@ public class CreateJobCommandHandlerTests
 
         var act = () => _handler.Handle(command, CancellationToken.None);
 
-        await act.Should().ThrowAsync<ValidationException>();
+        await act.Should().ThrowAsync<FluentValidation.ValidationException>();
     }
 
     [Fact]
@@ -100,7 +104,7 @@ public class CreateJobCommandHandlerTests
         {
             await _handler.Handle(command, CancellationToken.None);
         }
-        catch (ValidationException)
+        catch (FluentValidation.ValidationException)
         {
             // expected — assertions below verify no side effects occurred.
         }
@@ -125,5 +129,35 @@ public class CreateJobCommandHandlerTests
         addedJob.Should().NotBeNull();
         addedJob!.Status.Should().Be(JobStatus.Draft);
         _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_WhenCallerIsNotAuthenticated_ThrowsUnauthorizedException()
+    {
+        _currentUserService.SetupGet(u => u.UserId).Returns((string?)null);
+        var command = ValidCommand(publish: false);
+
+        var act = () => _handler.Handle(command, CancellationToken.None);
+
+        await act.Should().ThrowAsync<UnauthorizedException>();
+    }
+
+    [Fact]
+    public async Task Handle_WhenCallerIsNotAuthenticated_DoesNotPersistOrSave()
+    {
+        _currentUserService.SetupGet(u => u.UserId).Returns((string?)null);
+        var command = ValidCommand(publish: false);
+
+        try
+        {
+            await _handler.Handle(command, CancellationToken.None);
+        }
+        catch (UnauthorizedException)
+        {
+            // expected — assertions below verify no side effects occurred.
+        }
+
+        _jobRepository.Verify(r => r.AddAsync(It.IsAny<Job>(), It.IsAny<CancellationToken>()), Times.Never);
+        _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 }

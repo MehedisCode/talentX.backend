@@ -1,31 +1,42 @@
 using MediatR;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
+using TalentX.Application.Identity.Services;
 using TalentX.Domain.Entities;
 
 namespace TalentX.Application.Features.Jobs.Commands.CreateJob;
 
 public class CreateJobCommandHandler : IRequestHandler<CreateJobCommand, Guid>
 {
+    private readonly IJobRepository _jobRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ICurrentUserService _currentUserService;
 
-    public CreateJobCommandHandler(IUnitOfWork unitOfWork)
+    public CreateJobCommandHandler(
+        IJobRepository jobRepository,
+        IUnitOfWork unitOfWork,
+        ICurrentUserService currentUserService)
     {
+        _jobRepository = jobRepository;
         _unitOfWork = unitOfWork;
+        _currentUserService = currentUserService;
     }
 
-    // TODO: user id implementation remaining — resolve the authenticated employer via ICurrentUserService and pass it to Job.CreateDraft.
     public async Task<Guid> Handle(CreateJobCommand request, CancellationToken cancellationToken)
     {
-        var job = Job.CreateDraft(
-            request.Title,
-            request.CompanyName,
-            request.Description,
+        var employerId = _currentUserService.UserId
+            ?? throw new UnauthorizedException("You must be signed in to post a job.");
+
+        var job = Job.Create(
+            JobRules.NormalizeText(employerId),
+            JobRules.NormalizeText(request.Title),
+            JobRules.NormalizeText(request.CompanyName),
+            JobRules.NormalizeText(request.Description),
             request.EmploymentType,
             request.ExperienceLevel,
-            request.Location,
+            JobRules.NormalizeText(request.Location),
             request.WorkArrangement,
-            request.RequiredSkills,
+            JobRules.NormalizeSkills(request.RequiredSkills),
             request.Vacancies,
             request.ExpireAt
         );
@@ -34,15 +45,16 @@ public class CreateJobCommandHandler : IRequestHandler<CreateJobCommand, Guid>
         {
             try
             {
-                job.Publish();
+                JobRules.EnsurePublishable(job);
+                job.MarkAsPublished();
             }
             catch (InvalidOperationException ex)
             {
-                throw new ValidationException(ex.Message);
+                throw new FluentValidation.ValidationException(ex.Message);
             }
         }
 
-        await _unitOfWork.Jobs.AddAsync(job, cancellationToken);
+        await _jobRepository.AddAsync(job, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return job.Id;

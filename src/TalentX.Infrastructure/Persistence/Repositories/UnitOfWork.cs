@@ -8,7 +8,6 @@ public sealed class UnitOfWork : IUnitOfWork
 {
     private readonly ApplicationDbContext _context;
     public IJobRepository Jobs { get; }
-
     public IUserRepository Users { get; }
     public IEmployerRepository Employers { get; }
 
