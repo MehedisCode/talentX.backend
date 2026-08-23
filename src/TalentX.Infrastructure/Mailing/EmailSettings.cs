@@ -1,8 +1,5 @@
 namespace TalentX.Infrastructure.Mailing;
 
-/// <summary>
-/// Configuration options for outgoing SMTP email delivery.
-/// </summary>
 public sealed class EmailSettings
 {
     public const string SectionName = "EmailSettings";

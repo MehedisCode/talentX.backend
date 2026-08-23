@@ -7,7 +7,9 @@
     <Project Path="src/TalentX.Migrations/TalentX.Migrations.csproj" />
   </Folder>
   <Folder Name="/test/">
+    <Project Path="test/TalentX.Domain.Tests/TalentX.Domain.Tests.csproj" />
     <Project Path="test/TalentX.Application.Tests/TalentX.Application.Tests.csproj" />
     <Project Path="test/TalentX.Infrastructure.Tests/TalentX.Infrastructure.Tests.csproj" />
+    <Project Path="test/TalentX.Api.Tests/TalentX.Api.Tests.csproj" />
   </Folder>
 </Solution>

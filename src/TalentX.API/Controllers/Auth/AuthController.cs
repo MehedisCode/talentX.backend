@@ -6,7 +6,7 @@ using TalentX.Application.Features.Auth.Login;
 using TalentX.Application.Features.Auth.Logout;
 using TalentX.Application.Features.Auth.RefreshToken;
 
-namespace TalentX.API.Controllers;
+namespace TalentX.API.Controllers.Auth;
 
 [ApiController]
 [Route("api/v1/[controller]")]

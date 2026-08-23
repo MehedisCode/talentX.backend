@@ -48,6 +48,8 @@ talentx2026q3.backend/
 │   │   │   ├── BaseEntity.cs               # Audit fields (Id, CreatedAt, UpdatedAt)
 │   │   │   └── Enums/                      # Domain enums (UserRole: Employer, Talent)
 │   │   │       └── UserRole.cs
+│   │   ├── Entities/
+│   │   │   └── Job.cs                      # Job listing domain entity (Draft/Published lifecycle)
 │   │   ├── Employer.cs                     # Root Employer domain entity
 │   │   └── User.cs                         # Root User domain entity
 │   │
@@ -55,11 +57,12 @@ talentx2026q3.backend/
 │   │   ├── Common/                         # Cross-cutting application interfaces & pipelines
 │   │   │   ├── Behaviours/                 # MediatR pipeline behaviours (Logging, Validation)
 │   │   │   ├── Exceptions/                 # Domain/App exceptions (AppException, Conflict, etc.)
-│   │   │   └── Interfaces/                 # Service & repository contracts (IUnitOfWork, IEmployerRepository)
+│   │   │   └── Interfaces/                 # Service & repository contracts (IUnitOfWork, IJobRepository, IEmployerRepository)
 │   │   ├── DTOs/                           # Data Transfer Objects (Employers)
 │   │   ├── Features/                       # Feature slices organized by domain area
 │   │   │   ├── Auth/                       # CurrentUser, Login, Logout, RefreshToken handlers & validators
-│   │   │   └── Employers/Commands/         # CreateEmployer, GoogleSignIn, ResendOtp, VerifyEmail
+│   │   │   ├── Employers/Commands/         # CreateEmployer, GoogleSignIn, ResendOtp, VerifyEmail
+│   │   │   └── Jobs/Commands/               # CreateJob, UpdateJob handlers & validators
 │   │   ├── Identity/                       # Identity contracts & models (IIdentityService, ITokenService)
 │   │   ├── ApplicationStartup.cs           # Application DI service registration extensions (AddApplication)
 │   │   └── GlobalUsings.cs                 # Application-wide global using directives
@@ -78,9 +81,9 @@ talentx2026q3.backend/
 │   │   ├── Middlewares/                    # HTTP middlewares (ExceptionMiddleware, RequestLoggingMiddleware)
 │   │   │   └── MiddlewareStartup.cs        # Middleware pipeline extension (UseInfrastructureMiddlewares)
 │   │   ├── Persistence/                    # EF Core database access
-│   │   │   ├── Configurations/             # Entity type configurations (Employer, User, RefreshToken)
+│   │   │   ├── Configurations/             # Entity type configurations (Job, Employer, User, RefreshToken)
 │   │   │   ├── Contexts/                   # ApplicationDbContext
-│   │   │   ├── Repositories/               # EmployerRepository, UserRepository, UnitOfWork
+│   │   │   ├── Repositories/               # JobRepository, EmployerRepository, UserRepository, UnitOfWork
 │   │   │   └── PersistenceStartup.cs       # Persistence DI extension (AddPersistence)
 │   │   ├── InfrastructureStartup.cs        # Infrastructure master DI extension (AddInfrastructure)
 │   │   └── GlobalUsings.cs                 # Infrastructure-wide global using directives
@@ -93,6 +96,7 @@ talentx2026q3.backend/
 │       ├── Controllers/                    # HTTP Controllers organized by module
 │       │   ├── Auth/                       # Authentication endpoints (AuthController)
 │       │   ├── Employers/                  # Registration & onboarding (EmployersController)
+│       │   ├── Jobs/                       # Job listing endpoints (JobsController)
 │       │   ├── BaseApiController.cs        # Base controller injecting ISender
 │       │   └── HealthController.cs         # Administrative & diagnostic endpoints
 │       ├── Swagger/                        # OpenAPI / Swagger configuration (SwaggerStartup)
@@ -101,10 +105,14 @@ talentx2026q3.backend/
 │       └── appsettings.json                # Runtime configuration settings
 │
 └── test/
+    ├── TalentX.Domain.Tests/                # Automated unit tests for domain entities
+    │   └── Entities/                        # JobTests
     ├── TalentX.Application.Tests/          # Automated unit tests for CQRS features & validation
-    │   └── Features/                       # Unit tests for Auth & Employer CQRS commands
-    └── TalentX.Infrastructure.Tests/       # Automated unit tests for Identity, TokenService & Repositories
-        └── Identity/Services/              # IdentityServiceTests, TokenServiceTests
+    │   └── Features/                       # Unit tests for Auth, Employer & Job CQRS commands
+    ├── TalentX.Infrastructure.Tests/       # Automated unit tests for Identity, TokenService & Repositories
+    │   └── Identity/Services/              # IdentityServiceTests, TokenServiceTests
+    └── TalentX.Api.Tests/                   # Automated unit tests for controllers
+        └── Controllers/Jobs/                # JobsControllerTests
 ```
 
 ---
@@ -114,15 +122,15 @@ talentx2026q3.backend/
 1. **Domain (`TalentX.Domain`)**:
    - The absolute center of the application.
    - Depends on **nothing** (no external NuGet packages, no database dependencies).
-   - Contains pure enterprise models (`User`, `Employer`), domain enums (`UserRole`), and base entity classes.
+   - Contains pure enterprise models (`User`, `Employer`, `Job`), domain enums (`UserRole`, `JobStatus`, `EmploymentType`, `ExperienceLevel`, `WorkArrangement`), and base entity classes.
 
 2. **Application (`TalentX.Application`)**:
    - Depends **only on Domain**.
    - Implements CQRS via MediatR:
-     - **Commands** modify state (e.g. `CreateEmployerCommand`, `GoogleSignInEmployerCommand`, `VerifyEmployerEmailCommand`, `ResendEmployerOtpCommand`, `LoginCommand`, `LogoutCommand`, `RefreshTokenCommand`).
+     - **Commands** modify state (e.g. `CreateEmployerCommand`, `GoogleSignInEmployerCommand`, `VerifyEmployerEmailCommand`, `ResendEmployerOtpCommand`, `LoginCommand`, `LogoutCommand`, `RefreshTokenCommand`, `CreateJobCommand`, `UpdateJobCommand`).
      - **Queries** read state (e.g. `CurrentUserQuery`).
    - Validates all input commands using **FluentValidation** before execution.
-   - Defines abstract repository and service interfaces (`IUnitOfWork`, `IEmployerRepository`, `IIdentityService`, `ITokenService`).
+   - Defines abstract repository and service interfaces (`IUnitOfWork`, `IJobRepository`, `IEmployerRepository`, `IIdentityService`, `ITokenService`).
 
 3. **Infrastructure (`TalentX.Infrastructure`)**:
    - Implements the interfaces defined in the Application layer.
@@ -154,7 +162,7 @@ When an HTTP request enters the system:
 [ HTTP Request ]
        │
        ▼
-1. Controller (e.g. EmployersController / AuthController) receives DTO
+1. Controller (e.g. EmployersController / AuthController / JobsController) receives DTO
        │
        ▼
 2. MediatR Pipeline: LoggingBehaviour (Logs execution & duration)

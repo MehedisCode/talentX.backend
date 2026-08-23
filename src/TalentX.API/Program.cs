@@ -1,10 +1,12 @@
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using TalentX.API.Swagger;
 using TalentX.Application;
 using TalentX.Infrastructure;
 using TalentX.Infrastructure.Identity.Seed;
 using TalentX.Infrastructure.Middlewares;
 using TalentX.Infrastructure.Persistence.Contexts;
+using TalentX.Infrastructure.Persistence;
 
 // 1. Walk up directory tree to discover and load .env from solution root (talentx2026q3.backend/.env)
 var envFile = Path.Combine(Directory.GetCurrentDirectory(), ".env");
@@ -71,7 +73,6 @@ builder.Services.AddSwaggerDocumentation();
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
-        // Converts all enums to string values during JSON serialization/deserialization
         options.JsonSerializerOptions.Converters.Add(
             new System.Text.Json.Serialization.JsonStringEnumConverter()
         );
@@ -79,23 +80,16 @@ builder.Services.AddControllers()
 
 var app = builder.Build();
 
-// 5. Safe Database Migration & Identity Seeding (Runs migrations first, then seeds)
+// 5. Safe Database Migration & Seeding (logic moved to DatabaseInitializer.cs)
 try
 {
-    using var scope = app.Services.CreateScope();
-    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    
-    if (app.Environment.IsDevelopment())
-    {
-        await db.Database.MigrateAsync();
-    }
-
-    await IdentitySeeder.SeedAsync(app.Services);
+    await app.Services.InitializeDatabaseAsync(app.Environment);
 }
 catch (Exception ex)
 {
     var logger = app.Services.GetRequiredService<ILogger<Program>>();
-    logger.LogWarning(ex, "Database migration or seeding skipped or failed during startup: {Message}", ex.Message);
+    logger.LogCritical(ex, "Database initialization failed. The application will not start.");
+    throw;
 }
 
 // 6. Swagger (Development or explicit ENABLE_SWAGGER=true in .env)

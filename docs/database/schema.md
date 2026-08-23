@@ -12,7 +12,25 @@ erDiagram
     AspNetUsers ||--o{ AspNetUserRoles : "has many"
     AspNetRoles ||--o{ AspNetUserRoles : "has many"
     DomainUsers ||--o| Employers : "inherited by (TPT)"
-    
+
+    Jobs {
+        uuid Id PK
+        text EmployerId
+        varchar(200) Title
+        varchar(200) CompanyName
+        varchar(10000) Description
+        int EmploymentType
+        varchar(200) Location
+        int WorkArrangement
+        int ExperienceLevel
+        text_array RequiredSkills
+        int Status
+        int Vacancies
+        timestamp ExpireAt
+        timestamp CreatedAt
+        timestamp UpdatedAt
+    }
+
     DomainUsers {
         uuid Id PK
         varchar(200) UserId
@@ -77,7 +95,28 @@ erDiagram
 
 ---
 
-### 3. `RefreshTokens`
+### 3. `Jobs`
+| Column | Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `Id` | `uuid` | `PRIMARY KEY` | Job listing unique identifier |
+| `EmployerId` | `text` | `NOT NULL, INDEXED` | Owning employer's user id (not a DB-level FK — resolved via `ICurrentUserService`) |
+| `Title` | `varchar(200)` | `NOT NULL` | Job title |
+| `CompanyName` | `varchar(200)` | `NOT NULL` | Company or organization name shown on the listing |
+| `Description` | `varchar(10000)` | `NOT NULL` | Full job description |
+| `EmploymentType` | `int` | `NOT NULL` | Enum: `FullTime`, `PartTime`, `Contract`, `Internship` |
+| `Location` | `varchar(200)` | `NOT NULL` | Job location |
+| `WorkArrangement` | `int` | `NOT NULL` | Enum: `OnSite`, `Remote`, `Hybrid` |
+| `ExperienceLevel` | `int` | `NOT NULL` | Enum: `EntryLevel`, `MidLevel`, `SeniorLevel`, `Lead`, `Executive` |
+| `RequiredSkills` | `text[]` | `NOT NULL` | Primitive collection, deduplicated case-insensitively |
+| `Status` | `int` | `NOT NULL` | Enum: `Draft`, `Published`, `Closed` |
+| `Vacancies` | `int` | `NOT NULL` | Number of open positions |
+| `ExpireAt` | `timestamptz` | `NOT NULL` | Listing expiry timestamp (UTC) |
+| `CreatedAt` | `timestamptz` | `NOT NULL` | Creation timestamp (UTC) |
+| `UpdatedAt` | `timestamptz` | `NULL` | Last modification timestamp (UTC) |
+
+---
+
+### 4. `RefreshTokens`
 | Column | Type | Constraints | Description |
 | :--- | :--- | :--- | :--- |
 | `Id` | `uuid` | `PRIMARY KEY` | Token unique identifier |

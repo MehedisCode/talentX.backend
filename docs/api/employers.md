@@ -25,13 +25,17 @@ Creates a new Employer account with `UserRole.Employer`, generates a 6-digit OTP
 ### Response (`201 Created`)
 ```json
 {
-  "id": "c1f7b8d4-3456-4abc-9876-123456789abc",
-  "name": "Sarah Connor",
-  "email": "sarah.connor@cyberdyne.com",
-  "companyName": "Cyberdyne Systems",
-  "role": "Employer",
-  "isVerified": false,
-  "createdAt": "2026-08-19T10:00:00Z"
+  "employer": {
+    "id": "c1f7b8d4-3456-4abc-9876-123456789abc",
+    "name": "Sarah Connor",
+    "email": "sarah.connor@cyberdyne.com",
+    "companyName": "Cyberdyne Systems",
+    "role": "Employer",
+    "isVerified": true,
+    "createdAt": "2026-08-19T10:00:00Z"
+  },
+  "accessToken": "eyJhbGciOiJIUzI1NiIs...",
+  "refreshToken": "7f8a9b0c-1234-4567-8901-abcdef123456"
 }
 ```
 
@@ -43,7 +47,7 @@ Creates a new Employer account with `UserRole.Employer`, generates a 6-digit OTP
 
 ## 2. Verify Email (OTP)
 
-Validates the 6-digit OTP sent to the employer's email and marks the account as verified.
+Validates the 6-digit OTP sent to the employer's email. If the employer profile exists, marks it verified and issues JWT tokens.
 
 * **Method**: `POST`
 * **Route**: `/api/v1/employers/verify-email`
@@ -60,18 +64,28 @@ Validates the 6-digit OTP sent to the employer's email and marks the account as 
 ### Response (`200 OK`)
 ```json
 {
-  "message": "Email verified successfully."
+  "employer": {
+    "id": "c1f7b8d4-3456-4abc-9876-123456789abc",
+    "name": "Sarah Connor",
+    "email": "sarah.connor@cyberdyne.com",
+    "companyName": "Cyberdyne Systems",
+    "role": "Employer",
+    "isVerified": true,
+    "createdAt": "2026-08-19T10:00:00Z"
+  },
+  "accessToken": "eyJhbGciOiJIUzI1NiIs...",
+  "refreshToken": "7f8a9b0c-1234-4567-8901-abcdef123456"
 }
 ```
 
 ---
 
-## 3. Resend OTP
+## 3. Send OTP
 
-Generates and sends a new 6-digit verification code to an unverified employer account.
+Generates and sends a 6-digit verification code to the specified email address. Supports both new unverified emails and existing unverified employers.
 
 * **Method**: `POST`
-* **Route**: `/api/v1/employers/resend-otp`
+* **Route**: `/api/v1/employers/send-otp`
 * **Auth**: Public (`[AllowAnonymous]`)
 
 ### Request Body
@@ -84,7 +98,7 @@ Generates and sends a new 6-digit verification code to an unverified employer ac
 ### Response (`200 OK`)
 ```json
 {
-  "message": "A new verification code has been sent to your email."
+  "message": "A verification code has been sent to your email."
 }
 ```
 

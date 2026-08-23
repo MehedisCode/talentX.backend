@@ -44,8 +44,8 @@ Accept: application/json
 
 ###
 
-### Resend Verification OTP (Valid for unverified account)
-POST {{TalentX.Api_HostAddress}}/api/v1/employers/resend-otp
+### Send Verification OTP (Valid for new or unverified account)
+POST {{TalentX.Api_HostAddress}}/api/v1/employers/send-otp
 Content-Type: application/json
 Accept: application/json
 

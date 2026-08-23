@@ -2,9 +2,6 @@ using TalentX.Domain.Enums;
 
 namespace TalentX.Domain;
 
-/// <summary>
-/// Represents an Employer entity in the domain, inheriting from <see cref="User"/>.
-/// </summary>
 public sealed class Employer : User
 {
     public string CompanyName { get; private set; } = string.Empty;
