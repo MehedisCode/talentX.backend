@@ -11,7 +11,7 @@ namespace TalentX.API.Controllers.Resume;
 /// <summary>
 /// Handles resume upload and AI-powered extraction.
 /// </summary>
-[Route("api/[controller]")]
+[Route("api/v1/[controller]")]
 public sealed class ResumesController : BaseApiController
 {
     /// <summary>
