@@ -5,13 +5,13 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 
 WORKDIR /src
 
-COPY TalentX.slnx ./
-COPY src/TalentX.API/TalentX.API.csproj src/TalentX.API/
-COPY src/TalentX.Application/TalentX.Application.csproj src/TalentX.Application/
 COPY src/TalentX.Domain/TalentX.Domain.csproj src/TalentX.Domain/
+COPY src/TalentX.Application/TalentX.Application.csproj src/TalentX.Application/
 COPY src/TalentX.Infrastructure/TalentX.Infrastructure.csproj src/TalentX.Infrastructure/
+COPY src/TalentX.Migrations/TalentX.Migrations.csproj src/TalentX.Migrations/
+COPY src/TalentX.API/TalentX.API.csproj src/TalentX.API/
 
-RUN dotnet restore TalentX.slnx
+RUN dotnet restore src/TalentX.API/TalentX.API.csproj
 
 COPY src/ ./src/
 
