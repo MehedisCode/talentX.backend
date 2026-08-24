@@ -87,6 +87,11 @@ pipelines:
                 -e GEMINI_API_KEY="${GEMINI_API_KEY}" \
                 -e GEMINI_MODEL_NAME="${GEMINI_MODEL_NAME}" \
                 -e GEMINI_BASE_URL="${GEMINI_BASE_URL}" \
+                -e FILE_STORAGE_PROVIDER="${FILE_STORAGE_PROVIDER}" \
+                -e FILE_STORAGE_LOCAL_BASE_PATH="${FILE_STORAGE_LOCAL_BASE_PATH}" \
+                -e FILE_STORAGE_S3_BUCKET_NAME="${FILE_STORAGE_S3_BUCKET_NAME}" \
+                -e FILE_STORAGE_S3_REGION="${FILE_STORAGE_S3_REGION}" \
+                -e FILE_STORAGE_S3_FOLDER_PREFIX="${FILE_STORAGE_S3_FOLDER_PREFIX}" \
                 -e ASPNETCORE_ENVIRONMENT=Development \
                 "\$IMAGE"
 
