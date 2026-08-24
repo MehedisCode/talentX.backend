@@ -1,5 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using TalentX.Infrastructure.Ai;
+using TalentX.Infrastructure.FileStorage;
 using TalentX.Infrastructure.Identity;
 using TalentX.Infrastructure.Persistence;
 
@@ -14,6 +16,8 @@ public static class InfrastructureStartup
     {
         services.AddPersistence(configuration);
         services.AddIdentityServices(configuration);
+        services.AddFileStorage(configuration);
+        services.AddExtractionServices(configuration);
 
         return services;
     }
