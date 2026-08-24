@@ -42,6 +42,23 @@ SENDER_NAME=TalentX Support
 # Google OAuth 2.0 Client Keys
 GOOGLE_CLIENT_ID=your_google_client_id.apps.googleusercontent.com
 GOOGLE_CLIENT_SECRET=your_google_client_secret
+
+# Gemini AI Configuration
+GEMINI_API_KEY=your_gemini_api_key_here
+GEMINI_MODEL_NAME=gemini-3.1-flash-lite
+GEMINI_BASE_URL=https://generativelanguage.googleapis.com/
+
+# AWS S3 Configuration
+AWS_ACCESS_KEY_ID=your_aws_access_key_id
+AWS_SECRET_ACCESS_KEY=your_aws_secret_access_key
+AWS_REGION=ap-southeast-1
+
+# File Storage Configuration
+FILE_STORAGE_PROVIDER=S3
+FILE_STORAGE_LOCAL_BASE_PATH=uploads/resumes
+FILE_STORAGE_S3_BUCKET_NAME=talentx-s3-staging
+FILE_STORAGE_S3_REGION=ap-southeast-1
+FILE_STORAGE_S3_FOLDER_PREFIX=resumes
 ```
 
 ---
