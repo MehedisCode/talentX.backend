@@ -20,7 +20,7 @@ COPY src/ ./src/
 # =========================
 FROM build AS publish
 
-RUN dotnet publish src/TalentX.Api/TalentX.Api.csproj \
+RUN dotnet publish src/TalentX.API/TalentX.API.csproj \
     --configuration Release \
     --no-restore \
     --output /app/publish \
