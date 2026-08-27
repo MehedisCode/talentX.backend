@@ -1,7 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using TalentX.API.Identity.Services;
 using TalentX.API.Swagger;
 using TalentX.Application;
+using TalentX.Application.Identity.Services;
 using TalentX.Infrastructure;
 using TalentX.Infrastructure.Identity.Seed;
 using TalentX.Infrastructure.Middlewares;
@@ -77,6 +79,15 @@ builder.Services.AddControllers()
             new System.Text.Json.Serialization.JsonStringEnumConverter()
         );
     });
+
+// Development-only auth seam: reads X-Dev-User-Id / X-Dev-User-Email headers when the
+// request carries no JWT, so downstream teams can integrate against ICurrentUserService
+// before authentication is wired into TalentsController. Never registered outside Development.
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services.AddScoped<TalentX.Infrastructure.Identity.Services.CurrentUserService>();
+    builder.Services.AddScoped<ICurrentUserService, DevCurrentUserService>();
+}
 
 var app = builder.Build();
 
