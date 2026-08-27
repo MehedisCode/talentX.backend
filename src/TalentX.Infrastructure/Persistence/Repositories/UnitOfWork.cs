@@ -8,6 +8,7 @@ public sealed class UnitOfWork : IUnitOfWork
 {
     private readonly ApplicationDbContext _context;
     public IJobRepository Jobs { get; }
+    public IJobApplicationRepository JobApplications { get; }
     public IUserRepository Users { get; }
     public IEmployerRepository Employers { get; }
 
@@ -15,6 +16,7 @@ public sealed class UnitOfWork : IUnitOfWork
     {
         _context = context;
         Jobs = new JobRepository(_context);
+        JobApplications = new JobApplicationRepository(_context);
         Users = new UserRepository(_context);
         Employers = new EmployerRepository(_context);
     }

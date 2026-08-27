@@ -176,4 +176,27 @@ public class JobTests
         act.Should().NotThrow();
         job.Status.Should().Be(JobStatus.Published);
     }
+
+    [Fact]
+    public void UpdateWizardDetails_SetsWizardPropertiesAndUpdatesTimestamp()
+    {
+        var job = CreateJob();
+        var beforeUpdate = DateTime.UtcNow;
+
+        job.UpdateWizardDetails(
+            city: "Berlin",
+            country: "Germany",
+            minOverlapHours: 4,
+            responsibilities: "Lead architectural designs and mentor junior engineers."
+        );
+
+        var afterUpdate = DateTime.UtcNow;
+
+        job.City.Should().Be("Berlin");
+        job.Country.Should().Be("Germany");
+        job.MinOverlapHours.Should().Be(4);
+        job.Responsibilities.Should().Be("Lead architectural designs and mentor junior engineers.");
+        job.UpdatedAt.Should().NotBeNull();
+        job.UpdatedAt!.Value.Should().BeOnOrAfter(beforeUpdate).And.BeOnOrBefore(afterUpdate);
+    }
 }

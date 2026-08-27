@@ -1,6 +1,7 @@
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using TalentX.Application.Common.Interfaces;
+using TalentX.Application.Common.Interfaces.Repositories;
 using TalentX.Domain.Entities;
 using TalentX.Domain.Enums;
 using TalentX.Infrastructure.Persistence.Contexts;
@@ -28,6 +29,7 @@ public class UnitOfWorkTests
         var unitOfWork = new UnitOfWork(context);
 
         unitOfWork.Jobs.Should().NotBeNull().And.BeAssignableTo<IJobRepository>();
+        unitOfWork.JobApplications.Should().NotBeNull().And.BeAssignableTo<IJobApplicationRepository>();
     }
 
     [Fact]
