@@ -30,6 +30,12 @@ public class UnitOfWorkTests
 
         unitOfWork.Jobs.Should().NotBeNull().And.BeAssignableTo<IJobRepository>();
         unitOfWork.JobApplications.Should().NotBeNull().And.BeAssignableTo<IJobApplicationRepository>();
+        unitOfWork.Users.Should().NotBeNull().And.BeAssignableTo<IUserRepository>();
+        unitOfWork.Employers.Should().NotBeNull().And.BeAssignableTo<IEmployerRepository>();
+        unitOfWork.Talents.Should().NotBeNull().And.BeAssignableTo<ITalentRepository>();
+        unitOfWork.Resumes.Should().NotBeNull().And.BeAssignableTo<IResumeRepository>();
+        unitOfWork.WorkExperiences.Should().NotBeNull().And.BeAssignableTo<IWorkExperienceRepository>();
+        unitOfWork.Educations.Should().NotBeNull().And.BeAssignableTo<IEducationRepository>();
     }
 
     [Fact]
