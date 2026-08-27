@@ -29,6 +29,10 @@ public static class PersistenceStartup
         services.AddScoped<IJobApplicationRepository, JobApplicationRepository>();
         services.AddScoped<IEmployerRepository, EmployerRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<ITalentRepository, TalentRepository>();
+        services.AddScoped<IResumeRepository, ResumeRepository>();
+        services.AddScoped<IWorkExperienceRepository, WorkExperienceRepository>();
+        services.AddScoped<IEducationRepository, EducationRepository>();
 
         return services;
     }
