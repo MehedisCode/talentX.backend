@@ -7,16 +7,14 @@ namespace TalentX.Application.Common.Interfaces;
 /// </summary>
 public interface IUnitOfWork
 {
-    IJobRepository Jobs {get;}
-    /// <summary>
-    /// Repository for user operations.
-    /// </summary>
+    IJobRepository Jobs { get; }
+    IJobApplicationRepository JobApplications { get; }
     IUserRepository Users { get; }
-
-    /// <summary>
-    /// Repository for employer operations.
-    /// </summary>
     IEmployerRepository Employers { get; }
+    ITalentRepository Talents { get; }
+    IResumeRepository Resumes { get; }
+    IWorkExperienceRepository WorkExperiences { get; }
+    IEducationRepository Educations { get; }
 
     /// <summary>
     /// Asynchronously persists all changes made in the context to the database.

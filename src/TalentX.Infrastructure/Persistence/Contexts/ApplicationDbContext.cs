@@ -16,9 +16,14 @@ public class ApplicationDbContext
     }
 
     public DbSet<Job> Jobs => Set<Job>();
+    public DbSet<JobApplication> JobApplications => Set<JobApplication>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<User> DomainUsers => Set<User>();
     public DbSet<Employer> Employers => Set<Employer>();
+    public DbSet<Talent> Talents => Set<Talent>();
+    public DbSet<Resume> Resumes => Set<Resume>();
+    public DbSet<WorkExperience> WorkExperiences => Set<WorkExperience>();
+    public DbSet<Education> Educations => Set<Education>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
