@@ -36,15 +36,9 @@ public sealed class GetTalentProfileQueryHandler : IRequestHandler<GetTalentProf
         var talent = await _unitOfWork.Talents.GetByUserIdAsync(userId, cancellationToken)
             ?? throw new NotFoundException($"Talent profile for user '{userId}' was not found.");
 
-        var workExperiencesTask = _unitOfWork.WorkExperiences.GetByUserIdAsync(userId, cancellationToken);
-        var educationsTask = _unitOfWork.Educations.GetByUserIdAsync(userId, cancellationToken);
-        var resumeTask = _unitOfWork.Resumes.GetByUserIdAsync(userId, cancellationToken);
-
-        await Task.WhenAll(workExperiencesTask, educationsTask, resumeTask);
-
-        var workExperiences = await workExperiencesTask;
-        var educations = await educationsTask;
-        var resume = await resumeTask;
+        var workExperiences = await _unitOfWork.WorkExperiences.GetByUserIdAsync(userId, cancellationToken);
+        var educations = await _unitOfWork.Educations.GetByUserIdAsync(userId, cancellationToken);
+        var resume = await _unitOfWork.Resumes.GetByUserIdAsync(userId, cancellationToken);
 
         var profilePictureUrlTask = CreateDownloadUrlOrNullAsync(talent.ProfilePictureStorageKey, cancellationToken);
         var videoIntroUrlTask = CreateDownloadUrlOrNullAsync(talent.VideoIntroStorageKey, cancellationToken);

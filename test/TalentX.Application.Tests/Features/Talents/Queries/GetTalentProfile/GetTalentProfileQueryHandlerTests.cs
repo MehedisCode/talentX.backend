@@ -135,4 +135,56 @@ public class GetTalentProfileQueryHandlerTests
         response.WorkExperiences.Should().ContainSingle(item => item.CompanyName == "Acme Corp");
         response.Educations.Should().ContainSingle(item => item.Institution == "State University");
     }
+
+    [Fact]
+    public async Task Handle_CallsRepositories_NeverOverlapsInFlightRepositoryCalls()
+    {
+        // Regression test for the production crash: "A second operation was started on this
+        // context instance before a previous operation completed." The repository calls below
+        // are backed by the same DbContext in production, so the handler must await each one
+        // before starting the next. This test fails if the handler ever fans them out
+        // concurrently (e.g. via Task.WhenAll) by tracking how many calls are simultaneously
+        // in-flight.
+        var concurrentCallCount = new int[1];
+
+        _currentUserService.SetupGet(u => u.UserId).Returns("user-3");
+        var talent = new Talent("user-3", "Alex Doe", "alex@example.com");
+
+        _talentRepository
+            .Setup(r => r.GetByUserIdAsync("user-3", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(talent);
+        _workExperienceRepository
+            .Setup(r => r.GetByUserIdAsync("user-3", It.IsAny<CancellationToken>()))
+            .Returns(() => TrackOverlapAsync(concurrentCallCount, (IReadOnlyList<WorkExperience>)new List<WorkExperience>()));
+        _educationRepository
+            .Setup(r => r.GetByUserIdAsync("user-3", It.IsAny<CancellationToken>()))
+            .Returns(() => TrackOverlapAsync(concurrentCallCount, (IReadOnlyList<Education>)new List<Education>()));
+        _resumeRepository
+            .Setup(r => r.GetByUserIdAsync("user-3", It.IsAny<CancellationToken>()))
+            .Returns(() => TrackOverlapAsync(concurrentCallCount, (Resume?)null));
+
+        var act = () => _handler.Handle(new GetTalentProfileQuery(), CancellationToken.None);
+
+        await act.Should().NotThrowAsync();
+    }
+
+    private static async Task<T> TrackOverlapAsync<T>(int[] concurrentCallCount, T result)
+    {
+        var callsInFlight = Interlocked.Increment(ref concurrentCallCount[0]);
+        try
+        {
+            if (callsInFlight > 1)
+            {
+                throw new InvalidOperationException(
+                    "A second operation was started on this context instance before a previous operation completed.");
+            }
+
+            await Task.Delay(20);
+            return result;
+        }
+        finally
+        {
+            Interlocked.Decrement(ref concurrentCallCount[0]);
+        }
+    }
 }
