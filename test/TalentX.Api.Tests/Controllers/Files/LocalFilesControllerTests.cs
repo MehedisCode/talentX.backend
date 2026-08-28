@@ -125,6 +125,7 @@ public sealed class LocalFilesControllerTests
 
         var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
         okResult.Value.Should().BeSameAs(uploadedPart);
+        _controller.HttpContext.Response.Headers["ETag"].ToString().Should().Be(uploadedPart.ETag);
     }
 
     [Fact]

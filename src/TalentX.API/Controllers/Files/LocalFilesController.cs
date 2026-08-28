@@ -72,6 +72,8 @@ public sealed class LocalFilesController : BaseApiController
         var command = new SaveLocalMultipartPartCommand(key, uploadId, partNumber, Request.Body);
         var result = await Sender.Send(command, cancellationToken);
 
+        Response.Headers.Append("ETag", result.ETag);
+
         return Ok(result);
     }
 
