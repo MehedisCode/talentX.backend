@@ -3,6 +3,7 @@ using MediatR;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Features.Talents.DTOs;
+using TalentX.Application.Identity.Services;
 
 namespace TalentX.Application.Features.Talents.Queries.GetTalentProfile;
 
@@ -12,26 +13,32 @@ public sealed class GetTalentProfileQueryHandler : IRequestHandler<GetTalentProf
 
     private readonly IUnitOfWork _unitOfWork;
     private readonly IPresignedUrlService _presignedUrlService;
+    private readonly ICurrentUserService _currentUserService;
     private readonly IMapper _mapper;
 
     public GetTalentProfileQueryHandler(
         IUnitOfWork unitOfWork,
         IPresignedUrlService presignedUrlService,
+        ICurrentUserService currentUserService,
         IMapper mapper)
     {
         _unitOfWork = unitOfWork;
         _presignedUrlService = presignedUrlService;
+        _currentUserService = currentUserService;
         _mapper = mapper;
     }
 
     public async Task<TalentProfileResponse> Handle(GetTalentProfileQuery request, CancellationToken cancellationToken)
     {
-        var talent = await _unitOfWork.Talents.GetByUserIdAsync(request.UserId, cancellationToken)
-            ?? throw new NotFoundException($"Talent profile for user '{request.UserId}' was not found.");
+        var userId = _currentUserService.UserId
+            ?? throw new UnauthorizedException("You must be signed in to view your profile.");
 
-        var workExperiencesTask = _unitOfWork.WorkExperiences.GetByUserIdAsync(request.UserId, cancellationToken);
-        var educationsTask = _unitOfWork.Educations.GetByUserIdAsync(request.UserId, cancellationToken);
-        var resumeTask = _unitOfWork.Resumes.GetByUserIdAsync(request.UserId, cancellationToken);
+        var talent = await _unitOfWork.Talents.GetByUserIdAsync(userId, cancellationToken)
+            ?? throw new NotFoundException($"Talent profile for user '{userId}' was not found.");
+
+        var workExperiencesTask = _unitOfWork.WorkExperiences.GetByUserIdAsync(userId, cancellationToken);
+        var educationsTask = _unitOfWork.Educations.GetByUserIdAsync(userId, cancellationToken);
+        var resumeTask = _unitOfWork.Resumes.GetByUserIdAsync(userId, cancellationToken);
 
         await Task.WhenAll(workExperiencesTask, educationsTask, resumeTask);
 

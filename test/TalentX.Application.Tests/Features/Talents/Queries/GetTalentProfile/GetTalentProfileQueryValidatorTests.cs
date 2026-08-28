@@ -9,20 +9,10 @@ public class GetTalentProfileQueryValidatorTests
     private readonly GetTalentProfileQueryValidator _validator = new();
 
     [Fact]
-    public void Validate_WithAValidUserId_HasNoErrors()
+    public void Validate_HasNoErrors()
     {
-        var result = _validator.TestValidate(new GetTalentProfileQuery("user-1"));
+        var result = _validator.TestValidate(new GetTalentProfileQuery());
 
         result.ShouldNotHaveAnyValidationErrors();
-    }
-
-    [Theory]
-    [InlineData(null)]
-    [InlineData("")]
-    public void Validate_WithMissingUserId_HasError(string? userId)
-    {
-        var result = _validator.TestValidate(new GetTalentProfileQuery(userId!));
-
-        result.ShouldHaveValidationErrorFor(query => query.UserId);
     }
 }

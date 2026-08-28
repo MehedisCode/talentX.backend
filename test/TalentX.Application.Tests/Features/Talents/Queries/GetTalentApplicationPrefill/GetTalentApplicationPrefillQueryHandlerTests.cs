@@ -6,6 +6,7 @@ using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Common.Interfaces.Repositories;
 using TalentX.Application.Features.Talents.DTOs;
 using TalentX.Application.Features.Talents.Queries.GetTalentApplicationPrefill;
+using TalentX.Application.Identity.Services;
 using TalentX.Domain;
 using TalentX.Domain.Entities;
 using Xunit;
@@ -19,6 +20,7 @@ public class GetTalentApplicationPrefillQueryHandlerTests
     private readonly Mock<IResumeRepository> _resumeRepository = new();
     private readonly Mock<IWorkExperienceRepository> _workExperienceRepository = new();
     private readonly Mock<IPresignedUrlService> _presignedUrlService = new();
+    private readonly Mock<ICurrentUserService> _currentUserService = new();
     private readonly IMapper _mapper;
     private readonly GetTalentApplicationPrefillQueryHandler _handler;
 
@@ -34,17 +36,32 @@ public class GetTalentApplicationPrefillQueryHandlerTests
         }, Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         _mapper = mapperConfiguration.CreateMapper();
 
-        _handler = new GetTalentApplicationPrefillQueryHandler(_unitOfWork.Object, _presignedUrlService.Object, _mapper);
+        _handler = new GetTalentApplicationPrefillQueryHandler(
+            _unitOfWork.Object,
+            _presignedUrlService.Object,
+            _currentUserService.Object,
+            _mapper);
+    }
+
+    [Fact]
+    public async Task Handle_WhenCallerIsNotAuthenticated_ThrowsUnauthorizedException()
+    {
+        _currentUserService.SetupGet(u => u.UserId).Returns((string?)null);
+
+        var act = () => _handler.Handle(new GetTalentApplicationPrefillQuery(), CancellationToken.None);
+
+        await act.Should().ThrowAsync<UnauthorizedException>();
     }
 
     [Fact]
     public async Task Handle_WhenTalentDoesNotExist_ThrowsNotFoundException()
     {
+        _currentUserService.SetupGet(u => u.UserId).Returns("missing-user");
         _talentRepository
             .Setup(r => r.GetByUserIdAsync("missing-user", It.IsAny<CancellationToken>()))
             .ReturnsAsync((Talent?)null);
 
-        var act = () => _handler.Handle(new GetTalentApplicationPrefillQuery("missing-user"), CancellationToken.None);
+        var act = () => _handler.Handle(new GetTalentApplicationPrefillQuery(), CancellationToken.None);
 
         await act.Should().ThrowAsync<NotFoundException>();
     }
@@ -52,6 +69,7 @@ public class GetTalentApplicationPrefillQueryHandlerTests
     [Fact]
     public async Task Handle_ForAFreshTalentWithNoResumeOrExperience_ReturnsAWellFormedEmptyPayload()
     {
+        _currentUserService.SetupGet(u => u.UserId).Returns("user-1");
         var talent = new Talent("user-1", "Jane Doe", "jane@example.com");
         _talentRepository
             .Setup(r => r.GetByUserIdAsync("user-1", It.IsAny<CancellationToken>()))
@@ -63,7 +81,7 @@ public class GetTalentApplicationPrefillQueryHandlerTests
             .Setup(r => r.GetByUserIdAsync("user-1", It.IsAny<CancellationToken>()))
             .ReturnsAsync((Resume?)null);
 
-        var response = await _handler.Handle(new GetTalentApplicationPrefillQuery("user-1"), CancellationToken.None);
+        var response = await _handler.Handle(new GetTalentApplicationPrefillQuery(), CancellationToken.None);
 
         response.Name.Should().Be("Jane Doe");
         response.Email.Should().Be("jane@example.com");
@@ -80,6 +98,7 @@ public class GetTalentApplicationPrefillQueryHandlerTests
     [Fact]
     public async Task Handle_ForATalentWithDataAndAResume_ReturnsAPopulatedPayload()
     {
+        _currentUserService.SetupGet(u => u.UserId).Returns("user-2");
         var talent = new Talent("user-2", "John Smith", "john@example.com");
         talent.UpdateProfile(
             "John Smith",
@@ -109,7 +128,7 @@ public class GetTalentApplicationPrefillQueryHandlerTests
             .Setup(s => s.CreateDownloadUrlAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((string storageKey, TimeSpan _, CancellationToken _) => $"https://signed.example.com/{storageKey}");
 
-        var response = await _handler.Handle(new GetTalentApplicationPrefillQuery("user-2"), CancellationToken.None);
+        var response = await _handler.Handle(new GetTalentApplicationPrefillQuery(), CancellationToken.None);
 
         response.Location.Should().Be("Dhaka");
         response.ExpectedSalary.Should().Be(120000m);

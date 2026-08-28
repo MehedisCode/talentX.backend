@@ -6,6 +6,7 @@ using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Common.Interfaces.Repositories;
 using TalentX.Application.Features.Talents.DTOs;
 using TalentX.Application.Features.Talents.Queries.GetTalentProfile;
+using TalentX.Application.Identity.Services;
 using TalentX.Domain;
 using TalentX.Domain.Entities;
 using Xunit;
@@ -20,6 +21,7 @@ public class GetTalentProfileQueryHandlerTests
     private readonly Mock<IWorkExperienceRepository> _workExperienceRepository = new();
     private readonly Mock<IEducationRepository> _educationRepository = new();
     private readonly Mock<IPresignedUrlService> _presignedUrlService = new();
+    private readonly Mock<ICurrentUserService> _currentUserService = new();
     private readonly IMapper _mapper;
     private readonly GetTalentProfileQueryHandler _handler;
 
@@ -37,17 +39,32 @@ public class GetTalentProfileQueryHandlerTests
         }, Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         _mapper = mapperConfiguration.CreateMapper();
 
-        _handler = new GetTalentProfileQueryHandler(_unitOfWork.Object, _presignedUrlService.Object, _mapper);
+        _handler = new GetTalentProfileQueryHandler(
+            _unitOfWork.Object,
+            _presignedUrlService.Object,
+            _currentUserService.Object,
+            _mapper);
+    }
+
+    [Fact]
+    public async Task Handle_WhenCallerIsNotAuthenticated_ThrowsUnauthorizedException()
+    {
+        _currentUserService.SetupGet(u => u.UserId).Returns((string?)null);
+
+        var act = () => _handler.Handle(new GetTalentProfileQuery(), CancellationToken.None);
+
+        await act.Should().ThrowAsync<UnauthorizedException>();
     }
 
     [Fact]
     public async Task Handle_WhenTalentDoesNotExist_ThrowsNotFoundException()
     {
+        _currentUserService.SetupGet(u => u.UserId).Returns("missing-user");
         _talentRepository
             .Setup(r => r.GetByUserIdAsync("missing-user", It.IsAny<CancellationToken>()))
             .ReturnsAsync((Talent?)null);
 
-        var act = () => _handler.Handle(new GetTalentProfileQuery("missing-user"), CancellationToken.None);
+        var act = () => _handler.Handle(new GetTalentProfileQuery(), CancellationToken.None);
 
         await act.Should().ThrowAsync<NotFoundException>();
     }
@@ -55,6 +72,7 @@ public class GetTalentProfileQueryHandlerTests
     [Fact]
     public async Task Handle_WhenTalentHasNoStorageKeys_ReturnsNullDownloadUrls()
     {
+        _currentUserService.SetupGet(u => u.UserId).Returns("user-1");
         var talent = new Talent("user-1", "Jane Doe", "jane@example.com");
         _talentRepository
             .Setup(r => r.GetByUserIdAsync("user-1", It.IsAny<CancellationToken>()))
@@ -69,7 +87,7 @@ public class GetTalentProfileQueryHandlerTests
             .Setup(r => r.GetByUserIdAsync("user-1", It.IsAny<CancellationToken>()))
             .ReturnsAsync((Resume?)null);
 
-        var response = await _handler.Handle(new GetTalentProfileQuery("user-1"), CancellationToken.None);
+        var response = await _handler.Handle(new GetTalentProfileQuery(), CancellationToken.None);
 
         response.ProfilePictureUrl.Should().BeNull();
         response.VideoIntroUrl.Should().BeNull();
@@ -83,6 +101,7 @@ public class GetTalentProfileQueryHandlerTests
     [Fact]
     public async Task Handle_WhenTalentHasStorageKeysAndChildRecords_ReturnsPopulatedProfile()
     {
+        _currentUserService.SetupGet(u => u.UserId).Returns("user-2");
         var talent = new Talent("user-2", "John Smith", "john@example.com");
         talent.UpdateProfilePicture("profile-pictures/user-2.png");
         talent.UpdateVideoIntro("videos/user-2.mp4");
@@ -107,7 +126,7 @@ public class GetTalentProfileQueryHandlerTests
             .Setup(s => s.CreateDownloadUrlAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((string storageKey, TimeSpan _, CancellationToken _) => $"https://signed.example.com/{storageKey}");
 
-        var response = await _handler.Handle(new GetTalentProfileQuery("user-2"), CancellationToken.None);
+        var response = await _handler.Handle(new GetTalentProfileQuery(), CancellationToken.None);
 
         response.ProfilePictureUrl.Should().Be("https://signed.example.com/profile-pictures/user-2.png");
         response.VideoIntroUrl.Should().Be("https://signed.example.com/videos/user-2.mp4");

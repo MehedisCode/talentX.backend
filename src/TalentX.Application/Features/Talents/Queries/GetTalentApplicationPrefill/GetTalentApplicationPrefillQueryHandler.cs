@@ -3,6 +3,7 @@ using MediatR;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Features.Talents.DTOs;
+using TalentX.Application.Identity.Services;
 
 namespace TalentX.Application.Features.Talents.Queries.GetTalentApplicationPrefill;
 
@@ -13,15 +14,18 @@ public sealed class GetTalentApplicationPrefillQueryHandler
 
     private readonly IUnitOfWork _unitOfWork;
     private readonly IPresignedUrlService _presignedUrlService;
+    private readonly ICurrentUserService _currentUserService;
     private readonly IMapper _mapper;
 
     public GetTalentApplicationPrefillQueryHandler(
         IUnitOfWork unitOfWork,
         IPresignedUrlService presignedUrlService,
+        ICurrentUserService currentUserService,
         IMapper mapper)
     {
         _unitOfWork = unitOfWork;
         _presignedUrlService = presignedUrlService;
+        _currentUserService = currentUserService;
         _mapper = mapper;
     }
 
@@ -29,11 +33,14 @@ public sealed class GetTalentApplicationPrefillQueryHandler
         GetTalentApplicationPrefillQuery request,
         CancellationToken cancellationToken)
     {
-        var talent = await _unitOfWork.Talents.GetByUserIdAsync(request.UserId, cancellationToken)
-            ?? throw new NotFoundException($"Talent profile for user '{request.UserId}' was not found.");
+        var userId = _currentUserService.UserId
+            ?? throw new UnauthorizedException("You must be signed in to view your application pre-fill.");
 
-        var workExperiences = await _unitOfWork.WorkExperiences.GetByUserIdAsync(request.UserId, cancellationToken);
-        var resume = await _unitOfWork.Resumes.GetByUserIdAsync(request.UserId, cancellationToken);
+        var talent = await _unitOfWork.Talents.GetByUserIdAsync(userId, cancellationToken)
+            ?? throw new NotFoundException($"Talent profile for user '{userId}' was not found.");
+
+        var workExperiences = await _unitOfWork.WorkExperiences.GetByUserIdAsync(userId, cancellationToken);
+        var resume = await _unitOfWork.Resumes.GetByUserIdAsync(userId, cancellationToken);
 
         var resumeUrl = string.IsNullOrWhiteSpace(resume?.StorageKey)
             ? null

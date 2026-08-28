@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using TalentX.API.Controllers.Talents;
-using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Models;
 using TalentX.Application.Features.Talents.Commands.AbortMediaMultipartUpload;
 using TalentX.Application.Features.Talents.Commands.ApplyExtractedProfile;
@@ -26,7 +25,6 @@ using TalentX.Application.Features.Talents.DTOs;
 using TalentX.Application.Features.Talents.Queries.GetTalentApplicationPrefill;
 using TalentX.Application.Features.Talents.Queries.GetTalentProfile;
 using TalentX.Application.Features.Talents.Queries.ListMediaMultipartParts;
-using TalentX.Application.Identity.Services;
 using Xunit;
 
 namespace TalentX.Api.Tests.Controllers.Talents;
@@ -34,7 +32,6 @@ namespace TalentX.Api.Tests.Controllers.Talents;
 public class TalentsControllerTests
 {
     private readonly Mock<ISender> _sender = new();
-    private readonly Mock<ICurrentUserService> _currentUserService = new();
     private readonly Mock<IWebHostEnvironment> _webHostEnvironment = new();
 
     private TalentsController CreateController()
@@ -43,7 +40,7 @@ public class TalentsControllerTests
         services.AddSingleton(_sender.Object);
         var provider = services.BuildServiceProvider();
 
-        return new TalentsController(_currentUserService.Object, _webHostEnvironment.Object)
+        return new TalentsController(_webHostEnvironment.Object)
         {
             ControllerContext = new ControllerContext
             {
@@ -53,9 +50,8 @@ public class TalentsControllerTests
     }
 
     [Fact]
-    public async Task GetMyProfile_WhenCallerIsAuthenticated_SendsQueryAndReturnsOk()
+    public async Task GetMyProfile_SendsQuery_AndReturnsOk()
     {
-        _currentUserService.SetupGet(u => u.UserId).Returns("user-1");
         var expectedResponse = new TalentProfileResponse(
             Guid.NewGuid(), "user-1", "Jane Doe", "jane@example.com",
             null, null, null, null, null, new List<string>(),
@@ -75,19 +71,8 @@ public class TalentsControllerTests
         var okResult = actionResult.Should().BeOfType<OkObjectResult>().Subject;
         okResult.Value.Should().BeEquivalentTo(expectedResponse);
         _sender.Verify(
-            s => s.Send(It.Is<GetTalentProfileQuery>(q => q.UserId == "user-1"), It.IsAny<CancellationToken>()),
+            s => s.Send(It.IsAny<GetTalentProfileQuery>(), It.IsAny<CancellationToken>()),
             Times.Once);
-    }
-
-    [Fact]
-    public async Task GetMyProfile_WhenCallerIsNotAuthenticated_ThrowsUnauthorizedException()
-    {
-        _currentUserService.SetupGet(u => u.UserId).Returns((string?)null);
-        var controller = CreateController();
-
-        var act = () => controller.GetMyProfile(CancellationToken.None);
-
-        await act.Should().ThrowAsync<UnauthorizedException>();
     }
 
     [Fact]
@@ -106,9 +91,8 @@ public class TalentsControllerTests
     }
 
     [Fact]
-    public async Task GetMyApplicationPrefill_WhenCallerIsAuthenticated_SendsQueryAndReturnsOk()
+    public async Task GetMyApplicationPrefill_SendsQuery_AndReturnsOk()
     {
-        _currentUserService.SetupGet(u => u.UserId).Returns("user-1");
         var expectedResponse = new TalentApplicationPrefillResponse(
             "Jane Doe", "jane@example.com", null, null, null, null, null, null, null,
             new List<WorkExperienceItemDto>());
