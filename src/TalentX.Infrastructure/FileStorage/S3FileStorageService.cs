@@ -34,7 +34,10 @@ public sealed class S3FileStorageService : IFileStorageService
         string storageFileName,
         CancellationToken cancellationToken = default)
     {
-        var objectKey = string.IsNullOrWhiteSpace(_settings.FolderPrefix)
+        var objectKey = string.IsNullOrWhiteSpace(_settings.FolderPrefix) ||
+                        storageFileName.StartsWith(_settings.FolderPrefix.TrimEnd('/') + "/", StringComparison.OrdinalIgnoreCase) ||
+                        storageFileName.StartsWith("profile-pictures/", StringComparison.OrdinalIgnoreCase) ||
+                        storageFileName.StartsWith("video-intros/", StringComparison.OrdinalIgnoreCase)
             ? storageFileName
             : $"{_settings.FolderPrefix.TrimEnd('/')}/{storageFileName}";
 
