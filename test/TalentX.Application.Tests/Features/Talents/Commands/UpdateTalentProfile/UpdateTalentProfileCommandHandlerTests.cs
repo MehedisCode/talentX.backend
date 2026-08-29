@@ -84,6 +84,53 @@ public class UpdateTalentProfileCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_WhenOnlyNameAndTaglineAreProvided_PreservesOtherPreviouslySavedProfileFields()
+    {
+        var talent = new Talent("user-1", "Old Name", "jane@example.com");
+        talent.UpdateProfile(
+            "Old Name",
+            "Old Tagline",
+            "Old short bio.",
+            "Old Location",
+            "+8801111111111",
+            "https://linkedin.com/in/oldname",
+            new List<string> { "https://old-portfolio.example.com" },
+            3m,
+            90000m,
+            new List<string> { "Old skill proposition" });
+
+        _talentRepository
+            .Setup(r => r.GetByUserIdAsync("user-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(talent);
+
+        var partialCommand = new UpdateTalentProfileCommand(
+            "New Name",
+            null,
+            "New Tagline",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+        );
+
+        await _handler.Handle(partialCommand, CancellationToken.None);
+
+        talent.Name.Should().Be("New Name");
+        talent.Tagline.Should().Be("New Tagline");
+        talent.Location.Should().Be("Old Location");
+        talent.ShortBio.Should().Be("Old short bio.");
+        talent.Phone.Should().Be("+8801111111111");
+        talent.LinkedInUrl.Should().Be("https://linkedin.com/in/oldname");
+        talent.AdditionalUrls.Should().BeEquivalentTo(new List<string> { "https://old-portfolio.example.com" });
+        talent.TotalYearsExperience.Should().Be(3m);
+        talent.ExpectedSalary.Should().Be(90000m);
+        talent.SkillPropositions.Should().BeEquivalentTo(new List<string> { "Old skill proposition" });
+    }
+
+    [Fact]
     public async Task Handle_WithAnExistingTalent_CallsSaveChangesAsyncExactlyOnce()
     {
         var talent = new Talent("user-1", "Old Name", "jane@example.com");

@@ -26,15 +26,15 @@ public sealed class UpdateTalentProfileCommandHandler : IRequestHandler<UpdateTa
 
         talent.UpdateProfile(
             request.Name,
-            request.Tagline,
-            request.ShortBio,
-            request.Location,
-            request.Phone,
-            request.LinkedInUrl,
-            request.AdditionalUrls,
-            request.TotalYearsExperience,
-            request.ExpectedSalary,
-            request.SkillPropositions
+            request.Tagline ?? talent.Tagline,
+            request.ShortBio ?? talent.ShortBio,
+            request.Location ?? talent.Location,
+            request.Phone ?? talent.Phone,
+            request.LinkedInUrl ?? talent.LinkedInUrl,
+            request.AdditionalUrls ?? talent.AdditionalUrls,
+            request.TotalYearsExperience ?? talent.TotalYearsExperience,
+            request.ExpectedSalary ?? talent.ExpectedSalary,
+            request.SkillPropositions ?? talent.SkillPropositions
         );
 
         _unitOfWork.Talents.Update(talent);
