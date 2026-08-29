@@ -37,40 +37,71 @@ public sealed class EmailService : IEmailService
         string otpCode,
         CancellationToken cancellationToken = default)
     {
-        if (_environment.IsDevelopment())
-        {
-            _logger.LogInformation(
-                "[EMAIL] OTP dispatch to {RecipientName} <{ToEmail}>: {OtpCode}",
-                recipientName, toEmail, otpCode);
-        }
-        else
-        {
-            _logger.LogInformation(
-                "[EMAIL] OTP dispatch to {RecipientName} <{ToEmail}>",
-                recipientName, toEmail);
-        }
+        LogDispatch("OTP", recipientName, toEmail, otpCode);
 
-        if (string.IsNullOrWhiteSpace(_smtpHost) || string.IsNullOrWhiteSpace(_smtpUser))
-        {
-            _logger.LogWarning("SMTP not configured, email logged only (host={Host}, user={User})", _smtpHost, _smtpUser);
-            return Task.CompletedTask;
-        }
-
-        // Fire-and-forget so the HTTP response returns immediately
-        _ = Task.Run(() => DispatchAsync(toEmail, recipientName, otpCode), CancellationToken.None);
+        DispatchAfterLogging(
+            toEmail,
+            recipientName,
+            "Your TalentX Verification Code",
+            BuildOtpHtml(recipientName, otpCode));
 
         return Task.CompletedTask;
     }
 
-    private async Task DispatchAsync(string toEmail, string recipientName, string otpCode)
+    public Task SendCredentialsEmailAsync(
+        string toEmail,
+        string recipientName,
+        string temporaryPassword,
+        CancellationToken cancellationToken = default)
+    {
+        LogDispatch("CREDENTIALS", recipientName, toEmail, temporaryPassword);
+
+        DispatchAfterLogging(
+            toEmail,
+            recipientName,
+            "Your TalentX Login Credentials",
+            BuildCredentialsHtml(recipientName, toEmail, temporaryPassword));
+
+        return Task.CompletedTask;
+    }
+
+    private void LogDispatch(string kind, string recipientName, string toEmail, string? secret)
+    {
+        if (_environment.IsDevelopment())
+        {
+            _logger.LogInformation(
+                "[EMAIL] {Kind} dispatch to {RecipientName} <{ToEmail}>: {Secret}",
+                kind, recipientName, toEmail, secret);
+        }
+        else
+        {
+            _logger.LogInformation(
+                "[EMAIL] {Kind} dispatch to {RecipientName} <{ToEmail}>",
+                kind, recipientName, toEmail);
+        }
+    }
+
+    private void DispatchAfterLogging(string toEmail, string recipientName, string subject, string htmlBody)
+    {
+        if (string.IsNullOrWhiteSpace(_smtpHost) || string.IsNullOrWhiteSpace(_smtpUser))
+        {
+            _logger.LogWarning("SMTP not configured, email logged only (host={Host}, user={User})", _smtpHost, _smtpUser);
+            return;
+        }
+
+        // Fire-and-forget so the HTTP response returns immediately
+        _ = Task.Run(() => DispatchAsync(toEmail, recipientName, subject, htmlBody), CancellationToken.None);
+    }
+
+    private async Task DispatchAsync(string toEmail, string recipientName, string subject, string htmlBody)
     {
         try
         {
             var message = new MimeMessage();
             message.From.Add(new MailboxAddress(_senderName, _senderEmail));
             message.To.Add(new MailboxAddress(recipientName, toEmail));
-            message.Subject = "Your TalentX Verification Code";
-            message.Body = new BodyBuilder { HtmlBody = BuildHtml(recipientName, otpCode) }.ToMessageBody();
+            message.Subject = subject;
+            message.Body = new BodyBuilder { HtmlBody = htmlBody }.ToMessageBody();
 
             using var client = new SmtpClient();
 
@@ -107,7 +138,7 @@ public sealed class EmailService : IEmailService
     private static string Env(string key) =>
         Environment.GetEnvironmentVariable(key)?.Trim() ?? string.Empty;
 
-    private static string BuildHtml(string name, string otp) => $"""
+    private static string BuildOtpHtml(string name, string otp) => $"""
         <!DOCTYPE html>
         <html>
         <head><meta charset="utf-8"><title>Verify Your TalentX Account</title></head>
@@ -124,6 +155,32 @@ public sealed class EmailService : IEmailService
               </span>
             </div>
             <p style="color:#6b7280;font-size:13px;">If you did not request this, please ignore this email.</p>
+            <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;">
+            <p style="color:#9ca3af;font-size:12px;text-align:center;margin:0;">&copy; {DateTime.UtcNow.Year} TalentX Inc.</p>
+          </div>
+        </body>
+        </html>
+        """;
+
+    private static string BuildCredentialsHtml(string name, string email, string password) => $"""
+        <!DOCTYPE html>
+        <html>
+        <head><meta charset="utf-8"><title>Your TalentX Login Credentials</title></head>
+        <body style="font-family:Arial,sans-serif;background:#f4f6f8;margin:0;padding:20px;">
+          <div style="max-width:520px;margin:0 auto;background:#fff;border-radius:8px;padding:32px;box-shadow:0 2px 8px rgba(0,0,0,.05);">
+            <h2 style="color:#111827;margin-top:0;">Your TalentX Account</h2>
+            <p style="color:#4b5563;font-size:15px;line-height:1.5;">
+              Hello {System.Net.WebUtility.HtmlEncode(name)},<br><br>
+              Thanks for applying on TalentX. An account was created for you automatically.
+              Use the credentials below to sign in and track your applications.
+            </p>
+            <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:20px;margin:24px 0;">
+              <p style="margin:0 0 8px;color:#6b7280;font-size:13px;">Email</p>
+              <p style="margin:0 0 16px;font-size:15px;font-weight:600;color:#111827;">{System.Net.WebUtility.HtmlEncode(email)}</p>
+              <p style="margin:0 0 8px;color:#6b7280;font-size:13px;">Temporary password</p>
+              <p style="margin:0;font-size:15px;font-weight:700;letter-spacing:1px;color:#111827;">{System.Net.WebUtility.HtmlEncode(password)}</p>
+            </div>
+            <p style="color:#6b7280;font-size:13px;">For security, please change this password after signing in.</p>
             <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;">
             <p style="color:#9ca3af;font-size:12px;text-align:center;margin:0;">&copy; {DateTime.UtcNow.Year} TalentX Inc.</p>
           </div>
