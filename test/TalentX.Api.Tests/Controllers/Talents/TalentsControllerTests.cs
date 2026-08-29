@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using TalentX.API.Controllers.Talents;
+using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Models;
 using TalentX.Application.Features.Talents.Commands.AbortMediaMultipartUpload;
 using TalentX.Application.Features.Talents.Commands.ApplyExtractedProfile;
@@ -14,8 +15,8 @@ using TalentX.Application.Features.Talents.Commands.ConfirmProfileMediaUpload;
 using TalentX.Application.Features.Talents.Commands.CreateTalentForTesting;
 using TalentX.Application.Features.Talents.Commands.DeleteEducation;
 using TalentX.Application.Features.Talents.Commands.DeleteWorkExperience;
+using TalentX.Application.Features.Talents.Commands.ExtractResume;
 using TalentX.Application.Features.Talents.Commands.InitiateMediaMultipartUpload;
-using TalentX.Application.Features.Talents.Commands.ReplaceResume;
 using TalentX.Application.Features.Talents.Commands.RequestMediaMultipartPartUrl;
 using TalentX.Application.Features.Talents.Commands.RequestProfileMediaUploadUrl;
 using TalentX.Application.Features.Talents.Commands.UpdateTalentProfile;
@@ -143,7 +144,7 @@ public class TalentsControllerTests
     }
 
     [Fact]
-    public async Task ReplaceResume_SendsReplaceResumeCommand_AndReturnsOkWithExtractionPreview()
+    public async Task ExtractResume_SendsExtractResumeCommand_AndReturnsOkWithExtractionPreview()
     {
         var formFileMock = new Mock<IFormFile>();
         formFileMock.Setup(f => f.FileName).Returns("resume.pdf");
@@ -151,31 +152,69 @@ public class TalentsControllerTests
 
         var expectedResult = new ResumeExtractionResult { FullName = "Jane Doe" };
         _sender
-            .Setup(s => s.Send(It.IsAny<ReplaceResumeCommand>(), It.IsAny<CancellationToken>()))
+            .Setup(s => s.Send(It.IsAny<ExtractResumeCommand>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(expectedResult);
 
         var controller = CreateController();
 
-        var actionResult = await controller.ReplaceResume(formFileMock.Object, CancellationToken.None);
+        var actionResult = await controller.ExtractResume(formFileMock.Object, CancellationToken.None);
 
         var okResult = actionResult.Should().BeOfType<OkObjectResult>().Subject;
         okResult.Value.Should().BeEquivalentTo(expectedResult);
-        _sender.Verify(s => s.Send(It.IsAny<ReplaceResumeCommand>(), It.IsAny<CancellationToken>()), Times.Once);
+        _sender.Verify(s => s.Send(It.IsAny<ExtractResumeCommand>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
-    public async Task ApplyExtractedProfile_SendsCommand_AndReturnsNoContent()
+    public async Task ApplyExtractedProfile_DeserializesPayload_SendsCommandWithWrappedFile_AndReturnsNoContent()
     {
-        var command = new ApplyExtractedProfileCommand(
-            ["C#"], ["Teamwork"], ["Git"], [], [],
-            "resumes/key.pdf", "resume.pdf", "application/pdf", 1024);
+        var formFileMock = new Mock<IFormFile>();
+        formFileMock.Setup(f => f.FileName).Returns("resume.pdf");
+        formFileMock.Setup(f => f.ContentType).Returns("application/pdf");
+
+        const string payload = """
+        {
+            "TechnicalSkills": ["C#"],
+            "SoftSkills": ["Teamwork"],
+            "ToolsAndPlatforms": ["Git"],
+            "WorkExperiences": [],
+            "Educations": []
+        }
+        """;
+
+        ApplyExtractedProfileCommand? capturedCommand = null;
+        _sender
+            .Setup(s => s.Send(It.IsAny<ApplyExtractedProfileCommand>(), It.IsAny<CancellationToken>()))
+            .Callback<ApplyExtractedProfileCommand, CancellationToken>((request, _) => capturedCommand = request)
+            .Returns(Task.CompletedTask);
 
         var controller = CreateController();
 
-        var actionResult = await controller.ApplyExtractedProfile(command, CancellationToken.None);
+        var actionResult = await controller.ApplyExtractedProfile(formFileMock.Object, payload, CancellationToken.None);
 
         actionResult.Should().BeOfType<NoContentResult>();
-        _sender.Verify(s => s.Send(command, It.IsAny<CancellationToken>()), Times.Once);
+        capturedCommand.Should().NotBeNull();
+        capturedCommand!.TechnicalSkills.Should().BeEquivalentTo(["C#"]);
+        capturedCommand.SoftSkills.Should().BeEquivalentTo(["Teamwork"]);
+        capturedCommand.ToolsAndPlatforms.Should().BeEquivalentTo(["Git"]);
+        capturedCommand.ResumeFile.FileName.Should().Be("resume.pdf");
+        _sender.Verify(s => s.Send(It.IsAny<ApplyExtractedProfileCommand>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ApplyExtractedProfile_WhenPayloadIsMalformedJson_ThrowsBadRequestException_AndNeverSendsCommand()
+    {
+        var formFileMock = new Mock<IFormFile>();
+        formFileMock.Setup(f => f.FileName).Returns("resume.pdf");
+        formFileMock.Setup(f => f.ContentType).Returns("application/pdf");
+
+        const string malformedPayload = "{ this is not valid json ";
+
+        var controller = CreateController();
+
+        var act = () => controller.ApplyExtractedProfile(formFileMock.Object, malformedPayload, CancellationToken.None);
+
+        await act.Should().ThrowAsync<BadRequestException>();
+        _sender.Verify(s => s.Send(It.IsAny<ApplyExtractedProfileCommand>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]

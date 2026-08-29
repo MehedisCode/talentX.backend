@@ -1,4 +1,5 @@
 using FluentValidation;
+using TalentX.Application.Common.Validation;
 
 namespace TalentX.Application.Features.Talents.Commands.ApplyExtractedProfile;
 
@@ -12,20 +13,7 @@ public sealed class ApplyExtractedProfileCommandValidator : AbstractValidator<Ap
         RuleFor(command => command.WorkExperiences).NotNull();
         RuleFor(command => command.Educations).NotNull();
 
-        RuleFor(command => command.ResumeStorageKey)
-            .NotEmpty().WithMessage("Resume storage key is required.")
-            .MaximumLength(500).WithMessage("Resume storage key must not exceed 500 characters.");
-
-        RuleFor(command => command.ResumeOriginalFileName)
-            .NotEmpty().WithMessage("Resume original file name is required.")
-            .MaximumLength(255).WithMessage("Resume original file name must not exceed 255 characters.");
-
-        RuleFor(command => command.ResumeContentType)
-            .NotEmpty().WithMessage("Resume content type is required.")
-            .MaximumLength(100).WithMessage("Resume content type must not exceed 100 characters.");
-
-        RuleFor(command => command.ResumeSizeBytes)
-            .GreaterThan(0).WithMessage("Resume size must be greater than zero.");
+        this.ApplyResumeFileValidationRules(command => command.ResumeFile);
 
         RuleForEach(command => command.WorkExperiences).ChildRules(workExperience =>
         {

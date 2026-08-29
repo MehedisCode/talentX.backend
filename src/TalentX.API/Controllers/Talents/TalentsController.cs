@@ -1,7 +1,9 @@
+using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Features.Talents.Commands.AbortMediaMultipartUpload;
 using TalentX.Application.Features.Talents.Commands.ApplyExtractedProfile;
 using TalentX.Application.Features.Talents.Commands.CompleteMediaMultipartUpload;
@@ -9,8 +11,8 @@ using TalentX.Application.Features.Talents.Commands.ConfirmProfileMediaUpload;
 using TalentX.Application.Features.Talents.Commands.CreateTalentForTesting;
 using TalentX.Application.Features.Talents.Commands.DeleteEducation;
 using TalentX.Application.Features.Talents.Commands.DeleteWorkExperience;
+using TalentX.Application.Features.Talents.Commands.ExtractResume;
 using TalentX.Application.Features.Talents.Commands.InitiateMediaMultipartUpload;
-using TalentX.Application.Features.Talents.Commands.ReplaceResume;
 using TalentX.Application.Features.Talents.Commands.RequestMediaMultipartPartUrl;
 using TalentX.Application.Features.Talents.Commands.RequestProfileMediaUploadUrl;
 using TalentX.Application.Features.Talents.Commands.UpdateTalentProfile;
@@ -70,21 +72,53 @@ public sealed class TalentsController : BaseApiController
         return StatusCode(StatusCodes.Status201Created, new { id = talentId });
     }
 
-    [HttpPost("me/resume")]
+    [HttpPost("me/resume/extract")]
     [Consumes("multipart/form-data")]
     [RequestSizeLimit(5 * 1024 * 1024)]
-    public async Task<IActionResult> ReplaceResume(IFormFile file, CancellationToken cancellationToken)
+    public async Task<IActionResult> ExtractResume(IFormFile file, CancellationToken cancellationToken)
     {
-        var command = new ReplaceResumeCommand(new FormFileUploadedFile(file));
+        var command = new ExtractResumeCommand(new FormFileUploadedFile(file));
         var extractionResult = await Sender.Send(command, cancellationToken);
         return Ok(extractionResult);
     }
 
+    // The command carries a non-JSON-friendly IUploadedFile alongside the edited skills/
+    // work-experience/education fields, and ASP.NET Core cannot bind that nested structure
+    // from individual multipart form fields. So the non-file fields travel as a single JSON
+    // string form field ("payload"), deserialized here into ApplyExtractedProfilePayload,
+    // while the file travels as its own form part — the controller still only builds the
+    // command from the request and dispatches it, nothing more.
     [HttpPost("me/profile/apply-extraction")]
+    [Consumes("multipart/form-data")]
+    [RequestSizeLimit(5 * 1024 * 1024)]
     public async Task<IActionResult> ApplyExtractedProfile(
-        [FromBody] ApplyExtractedProfileCommand command,
+        IFormFile file,
+        [FromForm] string payload,
         CancellationToken cancellationToken)
     {
+        ApplyExtractedProfilePayload? parsedPayload;
+        try
+        {
+            parsedPayload = JsonSerializer.Deserialize<ApplyExtractedProfilePayload>(
+                payload,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        }
+        catch (JsonException)
+        {
+            throw new BadRequestException("The apply-extraction payload is malformed.");
+        }
+
+        if (parsedPayload is null)
+            throw new BadRequestException("The apply-extraction payload is required.");
+
+        var command = new ApplyExtractedProfileCommand(
+            parsedPayload.TechnicalSkills,
+            parsedPayload.SoftSkills,
+            parsedPayload.ToolsAndPlatforms,
+            parsedPayload.WorkExperiences,
+            parsedPayload.Educations,
+            new FormFileUploadedFile(file));
+
         await Sender.Send(command, cancellationToken);
         return NoContent();
     }

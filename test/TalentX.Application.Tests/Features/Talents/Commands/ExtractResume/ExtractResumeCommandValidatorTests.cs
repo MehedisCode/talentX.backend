@@ -1,19 +1,19 @@
 using FluentAssertions;
 using Moq;
 using TalentX.Application.Common.Interfaces;
-using TalentX.Application.Features.Talents.Commands.ReplaceResume;
+using TalentX.Application.Features.Talents.Commands.ExtractResume;
 using Xunit;
 
-namespace TalentX.Application.Tests.Features.Talents.Commands.ReplaceResume;
+namespace TalentX.Application.Tests.Features.Talents.Commands.ExtractResume;
 
-public class ReplaceResumeCommandValidatorTests
+public class ExtractResumeCommandValidatorTests
 {
-    private readonly ReplaceResumeCommandValidator _validator = new();
+    private readonly ExtractResumeCommandValidator _validator = new();
 
     [Fact]
     public async Task Validate_ShouldHaveError_WhenFileIsNull()
     {
-        var command = new ReplaceResumeCommand(null!);
+        var command = new ExtractResumeCommand(null!);
 
         var result = await _validator.ValidateAsync(command);
 
@@ -28,7 +28,7 @@ public class ReplaceResumeCommandValidatorTests
         fileMock.Setup(f => f.FileName).Returns("resume.pdf");
         fileMock.Setup(f => f.ContentType).Returns("application/pdf");
 
-        var command = new ReplaceResumeCommand(fileMock.Object);
+        var command = new ExtractResumeCommand(fileMock.Object);
 
         var result = await _validator.ValidateAsync(command);
 
@@ -44,7 +44,7 @@ public class ReplaceResumeCommandValidatorTests
         fileMock.Setup(f => f.FileName).Returns("resume.txt");
         fileMock.Setup(f => f.ContentType).Returns("text/plain");
 
-        var command = new ReplaceResumeCommand(fileMock.Object);
+        var command = new ExtractResumeCommand(fileMock.Object);
 
         var result = await _validator.ValidateAsync(command);
 
@@ -64,7 +64,7 @@ public class ReplaceResumeCommandValidatorTests
         fileMock.Setup(f => f.ContentType).Returns("application/pdf");
         fileMock.Setup(f => f.OpenReadStream()).Returns(stream);
 
-        var command = new ReplaceResumeCommand(fileMock.Object);
+        var command = new ExtractResumeCommand(fileMock.Object);
 
         var result = await _validator.ValidateAsync(command);
 
@@ -84,7 +84,7 @@ public class ReplaceResumeCommandValidatorTests
         fileMock.Setup(f => f.ContentType).Returns("application/pdf");
         fileMock.Setup(f => f.OpenReadStream()).Returns(stream);
 
-        var command = new ReplaceResumeCommand(fileMock.Object);
+        var command = new ExtractResumeCommand(fileMock.Object);
 
         var result = await _validator.ValidateAsync(command);
 

@@ -1,9 +1,16 @@
+using System.Linq.Expressions;
 using FluentValidation;
 using TalentX.Application.Common.Interfaces;
 
-namespace TalentX.Application.Features.Talents.Commands.ReplaceResume;
+namespace TalentX.Application.Common.Validation;
 
-public sealed class ReplaceResumeCommandValidator : AbstractValidator<ReplaceResumeCommand>
+/// <summary>
+/// Shared FluentValidation rules for a resume file (size, extension, content-type,
+/// magic-byte sniffing) so every command that accepts a raw resume upload
+/// (<c>UploadResumeCommand</c>, <c>ExtractResumeCommand</c>, <c>ApplyExtractedProfileCommand</c>)
+/// enforces identical rules from one place instead of three copies.
+/// </summary>
+public static class ResumeFileValidationRules
 {
     private const long MaxFileSizeBytes = 5 * 1024 * 1024;
     private static readonly string[] AllowedExtensions = [".pdf", ".docx"];
@@ -13,27 +20,31 @@ public sealed class ReplaceResumeCommandValidator : AbstractValidator<ReplaceRes
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
     ];
 
-    public ReplaceResumeCommandValidator()
+    public static void ApplyResumeFileValidationRules<T>(
+        this AbstractValidator<T> validator,
+        Expression<Func<T, IUploadedFile>> fileSelector)
     {
-        RuleFor(x => x.File)
+        var compiledFileSelector = fileSelector.Compile();
+
+        validator.RuleFor(fileSelector)
             .NotNull().WithMessage("A resume file is required.");
 
-        When(x => x.File is not null, () =>
+        validator.When(command => compiledFileSelector(command) is not null, () =>
         {
-            RuleFor(x => x.File.Length)
+            validator.RuleFor(command => compiledFileSelector(command).Length)
                 .LessThanOrEqualTo(MaxFileSizeBytes)
                 .WithMessage("File size must not exceed 5 MB.");
 
-            RuleFor(x => x.File.FileName)
-                .Must(name => AllowedExtensions.Contains(
-                    Path.GetExtension(name).ToLowerInvariant()))
+            validator.RuleFor(command => compiledFileSelector(command).FileName)
+                .Must(fileName => AllowedExtensions.Contains(
+                    Path.GetExtension(fileName).ToLowerInvariant()))
                 .WithMessage("Only PDF and DOCX files are accepted.");
 
-            RuleFor(x => x.File.ContentType)
+            validator.RuleFor(command => compiledFileSelector(command).ContentType)
                 .Must(contentType => AllowedContentTypes.Contains(contentType?.ToLowerInvariant()))
                 .WithMessage("File content type is not supported.");
 
-            RuleFor(x => x.File)
+            validator.RuleFor(command => compiledFileSelector(command))
                 .MustAsync(HaveValidMagicBytesAsync)
                 .WithMessage("File content does not match its declared type.");
         });

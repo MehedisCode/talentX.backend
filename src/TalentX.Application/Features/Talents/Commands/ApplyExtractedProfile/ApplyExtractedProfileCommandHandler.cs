@@ -1,4 +1,5 @@
 using MediatR;
+using Microsoft.Extensions.Logging;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Features.Talents;
@@ -12,15 +13,18 @@ public sealed class ApplyExtractedProfileCommandHandler : IRequestHandler<ApplyE
     private readonly IUnitOfWork _unitOfWork;
     private readonly IFileStorageService _fileStorageService;
     private readonly ICurrentUserService _currentUserService;
+    private readonly ILogger<ApplyExtractedProfileCommandHandler> _logger;
 
     public ApplyExtractedProfileCommandHandler(
         IUnitOfWork unitOfWork,
         IFileStorageService fileStorageService,
-        ICurrentUserService currentUserService)
+        ICurrentUserService currentUserService,
+        ILogger<ApplyExtractedProfileCommandHandler> logger)
     {
         _unitOfWork = unitOfWork;
         _fileStorageService = fileStorageService;
         _currentUserService = currentUserService;
+        _logger = logger;
     }
 
     public async Task Handle(ApplyExtractedProfileCommand request, CancellationToken cancellationToken)
@@ -28,7 +32,30 @@ public sealed class ApplyExtractedProfileCommandHandler : IRequestHandler<ApplyE
         var userId = _currentUserService.UserId
             ?? throw new UnauthorizedException("You must be signed in to update your profile.");
 
-        TalentMediaStorageKeyGuard.EnsureOwnedByUser(request.ResumeStorageKey, userId, "resumes");
+        // The original filename must be sanitized to a bare basename BEFORE the
+        // uniquifying GUID is prepended — BuildStorageKey's own sanitization strips
+        // everything up to the LAST path separator in whatever string it is given,
+        // so composing "{guid}_{rawFileName}" first and sanitizing only afterwards
+        // would silently swallow the GUID prefix whenever the original filename
+        // contains a '/' or '\'. Sanitizing here keeps that invariant safe; the
+        // sanitize call inside BuildStorageKey is then a no-op pass-through for the
+        // already-clean composite, not a second, divergent transformation.
+        var sanitizedResumeFileName = TalentMediaStorageKeyGuard.SanitizeFileNameSegment(request.ResumeFile.FileName);
+        var storageFileName = TalentMediaStorageKeyGuard.BuildStorageKey(
+            "resumes",
+            userId,
+            $"{Guid.NewGuid()}_{sanitizedResumeFileName}");
+
+        string resumeStorageKey;
+        try
+        {
+            resumeStorageKey = await _fileStorageService.SaveAsync(request.ResumeFile, storageFileName, cancellationToken);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(exception, "Failed to save resume {FileName} to storage", sanitizedResumeFileName);
+            throw new BadGatewayException("File storage is temporarily unavailable.");
+        }
 
         var talent = await _unitOfWork.Talents.GetByUserIdAsync(userId, cancellationToken)
             ?? throw new NotFoundException($"Talent profile for user '{userId}' was not found.");
@@ -63,7 +90,6 @@ public sealed class ApplyExtractedProfileCommandHandler : IRequestHandler<ApplyE
                 cancellationToken);
         }
 
-        var sanitizedResumeFileName = Path.GetFileName(request.ResumeOriginalFileName);
         var existingResume = await _unitOfWork.Resumes.GetByUserIdAsync(userId, cancellationToken);
         var previousResumeStorageKey = existingResume?.StorageKey;
 
@@ -72,28 +98,56 @@ public sealed class ApplyExtractedProfileCommandHandler : IRequestHandler<ApplyE
             await _unitOfWork.Resumes.AddAsync(
                 new Resume(
                     userId,
-                    request.ResumeStorageKey,
+                    resumeStorageKey,
                     sanitizedResumeFileName,
-                    request.ResumeContentType,
-                    request.ResumeSizeBytes),
+                    request.ResumeFile.ContentType,
+                    request.ResumeFile.Length),
                 cancellationToken);
         }
         else
         {
             existingResume.UpdateFile(
-                request.ResumeStorageKey,
+                resumeStorageKey,
                 sanitizedResumeFileName,
-                request.ResumeContentType,
-                request.ResumeSizeBytes);
+                request.ResumeFile.ContentType,
+                request.ResumeFile.Length);
             _unitOfWork.Resumes.Update(existingResume);
         }
 
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+        catch (Exception)
+        {
+            // The new resume was already saved to storage above (this handler now saves
+            // before committing, reversed from the old order). If the commit itself fails,
+            // that brand-new file would otherwise be orphaned — best-effort clean it up
+            // before rethrowing, mirroring this codebase's existing cleanup-on-failure pattern.
+            await TryDeleteStoredFileAsync(resumeStorageKey, sanitizedResumeFileName, cancellationToken);
+            throw;
+        }
 
         if (!string.IsNullOrWhiteSpace(previousResumeStorageKey) &&
-            previousResumeStorageKey != request.ResumeStorageKey)
+            previousResumeStorageKey != resumeStorageKey)
         {
             await _fileStorageService.DeleteAsync(previousResumeStorageKey, cancellationToken);
+        }
+    }
+
+    private async Task TryDeleteStoredFileAsync(string storageKey, string originalFileName, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _fileStorageService.DeleteAsync(storageKey, cancellationToken);
+        }
+        catch (Exception cleanupException)
+        {
+            _logger.LogWarning(
+                cleanupException,
+                "Failed to clean up stored file {StorageKey} for {FileName} after a save-changes error",
+                storageKey,
+                originalFileName);
         }
     }
 }

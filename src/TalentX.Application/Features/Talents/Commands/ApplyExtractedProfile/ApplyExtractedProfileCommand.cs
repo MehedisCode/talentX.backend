@@ -1,4 +1,5 @@
 using MediatR;
+using TalentX.Application.Common.Interfaces;
 
 namespace TalentX.Application.Features.Talents.Commands.ApplyExtractedProfile;
 
@@ -8,8 +9,5 @@ public sealed record ApplyExtractedProfileCommand(
     List<string> ToolsAndPlatforms,
     List<ApplyExtractedWorkExperienceItem> WorkExperiences,
     List<ApplyExtractedEducationItem> Educations,
-    string ResumeStorageKey,
-    string ResumeOriginalFileName,
-    string ResumeContentType,
-    long ResumeSizeBytes
+    IUploadedFile ResumeFile
 ) : IRequest;
