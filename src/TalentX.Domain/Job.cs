@@ -17,6 +17,10 @@ public class Job : BaseEntity
     public JobStatus Status { get; private set; }
     public int Vacancies { get; private set; }
     public DateTime ExpireAt { get; private set; }
+    public string? City { get; private set; }
+    public string? Country { get; private set; }
+    public short? MinOverlapHours { get; private set; }
+    public string? Responsibilities { get; private set; }
 
     private Job() { }
 
@@ -75,6 +79,19 @@ public class Job : BaseEntity
         RequiredSkills = requiredSkills;
         Vacancies = vacancies;
         ExpireAt = expireAt;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void UpdateWizardDetails(
+        string? city,
+        string? country,
+        short? minOverlapHours,
+        string? responsibilities)
+    {
+        City = city;
+        Country = country;
+        MinOverlapHours = minOverlapHours;
+        Responsibilities = responsibilities;
         UpdatedAt = DateTime.UtcNow;
     }
 

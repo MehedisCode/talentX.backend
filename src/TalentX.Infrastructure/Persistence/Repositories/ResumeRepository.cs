@@ -1,0 +1,37 @@
+using Microsoft.EntityFrameworkCore;
+using TalentX.Application.Common.Interfaces.Repositories;
+using TalentX.Domain.Entities;
+using TalentX.Infrastructure.Persistence.Contexts;
+
+namespace TalentX.Infrastructure.Persistence.Repositories;
+
+public sealed class ResumeRepository : IResumeRepository
+{
+    private readonly ApplicationDbContext _context;
+
+    public ResumeRepository(ApplicationDbContext context)
+    {
+        _context = context;
+    }
+
+    public async Task<Resume?> GetByUserIdAsync(string userId, CancellationToken cancellationToken = default)
+    {
+        return await _context.Resumes
+            .FirstOrDefaultAsync(resume => resume.UserId == userId, cancellationToken);
+    }
+
+    public async Task AddAsync(Resume resume, CancellationToken cancellationToken = default)
+    {
+        await _context.Resumes.AddAsync(resume, cancellationToken);
+    }
+
+    public void Update(Resume resume)
+    {
+        _context.Resumes.Update(resume);
+    }
+
+    public void Delete(Resume resume)
+    {
+        _context.Resumes.Remove(resume);
+    }
+}

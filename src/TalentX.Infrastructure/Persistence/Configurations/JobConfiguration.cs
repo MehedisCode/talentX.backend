@@ -38,6 +38,11 @@ public class JobConfiguration : IEntityTypeConfiguration<Job>
         builder.Property(j => j.ExperienceLevel).HasConversion<string>();
         builder.Property(j => j.Status).HasConversion<string>().IsRequired();
 
+        builder.Property(job => job.City).HasMaxLength(100);
+        builder.Property(job => job.Country).HasMaxLength(100);
+        builder.Property(job => job.MinOverlapHours);
+        builder.Property(job => job.Responsibilities);
+
         var stringListComparer = new ValueComparer<List<string>>(
             (c1, c2) => c1 != null && c2 != null ? c1.SequenceEqual(c2) : c1 == c2,
             c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
