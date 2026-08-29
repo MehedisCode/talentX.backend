@@ -47,17 +47,15 @@ public class InitiateMediaMultipartUploadCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_SanitizesUserIdSegment_BeforeItReachesTheStorageKey()
+    public async Task Handle_WhenUserIdContainsSlash_ThrowsBadRequestException_AndNeverInitiatesUpload()
     {
         _currentUserService.SetupGet(u => u.UserId).Returns("../evil-user");
-        string? capturedStorageKey = null;
-        _multipartStorageService
-            .Setup(s => s.InitiateMultipartUploadAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .Callback<string, string, CancellationToken>((storageKey, _, _) => capturedStorageKey = storageKey)
-            .ReturnsAsync(new InitiateMultipartResult("upload-1", "video-intros/evil-user/x.mp4", 5 * 1024 * 1024));
 
-        await _handler.Handle(new InitiateMediaMultipartUploadCommand("video/webm"), CancellationToken.None);
+        var act = () => _handler.Handle(new InitiateMediaMultipartUploadCommand("video/webm"), CancellationToken.None);
 
-        capturedStorageKey.Should().NotContain("..");
+        await act.Should().ThrowAsync<BadRequestException>();
+        _multipartStorageService.Verify(
+            s => s.InitiateMultipartUploadAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 }

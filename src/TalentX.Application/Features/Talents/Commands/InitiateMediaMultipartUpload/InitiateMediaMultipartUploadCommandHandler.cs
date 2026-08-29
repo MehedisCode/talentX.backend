@@ -2,6 +2,7 @@ using MediatR;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Common.Models;
+using TalentX.Application.Features.Talents;
 using TalentX.Application.Identity.Services;
 
 namespace TalentX.Application.Features.Talents.Commands.InitiateMediaMultipartUpload;
@@ -27,9 +28,11 @@ public sealed class InitiateMediaMultipartUploadCommandHandler
         var userId = _currentUserService.UserId
             ?? throw new UnauthorizedException("You must be signed in to upload a video introduction.");
 
-        var sanitizedUserId = Path.GetFileName(userId);
         var extension = ContentTypeToExtension(request.ContentType);
-        var storageKey = $"video-intros/{sanitizedUserId}/{Guid.NewGuid()}{extension}";
+        var storageKey = TalentMediaStorageKeyGuard.BuildStorageKey(
+            "video-intros",
+            userId,
+            $"{Guid.NewGuid()}{extension}");
 
         return await _multipartStorageService.InitiateMultipartUploadAsync(
             storageKey,

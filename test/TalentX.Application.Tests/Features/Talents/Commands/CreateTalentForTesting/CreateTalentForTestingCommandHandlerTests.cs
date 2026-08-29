@@ -100,6 +100,26 @@ public class CreateTalentForTestingCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_WhenUserIdHasSurroundingWhitespace_TrimsItBeforePersisting()
+    {
+        var command = new CreateTalentForTestingCommand(" user-1 ", "Jane Doe", "jane@example.com");
+        _talentRepository
+            .Setup(r => r.GetByUserIdAsync("user-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Talent?)null);
+
+        Talent? addedTalent = null;
+        _talentRepository
+            .Setup(r => r.AddAsync(It.IsAny<Talent>(), It.IsAny<CancellationToken>()))
+            .Callback<Talent, CancellationToken>((talent, _) => addedTalent = talent)
+            .Returns(Task.CompletedTask);
+
+        await _handler.Handle(command, CancellationToken.None);
+
+        addedTalent.Should().NotBeNull();
+        addedTalent!.UserId.Should().Be("user-1");
+    }
+
+    [Fact]
     public async Task Handle_WhenNotInDevelopment_ThrowsForbiddenException()
     {
         _hostEnvironmentService.SetupGet(e => e.IsDevelopment).Returns(false);

@@ -31,24 +31,24 @@ public class AbortMediaMultipartUploadCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WhenStorageKeyBelongsToAnotherUser_ThrowsForbiddenException_AndNeverAborts()
+    public async Task Handle_WhenStorageKeyBelongsToAnotherUser_ThrowsNotFoundException_AndNeverAborts()
     {
         var act = () => _handler.Handle(new AbortMediaMultipartUploadCommand("video-intros/other-user/x.mp4", "upload-1"), CancellationToken.None);
 
-        await act.Should().ThrowAsync<ForbiddenException>();
+        await act.Should().ThrowAsync<NotFoundException>();
         _multipartStorageService.Verify(
             s => s.AbortMultipartUploadAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
     [Fact]
-    public async Task Handle_WhenStorageKeyContainsDotDotSegment_ThrowsForbiddenException_AndNeverAborts()
+    public async Task Handle_WhenStorageKeyContainsDotDotSegment_ThrowsNotFoundException_AndNeverAborts()
     {
         var act = () => _handler.Handle(
             new AbortMediaMultipartUploadCommand("video-intros/user-1/../other-user/x.mp4", "upload-1"),
             CancellationToken.None);
 
-        await act.Should().ThrowAsync<ForbiddenException>();
+        await act.Should().ThrowAsync<NotFoundException>();
         _multipartStorageService.Verify(
             s => s.AbortMultipartUploadAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never);

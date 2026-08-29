@@ -116,11 +116,26 @@ public class ReplaceResumeCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_SanitizesUserIdSegment_BeforeItReachesTheStorageKey()
+    public async Task Handle_WhenUserIdContainsSlash_ThrowsBadRequestException_AndTouchesNoStorage()
     {
         _currentUserService.SetupGet(u => u.UserId).Returns("../evil-user");
         var fileMock = new Mock<IUploadedFile>();
         fileMock.Setup(f => f.FileName).Returns("resume.pdf");
+
+        var command = new ReplaceResumeCommand(fileMock.Object);
+
+        var act = () => _handler.Handle(command, CancellationToken.None);
+
+        await act.Should().ThrowAsync<BadRequestException>();
+        _fileStorageService.Verify(s => s.SaveAsync(It.IsAny<IUploadedFile>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        _resumeExtractionService.Verify(e => e.ExtractAsync(It.IsAny<IUploadedFile>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_WhenOriginalFileNameContainsBackslash_SanitizesFileName_DeterministicallyAcrossOperatingSystems()
+    {
+        var fileMock = new Mock<IUploadedFile>();
+        fileMock.Setup(f => f.FileName).Returns("notes\\v2.pdf");
 
         var command = new ReplaceResumeCommand(fileMock.Object);
         string? capturedStorageFileName = null;
@@ -128,14 +143,16 @@ public class ReplaceResumeCommandHandlerTests
         _fileStorageService
             .Setup(s => s.SaveAsync(fileMock.Object, It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .Callback<IUploadedFile, string, CancellationToken>((_, storageFileName, _) => capturedStorageFileName = storageFileName)
-            .ReturnsAsync("resumes/evil-user/1234_resume.pdf");
+            .ReturnsAsync("resumes/user-1/1234_v2.pdf");
         _resumeExtractionService
             .Setup(e => e.ExtractAsync(fileMock.Object, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ResumeExtractionResult());
 
         await _handler.Handle(command, CancellationToken.None);
 
-        capturedStorageFileName.Should().NotContain("..");
+        capturedStorageFileName.Should().NotBeNull();
+        capturedStorageFileName.Should().NotContain("\\");
+        capturedStorageFileName.Should().EndWith("_v2.pdf");
     }
 
     [Fact]

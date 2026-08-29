@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Common.Models;
+using TalentX.Application.Features.Talents;
 using TalentX.Application.Identity.Services;
 
 namespace TalentX.Application.Features.Talents.Commands.ReplaceResume;
@@ -34,9 +35,20 @@ public sealed class ReplaceResumeCommandHandler : IRequestHandler<ReplaceResumeC
             ?? throw new UnauthorizedException("You must be signed in to replace your resume.");
 
         var resumeUploadId = Guid.NewGuid();
-        var sanitizedUserId = Path.GetFileName(userId);
-        var sanitizedFileName = Path.GetFileName(request.File.FileName);
-        var storageFileName = $"resumes/{sanitizedUserId}/{resumeUploadId}_{sanitizedFileName}";
+
+        // The original filename must be sanitized to a bare basename BEFORE the
+        // uniquifying GUID is prepended — BuildStorageKey's own sanitization strips
+        // everything up to the LAST path separator in whatever string it is given,
+        // so composing "{guid}_{rawFileName}" first and sanitizing only afterwards
+        // would silently swallow the GUID prefix whenever the original filename
+        // contains a '/' or '\'. Sanitizing here keeps that invariant safe; the
+        // sanitize call inside BuildStorageKey is then a no-op pass-through for the
+        // already-clean composite, not a second, divergent transformation.
+        var sanitizedFileName = TalentMediaStorageKeyGuard.SanitizeFileNameSegment(request.File.FileName);
+        var storageFileName = TalentMediaStorageKeyGuard.BuildStorageKey(
+            "resumes",
+            userId,
+            $"{resumeUploadId}_{sanitizedFileName}");
 
         string fileStorageKey;
         try

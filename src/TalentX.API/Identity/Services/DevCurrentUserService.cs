@@ -35,7 +35,7 @@ public sealed class DevCurrentUserService : ICurrentUserService
 
     private string? GetHeaderValueOrNull(string headerName)
     {
-        var headerValue = _httpContextAccessor.HttpContext?.Request.Headers[headerName].ToString();
+        var headerValue = _httpContextAccessor.HttpContext?.Request.Headers[headerName].ToString().Trim();
         return string.IsNullOrWhiteSpace(headerValue) ? null : headerValue;
     }
 }

@@ -47,17 +47,15 @@ public class RequestProfileMediaUploadUrlCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_SanitizesUserIdSegment_BeforeItReachesTheStorageKey()
+    public async Task Handle_WhenUserIdContainsSlash_ThrowsBadRequestException_AndNeverRequestsUploadUrl()
     {
         _currentUserService.SetupGet(u => u.UserId).Returns("../evil-user");
-        string? capturedStorageKey = null;
-        _presignedUrlService
-            .Setup(s => s.CreateUploadUrlAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
-            .Callback<string, string, TimeSpan, CancellationToken>((storageKey, _, _, _) => capturedStorageKey = storageKey)
-            .ReturnsAsync(new PresignedUploadTarget("https://example.com/upload", "profile-pictures/evil-user/x.jpg", DateTimeOffset.UtcNow));
 
-        await _handler.Handle(new RequestProfileMediaUploadUrlCommand("image/png"), CancellationToken.None);
+        var act = () => _handler.Handle(new RequestProfileMediaUploadUrlCommand("image/png"), CancellationToken.None);
 
-        capturedStorageKey.Should().NotContain("..");
+        await act.Should().ThrowAsync<BadRequestException>();
+        _presignedUrlService.Verify(
+            s => s.CreateUploadUrlAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 }

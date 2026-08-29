@@ -29,21 +29,21 @@ public class ConfirmProfileMediaUploadCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WhenStorageKeyBelongsToAnotherUser_ThrowsForbiddenException()
+    public async Task Handle_WhenStorageKeyBelongsToAnotherUser_ThrowsNotFoundException()
     {
         var act = () => _handler.Handle(new ConfirmProfileMediaUploadCommand("profile-pictures/other-user/new.jpg"), CancellationToken.None);
 
-        await act.Should().ThrowAsync<ForbiddenException>();
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
-    public async Task Handle_WhenStorageKeyContainsDotDotSegment_ThrowsForbiddenException()
+    public async Task Handle_WhenStorageKeyContainsDotDotSegment_ThrowsNotFoundException()
     {
         var act = () => _handler.Handle(
             new ConfirmProfileMediaUploadCommand("profile-pictures/user-1/../other-user/new.jpg"),
             CancellationToken.None);
 
-        await act.Should().ThrowAsync<ForbiddenException>();
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]

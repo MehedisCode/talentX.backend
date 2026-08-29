@@ -59,26 +59,26 @@ public class ApplyExtractedProfileCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WhenResumeStorageKeyBelongsToAnotherUser_ThrowsForbiddenException_AndTouchesNoRepository()
+    public async Task Handle_WhenResumeStorageKeyBelongsToAnotherUser_ThrowsNotFoundException_AndTouchesNoRepository()
     {
         var command = ValidCommand() with { ResumeStorageKey = "resumes/other-user/stolen-key.pdf" };
 
         var act = () => _handler.Handle(command, CancellationToken.None);
 
-        await act.Should().ThrowAsync<ForbiddenException>();
+        await act.Should().ThrowAsync<NotFoundException>();
         _resumeRepository.Verify(r => r.AddAsync(It.IsAny<Resume>(), It.IsAny<CancellationToken>()), Times.Never);
         _resumeRepository.Verify(r => r.Update(It.IsAny<Resume>()), Times.Never);
         _fileStorageService.Verify(s => s.DeleteAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
-    public async Task Handle_WhenResumeStorageKeyContainsDotDotSegment_ThrowsForbiddenException()
+    public async Task Handle_WhenResumeStorageKeyContainsDotDotSegment_ThrowsNotFoundException()
     {
         var command = ValidCommand() with { ResumeStorageKey = "resumes/user-1/../other-user/stolen-key.pdf" };
 
         var act = () => _handler.Handle(command, CancellationToken.None);
 
-        await act.Should().ThrowAsync<ForbiddenException>();
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]

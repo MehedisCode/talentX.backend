@@ -37,22 +37,22 @@ public class ListMediaMultipartPartsQueryHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WhenStorageKeyBelongsToAnotherUser_ThrowsForbiddenException()
+    public async Task Handle_WhenStorageKeyBelongsToAnotherUser_ThrowsNotFoundException()
     {
         var act = () => _handler.Handle(
             new ListMediaMultipartPartsQuery("video-intros/other-user/x.mp4", "upload-1"),
             CancellationToken.None);
 
-        await act.Should().ThrowAsync<ForbiddenException>();
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
-    public async Task Handle_WhenStorageKeyContainsDotDotSegment_ThrowsForbiddenException()
+    public async Task Handle_WhenStorageKeyContainsDotDotSegment_ThrowsNotFoundException()
     {
         var act = () => _handler.Handle(
             new ListMediaMultipartPartsQuery("video-intros/user-1/../other-user/x.mp4", "upload-1"),
             CancellationToken.None);
 
-        await act.Should().ThrowAsync<ForbiddenException>();
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 }

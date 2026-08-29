@@ -2,6 +2,7 @@ using MediatR;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Common.Models;
+using TalentX.Application.Features.Talents;
 using TalentX.Application.Identity.Services;
 
 namespace TalentX.Application.Features.Talents.Commands.RequestProfileMediaUploadUrl;
@@ -29,9 +30,11 @@ public sealed class RequestProfileMediaUploadUrlCommandHandler
         var userId = _currentUserService.UserId
             ?? throw new UnauthorizedException("You must be signed in to upload a profile picture.");
 
-        var sanitizedUserId = Path.GetFileName(userId);
         var extension = ContentTypeToExtension(request.ContentType);
-        var storageKey = $"profile-pictures/{sanitizedUserId}/{Guid.NewGuid()}{extension}";
+        var storageKey = TalentMediaStorageKeyGuard.BuildStorageKey(
+            "profile-pictures",
+            userId,
+            $"{Guid.NewGuid()}{extension}");
 
         return await _presignedUrlService.CreateUploadUrlAsync(
             storageKey,

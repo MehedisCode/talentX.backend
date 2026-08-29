@@ -23,11 +23,13 @@ public sealed class CreateTalentForTestingCommandHandler : IRequestHandler<Creat
         if (!_hostEnvironmentService.IsDevelopment)
             throw new ForbiddenException("This operation is only available in the Development environment.");
 
-        var existingTalent = await _unitOfWork.Talents.GetByUserIdAsync(request.UserId, cancellationToken);
-        if (existingTalent is not null)
-            throw new ConflictException($"A Talent for user '{request.UserId}' already exists.");
+        var userId = request.UserId.Trim();
 
-        var talent = new Talent(request.UserId, request.Name, request.Email);
+        var existingTalent = await _unitOfWork.Talents.GetByUserIdAsync(userId, cancellationToken);
+        if (existingTalent is not null)
+            throw new ConflictException($"A Talent for user '{userId}' already exists.");
+
+        var talent = new Talent(userId, request.Name, request.Email);
 
         await _unitOfWork.Talents.AddAsync(talent, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
