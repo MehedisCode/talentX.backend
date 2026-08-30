@@ -136,4 +136,56 @@ public class IdentityService : IIdentityService
             ? IdentityResponse.Ok()
             : IdentityResponse.Fail(result.Errors.Select(e => e.Description));
     }
+
+    public async Task<IdentityResponse> ChangePasswordAsync(string userId, string currentPassword, string newPassword)
+    {
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user is null)
+        {
+            return IdentityResponse.Fail("User not found.");
+        }
+
+        var result = await _userManager.ChangePasswordAsync(user, currentPassword, newPassword);
+        if (!result.Succeeded)
+        {
+            return IdentityResponse.Fail(result.Errors.Select(e => e.Description));
+        }
+
+        return IdentityResponse.Ok();
+    }
+
+    public async Task<IdentityResponse> ChangeUserRoleAsync(string userId, string currentRole, string newRole)
+    {
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user is null)
+        {
+            return IdentityResponse.Fail("User not found.");
+        }
+
+        if (!await _roleManager.RoleExistsAsync(newRole))
+        {
+            return IdentityResponse.Fail($"Role '{newRole}' does not exist.");
+        }
+
+        if (await _userManager.IsInRoleAsync(user, currentRole))
+        {
+            var removeResult = await _userManager.RemoveFromRoleAsync(user, currentRole);
+            if (!removeResult.Succeeded)
+            {
+                return IdentityResponse.Fail(removeResult.Errors.Select(e => e.Description));
+            }
+        }
+
+        if (!await _userManager.IsInRoleAsync(user, newRole))
+        {
+            var addResult = await _userManager.AddToRoleAsync(user, newRole);
+            if (!addResult.Succeeded)
+            {
+                return IdentityResponse.Fail(addResult.Errors.Select(e => e.Description));
+            }
+        }
+
+        return IdentityResponse.Ok();
+    }
 }
+
