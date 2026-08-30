@@ -1,6 +1,5 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using TalentX.Application.Common.Exceptions;
@@ -8,7 +7,6 @@ using TalentX.Application.Features.Talents.Commands.AbortMediaMultipartUpload;
 using TalentX.Application.Features.Talents.Commands.ApplyExtractedProfile;
 using TalentX.Application.Features.Talents.Commands.CompleteMediaMultipartUpload;
 using TalentX.Application.Features.Talents.Commands.ConfirmProfileMediaUpload;
-using TalentX.Application.Features.Talents.Commands.CreateTalentForTesting;
 using TalentX.Application.Features.Talents.Commands.DeleteEducation;
 using TalentX.Application.Features.Talents.Commands.DeleteWorkExperience;
 using TalentX.Application.Features.Talents.Commands.ExtractResume;
@@ -21,22 +19,16 @@ using TalentX.Application.Features.Talents.Commands.UpsertWorkExperience;
 using TalentX.Application.Features.Talents.Queries.GetTalentApplicationPrefill;
 using TalentX.Application.Features.Talents.Queries.GetTalentProfile;
 using TalentX.Application.Features.Talents.Queries.ListMediaMultipartParts;
+using TalentX.Domain.Enums;
 using TalentX.Infrastructure.FileStorage;
 
 namespace TalentX.API.Controllers.Talents;
 
 [ApiController]
 [Route("api/v1/talents")]
-[AllowAnonymous]
+[Authorize(Roles = nameof(UserRole.Talent))]
 public sealed class TalentsController : BaseApiController
 {
-    private readonly IWebHostEnvironment _webHostEnvironment;
-
-    public TalentsController(IWebHostEnvironment webHostEnvironment)
-    {
-        _webHostEnvironment = webHostEnvironment;
-    }
-
     [HttpGet("me")]
     public async Task<IActionResult> GetMyProfile(CancellationToken cancellationToken)
     {
@@ -58,18 +50,6 @@ public sealed class TalentsController : BaseApiController
     {
         var prefill = await Sender.Send(new GetTalentApplicationPrefillQuery(), cancellationToken);
         return Ok(prefill);
-    }
-
-    [HttpPost("testing")]
-    public async Task<IActionResult> CreateTalentForTesting(
-        [FromBody] CreateTalentForTestingCommand command,
-        CancellationToken cancellationToken)
-    {
-        if (!_webHostEnvironment.IsDevelopment())
-            return NotFound();
-
-        var talentId = await Sender.Send(command, cancellationToken);
-        return StatusCode(StatusCodes.Status201Created, new { id = talentId });
     }
 
     [HttpPost("me/resume/extract")]

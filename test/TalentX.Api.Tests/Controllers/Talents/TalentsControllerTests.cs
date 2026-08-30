@@ -1,6 +1,7 @@
+using System.Reflection;
 using FluentAssertions;
 using MediatR;
-using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,7 +13,6 @@ using TalentX.Application.Features.Talents.Commands.AbortMediaMultipartUpload;
 using TalentX.Application.Features.Talents.Commands.ApplyExtractedProfile;
 using TalentX.Application.Features.Talents.Commands.CompleteMediaMultipartUpload;
 using TalentX.Application.Features.Talents.Commands.ConfirmProfileMediaUpload;
-using TalentX.Application.Features.Talents.Commands.CreateTalentForTesting;
 using TalentX.Application.Features.Talents.Commands.DeleteEducation;
 using TalentX.Application.Features.Talents.Commands.DeleteWorkExperience;
 using TalentX.Application.Features.Talents.Commands.ExtractResume;
@@ -26,6 +26,7 @@ using TalentX.Application.Features.Talents.DTOs;
 using TalentX.Application.Features.Talents.Queries.GetTalentApplicationPrefill;
 using TalentX.Application.Features.Talents.Queries.GetTalentProfile;
 using TalentX.Application.Features.Talents.Queries.ListMediaMultipartParts;
+using TalentX.Domain.Enums;
 using Xunit;
 
 namespace TalentX.Api.Tests.Controllers.Talents;
@@ -33,7 +34,6 @@ namespace TalentX.Api.Tests.Controllers.Talents;
 public class TalentsControllerTests
 {
     private readonly Mock<ISender> _sender = new();
-    private readonly Mock<IWebHostEnvironment> _webHostEnvironment = new();
 
     private TalentsController CreateController()
     {
@@ -41,13 +41,23 @@ public class TalentsControllerTests
         services.AddSingleton(_sender.Object);
         var provider = services.BuildServiceProvider();
 
-        return new TalentsController(_webHostEnvironment.Object)
+        return new TalentsController
         {
             ControllerContext = new ControllerContext
             {
                 HttpContext = new DefaultHttpContext { RequestServices = provider }
             }
         };
+    }
+
+    [Fact]
+    public void Controller_HasAuthorizeAttribute_WithTalentRole()
+    {
+        var attribute = typeof(TalentsController)
+            .GetCustomAttribute<AuthorizeAttribute>(inherit: false);
+
+        attribute.Should().NotBeNull();
+        attribute!.Roles.Should().Be(nameof(UserRole.Talent));
     }
 
     [Fact]
@@ -108,39 +118,6 @@ public class TalentsControllerTests
 
         var okResult = actionResult.Should().BeOfType<OkObjectResult>().Subject;
         okResult.Value.Should().BeEquivalentTo(expectedResponse);
-    }
-
-    [Fact]
-    public async Task CreateTalentForTesting_InDevelopment_SendsCommandAndReturnsCreated()
-    {
-        _webHostEnvironment.Setup(e => e.EnvironmentName).Returns("Development");
-        var command = new CreateTalentForTestingCommand("user-1", "Jane Doe", "jane@example.com");
-        var talentId = Guid.NewGuid();
-
-        _sender
-            .Setup(s => s.Send(command, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(talentId);
-
-        var controller = CreateController();
-
-        var actionResult = await controller.CreateTalentForTesting(command, CancellationToken.None);
-
-        var objectResult = actionResult.Should().BeOfType<ObjectResult>().Subject;
-        objectResult.StatusCode.Should().Be(StatusCodes.Status201Created);
-        _sender.Verify(s => s.Send(command, It.IsAny<CancellationToken>()), Times.Once);
-    }
-
-    [Fact]
-    public async Task CreateTalentForTesting_OutsideDevelopment_ReturnsNotFoundAndNeverSendsCommand()
-    {
-        _webHostEnvironment.Setup(e => e.EnvironmentName).Returns("Production");
-        var command = new CreateTalentForTestingCommand("user-1", "Jane Doe", "jane@example.com");
-        var controller = CreateController();
-
-        var actionResult = await controller.CreateTalentForTesting(command, CancellationToken.None);
-
-        actionResult.Should().BeOfType<NotFoundResult>();
-        _sender.Verify(s => s.Send(It.IsAny<CreateTalentForTestingCommand>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]

@@ -1,8 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using TalentX.Application.Common.Interfaces;
 using TalentX.Infrastructure.Ai;
-using TalentX.Infrastructure.Common;
 using TalentX.Infrastructure.FileStorage;
 using TalentX.Infrastructure.Identity;
 using TalentX.Infrastructure.Persistence;
@@ -20,7 +18,6 @@ public static class InfrastructureStartup
         services.AddIdentityServices(configuration);
         services.AddFileStorage(configuration);
         services.AddExtractionServices(configuration);
-        services.AddSingleton<IHostEnvironmentService, HostEnvironmentService>();
 
         return services;
     }
