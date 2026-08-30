@@ -10,4 +10,5 @@ public interface IJobRepository
     void Update(Job job);
     Task<PaginatedList<Job>> GetPublishedJobsAsync(int page, int pageSize, CancellationToken cancellationToken);
     Task<Job?> GetPublishedJobByIdAsync(Guid id, CancellationToken cancellationToken);
+    Task<List<Job>> GetByEmployerIdAsync(string employerId, CancellationToken cancellationToken = default);
 }

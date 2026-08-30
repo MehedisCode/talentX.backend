@@ -38,4 +38,11 @@ public sealed class JobRepository : RepositoryBase<Job>, IJobRepository
             .FirstOrDefaultAsync(
                 j => j.Id == id && j.Status == JobStatus.Published && j.ExpireAt > DateTime.UtcNow,
                 cancellationToken);
+
+    public async Task<List<Job>> GetByEmployerIdAsync(string employerId, CancellationToken cancellationToken = default) =>
+        await Context.Jobs
+            .AsNoTracking()
+            .Where(j => j.EmployerId == employerId)
+            .OrderByDescending(j => j.CreatedAt)
+            .ToListAsync(cancellationToken);
 }

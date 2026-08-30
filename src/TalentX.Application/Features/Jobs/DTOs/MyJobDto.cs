@@ -17,4 +17,7 @@ public class MyJobDto
     public DateTime ExpireAt { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
+    public string? City { get; set; }
+    public string? Country { get; set; }
+    public string? RequiredTimezoneOverlap { get; set; }
 }
