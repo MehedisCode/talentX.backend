@@ -25,7 +25,8 @@ public static class IdentitySeeder
         var roles = new[]
         {
             UserRole.Employer,
-            UserRole.Talent
+            UserRole.Talent,
+            UserRole.Guest
         };
 
         foreach (var role in roles)
