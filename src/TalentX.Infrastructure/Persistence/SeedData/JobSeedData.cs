@@ -12,7 +12,7 @@ public static class JobSeedData
         var jobs = new List<Job>
         {
             // ==========================================
-            // ACME INC (Fintech & Cloud SaaS)
+            // ACME INC (Fintech & Cloud SaaS - HQ: Dhaka)
             // ==========================================
             Job.Create(
                 "seed-acme", "Frontend Developer", "Acme Inc",
@@ -52,13 +52,13 @@ public static class JobSeedData
             Job.Create(
                 "seed-acme", "Part-Time Technical Writer", "Acme Inc",
                 "Write developer documentation, API references, integration tutorials, and release changelogs.",
-                EmploymentType.PartTime, ExperienceLevel.EntryLevel, "Remote", WorkArrangement.Remote,
+                EmploymentType.PartTime, ExperienceLevel.EntryLevel, "Dhaka", WorkArrangement.Remote,
                 new List<string> { "Technical Writing", "Markdown", "REST APIs", "Git" },
                 1, now.AddMonths(2)
             ),
 
             // ==========================================
-            // NORTHWIND LABS (Cloud Platforms & Infrastructure)
+            // NORTHWIND LABS (Cloud Infrastructure - HQ: Chittagong)
             // ==========================================
             Job.Create(
                 "seed-northwind", "Senior Backend Engineer (.NET)", "Northwind Labs",
@@ -77,7 +77,7 @@ public static class JobSeedData
             Job.Create(
                 "seed-northwind", "Staff DevOps & Cloud Architect", "Northwind Labs",
                 "Architect resilient AWS Kubernetes clusters, manage multi-region Terraform modules, and implement zero-trust security.",
-                EmploymentType.FullTime, ExperienceLevel.Lead, "Remote", WorkArrangement.Remote,
+                EmploymentType.FullTime, ExperienceLevel.Lead, "Chittagong", WorkArrangement.Remote,
                 new List<string> { "AWS", "Kubernetes", "Terraform", "ArgoCD", "Prometheus", "Helm" },
                 1, now.AddMonths(3)
             ),
@@ -98,13 +98,13 @@ public static class JobSeedData
             Job.Create(
                 "seed-northwind", "Site Reliability Engineer (Contract)", "Northwind Labs",
                 "Improve system uptime, establish SLOs/SLAs, conduct incident post-mortems, and automate observability dashboards.",
-                EmploymentType.Contract, ExperienceLevel.SeniorLevel, "Remote", WorkArrangement.Remote,
+                EmploymentType.Contract, ExperienceLevel.SeniorLevel, "Chittagong", WorkArrangement.Remote,
                 new List<string> { "SRE", "Linux", "Grafana", "Datadog", "Bash", "Python" },
                 1, now.AddMonths(2)
             ),
 
             // ==========================================
-            // STELLAR SYSTEMS (AI & Machine Learning)
+            // STELLAR SYSTEMS (AI & ML - HQ: Dhaka)
             // ==========================================
             Job.Create(
                 "seed-stellar", "Engineering Manager (AI Platform)", "Stellar Systems",
@@ -130,20 +130,20 @@ public static class JobSeedData
             Job.Create(
                 "seed-stellar", "AI Research Intern", "Stellar Systems",
                 "Work closely with our research scientists on multimodal document understanding and prompt optimization benchmarks.",
-                EmploymentType.Internship, ExperienceLevel.EntryLevel, "Remote", WorkArrangement.Remote,
+                EmploymentType.Internship, ExperienceLevel.EntryLevel, "Dhaka", WorkArrangement.Remote,
                 new List<string> { "Python", "NumPy", "Pandas", "Linear Algebra", "Machine Learning" },
                 2, now.AddMonths(1)
             ),
             Job.Create(
                 "seed-stellar", "Contract UI/UX Designer", "Stellar Systems",
                 "Craft user experiences for our AI copilot extension, conducting usability studies and rapid prototyping.",
-                EmploymentType.Contract, ExperienceLevel.MidLevel, "Remote", WorkArrangement.Remote,
+                EmploymentType.Contract, ExperienceLevel.MidLevel, "Dhaka", WorkArrangement.Remote,
                 new List<string> { "Figma", "UI Design", "Wireframing", "Usability Testing" },
                 1, now.AddMonths(2)
             ),
 
             // ==========================================
-            // HORIZON CAPITAL (Fintech & Digital Banking)
+            // HORIZON CAPITAL (Fintech & Digital Banking - HQ: Dhaka)
             // ==========================================
             Job.Create(
                 "seed-horizon", "Senior Data Scientist (Risk Analytics)", "Horizon Capital",
@@ -182,7 +182,7 @@ public static class JobSeedData
             ),
 
             // ==========================================
-            // GREENBRIDGE NGO (Digital Public Goods & Social Impact)
+            // GREENBRIDGE NGO (Digital Public Goods - HQ: Khulna/Rajshahi)
             // ==========================================
             Job.Create(
                 "seed-greenbridge", "Full Stack Developer", "GreenBridge NGO",
@@ -201,7 +201,7 @@ public static class JobSeedData
             Job.Create(
                 "seed-greenbridge", "Lead Software Architect", "GreenBridge NGO",
                 "Architect open-source health and disaster response systems designed for low-bandwidth rural environments.",
-                EmploymentType.FullTime, ExperienceLevel.Lead, "Remote", WorkArrangement.Remote,
+                EmploymentType.FullTime, ExperienceLevel.Lead, "Khulna", WorkArrangement.Remote,
                 new List<string> { "System Architecture", "Microservices", "Offline-First", "PostgreSQL", "Security" },
                 1, now.AddMonths(4)
             ),
@@ -214,7 +214,7 @@ public static class JobSeedData
             ),
 
             // ==========================================
-            // APEX CYBER (Cybersecurity & DevSecOps)
+            // APEX CYBER (Cybersecurity - HQ: Dhaka)
             // ==========================================
             Job.Create(
                 "seed-apex", "Security Engineer (AppSec)", "Apex Cyber",
@@ -233,13 +233,13 @@ public static class JobSeedData
             Job.Create(
                 "seed-apex", "Lead Penetration Tester (Contract)", "Apex Cyber",
                 "Execute red-team assessments, cloud environment pen-testing (AWS/Azure), and deliver executive remediation reports.",
-                EmploymentType.Contract, ExperienceLevel.Lead, "Remote", WorkArrangement.Remote,
+                EmploymentType.Contract, ExperienceLevel.Lead, "Dhaka", WorkArrangement.Remote,
                 new List<string> { "Penetration Testing", "Burp Suite", "Metasploit", "Cloud Security", "OSCP" },
                 1, now.AddMonths(2)
             ),
 
             // ==========================================
-            // NEXUS COMMERCE (E-Commerce & Logistics)
+            // NEXUS COMMERCE (E-Commerce & Logistics - HQ: Dhaka/Chittagong)
             // ==========================================
             Job.Create(
                 "seed-nexus", "Senior React Native Developer", "Nexus Commerce",
@@ -271,7 +271,7 @@ public static class JobSeedData
             ),
 
             // ==========================================
-            // HYPERION HEALTH (HealthTech & Telemedicine)
+            // HYPERION HEALTH (HealthTech & Telemedicine - HQ: Sylhet/Dhaka)
             // ==========================================
             Job.Create(
                 "seed-hyperion", "Senior Full Stack Engineer (Node + Next.js)", "Hyperion Health",
@@ -296,7 +296,7 @@ public static class JobSeedData
             ),
 
             // ==========================================
-            // QUANTUM LEAP AI (Robotics & Computer Vision)
+            // QUANTUM LEAP AI (Robotics & Computer Vision - HQ: Dhaka)
             // ==========================================
             Job.Create(
                 "seed-quantum", "Computer Vision Research Engineer", "Quantum Leap AI",
@@ -315,7 +315,7 @@ public static class JobSeedData
             Job.Create(
                 "seed-quantum", "Contract Technical Recruiter", "Quantum Leap AI",
                 "Source and screen niche hardware, AI, and robotics engineers across international networks.",
-                EmploymentType.Contract, ExperienceLevel.MidLevel, "Remote", WorkArrangement.Remote,
+                EmploymentType.Contract, ExperienceLevel.MidLevel, "Dhaka", WorkArrangement.Remote,
                 new List<string> { "Technical Sourcing", "Talent Acquisition", "LinkedIn Recruiter", "Interviewing" },
                 1, now.AddMonths(2)
             ),
@@ -334,7 +334,7 @@ public static class JobSeedData
             Job.Create(
                 "seed-acme", "Expired Java Spring Intern (should NOT appear)", "Acme Inc",
                 "Seeded already-expired to verify the ExpireAt filter works accurately.",
-                EmploymentType.Internship, ExperienceLevel.EntryLevel, "Remote", WorkArrangement.Remote,
+                EmploymentType.Internship, ExperienceLevel.EntryLevel, "Dhaka", WorkArrangement.Remote,
                 new List<string> { "Java", "Spring Boot" },
                 1, now.AddDays(-2)
             ),
