@@ -1,5 +1,6 @@
 using System.Linq;
 using FluentValidation;
+using TalentX.Domain.Enums;
 
 namespace TalentX.Application.Features.Jobs.Commands.UpdateJob;
 
@@ -56,5 +57,33 @@ public class UpdateJobCommandValidator : AbstractValidator<UpdateJobCommand>
 
         RuleFor(v => v.ExpireAt)
             .GreaterThan(v => DateTime.UtcNow).WithMessage("Expire date must be in the future.");
+
+        // Conditional validation for wizard fields based on WorkArrangement
+        RuleFor(v => v.City)
+            .Must((cmd, city) => !IsLocationRequired(cmd.WorkArrangement)
+                || (!string.IsNullOrWhiteSpace(city) && city.Trim().Length >= 2))
+            .WithMessage("City is required for Hybrid and On-Site roles.")
+            .MaximumLength(100).WithMessage("City must not exceed 100 characters.")
+            .When(v => v.WorkArrangement is WorkArrangement.OnSite or WorkArrangement.Hybrid);
+
+        RuleFor(v => v.Country)
+            .Must((cmd, country) => !IsLocationRequired(cmd.WorkArrangement)
+                || (!string.IsNullOrWhiteSpace(country) && country.Trim().Length >= 2))
+            .WithMessage("Country is required for Hybrid and On-Site roles.")
+            .MaximumLength(100).WithMessage("Country must not exceed 100 characters.")
+            .When(v => v.WorkArrangement is WorkArrangement.OnSite or WorkArrangement.Hybrid);
+
+        RuleFor(v => v.RequiredTimezoneOverlap)
+            .Must((cmd, tz) => !IsRemoteTimezoneRequired(cmd.WorkArrangement)
+                || (!string.IsNullOrWhiteSpace(tz) && tz.Trim().Length >= 2))
+            .WithMessage("Timezone overlap is required for Remote roles.")
+            .MaximumLength(200).WithMessage("Timezone overlap must not exceed 200 characters.")
+            .When(v => v.WorkArrangement is WorkArrangement.AnywhereFullRemote);
     }
+
+    private static bool IsLocationRequired(WorkArrangement? a) =>
+        a is WorkArrangement.OnSite or WorkArrangement.Hybrid;
+
+    private static bool IsRemoteTimezoneRequired(WorkArrangement? a) =>
+        a is WorkArrangement.AnywhereFullRemote;
 }

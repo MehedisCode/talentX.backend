@@ -15,5 +15,8 @@ public record UpdateJobCommand(
     List<string>? RequiredSkills,
     int? Vacancies,
     DateTime? ExpireAt,
-    bool Publish = false
+    bool Publish = false,
+    string? City = null,
+    string? Country = null,
+    string? RequiredTimezoneOverlap = null
 ) : IRequest;
