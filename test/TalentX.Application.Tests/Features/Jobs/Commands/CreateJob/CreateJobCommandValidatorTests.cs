@@ -17,11 +17,13 @@ public class CreateJobCommandValidatorTests
         EmploymentType.FullTime,
         ExperienceLevel.MidLevel,
         "Dhaka",
-        WorkArrangement.AnywhereFullRemote,
+        WorkArrangement.Hybrid,
         new List<string> { "C#", "SQL" },
         2,
         DateTime.UtcNow.AddDays(30),
-        false
+        false,
+        City: "Dhaka",
+        Country: "Bangladesh"
     );
 
     [Fact]
