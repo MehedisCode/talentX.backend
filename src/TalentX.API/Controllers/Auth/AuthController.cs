@@ -57,7 +57,7 @@ public class AuthController : BaseApiController
         return Ok();
     }
 
-    [Authorize(Roles = nameof(UserRole.Employer) + "," + nameof(UserRole.Talent) + "," + nameof(UserRole.Guest))]
+    [Authorize(Roles = $"{nameof(UserRole.Employer)},{nameof(UserRole.Talent)},{nameof(UserRole.Guest)}")]
     [HttpGet("user")]
     public async Task<IActionResult> CurrentUser()
     {
@@ -69,7 +69,7 @@ public class AuthController : BaseApiController
         return Ok(result.Data);
     }
 
-    [Authorize(Roles = nameof(UserRole.Employer) + "," + nameof(UserRole.Talent) + "," + nameof(UserRole.Guest))]
+    [Authorize(Roles = $"{nameof(UserRole.Employer)},{nameof(UserRole.Talent)},{nameof(UserRole.Guest)}")]    
     [HttpPost("change-password")]
     public async Task<IActionResult> ChangePassword(ChangePasswordCommand command)
     {
