@@ -35,7 +35,10 @@ public class CreateJobCommandHandlerTests
         new List<string> { "C#", "SQL" },
         2,
         DateTime.UtcNow.AddDays(30),
-        publish
+        publish,
+        City: null,
+        Country: null,
+        RequiredTimezoneOverlap: "UTC-5 to UTC+3"
     );
 
     [Fact]

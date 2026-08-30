@@ -26,7 +26,7 @@ public class UpdateJobCommandHandlerTests
 
     private static Job ExistingDraftJob()
     {
-        return Job.Create(
+        var job = Job.Create(
             "employer-1",
             "Backend Engineer",
             "Acme Corp",
@@ -39,6 +39,16 @@ public class UpdateJobCommandHandlerTests
             2,
             DateTime.UtcNow.AddDays(30)
         );
+
+        // Set wizard fields for AnywhereFullRemote
+        job.UpdateWizardDetails(
+            null,
+            null,
+            "UTC-5 to UTC+3",
+            null
+        );
+
+        return job;
     }
 
     private static UpdateJobCommand CommandFor(Guid id, bool publish = false) => new(

@@ -15,10 +15,11 @@ public class JobRulesTests
         string location = "Dhaka",
         List<string>? requiredSkills = null,
         int vacancies = 2,
-        DateTime? expireAt = null
+        DateTime? expireAt = null,
+        WorkArrangement workArrangement = WorkArrangement.AnywhereFullRemote
     )
     {
-        return Job.Create(
+        var job = Job.Create(
             "employer-1",
             title,
             companyName,
@@ -26,11 +27,33 @@ public class JobRulesTests
             EmploymentType.FullTime,
             ExperienceLevel.MidLevel,
             location,
-            WorkArrangement.AnywhereFullRemote,
+            workArrangement,
             requiredSkills ?? new List<string> { "C#" },
             vacancies,
             expireAt ?? DateTime.UtcNow.AddDays(30)
         );
+
+        // Set wizard fields based on work arrangement
+        if (workArrangement is WorkArrangement.AnywhereFullRemote)
+        {
+            job.UpdateWizardDetails(
+                null,
+                null,
+                "UTC-5 to UTC+3",
+                null
+            );
+        }
+        else if (workArrangement is WorkArrangement.OnSite or WorkArrangement.Hybrid)
+        {
+            job.UpdateWizardDetails(
+                "Dhaka",
+                "Bangladesh",
+                null,
+                null
+            );
+        }
+
+        return job;
     }
 
     [Fact]
@@ -203,5 +226,58 @@ public class JobRulesTests
         exception.Message.Should().Contain("Title");
         exception.Message.Should().Contain("CompanyName");
         exception.Message.Should().Contain("Vacancies");
+    }
+
+    [Fact]
+    public void EnsurePublishable_OnSiteWithCityAndCountry_DoesNotThrow()
+    {
+        var job = ValidDraft(workArrangement: WorkArrangement.OnSite);
+
+        var act = () => JobRules.EnsurePublishable(job);
+
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void EnsurePublishable_OnSiteWithoutCity_ThrowsAndListsCity()
+    {
+        var job = ValidDraft(workArrangement: WorkArrangement.OnSite);
+        job.UpdateWizardDetails(null, "Bangladesh", null, null);
+
+        var act = () => JobRules.EnsurePublishable(job);
+
+        act.Should().Throw<InvalidOperationException>().WithMessage("*City*");
+    }
+
+    [Fact]
+    public void EnsurePublishable_OnSiteWithoutCountry_ThrowsAndListsCountry()
+    {
+        var job = ValidDraft(workArrangement: WorkArrangement.OnSite);
+        job.UpdateWizardDetails("Dhaka", null, null, null);
+
+        var act = () => JobRules.EnsurePublishable(job);
+
+        act.Should().Throw<InvalidOperationException>().WithMessage("*Country*");
+    }
+
+    [Fact]
+    public void EnsurePublishable_AnywhereFullRemoteWithTimezoneOverlap_DoesNotThrow()
+    {
+        var job = ValidDraft(workArrangement: WorkArrangement.AnywhereFullRemote);
+
+        var act = () => JobRules.EnsurePublishable(job);
+
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void EnsurePublishable_AnywhereFullRemoteWithoutTimezoneOverlap_ThrowsAndListsRequiredTimezoneOverlap()
+    {
+        var job = ValidDraft(workArrangement: WorkArrangement.AnywhereFullRemote);
+        job.UpdateWizardDetails(null, null, null, null);
+
+        var act = () => JobRules.EnsurePublishable(job);
+
+        act.Should().Throw<InvalidOperationException>().WithMessage("*RequiredTimezoneOverlap*");
     }
 }
