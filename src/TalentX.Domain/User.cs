@@ -45,4 +45,10 @@ public class User : BaseEntity
         IsVerified = true;
         UpdatedAt = DateTime.UtcNow;
     }
+
+    public void UpdateRole(UserRole role)
+    {
+        Role = role;
+        UpdatedAt = DateTime.UtcNow;
+    }
 }

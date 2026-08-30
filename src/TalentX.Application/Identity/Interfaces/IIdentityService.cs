@@ -11,4 +11,6 @@ public interface IIdentityService
     Task<IdentityResponse<string>> GetApplicationUserEmailByUserIdAsync(string userId);
     Task<IdentityResponse> UpdateApplicationUserEmailAsync(string userId, string newEmail);
     Task<IdentityResponse> DeleteApplicationUserAsync(string userId);
+    Task<IdentityResponse> ChangePasswordAsync(string userId, string currentPassword, string newPassword);
+    Task<IdentityResponse> ChangeUserRoleAsync(string userId, string currentRole, string newRole);
 }

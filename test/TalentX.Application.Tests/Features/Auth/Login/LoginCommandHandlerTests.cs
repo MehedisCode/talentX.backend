@@ -1,9 +1,9 @@
 using FluentAssertions;
 using Moq;
-using TalentX.Application.Identity.Interfaces;
-using TalentX.Application.Identity.Models;
 using TalentX.Application.Features.Auth.Login;
 using Xunit;
+using TalentX.Application.Identity.Models;
+using TalentX.Application.Identity.Interfaces;
 
 namespace TalentX.Application.Tests.Features.Auth.Login;
 
