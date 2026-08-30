@@ -4,6 +4,7 @@ using TalentX.Application.Features.Jobs.Commands.CreateJob;
 using TalentX.Application.Features.Jobs.Commands.UpdateJob;
 using TalentX.Application.Features.Jobs.Queries.GetJobDetails;
 using TalentX.Application.Features.Jobs.Queries.GetMyJob;
+using TalentX.Application.Features.Jobs.Queries.GetMyJobs;
 using TalentX.Application.Features.Jobs.Queries.GetPublishedJobs;
 
 namespace TalentX.API.Controllers;
@@ -50,6 +51,14 @@ public class JobsController : BaseApiController
     {
         var job = await Sender.Send(new GetMyJobQuery(id), cancellationToken);
         return Ok(job);
+    }
+
+    [HttpGet("mine")]
+    [Authorize(Roles = "Employer")]
+    public async Task<IActionResult> GetMyJobs(CancellationToken cancellationToken)
+    {
+        var jobs = await Sender.Send(new GetMyJobsQuery(), cancellationToken);
+        return Ok(jobs);
     }
 }
 

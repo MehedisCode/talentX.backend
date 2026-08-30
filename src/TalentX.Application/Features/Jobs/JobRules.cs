@@ -53,6 +53,22 @@ public static class JobRules
         if (job.ExpireAt <= DateTime.UtcNow)
             missing.Add(nameof(job.ExpireAt));
 
+        // Conditional validation for wizard fields based on WorkArrangement
+        if (IsLocationRequired(job.WorkArrangement))
+        {
+            if (string.IsNullOrWhiteSpace(job.City))
+                missing.Add(nameof(job.City));
+
+            if (string.IsNullOrWhiteSpace(job.Country))
+                missing.Add(nameof(job.Country));
+        }
+
+        if (IsRemoteTimezoneRequired(job.WorkArrangement))
+        {
+            if (string.IsNullOrWhiteSpace(job.RequiredTimezoneOverlap))
+                missing.Add(nameof(job.RequiredTimezoneOverlap));
+        }
+
         if (missing.Count > 0)
         {
             throw new InvalidOperationException(
@@ -60,4 +76,10 @@ public static class JobRules
             );
         }
     }
+
+    private static bool IsLocationRequired(WorkArrangement a) =>
+        a is WorkArrangement.OnSite or WorkArrangement.Hybrid;
+
+    private static bool IsRemoteTimezoneRequired(WorkArrangement a) =>
+        a is WorkArrangement.AnywhereFullRemote;
 }
