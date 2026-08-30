@@ -51,7 +51,7 @@ public class UnitOfWorkTests
             EmploymentType.FullTime,
             ExperienceLevel.MidLevel,
             "Dhaka",
-            WorkArrangement.Remote,
+            WorkArrangement.AnywhereFullRemote,
             new List<string> { "C#" },
             2,
             DateTime.UtcNow.AddDays(30)

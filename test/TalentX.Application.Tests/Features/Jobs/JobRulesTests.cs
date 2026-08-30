@@ -26,7 +26,7 @@ public class JobRulesTests
             EmploymentType.FullTime,
             ExperienceLevel.MidLevel,
             location,
-            WorkArrangement.Remote,
+            WorkArrangement.AnywhereFullRemote,
             requiredSkills ?? new List<string> { "C#" },
             vacancies,
             expireAt ?? DateTime.UtcNow.AddDays(30)

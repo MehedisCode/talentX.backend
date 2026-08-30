@@ -18,7 +18,7 @@ public class JobTests
         EmploymentType employmentType = EmploymentType.FullTime,
         ExperienceLevel experienceLevel = ExperienceLevel.MidLevel,
         string location = "Dhaka",
-        WorkArrangement workArrangement = WorkArrangement.Remote,
+        WorkArrangement workArrangement = WorkArrangement.AnywhereFullRemote,
         List<string>? requiredSkills = null,
         int vacancies = 2,
         DateTime? expireAt = null
@@ -186,7 +186,7 @@ public class JobTests
         job.UpdateWizardDetails(
             city: "Berlin",
             country: "Germany",
-            minOverlapHours: 4,
+            requiredTimezoneOverlap: "UTC+2",
             responsibilities: "Lead architectural designs and mentor junior engineers."
         );
 
@@ -194,7 +194,7 @@ public class JobTests
 
         job.City.Should().Be("Berlin");
         job.Country.Should().Be("Germany");
-        job.MinOverlapHours.Should().Be(4);
+        job.RequiredTimezoneOverlap.Should().Be("UTC+2");
         job.Responsibilities.Should().Be("Lead architectural designs and mentor junior engineers.");
         job.UpdatedAt.Should().NotBeNull();
         job.UpdatedAt!.Value.Should().BeOnOrAfter(beforeUpdate).And.BeOnOrBefore(afterUpdate);

@@ -31,7 +31,7 @@ public class CreateJobCommandHandlerTests
         EmploymentType.FullTime,
         ExperienceLevel.MidLevel,
         "Dhaka",
-        WorkArrangement.Remote,
+        WorkArrangement.AnywhereFullRemote,
         new List<string> { "C#", "SQL" },
         2,
         DateTime.UtcNow.AddDays(30),
