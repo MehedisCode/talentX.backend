@@ -19,7 +19,7 @@ public class Job : BaseEntity
     public DateTime ExpireAt { get; private set; }
     public string? City { get; private set; }
     public string? Country { get; private set; }
-    public string? RequiredTimezoneOverlap { get; private set; }
+    public short? MinOverlapHours { get; private set; }
     public string? Responsibilities { get; private set; }
 
     private Job() { }
@@ -85,12 +85,12 @@ public class Job : BaseEntity
     public void UpdateWizardDetails(
         string? city,
         string? country,
-        string? requiredTimezoneOverlap,
+        short? minOverlapHours,
         string? responsibilities)
     {
         City = city;
         Country = country;
-        RequiredTimezoneOverlap = requiredTimezoneOverlap;
+        MinOverlapHours = minOverlapHours;
         Responsibilities = responsibilities;
         UpdatedAt = DateTime.UtcNow;
     }

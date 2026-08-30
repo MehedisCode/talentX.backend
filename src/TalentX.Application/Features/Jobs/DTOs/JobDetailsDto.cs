@@ -16,5 +16,5 @@ public class JobDetailsDto
     public DateTime ExpireAt { get; set; }
     public string? City { get; set; }
     public string? Country { get; set; }
-    public string? RequiredTimezoneOverlap { get; set; }
+    public short? MinOverlapHours { get; set; }
 }

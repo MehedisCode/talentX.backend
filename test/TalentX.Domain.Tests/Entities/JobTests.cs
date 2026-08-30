@@ -186,7 +186,7 @@ public class JobTests
         job.UpdateWizardDetails(
             city: "Berlin",
             country: "Germany",
-            requiredTimezoneOverlap: "UTC+2",
+            minOverlapHours: 4,
             responsibilities: "Lead architectural designs and mentor junior engineers."
         );
 
@@ -194,7 +194,7 @@ public class JobTests
 
         job.City.Should().Be("Berlin");
         job.Country.Should().Be("Germany");
-        job.RequiredTimezoneOverlap.Should().Be("UTC+2");
+        job.MinOverlapHours.Should().Be(4);
         job.Responsibilities.Should().Be("Lead architectural designs and mentor junior engineers.");
         job.UpdatedAt.Should().NotBeNull();
         job.UpdatedAt!.Value.Should().BeOnOrAfter(beforeUpdate).And.BeOnOrBefore(afterUpdate);

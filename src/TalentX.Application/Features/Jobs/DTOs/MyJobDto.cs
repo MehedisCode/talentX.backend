@@ -19,5 +19,5 @@ public class MyJobDto
     public DateTime? UpdatedAt { get; set; }
     public string? City { get; set; }
     public string? Country { get; set; }
-    public string? RequiredTimezoneOverlap { get; set; }
+    public short? MinOverlapHours { get; set; }
 }

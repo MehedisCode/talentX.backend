@@ -47,7 +47,7 @@ public class GetMyJobQueryHandler : IRequestHandler<GetMyJobQuery, MyJobDto>
             UpdatedAt = job.UpdatedAt,
             City = job.City,
             Country = job.Country,
-            RequiredTimezoneOverlap = job.RequiredTimezoneOverlap
+            MinOverlapHours = job.MinOverlapHours
         };
     }
 }

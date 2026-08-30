@@ -39,7 +39,7 @@ public class JobRulesTests
             job.UpdateWizardDetails(
                 null,
                 null,
-                "UTC-5 to UTC+3",
+                4,
                 null
             );
         }
@@ -271,13 +271,13 @@ public class JobRulesTests
     }
 
     [Fact]
-    public void EnsurePublishable_AnywhereFullRemoteWithoutTimezoneOverlap_ThrowsAndListsRequiredTimezoneOverlap()
+    public void EnsurePublishable_AnywhereFullRemoteWithoutMinOverlapHours_ThrowsAndListsMinOverlapHours()
     {
         var job = ValidDraft(workArrangement: WorkArrangement.AnywhereFullRemote);
         job.UpdateWizardDetails(null, null, null, null);
 
         var act = () => JobRules.EnsurePublishable(job);
 
-        act.Should().Throw<InvalidOperationException>().WithMessage("*RequiredTimezoneOverlap*");
+        act.Should().Throw<InvalidOperationException>().WithMessage("*MinOverlapHours*");
     }
 }

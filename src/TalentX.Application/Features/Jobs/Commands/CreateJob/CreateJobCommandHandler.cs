@@ -44,7 +44,7 @@ public class CreateJobCommandHandler : IRequestHandler<CreateJobCommand, Guid>
         job.UpdateWizardDetails(
             request.City != null ? JobRules.NormalizeText(request.City) : null,
             request.Country != null ? JobRules.NormalizeText(request.Country) : null,
-            request.RequiredTimezoneOverlap != null ? JobRules.NormalizeText(request.RequiredTimezoneOverlap) : null,
+            request.MinOverlapHours,
             null
         );
 

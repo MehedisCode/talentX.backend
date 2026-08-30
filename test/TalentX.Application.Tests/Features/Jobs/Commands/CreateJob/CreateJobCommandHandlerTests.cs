@@ -38,7 +38,7 @@ public class CreateJobCommandHandlerTests
         publish,
         City: null,
         Country: null,
-        RequiredTimezoneOverlap: "UTC-5 to UTC+3"
+        MinOverlapHours: 4
     );
 
     [Fact]

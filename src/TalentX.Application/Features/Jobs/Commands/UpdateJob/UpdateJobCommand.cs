@@ -18,5 +18,5 @@ public record UpdateJobCommand(
     bool Publish = false,
     string? City = null,
     string? Country = null,
-    string? RequiredTimezoneOverlap = null
+    short? MinOverlapHours = null
 ) : IRequest;

@@ -73,11 +73,10 @@ public class UpdateJobCommandValidator : AbstractValidator<UpdateJobCommand>
             .MaximumLength(100).WithMessage("Country must not exceed 100 characters.")
             .When(v => v.WorkArrangement is WorkArrangement.OnSite or WorkArrangement.Hybrid);
 
-        RuleFor(v => v.RequiredTimezoneOverlap)
-            .Must((cmd, tz) => !IsRemoteTimezoneRequired(cmd.WorkArrangement)
-                || (!string.IsNullOrWhiteSpace(tz) && tz.Trim().Length >= 2))
-            .WithMessage("Timezone overlap is required for Remote roles.")
-            .MaximumLength(200).WithMessage("Timezone overlap must not exceed 200 characters.")
+        RuleFor(v => v.MinOverlapHours)
+            .Must((cmd, hours) => !IsRemoteTimezoneRequired(cmd.WorkArrangement)
+                || (hours.HasValue && hours.Value > 0))
+            .WithMessage("Minimum overlap hours is required for Remote roles.")
             .When(v => v.WorkArrangement is WorkArrangement.AnywhereFullRemote);
     }
 

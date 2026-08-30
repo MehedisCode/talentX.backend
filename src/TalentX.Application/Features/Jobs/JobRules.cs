@@ -65,8 +65,8 @@ public static class JobRules
 
         if (IsRemoteTimezoneRequired(job.WorkArrangement))
         {
-            if (string.IsNullOrWhiteSpace(job.RequiredTimezoneOverlap))
-                missing.Add(nameof(job.RequiredTimezoneOverlap));
+            if (!job.MinOverlapHours.HasValue || job.MinOverlapHours.Value <= 0)
+                missing.Add(nameof(job.MinOverlapHours));
         }
 
         if (missing.Count > 0)

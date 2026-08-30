@@ -17,5 +17,5 @@ public record CreateJobCommand(
     bool Publish,
     string? City = null,
     string? Country = null,
-    string? RequiredTimezoneOverlap = null
+    short? MinOverlapHours = null
 ) : IRequest<Guid>;

@@ -40,7 +40,7 @@ public class JobConfiguration : IEntityTypeConfiguration<Job>
 
         builder.Property(job => job.City).HasMaxLength(100);
         builder.Property(job => job.Country).HasMaxLength(100);
-        builder.Property(job => job.RequiredTimezoneOverlap).HasMaxLength(200);
+        builder.Property(job => job.MinOverlapHours);
         builder.Property(job => job.Responsibilities);
 
         var stringListComparer = new ValueComparer<List<string>>(

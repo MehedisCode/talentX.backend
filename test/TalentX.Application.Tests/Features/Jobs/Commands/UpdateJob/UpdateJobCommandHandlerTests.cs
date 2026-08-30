@@ -44,7 +44,7 @@ public class UpdateJobCommandHandlerTests
         job.UpdateWizardDetails(
             null,
             null,
-            "UTC-5 to UTC+3",
+            4,
             null
         );
 
