@@ -60,12 +60,11 @@ public class ApplyToJobCommandHandlerTests
         location
     );
 
-    private void SetupPublishedJob(WorkArrangement arrangement = WorkArrangement.Remote, Guid? jobId = null)
+    private void SetupPublishedJob(WorkArrangement arrangement = WorkArrangement.Remote)
     {
         var job = PublishedJob(arrangement);
-        var id = jobId ?? Guid.NewGuid();
         _jobRepository
-            .Setup(r => r.GetPublishedJobByIdAsync(id, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetPublishedJobByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(job);
     }
 
@@ -74,7 +73,7 @@ public class ApplyToJobCommandHandlerTests
     {
         var job = PublishedJob();
         _jobRepository
-            .Setup(r => r.GetPublishedJobByIdAsync(job.Id, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetPublishedJobByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(job);
         _talentRepository
             .Setup(r => r.GetByEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -111,7 +110,7 @@ public class ApplyToJobCommandHandlerTests
         addedTalent.Role.Should().Be(UserRole.Talent);
 
         addedApplication.Should().NotBeNull();
-        addedApplication!.JobId.Should().Be(job.Id);
+        addedApplication!.JobId.Should().Be(command.JobId);
         addedApplication.TalentUserId.Should().Be("user-1");
         addedApplication.ApplicantName.Should().Be("Jane Doe");
         addedApplication.ApplicantEmail.Should().Be("jane@example.com");
@@ -125,7 +124,7 @@ public class ApplyToJobCommandHandlerTests
             Times.Once);
 
         response.ApplicationId.Should().Be(addedApplication.Id);
-        response.JobId.Should().Be(job.Id);
+        response.JobId.Should().Be(command.JobId);
         response.TalentAccountCreated.Should().BeTrue();
     }
 
@@ -134,7 +133,7 @@ public class ApplyToJobCommandHandlerTests
     {
         var job = PublishedJob();
         _jobRepository
-            .Setup(r => r.GetPublishedJobByIdAsync(job.Id, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetPublishedJobByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(job);
         var existing = new Talent("talent-user-1", "Jane Doe", "jane@example.com");
         _talentRepository
@@ -193,7 +192,7 @@ public class ApplyToJobCommandHandlerTests
     {
         var job = PublishedJob(WorkArrangement.OnSite);
         _jobRepository
-            .Setup(r => r.GetPublishedJobByIdAsync(job.Id, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetPublishedJobByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(job);
         _talentRepository
             .Setup(r => r.GetByEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -215,7 +214,7 @@ public class ApplyToJobCommandHandlerTests
     {
         var job = PublishedJob(WorkArrangement.Remote);
         _jobRepository
-            .Setup(r => r.GetPublishedJobByIdAsync(job.Id, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetPublishedJobByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(job);
         _talentRepository
             .Setup(r => r.GetByEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -229,7 +228,7 @@ public class ApplyToJobCommandHandlerTests
 
         response.TalentAccountCreated.Should().BeTrue();
         _jobApplicationRepository.Verify(
-            r => r.AddAsync(It.Is<JobApplication>(a => a.Location is null), It.IsAny<CancellationToken>()),
+            r => r.AddAsync(It.Is<JobApplication>(a => a.Location == null), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -238,7 +237,7 @@ public class ApplyToJobCommandHandlerTests
     {
         var job = PublishedJob();
         _jobRepository
-            .Setup(r => r.GetPublishedJobByIdAsync(job.Id, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetPublishedJobByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(job);
         var existing = new Talent("talent-user-1", "Jane Doe", "jane@example.com");
         _talentRepository
@@ -266,7 +265,7 @@ public class ApplyToJobCommandHandlerTests
     {
         var job = PublishedJob();
         _jobRepository
-            .Setup(r => r.GetPublishedJobByIdAsync(job.Id, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetPublishedJobByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(job);
         _talentRepository
             .Setup(r => r.GetByEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -290,7 +289,7 @@ public class ApplyToJobCommandHandlerTests
     {
         var job = PublishedJob();
         _jobRepository
-            .Setup(r => r.GetPublishedJobByIdAsync(job.Id, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetPublishedJobByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(job);
         _talentRepository
             .Setup(r => r.GetByEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))

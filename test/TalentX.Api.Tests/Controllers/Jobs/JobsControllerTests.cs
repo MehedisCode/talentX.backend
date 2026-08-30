@@ -154,7 +154,7 @@ public class JobsControllerTests
         var response = new ApplyToJobResponse(Guid.NewGuid(), routeId, false);
         _sender
             .Setup(s => s.Send(It.IsAny<ApplyToJobCommand>(), It.IsAny<CancellationToken>()))
-            .Callback<IRequest, CancellationToken>((req, _) => sentCommand = (ApplyToJobCommand)req)
+            .Callback<IRequest<ApplyToJobResponse>, CancellationToken>((req, _) => sentCommand = (ApplyToJobCommand)req)
             .ReturnsAsync(response);
 
         var result = await _controller.Apply(routeId, command);

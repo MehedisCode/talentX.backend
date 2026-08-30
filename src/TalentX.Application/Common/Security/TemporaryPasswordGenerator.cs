@@ -14,8 +14,8 @@ public static class TemporaryPasswordGenerator
     private const string Digits = "23456789";                     // excludes '0', '1'
     private const string Specials = "!@#$%^&*-_=+";
 
-    private static readonly char[] All =
-        (Lowercase + Uppercase + Digits + Specials).ToCharArray();
+    private static readonly string All =
+        Lowercase + Uppercase + Digits + Specials;
 
     /// <summary>
     /// Generates a temporary password of the requested length. Each generated
