@@ -112,7 +112,7 @@ public class JobsControllerTests
     [Fact]
     public async Task GetJobs_ReturnsOkResult_WithPaginatedList()
     {
-        var paginatedList = new PaginatedList<JobListItemDto>(new List<JobListItemDto>(), 1, 20, 0);
+        var paginatedList = new PaginatedList<JobListItemDto>(new List<JobListItemDto>(), 1, 10, 0);
         _sender.Setup(s => s.Send(It.IsAny<GetPublishedJobsQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(paginatedList);
 
@@ -120,6 +120,37 @@ public class JobsControllerTests
 
         var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
         okResult.Value.Should().BeEquivalentTo(paginatedList);
+    }
+
+    [Fact]
+    public async Task GetJobs_WithFilterParams_SendsQueryWithCorrectFilters()
+    {
+        var paginatedList = new PaginatedList<JobListItemDto>(new List<JobListItemDto>(), 1, 10, 0);
+        GetPublishedJobsQuery? sentQuery = null;
+
+        _sender
+            .Setup(s => s.Send(It.IsAny<GetPublishedJobsQuery>(), It.IsAny<CancellationToken>()))
+            .Callback<IRequest<PaginatedList<JobListItemDto>>, CancellationToken>((req, _) =>
+                sentQuery = (GetPublishedJobsQuery)req)
+            .ReturnsAsync(paginatedList);
+
+        await _controller.GetJobs(
+            keyword: "engineer",
+            location: "Dhaka",
+            employmentType: EmploymentType.FullTime,
+            experienceLevel: ExperienceLevel.SeniorLevel,
+            workArrangement: WorkArrangement.Hybrid,
+            page: 2,
+            pageSize: 10);
+
+        sentQuery.Should().NotBeNull();
+        sentQuery!.Keyword.Should().Be("engineer");
+        sentQuery.Location.Should().Be("Dhaka");
+        sentQuery.EmploymentType.Should().Be(EmploymentType.FullTime);
+        sentQuery.ExperienceLevel.Should().Be(ExperienceLevel.SeniorLevel);
+        sentQuery.WorkArrangement.Should().Be(WorkArrangement.Hybrid);
+        sentQuery.Page.Should().Be(2);
+        sentQuery.PageSize.Should().Be(10);
     }
 
     [Fact]
