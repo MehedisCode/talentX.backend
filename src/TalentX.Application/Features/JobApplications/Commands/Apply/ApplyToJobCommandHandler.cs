@@ -73,7 +73,7 @@ public class ApplyToJobCommandHandler : IRequestHandler<ApplyToJobCommand, Apply
         {
             temporaryPassword = TemporaryPasswordGenerator.Generate();
 
-            var createResult = await _identityService.CreateApplicationUserAsync(email, temporaryPassword, UserRole.Talent);
+            var createResult = await _identityService.CreateApplicationUserAsync(email, temporaryPassword, UserRole.Guest);
             if (!createResult.Success || createResult.Data is null)
             {
                 throw new ConflictException(
