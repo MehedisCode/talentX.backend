@@ -5,6 +5,7 @@ using TalentX.Application.Features.Jobs.Commands.UpdateJob;
 using TalentX.Application.Features.Jobs.Queries.GetJobDetails;
 using TalentX.Application.Features.Jobs.Queries.GetMyJob;
 using TalentX.Application.Features.Jobs.Queries.GetPublishedJobs;
+using TalentX.Domain.Enums;
 using TalentX.Application.Features.JobApplications.Commands.Apply;
 
 namespace TalentX.API.Controllers;
@@ -28,13 +29,28 @@ public class JobsController : BaseApiController
         await Sender.Send(command with { Id = id });
         return NoContent();
     }
+
     [HttpGet]
     public async Task<IActionResult> GetJobs(
+        [FromQuery] string? keyword = null,
+        [FromQuery] string? location = null,
+        [FromQuery] EmploymentType? employmentType = null,
+        [FromQuery] ExperienceLevel? experienceLevel = null,
+        [FromQuery] WorkArrangement? workArrangement = null,
         [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 20,
+        [FromQuery] int pageSize = 10,
         CancellationToken cancellationToken = default)
     {
-        var result = await Sender.Send(new GetPublishedJobsQuery(page, pageSize), cancellationToken);
+        var query = new GetPublishedJobsQuery(
+            Keyword: keyword,
+            Location: location,
+            EmploymentType: employmentType,
+            ExperienceLevel: experienceLevel,
+            WorkArrangement: workArrangement,
+            Page: page,
+            PageSize: pageSize);
+
+        var result = await Sender.Send(query, cancellationToken);
         return Ok(result);
     }
 
@@ -44,7 +60,7 @@ public class JobsController : BaseApiController
         var job = await Sender.Send(new GetJobDetailsQuery(id), cancellationToken);
         return Ok(job);
     }
-    
+
     [HttpGet("mine/{id:guid}")]
     [Authorize(Roles = "Employer")]
     public async Task<IActionResult> GetMyJob(Guid id, CancellationToken cancellationToken)
