@@ -20,18 +20,26 @@ public class ApplyToJobCommandHandlerTests
     private readonly Mock<IJobApplicationRepository> _jobApplicationRepository = new();
     private readonly Mock<IIdentityService> _identityService = new();
     private readonly Mock<IEmailService> _emailService = new();
+    private readonly Mock<IFileStorageService> _fileStorageService = new();
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
+    private readonly Mock<Microsoft.Extensions.Logging.ILogger<ApplyToJobCommandHandler>> _logger = new();
     private readonly ApplyToJobCommandHandler _handler;
 
     public ApplyToJobCommandHandlerTests()
     {
+        _fileStorageService
+            .Setup(s => s.SaveAsync(It.IsAny<IUploadedFile>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IUploadedFile _, string key, CancellationToken _) => key);
+
         _handler = new ApplyToJobCommandHandler(
             _jobRepository.Object,
             _talentRepository.Object,
             _jobApplicationRepository.Object,
             _identityService.Object,
             _emailService.Object,
-            _unitOfWork.Object);
+            _fileStorageService.Object,
+            _unitOfWork.Object,
+            _logger.Object);
     }
 
     private static Job PublishedJob(WorkArrangement arrangement = WorkArrangement.Remote) =>
@@ -49,11 +57,21 @@ public class ApplyToJobCommandHandlerTests
             DateTime.UtcNow.AddDays(30)
         );
 
-    private static ApplyToJobCommand ValidCommand(string? location = "Remote - anywhere") => new(
+    private static Mock<IUploadedFile> MockResumeFile(string fileName = "resume.pdf")
+    {
+        var fileMock = new Mock<IUploadedFile>();
+        fileMock.Setup(f => f.FileName).Returns(fileName);
+        fileMock.Setup(f => f.Length).Returns(1024);
+        fileMock.Setup(f => f.ContentType).Returns("application/pdf");
+        fileMock.Setup(f => f.OpenReadStream()).Returns(new MemoryStream([0x25, 0x50, 0x44, 0x46]));
+        return fileMock;
+    }
+
+    private static ApplyToJobCommand ValidCommand(string? location = "Remote - anywhere", IUploadedFile? file = null) => new(
         Guid.NewGuid(),
         "Jane Doe",
         "Jane@Example.com ",
-        "uploads/1234/resume.pdf",
+        file ?? MockResumeFile().Object,
         "I am excited to apply for this role.",
         85000,
         6,
@@ -115,7 +133,8 @@ public class ApplyToJobCommandHandlerTests
         addedApplication.ApplicantName.Should().Be("Jane Doe");
         addedApplication.ApplicantEmail.Should().Be("jane@example.com");
         addedApplication.Status.Should().Be(ApplicationStatus.Applied);
-        addedApplication.ResumeStorageKey.Should().Be(command.ResumeStorageKey);
+        addedApplication.ResumeStorageKey.Should().StartWith("resumes/user-1/");
+        addedApplication.ResumeStorageKey.Should().EndWith("resume.pdf");
         addedApplication.ExpectedSalary.Should().Be(command.ExpectedSalary);
         addedApplication.Location.Should().Be(command.Location);
 

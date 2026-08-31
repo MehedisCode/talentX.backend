@@ -171,11 +171,16 @@ public class JobsControllerTests
     public async Task Apply_SendsTheCommandWithTheRouteIdApplied()
     {
         var routeId = Guid.NewGuid();
-        var command = new ApplyToJobCommand(
-            Guid.NewGuid(),
+        var formFileMock = new Mock<IFormFile>();
+        formFileMock.Setup(f => f.FileName).Returns("resume.pdf");
+        formFileMock.Setup(f => f.Length).Returns(1024);
+        formFileMock.Setup(f => f.ContentType).Returns("application/pdf");
+        formFileMock.Setup(f => f.OpenReadStream()).Returns(new MemoryStream([0x25, 0x50, 0x44, 0x46]));
+
+        var requestDto = new ApplyToJobRequestDto(
             "Jane Doe",
             "jane@example.com",
-            "uploads/1234/resume.pdf",
+            formFileMock.Object,
             "I am excited to apply for this role.",
             85000,
             6,
@@ -188,12 +193,13 @@ public class JobsControllerTests
             .Callback<IRequest<ApplyToJobResponse>, CancellationToken>((req, _) => sentCommand = (ApplyToJobCommand)req)
             .ReturnsAsync(response);
 
-        var result = await _controller.Apply(routeId, command);
+        var result = await _controller.Apply(routeId, requestDto, CancellationToken.None);
 
         var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
         okResult.Value.Should().BeEquivalentTo(response);
         sentCommand.Should().NotBeNull();
         sentCommand!.JobId.Should().Be(routeId);
         sentCommand.ApplicantName.Should().Be("Jane Doe");
+        sentCommand.ResumeFile.FileName.Should().Be("resume.pdf");
     }
 }
