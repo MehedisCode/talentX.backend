@@ -11,7 +11,7 @@ public class LoginCommandHandler
     private readonly ITokenService _tokenService;
 
     public LoginCommandHandler(
-        IIdentityService identityService, 
+        IIdentityService identityService,
         ITokenService tokenService)
     {
         _identityService = identityService;

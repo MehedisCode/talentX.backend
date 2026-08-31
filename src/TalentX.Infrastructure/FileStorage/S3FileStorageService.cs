@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
+using TalentX.Application.Features.Talents;
 
 namespace TalentX.Infrastructure.FileStorage;
 
@@ -34,7 +35,16 @@ public sealed class S3FileStorageService : IFileStorageService
         string storageFileName,
         CancellationToken cancellationToken = default)
     {
-        var objectKey = string.IsNullOrWhiteSpace(_settings.FolderPrefix)
+        // TalentMediaStorageKeyGuard.Categories are deliberately bare, unprefixed keys by
+        // design — they're validated and looked up as "{category}/{userId}/{fileName}"
+        // with no FolderPrefix segment, for all three categories alike. Environment
+        // isolation for these keys is intentionally achieved via a separate bucket per
+        // environment, not via a shared-bucket FolderPrefix scheme, so skipping the
+        // prefix here is not a gap to close.
+        var objectKey = string.IsNullOrWhiteSpace(_settings.FolderPrefix) ||
+                        storageFileName.StartsWith(_settings.FolderPrefix.TrimEnd('/') + "/", StringComparison.OrdinalIgnoreCase) ||
+                        TalentMediaStorageKeyGuard.Categories.Any(category =>
+                            storageFileName.StartsWith(category + "/", StringComparison.OrdinalIgnoreCase))
             ? storageFileName
             : $"{_settings.FolderPrefix.TrimEnd('/')}/{storageFileName}";
 

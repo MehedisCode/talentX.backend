@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using TalentX.API.Swagger;
 using TalentX.Application;
+using TalentX.Application.Identity.Services;
 using TalentX.Infrastructure;
 using TalentX.Infrastructure.Identity.Seed;
 using TalentX.Infrastructure.Middlewares;
@@ -60,7 +61,8 @@ builder.Services.AddCors(options =>
         policy.WithOrigins(allowedOrigins)
               .AllowAnyHeader()
               .AllowAnyMethod()
-              .AllowCredentials();
+              .AllowCredentials()
+              .WithExposedHeaders("ETag");
     });
 });
 

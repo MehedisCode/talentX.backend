@@ -6,6 +6,7 @@ using TalentX.Application.Features.Jobs.Queries.GetJobDetails;
 using TalentX.Application.Features.Jobs.Queries.GetMyJob;
 using TalentX.Application.Features.Jobs.Queries.GetPublishedJobs;
 using TalentX.Domain.Enums;
+using TalentX.Application.Features.JobApplications.Commands.Apply;
 
 namespace TalentX.API.Controllers;
 
@@ -66,5 +67,13 @@ public class JobsController : BaseApiController
     {
         var job = await Sender.Send(new GetMyJobQuery(id), cancellationToken);
         return Ok(job);
+    }
+
+    [HttpPost("{id:guid}/apply")]
+    [AllowAnonymous]
+    public async Task<IActionResult> Apply(Guid id, [FromBody] ApplyToJobCommand command)
+    {
+        var response = await Sender.Send(command with { JobId = id });
+        return Ok(response);
     }
 }
