@@ -34,11 +34,7 @@ public sealed class JobRepository : RepositoryBase<Job>, IJobRepository
             query = query.Where(j =>
                 j.Title.ToLower().Contains(kw) ||
                 j.CompanyName.ToLower().Contains(kw) ||
-                j.Description.ToLower().Contains(kw) ||
-                j.Location.ToLower().Contains(kw) ||
-                (j.City != null && j.City.ToLower().Contains(kw)) ||
-                (j.Country != null && j.Country.ToLower().Contains(kw)) ||
-                (j.Responsibilities != null && j.Responsibilities.ToLower().Contains(kw)));
+                j.Description.ToLower().Contains(kw));
         }
 
         if (!string.IsNullOrWhiteSpace(location))
