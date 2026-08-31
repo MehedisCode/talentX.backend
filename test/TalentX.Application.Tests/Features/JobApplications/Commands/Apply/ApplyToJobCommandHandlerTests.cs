@@ -101,7 +101,7 @@ public class ApplyToJobCommandHandlerTests
             s => s.CreateApplicationUserAsync(
                 "jane@example.com",
                 It.IsAny<string>(),
-                UserRole.Talent),
+                UserRole.Guest),
             Times.Once);
 
         addedTalent.Should().NotBeNull();
@@ -202,7 +202,7 @@ public class ApplyToJobCommandHandlerTests
 
         var act = () => _handler.Handle(command, CancellationToken.None);
 
-        await act.Should().ThrowAsync<FluentValidation.ValidationException>();
+        await act.Should().ThrowAsync<TalentX.Application.Common.Exceptions.ValidationException>();
         _identityService.Verify(
             s => s.CreateApplicationUserAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<UserRole>()),
             Times.Never);

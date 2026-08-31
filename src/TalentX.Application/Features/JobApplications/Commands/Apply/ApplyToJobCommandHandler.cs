@@ -42,13 +42,7 @@ public class ApplyToJobCommandHandler : IRequestHandler<ApplyToJobCommand, Apply
 
         if (job.WorkArrangement != WorkArrangement.Remote && string.IsNullOrWhiteSpace(request.Location))
         {
-            throw new FluentValidation.ValidationException(
-                new[]
-                {
-                    new FluentValidation.Results.ValidationFailure(
-                        nameof(ApplyToJobCommand.Location),
-                        "Location is required for non-remote jobs.")
-                });
+            throw new ValidationException("Location is required for non-remote jobs.");
         }
 
         var name = request.ApplicantName.Trim();
