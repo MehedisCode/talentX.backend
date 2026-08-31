@@ -1,4 +1,5 @@
 using MediatR;
+using TalentX.Application.Common.Interfaces;
 
 namespace TalentX.Application.Features.JobApplications.Commands.Apply;
 
@@ -6,7 +7,7 @@ public record ApplyToJobCommand(
     Guid JobId,
     string ApplicantName,
     string ApplicantEmail,
-    string ResumeStorageKey,
+    IUploadedFile ResumeFile,
     string CoverLetter,
     decimal ExpectedSalary,
     decimal TotalYearsExperience,
