@@ -12,6 +12,8 @@ public static class FileStorageStartup
         this IServiceCollection services,
         IConfiguration configuration)
     {
+        services.AddSingleton<ILocalStoragePathProvider, LocalStoragePathProvider>();
+
         var provider = Environment.GetEnvironmentVariable("FILE_STORAGE_PROVIDER")
             ?? configuration["FILE_STORAGE_PROVIDER"]
             ?? configuration["FileStorage:Provider"]
@@ -45,20 +47,20 @@ public static class FileStorageStartup
                 options.FolderPrefix = folderPrefix;
             });
 
-            // Register IAmazonS3 as singleton — it owns the HTTP connection pool
-            // and is thread-safe. Credentials come from the AWS SDK default
-            // credential provider chain (env vars → ~/.aws → IAM role).
-            services.AddSingleton<IAmazonS3>(sp =>
+            services.AddSingleton<IAmazonS3>(serviceProvider =>
             {
                 return new AmazonS3Client(RegionEndpoint.GetBySystemName(region));
             });
 
             services.AddScoped<IFileStorageService, S3FileStorageService>();
+            services.AddScoped<IPresignedUrlService, S3PresignedUrlService>();
+            services.AddScoped<IMultipartStorageService, S3MultipartStorageService>();
         }
         else
         {
-            // Default: local disk storage (development / fallback)
             services.AddScoped<IFileStorageService, LocalFileStorageService>();
+            services.AddScoped<IPresignedUrlService, LocalPresignedUrlService>();
+            services.AddScoped<IMultipartStorageService, LocalMultipartStorageService>();
         }
 
         return services;

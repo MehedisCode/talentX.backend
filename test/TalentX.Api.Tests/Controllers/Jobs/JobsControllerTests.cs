@@ -11,6 +11,7 @@ using TalentX.Application.Features.Jobs.Commands.UpdateJob;
 using TalentX.Application.Features.Jobs.DTOs;
 using TalentX.Application.Features.Jobs.Queries.GetJobDetails;
 using TalentX.Application.Features.Jobs.Queries.GetPublishedJobs;
+using TalentX.Application.Features.JobApplications.Commands.Apply;
 using TalentX.Domain.Enums;
 using Xunit;
 
@@ -111,7 +112,7 @@ public class JobsControllerTests
     [Fact]
     public async Task GetJobs_ReturnsOkResult_WithPaginatedList()
     {
-        var paginatedList = new PaginatedList<JobListItemDto>(new List<JobListItemDto>(), 1, 20, 0);
+        var paginatedList = new PaginatedList<JobListItemDto>(new List<JobListItemDto>(), 1, 10, 0);
         _sender.Setup(s => s.Send(It.IsAny<GetPublishedJobsQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(paginatedList);
 
@@ -119,6 +120,37 @@ public class JobsControllerTests
 
         var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
         okResult.Value.Should().BeEquivalentTo(paginatedList);
+    }
+
+    [Fact]
+    public async Task GetJobs_WithFilterParams_SendsQueryWithCorrectFilters()
+    {
+        var paginatedList = new PaginatedList<JobListItemDto>(new List<JobListItemDto>(), 1, 10, 0);
+        GetPublishedJobsQuery? sentQuery = null;
+
+        _sender
+            .Setup(s => s.Send(It.IsAny<GetPublishedJobsQuery>(), It.IsAny<CancellationToken>()))
+            .Callback<IRequest<PaginatedList<JobListItemDto>>, CancellationToken>((req, _) =>
+                sentQuery = (GetPublishedJobsQuery)req)
+            .ReturnsAsync(paginatedList);
+
+        await _controller.GetJobs(
+            keyword: "engineer",
+            location: "Dhaka",
+            employmentType: EmploymentType.FullTime,
+            experienceLevel: ExperienceLevel.SeniorLevel,
+            workArrangement: WorkArrangement.Hybrid,
+            page: 2,
+            pageSize: 10);
+
+        sentQuery.Should().NotBeNull();
+        sentQuery!.Keyword.Should().Be("engineer");
+        sentQuery.Location.Should().Be("Dhaka");
+        sentQuery.EmploymentType.Should().Be(EmploymentType.FullTime);
+        sentQuery.ExperienceLevel.Should().Be(ExperienceLevel.SeniorLevel);
+        sentQuery.WorkArrangement.Should().Be(WorkArrangement.Hybrid);
+        sentQuery.Page.Should().Be(2);
+        sentQuery.PageSize.Should().Be(10);
     }
 
     [Fact]
@@ -133,5 +165,35 @@ public class JobsControllerTests
 
         var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
         okResult.Value.Should().BeEquivalentTo(jobDetails);
+    }
+
+    [Fact]
+    public async Task Apply_SendsTheCommandWithTheRouteIdApplied()
+    {
+        var routeId = Guid.NewGuid();
+        var command = new ApplyToJobCommand(
+            Guid.NewGuid(),
+            "Jane Doe",
+            "jane@example.com",
+            "uploads/1234/resume.pdf",
+            "I am excited to apply for this role.",
+            85000,
+            6,
+            "Dhaka"
+        );
+        ApplyToJobCommand? sentCommand = null;
+        var response = new ApplyToJobResponse(Guid.NewGuid(), routeId, false);
+        _sender
+            .Setup(s => s.Send(It.IsAny<ApplyToJobCommand>(), It.IsAny<CancellationToken>()))
+            .Callback<IRequest<ApplyToJobResponse>, CancellationToken>((req, _) => sentCommand = (ApplyToJobCommand)req)
+            .ReturnsAsync(response);
+
+        var result = await _controller.Apply(routeId, command);
+
+        var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
+        okResult.Value.Should().BeEquivalentTo(response);
+        sentCommand.Should().NotBeNull();
+        sentCommand!.JobId.Should().Be(routeId);
+        sentCommand.ApplicantName.Should().Be("Jane Doe");
     }
 }

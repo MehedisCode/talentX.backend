@@ -8,6 +8,8 @@ using TalentX.Application.Features.Jobs.Queries.GetJobDetails;
 using TalentX.Application.Features.Jobs.Queries.GetMyJob;
 using TalentX.Application.Features.Jobs.Queries.GetMyJobs;
 using TalentX.Application.Features.Jobs.Queries.GetPublishedJobs;
+using TalentX.Domain.Enums;
+using TalentX.Application.Features.JobApplications.Commands.Apply;
 
 namespace TalentX.API.Controllers;
 
@@ -19,7 +21,7 @@ public class JobsController : BaseApiController
     /// Creates a new job posting (draft or published).
     /// </summary>
     [HttpPost]
-    [Authorize(Roles = "Employer")]
+    [Authorize(Roles = $"{nameof(UserRole.Employer)}")]
     public async Task<ActionResult<Guid>> CreateJob([FromBody] CreateJobCommand command)
     {
         var jobId = await Sender.Send(command);
@@ -30,23 +32,34 @@ public class JobsController : BaseApiController
     /// Updates an existing job posting.
     /// </summary>
     [HttpPatch("{id}")]
-    [Authorize(Roles = "Employer")]
+    [Authorize(Roles = $"{nameof(UserRole.Employer)}")]
     public async Task<IActionResult> UpdateJob(Guid id, [FromBody] UpdateJobCommand command)
     {
         await Sender.Send(command with { Id = id });
         return NoContent();
     }
 
-    /// <summary>
-    /// Gets all published jobs with pagination.
-    /// </summary>
     [HttpGet]
     public async Task<IActionResult> GetJobs(
+        [FromQuery] string? keyword = null,
+        [FromQuery] string? location = null,
+        [FromQuery] EmploymentType? employmentType = null,
+        [FromQuery] ExperienceLevel? experienceLevel = null,
+        [FromQuery] WorkArrangement? workArrangement = null,
         [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 20,
+        [FromQuery] int pageSize = 10,
         CancellationToken cancellationToken = default)
     {
-        var result = await Sender.Send(new GetPublishedJobsQuery(page, pageSize), cancellationToken);
+        var query = new GetPublishedJobsQuery(
+            Keyword: keyword,
+            Location: location,
+            EmploymentType: employmentType,
+            ExperienceLevel: experienceLevel,
+            WorkArrangement: workArrangement,
+            Page: page,
+            PageSize: pageSize);
+
+        var result = await Sender.Send(query, cancellationToken);
         return Ok(result);
     }
 
@@ -59,12 +72,8 @@ public class JobsController : BaseApiController
         var job = await Sender.Send(new GetJobDetailsQuery(id), cancellationToken);
         return Ok(job);
     }
-    
-    /// <summary>
-    /// Gets a specific job belonging to the current employer.
-    /// </summary>
     [HttpGet("mine/{id:guid}")]
-    [Authorize(Roles = "Employer")]
+    [Authorize(Roles = $"{nameof(UserRole.Employer)}")]
     public async Task<IActionResult> GetMyJob(Guid id, CancellationToken cancellationToken)
     {
         var job = await Sender.Send(new GetMyJobQuery(id), cancellationToken);
@@ -75,7 +84,7 @@ public class JobsController : BaseApiController
     /// Gets all jobs belonging to the current employer.
     /// </summary>
     [HttpGet("mine")]
-    [Authorize(Roles = "Employer")]
+    [Authorize(Roles = $"{nameof(UserRole.Employer)}")]
     public async Task<IActionResult> GetMyJobs(CancellationToken cancellationToken)
     {
         var jobs = await Sender.Send(new GetMyJobsQuery(), cancellationToken);
@@ -87,7 +96,7 @@ public class JobsController : BaseApiController
     /// Used in the multi-step wizard to assist employers.
     /// </summary>
     [HttpPost("generate-description")]
-    [Authorize(Roles = "Employer")]
+    [Authorize(Roles = $"{nameof(UserRole.Employer)}")]
     public async Task<IActionResult> GenerateDescription(
         [FromBody] GenerateJobDescriptionCommand command,
         CancellationToken cancellationToken)
@@ -101,7 +110,7 @@ public class JobsController : BaseApiController
     /// Used in the multi-step wizard to assist employers.
     /// </summary>
     [HttpPost("generate-skills")]
-    [Authorize(Roles = "Employer")]
+    [Authorize(Roles = $"{nameof(UserRole.Employer)}")]
     public async Task<IActionResult> GenerateSkills(
         [FromBody] GenerateSkillsCommand command,
         CancellationToken cancellationToken)
@@ -109,5 +118,12 @@ public class JobsController : BaseApiController
         var result = await Sender.Send(command, cancellationToken);
         return Ok(result);
     }
-}
 
+    [HttpPost("{id:guid}/apply")]
+    [AllowAnonymous]
+    public async Task<IActionResult> Apply(Guid id, [FromBody] ApplyToJobCommand command)
+    {
+        var response = await Sender.Send(command with { JobId = id });
+        return Ok(response);
+    }
+}

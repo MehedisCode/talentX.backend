@@ -47,10 +47,21 @@ public static class DatabaseInitializer
 
     private static async Task SeedJobsAsync(ApplicationDbContext db)
     {
-        if (await db.Jobs.AnyAsync())
-            return;
+        var seedJobs = JobSeedData.GetJobs();
+        var existingKeys = await db.Jobs
+            .Select(j => j.Title + "___" + j.CompanyName)
+            .ToListAsync();
 
-        db.Jobs.AddRange(JobSeedData.GetJobs());
-        await db.SaveChangesAsync();
+        var existingSet = new HashSet<string>(existingKeys, StringComparer.OrdinalIgnoreCase);
+
+        var newJobs = seedJobs
+            .Where(j => !existingSet.Contains(j.Title + "___" + j.CompanyName))
+            .ToList();
+
+        if (newJobs.Count > 0)
+        {
+            db.Jobs.AddRange(newJobs);
+            await db.SaveChangesAsync();
+        }
     }
 }

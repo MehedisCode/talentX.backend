@@ -21,7 +21,16 @@ public class GetPublishedJobsQueryHandler : IRequestHandler<GetPublishedJobsQuer
     {
         var (page, pageSize) = PaginationRequest.Normalize(request.Page, request.PageSize);
 
-        var jobs = await _unitOfWork.Jobs.GetPublishedJobsAsync(page, pageSize, cancellationToken);
+        var jobs = await _unitOfWork.Jobs.GetPublishedJobsAsync(
+            page,
+            pageSize,
+            cancellationToken,
+            keyword: request.Keyword,
+            location: request.Location,
+            employmentType: request.EmploymentType,
+            experienceLevel: request.ExperienceLevel,
+            workArrangement: request.WorkArrangement);
+
         var items = _mapper.Map<List<JobListItemDto>>(jobs.Items);
 
         return new PaginatedList<JobListItemDto>(items, jobs.Page, jobs.PageSize, jobs.TotalCount);

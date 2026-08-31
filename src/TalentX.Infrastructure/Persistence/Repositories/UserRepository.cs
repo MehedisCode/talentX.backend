@@ -20,4 +20,17 @@ public class UserRepository : IUserRepository
             .AsNoTracking()
             .FirstOrDefaultAsync(u => u.Email == email);
     }
+
+    public async Task<User?> GetByUserIdAsync(string userId)
+    {
+        return await _context.DomainUsers
+            .AsNoTracking()
+            .FirstOrDefaultAsync(u => u.UserId == userId);
+    }
+
+    public void Update(User user)
+    {
+        _context.DomainUsers.Update(user);
+    }
 }
+

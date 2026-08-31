@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using TalentX.Application.Features.Auth.ChangePassword;
 using TalentX.Application.Features.Auth.CurrentUser;
 using TalentX.Application.Features.Auth.Login;
 using TalentX.Application.Features.Auth.Logout;
@@ -56,7 +57,7 @@ public class AuthController : BaseApiController
         return Ok();
     }
 
-    [Authorize]
+    [Authorize(Roles = $"{nameof(UserRole.Employer)},{nameof(UserRole.Talent)},{nameof(UserRole.Guest)}")]
     [HttpGet("user")]
     public async Task<IActionResult> CurrentUser()
     {
@@ -67,4 +68,17 @@ public class AuthController : BaseApiController
 
         return Ok(result.Data);
     }
+
+    [Authorize(Roles = $"{nameof(UserRole.Employer)},{nameof(UserRole.Talent)},{nameof(UserRole.Guest)}")]    
+    [HttpPost("change-password")]
+    public async Task<IActionResult> ChangePassword(ChangePasswordCommand command)
+    {
+        var result = await Sender.Send(command);
+
+        if (!result.Success)
+            return BadRequest(result.Errors);
+
+        return Ok(new { message = "Password changed successfully." });
+    }
 }
+
