@@ -11,6 +11,7 @@ using TalentX.Application.Features.Jobs.Commands.UpdateJob;
 using TalentX.Application.Features.Jobs.DTOs;
 using TalentX.Application.Features.Jobs.Queries.GetJobDetails;
 using TalentX.Application.Features.Jobs.Queries.GetPublishedJobs;
+using TalentX.Application.Features.JobApplications.Commands.Apply;
 using TalentX.Domain.Enums;
 using Xunit;
 
@@ -133,5 +134,35 @@ public class JobsControllerTests
 
         var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
         okResult.Value.Should().BeEquivalentTo(jobDetails);
+    }
+
+    [Fact]
+    public async Task Apply_SendsTheCommandWithTheRouteIdApplied()
+    {
+        var routeId = Guid.NewGuid();
+        var command = new ApplyToJobCommand(
+            Guid.NewGuid(),
+            "Jane Doe",
+            "jane@example.com",
+            "uploads/1234/resume.pdf",
+            "I am excited to apply for this role.",
+            85000,
+            6,
+            "Dhaka"
+        );
+        ApplyToJobCommand? sentCommand = null;
+        var response = new ApplyToJobResponse(Guid.NewGuid(), routeId, false);
+        _sender
+            .Setup(s => s.Send(It.IsAny<ApplyToJobCommand>(), It.IsAny<CancellationToken>()))
+            .Callback<IRequest<ApplyToJobResponse>, CancellationToken>((req, _) => sentCommand = (ApplyToJobCommand)req)
+            .ReturnsAsync(response);
+
+        var result = await _controller.Apply(routeId, command);
+
+        var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
+        okResult.Value.Should().BeEquivalentTo(response);
+        sentCommand.Should().NotBeNull();
+        sentCommand!.JobId.Should().Be(routeId);
+        sentCommand.ApplicantName.Should().Be("Jane Doe");
     }
 }

@@ -18,4 +18,14 @@ public interface IEmailService
         string otpCode,
         CancellationToken cancellationToken = default
     );
+
+    /// <summary>
+    /// Sends an email with temporary login credentials to the recipient.
+    /// </summary>
+    Task SendCredentialsEmailAsync(
+        string toEmail,
+        string recipientName,
+        string temporaryPassword,
+        CancellationToken cancellationToken = default
+    );
 }
