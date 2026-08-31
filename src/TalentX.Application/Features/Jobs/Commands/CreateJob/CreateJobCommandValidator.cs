@@ -60,7 +60,8 @@ public class CreateJobCommandValidator : AbstractValidator<CreateJobCommand>
                 .WithMessage("Skill entries must contain at least one letter.");
 
         RuleFor(v => v.ExpireAt)
-            .GreaterThanOrEqualTo(v => DateTime.UtcNow).WithMessage("Expire date must be today or in the future.");
+            .Must(expireAt => expireAt.Date >= DateTime.UtcNow.Date)
+            .WithMessage("Expire date must be today or in the future.");
 
         // Conditional validation for wizard fields based on WorkArrangement
         RuleFor(v => v.City)
