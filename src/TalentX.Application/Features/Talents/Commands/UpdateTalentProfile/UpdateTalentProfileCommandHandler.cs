@@ -37,6 +37,15 @@ public sealed class UpdateTalentProfileCommandHandler : IRequestHandler<UpdateTa
             request.SkillPropositions ?? talent.SkillPropositions
         );
 
+        if (request.TechnicalSkills is not null || request.SoftSkills is not null || request.ToolsAndPlatforms is not null)
+        {
+            talent.UpdateSkills(
+                request.TechnicalSkills ?? talent.TechnicalSkills,
+                request.SoftSkills ?? talent.SoftSkills,
+                request.ToolsAndPlatforms ?? talent.ToolsAndPlatforms
+            );
+        }
+
         _unitOfWork.Talents.Update(talent);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
