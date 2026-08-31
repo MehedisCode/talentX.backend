@@ -28,8 +28,6 @@ public sealed class JobRepository : RepositoryBase<Job>, IJobRepository
             .AsNoTracking()
             .Where(j => j.Status == JobStatus.Published && j.ExpireAt > DateTime.UtcNow);
 
-        // Keyword: case-insensitive match across Title, CompanyName, Description,
-        //          Location, City, Country, Responsibilities
         if (!string.IsNullOrWhiteSpace(keyword))
         {
             var kw = keyword.Trim().ToLower();
@@ -43,7 +41,6 @@ public sealed class JobRepository : RepositoryBase<Job>, IJobRepository
                 (j.Responsibilities != null && j.Responsibilities.ToLower().Contains(kw)));
         }
 
-        // Location: case-insensitive match across Location, City, Country
         if (!string.IsNullOrWhiteSpace(location))
         {
             var loc = location.Trim().ToLower();
@@ -53,7 +50,6 @@ public sealed class JobRepository : RepositoryBase<Job>, IJobRepository
                 (j.Country != null && j.Country.ToLower().Contains(loc)));
         }
 
-        // Enum filters — exact match
         if (employmentType.HasValue)
             query = query.Where(j => j.EmploymentType == employmentType.Value);
 
