@@ -2,11 +2,6 @@ using System.Security.Cryptography;
 
 namespace TalentX.Application.Common.Security;
 
-/// <summary>
-/// Generates cryptographically strong temporary passwords that satisfy the ASP.NET
-/// Core Identity policy (minimum length 8, at least one uppercase, one lowercase,
-/// one digit and one non-alphanumeric character).
-/// </summary>
 public static class TemporaryPasswordGenerator
 {
     private const string Lowercase = "abcdefghijkmnpqrstuvwxyz"; // excludes 'l'
@@ -17,12 +12,6 @@ public static class TemporaryPasswordGenerator
     private static readonly string All =
         Lowercase + Uppercase + Digits + Specials;
 
-    /// <summary>
-    /// Generates a temporary password of the requested length. Each generated
-    /// password is guaranteed to contain at least one character from every
-    /// required class, then shuffled so classes are not clustered.
-    /// </summary>
-    /// <param name="length">Password length. Must be at least 8.</param>
     public static string Generate(int length = 12)
     {
         if (length < 8)
