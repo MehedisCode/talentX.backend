@@ -13,15 +13,18 @@ public sealed class UploadApplicationResumeCommandHandler
 {
     private readonly IFileStorageService _fileStorageService;
     private readonly ICurrentUserService _currentUserService;
+    private readonly IPresignedUrlService _presignedUrlService;
     private readonly ILogger<UploadApplicationResumeCommandHandler> _logger;
 
     public UploadApplicationResumeCommandHandler(
         IFileStorageService fileStorageService,
         ICurrentUserService currentUserService,
+        IPresignedUrlService presignedUrlService,
         ILogger<UploadApplicationResumeCommandHandler> logger)
     {
         _fileStorageService = fileStorageService;
         _currentUserService = currentUserService;
+        _presignedUrlService = presignedUrlService;
         _logger = logger;
     }
 
@@ -30,7 +33,7 @@ public sealed class UploadApplicationResumeCommandHandler
         CancellationToken cancellationToken)
     {
         var userId = _currentUserService.UserId
-            ?? throw new UnauthorizedException("Something went wrong.. Can not find user. ");
+            ?? throw new UnauthorizedException("You must be signed in to upload a resume.");
 
         var sanitizedFileName = TalentMediaStorageKeyGuard.SanitizeFileNameSegment(request.File.FileName);
         var storageKey = TalentMediaStorageKeyGuard.BuildStorageKey(
@@ -48,6 +51,11 @@ public sealed class UploadApplicationResumeCommandHandler
             throw new BadGatewayException("File storage is temporarily unavailable.");
         }
 
-        return new UploadApplicationResumeResponse(storageKey, sanitizedFileName);
+        var resumeDownloadUrl = await _presignedUrlService.CreateDownloadUrlAsync(
+            storageKey,
+            TimeSpan.FromHours(1),
+            cancellationToken);
+
+        return new UploadApplicationResumeResponse(storageKey, sanitizedFileName, resumeDownloadUrl);
     }
 }
