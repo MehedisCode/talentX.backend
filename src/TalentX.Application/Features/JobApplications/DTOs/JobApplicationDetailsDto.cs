@@ -7,6 +7,7 @@ public sealed record JobApplicationDetailsDto(
     string ApplicantName,
     string ApplicantEmail,
     string ResumeStorageKey,
+    string? ResumeDownloadUrl,
     string? CoverLetter,
     decimal? ExpectedSalary,
     decimal? TotalYearsExperience,

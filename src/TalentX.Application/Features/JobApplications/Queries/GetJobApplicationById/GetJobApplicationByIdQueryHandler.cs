@@ -11,13 +11,19 @@ public sealed class GetJobApplicationByIdQueryHandler
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUserService;
+    private readonly IPresignedUrlService _presignedUrlService;
+
+    // Use a 1-hour expiry for the presigned URL
+    private static readonly TimeSpan DownloadUrlExpiry = TimeSpan.FromHours(1);
 
     public GetJobApplicationByIdQueryHandler(
         IUnitOfWork unitOfWork,
-        ICurrentUserService currentUserService)
+        ICurrentUserService currentUserService,
+        IPresignedUrlService presignedUrlService)
     {
         _unitOfWork = unitOfWork;
         _currentUserService = currentUserService;
+        _presignedUrlService = presignedUrlService;
     }
 
     public async Task<JobApplicationDetailsDto> Handle(
@@ -38,12 +44,22 @@ public sealed class GetJobApplicationByIdQueryHandler
                 throw new ForbiddenException("You do not have permission to view this application.");
         }
 
+        string? resumeDownloadUrl = null;
+        if (!string.IsNullOrWhiteSpace(application.ResumeStorageKey))
+        {
+            resumeDownloadUrl = await _presignedUrlService.CreateDownloadUrlAsync(
+                application.ResumeStorageKey,
+                DownloadUrlExpiry,
+                cancellationToken);
+        }
+
         return new JobApplicationDetailsDto(
             application.Id,
             application.JobId,
             application.ApplicantName,
             application.ApplicantEmail,
             application.ResumeStorageKey,
+            resumeDownloadUrl,
             application.CoverLetter,
             application.ExpectedSalary,
             application.TotalYearsExperience,

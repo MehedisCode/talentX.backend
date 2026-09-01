@@ -37,6 +37,7 @@ public class JobApplicationDetailsControllerTests
         "Jane Talent",
         "jane@example.com",
         "resumes/abc_cv.pdf",
+        "https://s3.amazonaws.com/test-bucket/resumes/abc_cv.pdf?signature",
         "I am a great fit.",
         90000m,
         5m,

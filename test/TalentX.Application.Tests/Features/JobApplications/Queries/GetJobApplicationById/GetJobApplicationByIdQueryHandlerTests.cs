@@ -17,6 +17,7 @@ public class GetJobApplicationByIdQueryHandlerTests
     private readonly Mock<IJobApplicationRepository> _jobApplicationRepository = new();
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
     private readonly Mock<ICurrentUserService> _currentUserService = new();
+    private readonly Mock<IPresignedUrlService> _presignedUrlService = new();
     private readonly GetJobApplicationByIdQueryHandler _handler;
 
     public GetJobApplicationByIdQueryHandlerTests()
@@ -24,7 +25,9 @@ public class GetJobApplicationByIdQueryHandlerTests
         _unitOfWork.Setup(u => u.Jobs).Returns(_jobRepository.Object);
         _unitOfWork.Setup(u => u.JobApplications).Returns(_jobApplicationRepository.Object);
         _currentUserService.SetupGet(u => u.UserId).Returns("talent-1");
-        _handler = new GetJobApplicationByIdQueryHandler(_unitOfWork.Object, _currentUserService.Object);
+        _presignedUrlService.Setup(p => p.CreateDownloadUrlAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync("https://s3.amazonaws.com/test-bucket/resumes/abc_cv.pdf?signature");
+        _handler = new GetJobApplicationByIdQueryHandler(_unitOfWork.Object, _currentUserService.Object, _presignedUrlService.Object);
     }
 
     private static Job JobOwnedBy(string employerId)
