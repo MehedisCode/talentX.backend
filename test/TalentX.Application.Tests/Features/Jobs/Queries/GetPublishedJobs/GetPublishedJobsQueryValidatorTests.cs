@@ -15,7 +15,7 @@ public class GetPublishedJobsQueryValidatorTests
         Location: "Dhaka",
         EmploymentType: EmploymentType.FullTime,
         ExperienceLevel: ExperienceLevel.MidLevel,
-        WorkArrangement: WorkArrangement.Remote,
+        WorkArrangement: WorkArrangement.RemoteButAccessible,
         Page: 1,
         PageSize: 20
     );

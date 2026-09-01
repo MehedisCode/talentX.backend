@@ -19,7 +19,7 @@ public sealed class JobApplicationRepositoryTests
         return new ApplicationDbContext(options);
     }
 
-    private static JobApplication NewApplication(Guid? jobId = null, string talentUserId = "talent-1")
+    private static JobApplication NewApplication(Guid? jobId = null, string? talentUserId = "talent-1")
     {
         return new JobApplication(
             jobId ?? Guid.NewGuid(),

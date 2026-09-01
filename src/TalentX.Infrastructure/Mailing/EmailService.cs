@@ -65,6 +65,23 @@ public sealed class EmailService : IEmailService
         DispatchAfterLogging(toEmail, recipientName, "Your TalentX Login Credentials", html);
     }
 
+    public async Task SendVerificationLinkEmailAsync(
+        string toEmail,
+        string recipientName,
+        string verificationUrl,
+        CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation(
+            "[EMAIL] VERIFICATION_LINK dispatch to {RecipientName} <{ToEmail}>: {Url}",
+            recipientName, toEmail, verificationUrl);
+
+        var html = await _razor.CompileRenderAsync(
+            "TalentX.Infrastructure.Mailing.Templates.Emails.VerificationLink",
+            new VerificationLinkEmailModel(recipientName, verificationUrl));
+
+        DispatchAfterLogging(toEmail, recipientName, "Verify Your Email — TalentX", html);
+    }
+
     private void LogDispatch(string kind, string recipientName, string toEmail, string? secret)
     {
         _logger.LogInformation(
