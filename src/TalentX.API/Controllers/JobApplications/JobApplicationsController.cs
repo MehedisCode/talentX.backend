@@ -2,7 +2,10 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using TalentX.Application.Features.JobApplications.Commands.ApplyToJob;
+using TalentX.Application.Features.JobApplications.Commands.UploadApplicationResume;
 using TalentX.Application.Features.JobApplications.Queries.GetMyApplicationStatus;
+using TalentX.Domain.Enums;
+using TalentX.Infrastructure.FileStorage;
 
 namespace TalentX.API.Controllers.JobApplications;
 
@@ -28,5 +31,17 @@ public sealed class JobApplicationsController : BaseApiController
     {
         var result = await Sender.Send(command with { JobId = jobId }, cancellationToken);
         return StatusCode(StatusCodes.Status201Created, result);
+    }
+
+    [HttpPost("upload-application-resume")]
+    [Consumes("multipart/form-data")]
+    [RequestSizeLimit(5 * 1024 * 1024)]
+    public async Task<IActionResult> UploadApplicationResume(
+        IFormFile file,
+        CancellationToken cancellationToken)
+    {
+        var command = new UploadApplicationResumeCommand(new FormFileUploadedFile(file));
+        var result = await Sender.Send(command, cancellationToken);
+        return Ok(result);
     }
 }
