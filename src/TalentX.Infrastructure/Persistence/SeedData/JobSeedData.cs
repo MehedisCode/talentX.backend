@@ -24,7 +24,7 @@ public static class JobSeedData
             Job.Create(
                 "seed-northwind", "Backend Engineer (.NET)", "Northwind Labs",
                 "Own our core API and data layer.",
-                EmploymentType.FullTime, ExperienceLevel.SeniorLevel, "Remote", WorkArrangement.AnywhereFullRemote,
+                EmploymentType.FullTime, ExperienceLevel.SeniorLevel, "Remote", WorkArrangement.FullRemote,
                 new List<string> { "C#", "EF Core", "SQL Server" },
                 1, DateTime.UtcNow.AddMonths(1)
             ),
@@ -38,14 +38,14 @@ public static class JobSeedData
             Job.Create(
                 "seed-northwind", "QA Engineer", "Northwind Labs",
                 "Own quality across our web and API surfaces.",
-                EmploymentType.Contract, ExperienceLevel.EntryLevel, "Remote", WorkArrangement.AnywhereFullRemote,
+                EmploymentType.Contract, ExperienceLevel.EntryLevel, "Remote", WorkArrangement.FullRemote,
                 new List<string> { "Manual Testing", "Cypress" },
                 1, DateTime.UtcNow.AddMonths(1)
             ),
             Job.Create(
                 "seed-acme", "Expired Internship (should NOT appear)", "Acme Inc",
                 "Seeded already-expired to verify the eligibility filter works.",
-                EmploymentType.Internship, ExperienceLevel.EntryLevel, "Remote", WorkArrangement.AnywhereFullRemote,
+                EmploymentType.Internship, ExperienceLevel.EntryLevel, "Remote", WorkArrangement.FullRemote,
                 new List<string> { "Java", "Spring Boot" },
                 1, now.AddDays(-2)
             ),

@@ -48,9 +48,9 @@ public class GetPublishedJobsQueryTests
     [Fact]
     public async Task Handle_ReturnsPaginatedList()
     {
-        var job1 = Job.Create("employer-1", "Job 1", "Co 1", "Desc 1", EmploymentType.FullTime, ExperienceLevel.MidLevel, "Dhaka", WorkArrangement.AnywhereFullRemote, new List<string>(), 1, DateTime.UtcNow.AddDays(10));
+        var job1 = Job.Create("employer-1", "Job 1", "Co 1", "Desc 1", EmploymentType.FullTime, ExperienceLevel.MidLevel, "Dhaka", WorkArrangement.FullRemote, new List<string>(), 1, DateTime.UtcNow.AddDays(10));
         job1.MarkAsPublished();
-        var job2 = Job.Create("employer-1", "Job 2", "Co 2", "Desc 2", EmploymentType.FullTime, ExperienceLevel.MidLevel, "Dhaka", WorkArrangement.AnywhereFullRemote, new List<string>(), 1, DateTime.UtcNow.AddDays(10));
+        var job2 = Job.Create("employer-1", "Job 2", "Co 2", "Desc 2", EmploymentType.FullTime, ExperienceLevel.MidLevel, "Dhaka", WorkArrangement.FullRemote, new List<string>(), 1, DateTime.UtcNow.AddDays(10));
         job2.MarkAsPublished();
 
         var jobs = new List<Job> { job1, job2 };

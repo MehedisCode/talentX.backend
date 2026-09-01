@@ -321,7 +321,7 @@ public class UpdateJobCommandValidatorTests
         var result = _validator.TestValidate(command);
 
         result.ShouldHaveValidationErrorFor(c => c.ExpireAt)
-            .WithErrorMessage("Expire date must be in the future.");
+            .WithErrorMessage("Expire date must be today or in the future.");
     }
 
     [Fact]
@@ -340,5 +340,192 @@ public class UpdateJobCommandValidatorTests
         var result = _validator.TestValidate(EmptyCommand());
 
         result.ShouldNotHaveValidationErrorFor(c => c.ExpireAt);
+    }
+
+    [Fact]
+    public void Validate_OnSiteWithCityAndCountry_HasNoErrors()
+    {
+        var command = EmptyCommand() with
+        {
+            WorkArrangement = WorkArrangement.OnSite,
+            City = "Dhaka",
+            Country = "Bangladesh"
+        };
+
+        var result = _validator.TestValidate(command);
+
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Fact]
+    public void Validate_OnSiteWithNoCity_HasError()
+    {
+        var command = EmptyCommand() with
+        {
+            WorkArrangement = WorkArrangement.OnSite,
+            City = null,
+            Country = "Bangladesh"
+        };
+
+        var result = _validator.TestValidate(command);
+
+        result.ShouldHaveValidationErrorFor(c => c.City);
+    }
+
+    [Fact]
+    public void Validate_OnSiteWithNoCountry_HasError()
+    {
+        var command = EmptyCommand() with
+        {
+            WorkArrangement = WorkArrangement.OnSite,
+            City = "Dhaka",
+            Country = null
+        };
+
+        var result = _validator.TestValidate(command);
+
+        result.ShouldHaveValidationErrorFor(c => c.Country);
+    }
+
+    [Fact]
+    public void Validate_HybridWithEmptyCity_HasError()
+    {
+        var command = EmptyCommand() with
+        {
+            WorkArrangement = WorkArrangement.Hybrid,
+            City = "   ",
+            Country = "Bangladesh"
+        };
+
+        var result = _validator.TestValidate(command);
+
+        result.ShouldHaveValidationErrorFor(c => c.City);
+    }
+
+    [Fact]
+    public void Validate_HybridWithEmptyCountry_HasError()
+    {
+        var command = EmptyCommand() with
+        {
+            WorkArrangement = WorkArrangement.Hybrid,
+            City = "Dhaka",
+            Country = ""
+        };
+
+        var result = _validator.TestValidate(command);
+
+        result.ShouldHaveValidationErrorFor(c => c.Country);
+    }
+
+    [Fact]
+    public void Validate_AnywhereFullRemoteWithNoCity_HasNoCityError()
+    {
+        var command = EmptyCommand() with
+        {
+            WorkArrangement = WorkArrangement.FullRemote,
+            City = null,
+            Country = null
+        };
+
+        var result = _validator.TestValidate(command);
+
+        result.ShouldNotHaveValidationErrorFor(c => c.City);
+        result.ShouldNotHaveValidationErrorFor(c => c.Country);
+    }
+
+    [Fact]
+    public void Validate_AnywhereFullRemoteWithNoMinOverlapHours_HasError()
+    {
+        var command = EmptyCommand() with
+        {
+            WorkArrangement = WorkArrangement.FullRemote,
+            City = null,
+            Country = null,
+            MinOverlapHours = null
+        };
+
+        var result = _validator.TestValidate(command);
+
+        result.ShouldHaveValidationErrorFor(c => c.MinOverlapHours);
+    }
+
+    [Fact]
+    public void Validate_AnywhereFullRemoteWithZeroMinOverlapHours_HasError()
+    {
+        var command = EmptyCommand() with
+        {
+            WorkArrangement = WorkArrangement.FullRemote,
+            City = null,
+            Country = null,
+            MinOverlapHours = 0
+        };
+
+        var result = _validator.TestValidate(command);
+
+        result.ShouldHaveValidationErrorFor(c => c.MinOverlapHours);
+    }
+
+    [Fact]
+    public void Validate_AnywhereFullRemoteWithValidMinOverlapHours_HasNoError()
+    {
+        var command = EmptyCommand() with
+        {
+            WorkArrangement = WorkArrangement.FullRemote,
+            City = null,
+            Country = null,
+            MinOverlapHours = 4
+        };
+
+        var result = _validator.TestValidate(command);
+
+        result.ShouldNotHaveValidationErrorFor(c => c.MinOverlapHours);
+    }
+
+    [Fact]
+    public void Validate_OnSiteWithCityOver100Chars_HasError()
+    {
+        var command = EmptyCommand() with
+        {
+            WorkArrangement = WorkArrangement.OnSite,
+            City = new string('a', 101),
+            Country = "Bangladesh"
+        };
+
+        var result = _validator.TestValidate(command);
+
+        result.ShouldHaveValidationErrorFor(c => c.City)
+            .WithErrorMessage("City must not exceed 100 characters.");
+    }
+
+    [Fact]
+    public void Validate_OnSiteWithCountryOver100Chars_HasError()
+    {
+        var command = EmptyCommand() with
+        {
+            WorkArrangement = WorkArrangement.OnSite,
+            City = "Dhaka",
+            Country = new string('b', 101)
+        };
+
+        var result = _validator.TestValidate(command);
+
+        result.ShouldHaveValidationErrorFor(c => c.Country)
+            .WithErrorMessage("Country must not exceed 100 characters.");
+    }
+
+    [Fact]
+    public void Validate_NullWorkArrangementWithCity_HasNoCityError()
+    {
+        var command = EmptyCommand() with
+        {
+            WorkArrangement = null,
+            City = "Dhaka",
+            Country = "Bangladesh"
+        };
+
+        var result = _validator.TestValidate(command);
+
+        result.ShouldNotHaveValidationErrorFor(c => c.City);
+        result.ShouldNotHaveValidationErrorFor(c => c.Country);
     }
 }

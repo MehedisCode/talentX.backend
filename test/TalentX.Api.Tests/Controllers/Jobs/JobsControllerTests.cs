@@ -44,7 +44,7 @@ public class JobsControllerTests
         EmploymentType.FullTime,
         ExperienceLevel.MidLevel,
         "Dhaka",
-        WorkArrangement.AnywhereFullRemote,
+        WorkArrangement.FullRemote,
         new List<string> { "C#" },
         2,
         DateTime.UtcNow.AddDays(30),

@@ -1,5 +1,5 @@
 using TalentX.Domain.Entities;
-using TalentX.Domain.Enums;
+//using TalentX.Domain.Enums;
 
 namespace TalentX.Application.Features.Jobs;
 
@@ -50,7 +50,7 @@ public static class JobRules
         if (job.Vacancies <= 0)
             missing.Add(nameof(job.Vacancies));
 
-        if (job.ExpireAt <= DateTime.UtcNow)
+        if (job.ExpireAt < DateTime.Now.Date)
             missing.Add(nameof(job.ExpireAt));
 
         // Conditional validation for wizard fields based on WorkArrangement
@@ -81,5 +81,5 @@ public static class JobRules
         a is WorkArrangement.OnSite or WorkArrangement.Hybrid;
 
     private static bool IsRemoteTimezoneRequired(WorkArrangement a) =>
-        a is WorkArrangement.AnywhereFullRemote;
+        a is WorkArrangement.FullRemote;
 }

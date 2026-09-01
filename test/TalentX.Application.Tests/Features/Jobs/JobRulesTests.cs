@@ -16,7 +16,7 @@ public class JobRulesTests
         List<string>? requiredSkills = null,
         int vacancies = 2,
         DateTime? expireAt = null,
-        WorkArrangement workArrangement = WorkArrangement.AnywhereFullRemote
+        WorkArrangement workArrangement = WorkArrangement.FullRemote
     )
     {
         var job = Job.Create(
@@ -34,7 +34,7 @@ public class JobRulesTests
         );
 
         // Set wizard fields based on work arrangement
-        if (workArrangement is WorkArrangement.AnywhereFullRemote)
+        if (workArrangement is WorkArrangement.FullRemote)
         {
             job.UpdateWizardDetails(
                 null,
@@ -263,7 +263,7 @@ public class JobRulesTests
     [Fact]
     public void EnsurePublishable_AnywhereFullRemoteWithTimezoneOverlap_DoesNotThrow()
     {
-        var job = ValidDraft(workArrangement: WorkArrangement.AnywhereFullRemote);
+        var job = ValidDraft(workArrangement: WorkArrangement.FullRemote);
 
         var act = () => JobRules.EnsurePublishable(job);
 
@@ -273,7 +273,7 @@ public class JobRulesTests
     [Fact]
     public void EnsurePublishable_AnywhereFullRemoteWithoutMinOverlapHours_ThrowsAndListsMinOverlapHours()
     {
-        var job = ValidDraft(workArrangement: WorkArrangement.AnywhereFullRemote);
+        var job = ValidDraft(workArrangement: WorkArrangement.FullRemote);
         job.UpdateWizardDetails(null, null, null, null);
 
         var act = () => JobRules.EnsurePublishable(job);

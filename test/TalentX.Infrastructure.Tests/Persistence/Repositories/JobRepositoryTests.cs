@@ -29,19 +29,21 @@ public class JobRepositoryTests
         WorkArrangement arrangement = WorkArrangement.RemoteButAccessible,
         int daysUntilExpiry = 30)
     {
-        return Job.Create(
+        var job = Job.Create(
             "employer-1",
-            "Backend Engineer",
-            "Acme Corp",
-            "Build and maintain backend services.",
-            EmploymentType.FullTime,
-            ExperienceLevel.MidLevel,
-            "Dhaka",
-            WorkArrangement.RemoteButAccessible,
+            title,
+            company,
+            description,
+            empType,
+            expLevel,
+            location,
+            arrangement,
             new List<string> { "C#" },
             2,
-            DateTime.UtcNow.AddDays(30)
+            DateTime.UtcNow.AddDays(daysUntilExpiry)
         );
+        job.MarkAsPublished();
+        return job;
     }
 
     // ---------- Existing CRUD tests (unchanged) ----------

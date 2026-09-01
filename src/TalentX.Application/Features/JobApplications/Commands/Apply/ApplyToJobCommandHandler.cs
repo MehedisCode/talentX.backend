@@ -40,7 +40,7 @@ public class ApplyToJobCommandHandler : IRequestHandler<ApplyToJobCommand, Apply
         var job = await _jobRepository.GetPublishedJobByIdAsync(request.JobId, cancellationToken)
             ?? throw new NotFoundException($"Job '{request.JobId}' was not found or is no longer available.");
 
-        if (job.WorkArrangement != WorkArrangement.Remote && string.IsNullOrWhiteSpace(request.Location))
+        if (job.WorkArrangement != WorkArrangement.RemoteButAccessible && string.IsNullOrWhiteSpace(request.Location))
         {
             throw new ValidationException("Location is required for non-remote jobs.");
         }
