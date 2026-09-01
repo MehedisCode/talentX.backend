@@ -1,11 +1,13 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using TalentX.Application.Common.Interfaces.Repositories;
 using TalentX.Application.DTOs.Employers;
 using TalentX.Application.Features.Employers.Commands.CreateEmployer;
 using TalentX.Application.Features.Employers.Commands.GoogleSignIn;
 using TalentX.Application.Features.Employers.Commands.SendOtp;
 using TalentX.Application.Features.Employers.Commands.VerifyEmail;
+using TalentX.Application.Identity.Services;
 
 namespace TalentX.API.Controllers.Employers;
 
@@ -14,20 +16,14 @@ namespace TalentX.API.Controllers.Employers;
 /// </summary>
 [ApiController]
 [Route("api/v1/employers")]
-[AllowAnonymous]
 public sealed class EmployersController : BaseApiController
 {
     /// <summary>
     /// Registers a new employer with an email, company name, and password. Dispatches an OTP verification email.
     /// </summary>
-    /// <param name="command">Registration payload.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>The created employer details and JWT session tokens.</returns>
-    /// <response code="201">Employer created successfully.</response>
-    /// <response code="400">Validation errors.</response>
-    /// <response code="409">An employer with this email is already registered.</response>
     [HttpPost]
     [HttpPost("register")]
+    [AllowAnonymous]
     [ProducesResponseType(typeof(AuthEmployerDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
@@ -42,14 +38,9 @@ public sealed class EmployersController : BaseApiController
     /// <summary>
     /// Authenticates or registers an employer using a Google OAuth ID token.
     /// </summary>
-    /// <param name="command">Google OAuth payload containing the raw ID token.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>The employer details.</returns>
-    /// <response code="200">Google sign-in successful.</response>
-    /// <response code="400">Invalid Google ID token.</response>
-    /// <response code="401">Unauthorized Google token.</response>
     [HttpPost("google")]
     [HttpPost("google-signin")]
+    [AllowAnonymous]
     [ProducesResponseType(typeof(AuthEmployerDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -64,13 +55,8 @@ public sealed class EmployersController : BaseApiController
     /// <summary>
     /// Verifies the employer's email using the 6-digit OTP code received via email and returns JWT session tokens.
     /// </summary>
-    /// <param name="command">Verification payload containing email and OTP code.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>The authenticated employer profile and JWT tokens.</returns>
-    /// <response code="200">Email verified successfully with JWT tokens returned.</response>
-    /// <response code="400">Invalid or expired OTP code.</response>
-    /// <response code="404">Employer not found.</response>
     [HttpPost("verify-email")]
+    [AllowAnonymous]
     [ProducesResponseType(typeof(AuthEmployerDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -85,13 +71,8 @@ public sealed class EmployersController : BaseApiController
     /// <summary>
     /// Sends a 6-digit OTP verification code to the specified email address.
     /// </summary>
-    /// <param name="command">Payload containing the employer's email.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>Confirmation message.</returns>
-    /// <response code="200">OTP code dispatched successfully.</response>
-    /// <response code="400">Validation errors.</response>
-    /// <response code="409">Employer account is already registered and verified.</response>
     [HttpPost("send-otp")]
+    [AllowAnonymous]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
@@ -102,4 +83,37 @@ public sealed class EmployersController : BaseApiController
         await Sender.Send(command, cancellationToken);
         return Ok(new { message = "A verification code has been sent to your email." });
     }
+
+    /// <summary>
+    /// Returns the current authenticated employer's profile including company name.
+    /// </summary>
+    [HttpGet("me")]
+    [Authorize]
+    [ProducesResponseType(typeof(CurrentEmployerResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> GetMyProfile(
+        [FromServices] ICurrentUserService currentUserService,
+        [FromServices] IEmployerRepository employerRepository,
+        CancellationToken cancellationToken)
+    {
+        var userId = currentUserService.UserId;
+        if (userId is null)
+            return Unauthorized();
+
+        var employer = await employerRepository.GetByUserIdAsync(userId, cancellationToken);
+        if (employer is null)
+            return NotFound(new { message = "Employer profile not found." });
+
+        return Ok(new CurrentEmployerResult
+        {
+            Id = employer.Id.ToString(),
+            CompanyName = employer.CompanyName
+        });
+    }
+}
+
+public sealed class CurrentEmployerResult
+{
+    public string Id { get; set; } = string.Empty;
+    public string CompanyName { get; set; } = string.Empty;
 }
