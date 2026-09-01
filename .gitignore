@@ -117,3 +117,5 @@ $RECYCLE.BIN/
 *.lnk
 *.swp
 *~
+docker-compose.yml
+commands.txt

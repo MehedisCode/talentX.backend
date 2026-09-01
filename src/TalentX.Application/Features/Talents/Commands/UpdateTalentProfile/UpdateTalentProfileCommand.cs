@@ -4,13 +4,16 @@ namespace TalentX.Application.Features.Talents.Commands.UpdateTalentProfile;
 
 public sealed record UpdateTalentProfileCommand(
     string Name,
-    string? Location,
-    string? Tagline,
-    string? ShortBio,
-    string? Phone,
-    string? LinkedInUrl,
-    List<string>? AdditionalUrls,
-    decimal? TotalYearsExperience,
-    decimal? ExpectedSalary,
-    List<string>? SkillPropositions
+    string? Location = null,
+    string? Tagline = null,
+    string? ShortBio = null,
+    string? Phone = null,
+    string? LinkedInUrl = null,
+    List<string>? AdditionalUrls = null,
+    decimal? TotalYearsExperience = null,
+    decimal? ExpectedSalary = null,
+    List<string>? SkillPropositions = null,
+    List<string>? TechnicalSkills = null,
+    List<string>? SoftSkills = null,
+    List<string>? ToolsAndPlatforms = null
 ) : IRequest;

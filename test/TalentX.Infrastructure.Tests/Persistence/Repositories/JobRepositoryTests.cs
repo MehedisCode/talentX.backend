@@ -19,29 +19,31 @@ public class JobRepositoryTests
         return new ApplicationDbContext(options);
     }
 
-    private static Job NewJob()
+    private static Job MakePublishedJob(
+        string title = "Backend Engineer",
+        string company = "Acme Corp",
+        string description = "Build and maintain backend services.",
+        string location = "Dhaka",
+        EmploymentType empType = EmploymentType.FullTime,
+        ExperienceLevel expLevel = ExperienceLevel.MidLevel,
+        WorkArrangement arrangement = WorkArrangement.Remote,
+        int daysUntilExpiry = 30)
     {
-        return Job.Create(
-            "employer-1",
-            "Backend Engineer",
-            "Acme Corp",
-            "Build and maintain backend services.",
-            EmploymentType.FullTime,
-            ExperienceLevel.MidLevel,
-            "Dhaka",
-            WorkArrangement.Remote,
-            new List<string> { "C#" },
-            2,
-            DateTime.UtcNow.AddDays(30)
-        );
+        var job = Job.Create(
+            "employer-1", title, company, description, empType, expLevel, location,
+            arrangement, new List<string> { "C#" }, 2, DateTime.UtcNow.AddDays(daysUntilExpiry));
+        job.MarkAsPublished();
+        return job;
     }
+
+    // ---------- Existing CRUD tests (unchanged) ----------
 
     [Fact]
     public async Task GetByIdAsync_WhenJobExists_ReturnsIt()
     {
         await using var context = NewContext();
         var repository = new JobRepository(context);
-        var job = NewJob();
+        var job = MakePublishedJob();
         context.Jobs.Add(job);
         await context.SaveChangesAsync();
 
@@ -67,7 +69,7 @@ public class JobRepositoryTests
     {
         await using var context = NewContext();
         var repository = new JobRepository(context);
-        var job = NewJob();
+        var job = MakePublishedJob();
 
         await repository.AddAsync(job);
         await context.SaveChangesAsync();
@@ -78,11 +80,9 @@ public class JobRepositoryTests
     [Fact]
     public async Task AddAsync_DoesNotChangeTheAlreadyAssignedId()
     {
-        // BaseEntity generates the Id client-side at construction, so
-        // AddAsync just tracks the entity — it doesn't assign anything.
         await using var context = NewContext();
         var repository = new JobRepository(context);
-        var job = NewJob();
+        var job = MakePublishedJob();
         var originalId = job.Id;
         originalId.Should().NotBe(Guid.Empty);
 
@@ -96,7 +96,7 @@ public class JobRepositoryTests
     {
         using var context = NewContext();
         var repository = new JobRepository(context);
-        var job = NewJob();
+        var job = MakePublishedJob();
         context.Jobs.Add(job);
         context.SaveChanges();
         context.Entry(job).State = EntityState.Detached;
@@ -109,5 +109,228 @@ public class JobRepositoryTests
         repository.Update(job);
 
         context.Entry(job).State.Should().Be(EntityState.Modified);
+    }
+
+    // ---------- Filter tests ----------
+
+    [Fact]
+    public async Task GetPublishedJobsAsync_ExcludesExpiredJobs()
+    {
+        await using var context = NewContext();
+        var repo = new JobRepository(context);
+
+        var active = MakePublishedJob("Active Job", daysUntilExpiry: 10);
+        var expired = Job.Create("emp", "Expired Job", "Co", "Desc",
+            EmploymentType.FullTime, ExperienceLevel.MidLevel, "Dhaka",
+            WorkArrangement.Remote, new List<string>(), 1, DateTime.UtcNow.AddDays(-1));
+        expired.MarkAsPublished();
+
+        context.Jobs.AddRange(active, expired);
+        await context.SaveChangesAsync();
+
+        var result = await repo.GetPublishedJobsAsync(1, 20, CancellationToken.None);
+
+        result.Items.Should().HaveCount(1);
+        result.Items[0].Title.Should().Be("Active Job");
+    }
+
+    [Fact]
+    public async Task GetPublishedJobsAsync_ExcludesDraftJobs()
+    {
+        await using var context = NewContext();
+        var repo = new JobRepository(context);
+
+        var published = MakePublishedJob("Published Job");
+        var draft = Job.Create("emp", "Draft Job", "Co", "Desc",
+            EmploymentType.FullTime, ExperienceLevel.MidLevel, "Dhaka",
+            WorkArrangement.Remote, new List<string>(), 1, DateTime.UtcNow.AddDays(30));
+        // draft.MarkAsPublished() intentionally omitted
+
+        context.Jobs.AddRange(published, draft);
+        await context.SaveChangesAsync();
+
+        var result = await repo.GetPublishedJobsAsync(1, 20, CancellationToken.None);
+
+        result.Items.Should().HaveCount(1);
+        result.Items[0].Title.Should().Be("Published Job");
+    }
+
+    [Fact]
+    public async Task GetPublishedJobsAsync_KeywordFilter_MatchesTitle()
+    {
+        await using var context = NewContext();
+        var repo = new JobRepository(context);
+
+        context.Jobs.AddRange(
+            MakePublishedJob("React Developer"),
+            MakePublishedJob("Backend Engineer"));
+        await context.SaveChangesAsync();
+
+        var result = await repo.GetPublishedJobsAsync(1, 20, CancellationToken.None, keyword: "react");
+
+        result.Items.Should().HaveCount(1);
+        result.Items[0].Title.Should().Be("React Developer");
+    }
+
+    [Fact]
+    public async Task GetPublishedJobsAsync_KeywordFilter_MatchesCompanyName()
+    {
+        await using var context = NewContext();
+        var repo = new JobRepository(context);
+
+        context.Jobs.AddRange(
+            MakePublishedJob("Dev", "Northwind Labs"),
+            MakePublishedJob("Dev", "Acme Corp"));
+        await context.SaveChangesAsync();
+
+        var result = await repo.GetPublishedJobsAsync(1, 20, CancellationToken.None, keyword: "northwind");
+
+        result.Items.Should().HaveCount(1);
+        result.Items[0].CompanyName.Should().Be("Northwind Labs");
+    }
+
+    [Fact]
+    public async Task GetPublishedJobsAsync_KeywordFilter_IsCaseInsensitive()
+    {
+        await using var context = NewContext();
+        var repo = new JobRepository(context);
+
+        context.Jobs.Add(MakePublishedJob("SENIOR BACKEND ENGINEER"));
+        await context.SaveChangesAsync();
+
+        var result = await repo.GetPublishedJobsAsync(1, 20, CancellationToken.None, keyword: "senior backend");
+
+        result.Items.Should().HaveCount(1);
+    }
+
+    [Fact]
+    public async Task GetPublishedJobsAsync_KeywordFilter_ReturnsEmpty_WhenNoMatch()
+    {
+        await using var context = NewContext();
+        var repo = new JobRepository(context);
+
+        context.Jobs.Add(MakePublishedJob("Frontend Developer"));
+        await context.SaveChangesAsync();
+
+        var result = await repo.GetPublishedJobsAsync(1, 20, CancellationToken.None, keyword: "zxqwerty999");
+
+        result.Items.Should().BeEmpty();
+        result.TotalCount.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task GetPublishedJobsAsync_LocationFilter_MatchesLocation()
+    {
+        await using var context = NewContext();
+        var repo = new JobRepository(context);
+
+        context.Jobs.AddRange(
+            MakePublishedJob(location: "Dhaka"),
+            MakePublishedJob(location: "Chittagong"));
+        await context.SaveChangesAsync();
+
+        var result = await repo.GetPublishedJobsAsync(1, 20, CancellationToken.None, location: "Dhaka");
+
+        result.Items.Should().HaveCount(1);
+        result.Items[0].Location.Should().Be("Dhaka");
+    }
+
+    [Fact]
+    public async Task GetPublishedJobsAsync_EmploymentTypeFilter_ReturnsOnlyMatchingJobs()
+    {
+        await using var context = NewContext();
+        var repo = new JobRepository(context);
+
+        context.Jobs.AddRange(
+            MakePublishedJob(empType: EmploymentType.FullTime),
+            MakePublishedJob(empType: EmploymentType.Contract),
+            MakePublishedJob(empType: EmploymentType.Internship));
+        await context.SaveChangesAsync();
+
+        var result = await repo.GetPublishedJobsAsync(
+            1, 20, CancellationToken.None, employmentType: EmploymentType.Contract);
+
+        result.Items.Should().HaveCount(1);
+        result.Items[0].EmploymentType.Should().Be(EmploymentType.Contract);
+    }
+
+    [Fact]
+    public async Task GetPublishedJobsAsync_ExperienceLevelFilter_ReturnsOnlyMatchingJobs()
+    {
+        await using var context = NewContext();
+        var repo = new JobRepository(context);
+
+        context.Jobs.AddRange(
+            MakePublishedJob(expLevel: ExperienceLevel.EntryLevel),
+            MakePublishedJob(expLevel: ExperienceLevel.SeniorLevel));
+        await context.SaveChangesAsync();
+
+        var result = await repo.GetPublishedJobsAsync(
+            1, 20, CancellationToken.None, experienceLevel: ExperienceLevel.SeniorLevel);
+
+        result.Items.Should().HaveCount(1);
+        result.Items[0].ExperienceLevel.Should().Be(ExperienceLevel.SeniorLevel);
+    }
+
+    [Fact]
+    public async Task GetPublishedJobsAsync_WorkArrangementFilter_ReturnsOnlyMatchingJobs()
+    {
+        await using var context = NewContext();
+        var repo = new JobRepository(context);
+
+        context.Jobs.AddRange(
+            MakePublishedJob(arrangement: WorkArrangement.Remote),
+            MakePublishedJob(arrangement: WorkArrangement.OnSite),
+            MakePublishedJob(arrangement: WorkArrangement.Hybrid));
+        await context.SaveChangesAsync();
+
+        var result = await repo.GetPublishedJobsAsync(
+            1, 20, CancellationToken.None, workArrangement: WorkArrangement.Remote);
+
+        result.Items.Should().HaveCount(1);
+        result.Items[0].WorkArrangement.Should().Be(WorkArrangement.Remote);
+    }
+
+    [Fact]
+    public async Task GetPublishedJobsAsync_CompoundFilters_ApplyAsAnd()
+    {
+        await using var context = NewContext();
+        var repo = new JobRepository(context);
+
+        // Match: FullTime + Senior + Hybrid
+        context.Jobs.Add(MakePublishedJob("Match", empType: EmploymentType.FullTime,
+            expLevel: ExperienceLevel.SeniorLevel, arrangement: WorkArrangement.Hybrid));
+        // Miss: FullTime + Senior + Remote
+        context.Jobs.Add(MakePublishedJob("Miss", empType: EmploymentType.FullTime,
+            expLevel: ExperienceLevel.SeniorLevel, arrangement: WorkArrangement.Remote));
+        await context.SaveChangesAsync();
+
+        var result = await repo.GetPublishedJobsAsync(
+            1, 20, CancellationToken.None,
+            employmentType: EmploymentType.FullTime,
+            experienceLevel: ExperienceLevel.SeniorLevel,
+            workArrangement: WorkArrangement.Hybrid);
+
+        result.Items.Should().HaveCount(1);
+        result.Items[0].Title.Should().Be("Match");
+    }
+
+    [Fact]
+    public async Task GetPublishedJobsAsync_Pagination_ReturnsCorrectSlice()
+    {
+        await using var context = NewContext();
+        var repo = new JobRepository(context);
+
+        for (int i = 0; i < 5; i++)
+            context.Jobs.Add(MakePublishedJob($"Job {i}"));
+        await context.SaveChangesAsync();
+
+        var page1 = await repo.GetPublishedJobsAsync(1, 2, CancellationToken.None);
+        var page2 = await repo.GetPublishedJobsAsync(2, 2, CancellationToken.None);
+
+        page1.Items.Should().HaveCount(2);
+        page2.Items.Should().HaveCount(2);
+        page1.TotalCount.Should().Be(5);
+        page1.Items[0].Title.Should().NotBe(page2.Items[0].Title);
     }
 }

@@ -7,11 +7,6 @@ using TalentX.Application.Identity.Interfaces;
 
 namespace TalentX.Application.Tests.Features.Auth.Login;
 
-/// <summary>
-/// Unit tests for LoginCommandHandler
-/// Tests cover login flow including password validation and token generation
-/// Uses AAA (Arrange-Act-Assert) pattern with mocked dependencies
-/// </summary>
 public class LoginCommandHandlerTests
 {
     private readonly Mock<IIdentityService> _identityServiceMock;
