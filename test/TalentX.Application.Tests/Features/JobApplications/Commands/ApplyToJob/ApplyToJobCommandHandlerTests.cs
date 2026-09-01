@@ -36,7 +36,7 @@ public class ApplyToJobCommandHandlerTests
             EmploymentType.FullTime,
             ExperienceLevel.MidLevel,
             "Dhaka",
-            WorkArrangement.Remote,
+            WorkArrangement.FullRemote,
             new List<string> { "C#" },
             1,
             DateTime.UtcNow.AddDays(30));
