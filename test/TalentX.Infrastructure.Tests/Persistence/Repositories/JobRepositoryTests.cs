@@ -333,4 +333,56 @@ public class JobRepositoryTests
         page1.TotalCount.Should().Be(5);
         page1.Items[0].Title.Should().NotBe(page2.Items[0].Title);
     }
+
+    [Fact]
+    public async Task GetPublishedJobsAsync_KeywordFilter_MatchesDescription()
+    {
+        await using var context = NewContext();
+        var repo = new JobRepository(context);
+
+        var job1 = MakePublishedJob("Lead Architect", description: "Deep expertise in Kubernetes and distributed systems.");
+        var job2 = MakePublishedJob("Product Designer", description: "Design Figma wireframes and prototypes.");
+        context.Jobs.AddRange(job1, job2);
+        await context.SaveChangesAsync();
+
+        var result = await repo.GetPublishedJobsAsync(1, 20, CancellationToken.None, keyword: "Kubernetes");
+
+        result.Items.Should().HaveCount(1);
+        result.Items[0].Title.Should().Be("Lead Architect");
+    }
+
+    [Fact]
+    public async Task GetPublishedJobsAsync_LocationFilter_MatchesCity()
+    {
+        await using var context = NewContext();
+        var repo = new JobRepository(context);
+
+        var job = MakePublishedJob("Software Engineer", location: "On-site");
+        job.UpdateWizardDetails("Berlin", "Germany", null, null);
+        context.Jobs.Add(job);
+        await context.SaveChangesAsync();
+
+        var result = await repo.GetPublishedJobsAsync(1, 20, CancellationToken.None, location: "berlin");
+
+        result.Items.Should().HaveCount(1);
+        result.Items[0].City.Should().Be("Berlin");
+    }
+
+    [Fact]
+    public async Task GetPublishedJobsAsync_LocationFilter_MatchesCountry()
+    {
+        await using var context = NewContext();
+        var repo = new JobRepository(context);
+
+        var job = MakePublishedJob("Software Engineer", location: "Remote");
+        job.UpdateWizardDetails("Tokyo", "Japan", null, null);
+        context.Jobs.Add(job);
+        await context.SaveChangesAsync();
+
+        var result = await repo.GetPublishedJobsAsync(1, 20, CancellationToken.None, location: "japan");
+
+        result.Items.Should().HaveCount(1);
+        result.Items[0].Country.Should().Be("Japan");
+    }
 }
+
