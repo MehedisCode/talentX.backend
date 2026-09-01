@@ -14,4 +14,7 @@ public class JobDetailsDto
     public int Vacancies { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime ExpireAt { get; set; }
+    public string? City { get; set; }
+    public string? Country { get; set; }
+    public short? MinOverlapHours { get; set; }
 }

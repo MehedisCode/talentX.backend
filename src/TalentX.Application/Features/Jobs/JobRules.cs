@@ -1,5 +1,5 @@
 using TalentX.Domain.Entities;
-using TalentX.Domain.Enums;
+//using TalentX.Domain.Enums;
 
 namespace TalentX.Application.Features.Jobs;
 
@@ -50,8 +50,24 @@ public static class JobRules
         if (job.Vacancies <= 0)
             missing.Add(nameof(job.Vacancies));
 
-        if (job.ExpireAt <= DateTime.UtcNow)
+        if (job.ExpireAt < DateTime.Now.Date)
             missing.Add(nameof(job.ExpireAt));
+
+        // Conditional validation for wizard fields based on WorkArrangement
+        if (IsLocationRequired(job.WorkArrangement))
+        {
+            if (string.IsNullOrWhiteSpace(job.City))
+                missing.Add(nameof(job.City));
+
+            if (string.IsNullOrWhiteSpace(job.Country))
+                missing.Add(nameof(job.Country));
+        }
+
+        if (IsRemoteTimezoneRequired(job.WorkArrangement))
+        {
+            if (!job.MinOverlapHours.HasValue || job.MinOverlapHours.Value <= 0)
+                missing.Add(nameof(job.MinOverlapHours));
+        }
 
         if (missing.Count > 0)
         {
@@ -60,4 +76,10 @@ public static class JobRules
             );
         }
     }
+
+    private static bool IsLocationRequired(WorkArrangement a) =>
+        a is WorkArrangement.OnSite or WorkArrangement.Hybrid;
+
+    private static bool IsRemoteTimezoneRequired(WorkArrangement a) =>
+        a is WorkArrangement.FullRemote;
 }

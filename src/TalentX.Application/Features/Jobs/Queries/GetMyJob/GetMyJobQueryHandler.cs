@@ -44,7 +44,10 @@ public class GetMyJobQueryHandler : IRequestHandler<GetMyJobQuery, MyJobDto>
             Vacancies = job.Vacancies,
             ExpireAt = job.ExpireAt,
             CreatedAt = job.CreatedAt,
-            UpdatedAt = job.UpdatedAt
+            UpdatedAt = job.UpdatedAt,
+            City = job.City,
+            Country = job.Country,
+            MinOverlapHours = job.MinOverlapHours
         };
     }
 }

@@ -1,5 +1,6 @@
 using System.Linq;
 using FluentValidation;
+using TalentX.Domain.Enums;
 
 namespace TalentX.Application.Features.Jobs.Commands.UpdateJob;
 
@@ -55,6 +56,35 @@ public class UpdateJobCommandValidator : AbstractValidator<UpdateJobCommand>
                 .WithMessage("Skill entries must contain at least one letter.");
 
         RuleFor(v => v.ExpireAt)
-            .GreaterThan(v => DateTime.UtcNow).WithMessage("Expire date must be in the future.");
+            .Must(expireAt => expireAt.HasValue && expireAt.Value.Date >= DateTime.UtcNow.Date)
+            .WithMessage("Expire date must be today or in the future.")
+            .When(v => v.ExpireAt.HasValue);
+
+        // Conditional validation for wizard fields based on WorkArrangement
+        RuleFor(v => v.City)
+            .Must((cmd, city) => !IsLocationRequired(cmd.WorkArrangement)
+                || (!string.IsNullOrWhiteSpace(city) && city.Trim().Length >= 2))
+            .WithMessage("City is required for Hybrid and On-Site roles.")
+            .MaximumLength(100).WithMessage("City must not exceed 100 characters.")
+            .When(v => v.WorkArrangement is WorkArrangement.OnSite or WorkArrangement.Hybrid);
+
+        RuleFor(v => v.Country)
+            .Must((cmd, country) => !IsLocationRequired(cmd.WorkArrangement)
+                || (!string.IsNullOrWhiteSpace(country) && country.Trim().Length >= 2))
+            .WithMessage("Country is required for Hybrid and On-Site roles.")
+            .MaximumLength(100).WithMessage("Country must not exceed 100 characters.")
+            .When(v => v.WorkArrangement is WorkArrangement.OnSite or WorkArrangement.Hybrid);
+
+        RuleFor(v => v.MinOverlapHours)
+            .Must((cmd, hours) => !IsRemoteTimezoneRequired(cmd.WorkArrangement)
+                || (hours.HasValue && hours.Value > 0))
+            .WithMessage("Minimum overlap hours is required for Remote roles.")
+            .When(v => v.WorkArrangement is WorkArrangement.FullRemote);
     }
+
+    private static bool IsLocationRequired(WorkArrangement? a) =>
+        a is WorkArrangement.OnSite or WorkArrangement.Hybrid;
+
+    private static bool IsRemoteTimezoneRequired(WorkArrangement? a) =>
+        a is WorkArrangement.FullRemote;
 }

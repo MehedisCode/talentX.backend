@@ -26,7 +26,7 @@ public class UpdateJobCommandHandlerTests
 
     private static Job ExistingDraftJob()
     {
-        return Job.Create(
+        var job = Job.Create(
             "employer-1",
             "Backend Engineer",
             "Acme Corp",
@@ -34,11 +34,21 @@ public class UpdateJobCommandHandlerTests
             EmploymentType.FullTime,
             ExperienceLevel.MidLevel,
             "Dhaka",
-            WorkArrangement.Remote,
+            WorkArrangement.FullRemote,
             new List<string> { "C#" },
             2,
             DateTime.UtcNow.AddDays(30)
         );
+
+        // Set wizard fields for AnywhereFullRemote
+        job.UpdateWizardDetails(
+            null,
+            null,
+            4,
+            null
+        );
+
+        return job;
     }
 
     private static UpdateJobCommand CommandFor(Guid id, bool publish = false) => new(
@@ -200,5 +210,106 @@ public class UpdateJobCommandHandlerTests
         }
 
         _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_WithCityUpdate_UpdatesCityOnJob()
+    {
+        var job = ExistingDraftJob();
+        _jobRepository.Setup(r => r.GetByIdAsync(job.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(job);
+
+        var command = new UpdateJobCommand(
+            job.Id, null, null, null, null, null, null, null, null, null, null, false,
+            City: "Chattogram", Country: null, MinOverlapHours: null);
+
+        await _handler.Handle(command, CancellationToken.None);
+
+        job.City.Should().Be("Chattogram");
+    }
+
+    [Fact]
+    public async Task Handle_WithCountryUpdate_UpdatesCountryOnJob()
+    {
+        var job = ExistingDraftJob();
+        _jobRepository.Setup(r => r.GetByIdAsync(job.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(job);
+
+        var command = new UpdateJobCommand(
+            job.Id, null, null, null, null, null, null, null, null, null, null, false,
+            City: null, Country: "India", MinOverlapHours: null);
+
+        await _handler.Handle(command, CancellationToken.None);
+
+        job.Country.Should().Be("India");
+    }
+
+    [Fact]
+    public async Task Handle_WithMinOverlapHoursUpdate_UpdatesMinOverlapHoursOnJob()
+    {
+        var job = ExistingDraftJob();
+        _jobRepository.Setup(r => r.GetByIdAsync(job.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(job);
+
+        var command = new UpdateJobCommand(
+            job.Id, null, null, null, null, null, null, null, null, null, null, false,
+            City: null, Country: null, MinOverlapHours: 8);
+
+        await _handler.Handle(command, CancellationToken.None);
+
+        job.MinOverlapHours.Should().Be(8);
+    }
+
+    [Fact]
+    public async Task Handle_WithWizardFieldsUpdate_NormalizesCityAndCountry()
+    {
+        var job = ExistingDraftJob();
+        _jobRepository.Setup(r => r.GetByIdAsync(job.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(job);
+
+        var command = new UpdateJobCommand(
+            job.Id, null, null, null, null, null, null, null, null, null, null, false,
+            City: "  Dhaka  ", Country: "  Bangladesh  ", MinOverlapHours: null);
+
+        await _handler.Handle(command, CancellationToken.None);
+
+        job.City.Should().Be("Dhaka");
+        job.Country.Should().Be("Bangladesh");
+    }
+
+    [Fact]
+    public async Task Handle_WithNullWizardFields_PreservesExistingValues()
+    {
+        var job = ExistingDraftJob();
+        _jobRepository.Setup(r => r.GetByIdAsync(job.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(job);
+
+        var originalMinOverlapHours = job.MinOverlapHours;
+
+        var command = new UpdateJobCommand(
+            job.Id, null, null, null, null, null, null, null, null, null, null, false,
+            City: null, Country: null, MinOverlapHours: null);
+
+        await _handler.Handle(command, CancellationToken.None);
+
+        job.MinOverlapHours.Should().Be(originalMinOverlapHours);
+    }
+
+    [Fact]
+    public async Task Handle_WithWorkArrangementUpdate_UpdatesWorkArrangement()
+    {
+        var job = ExistingDraftJob();
+        _jobRepository.Setup(r => r.GetByIdAsync(job.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(job);
+
+        var command = new UpdateJobCommand(
+            job.Id, null, null, null, null, null, null,
+            WorkArrangement: WorkArrangement.Hybrid,
+            null, null, null, false,
+            City: "Dhaka", Country: "Bangladesh", MinOverlapHours: null);
+
+        await _handler.Handle(command, CancellationToken.None);
+
+        job.WorkArrangement.Should().Be(WorkArrangement.Hybrid);
     }
 }

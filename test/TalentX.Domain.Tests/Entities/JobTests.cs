@@ -18,7 +18,7 @@ public class JobTests
         EmploymentType employmentType = EmploymentType.FullTime,
         ExperienceLevel experienceLevel = ExperienceLevel.MidLevel,
         string location = "Dhaka",
-        WorkArrangement workArrangement = WorkArrangement.Remote,
+        WorkArrangement workArrangement = WorkArrangement.FullRemote,
         List<string>? requiredSkills = null,
         int vacancies = 2,
         DateTime? expireAt = null

@@ -26,7 +26,7 @@ public sealed class JobRepository : RepositoryBase<Job>, IJobRepository
     {
         var query = Context.Jobs
             .AsNoTracking()
-            .Where(j => j.Status == JobStatus.Published && j.ExpireAt > DateTime.UtcNow);
+            .Where(j => j.Status == JobStatus.Published && j.ExpireAt.Date >= DateTime.UtcNow.Date);
 
         if (!string.IsNullOrWhiteSpace(keyword))
         {
@@ -71,6 +71,13 @@ public sealed class JobRepository : RepositoryBase<Job>, IJobRepository
         await Context.Jobs
             .AsNoTracking()
             .FirstOrDefaultAsync(
-                j => j.Id == id && j.Status == JobStatus.Published && j.ExpireAt > DateTime.UtcNow,
+                j => j.Id == id && j.Status == JobStatus.Published && j.ExpireAt.Date >= DateTime.UtcNow.Date,
                 cancellationToken);
+
+    public async Task<List<Job>> GetByEmployerIdAsync(string employerId, CancellationToken cancellationToken = default) =>
+        await Context.Jobs
+            .AsNoTracking()
+            .Where(j => j.EmployerId == employerId)
+            .OrderByDescending(j => j.CreatedAt)
+            .ToListAsync(cancellationToken);
 }

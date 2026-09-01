@@ -31,11 +31,14 @@ public class CreateJobCommandHandlerTests
         EmploymentType.FullTime,
         ExperienceLevel.MidLevel,
         "Dhaka",
-        WorkArrangement.Remote,
+        WorkArrangement.FullRemote,
         new List<string> { "C#", "SQL" },
         2,
         DateTime.UtcNow.AddDays(30),
-        publish
+        publish,
+        City: null,
+        Country: null,
+        MinOverlapHours: 4
     );
 
     [Fact]
@@ -159,5 +162,132 @@ public class CreateJobCommandHandlerTests
 
         _jobRepository.Verify(r => r.AddAsync(It.IsAny<Job>(), It.IsAny<CancellationToken>()), Times.Never);
         _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_WithOnSiteWorkArrangement_SetsCityAndCountry()
+    {
+        Job? addedJob = null;
+        _jobRepository
+            .Setup(r => r.AddAsync(It.IsAny<Job>(), It.IsAny<CancellationToken>()))
+            .Callback<Job, CancellationToken>((job, _) => addedJob = job)
+            .Returns(Task.CompletedTask);
+
+        var command = ValidCommand(publish: false) with
+        {
+            WorkArrangement = WorkArrangement.OnSite,
+            City = "Dhaka",
+            Country = "Bangladesh",
+            MinOverlapHours = null
+        };
+
+        await _handler.Handle(command, CancellationToken.None);
+
+        addedJob!.City.Should().Be("Dhaka");
+        addedJob.Country.Should().Be("Bangladesh");
+        addedJob.MinOverlapHours.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Handle_WithAnywhereFullRemote_SetsMinOverlapHours()
+    {
+        Job? addedJob = null;
+        _jobRepository
+            .Setup(r => r.AddAsync(It.IsAny<Job>(), It.IsAny<CancellationToken>()))
+            .Callback<Job, CancellationToken>((job, _) => addedJob = job)
+            .Returns(Task.CompletedTask);
+
+        var command = ValidCommand(publish: false) with
+        {
+            WorkArrangement = WorkArrangement.FullRemote,
+            City = null,
+            Country = null,
+            MinOverlapHours = 6
+        };
+
+        await _handler.Handle(command, CancellationToken.None);
+
+        addedJob!.MinOverlapHours.Should().Be(6);
+        addedJob.City.Should().BeNull();
+        addedJob.Country.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Handle_WithHybridWorkArrangement_SetsCityCountryAndWorkArrangement()
+    {
+        Job? addedJob = null;
+        _jobRepository
+            .Setup(r => r.AddAsync(It.IsAny<Job>(), It.IsAny<CancellationToken>()))
+            .Callback<Job, CancellationToken>((job, _) => addedJob = job)
+            .Returns(Task.CompletedTask);
+
+        var command = ValidCommand(publish: false) with
+        {
+            WorkArrangement = WorkArrangement.Hybrid,
+            City = "Chattogram",
+            Country = "Bangladesh",
+            MinOverlapHours = null
+        };
+
+        await _handler.Handle(command, CancellationToken.None);
+
+        addedJob!.WorkArrangement.Should().Be(WorkArrangement.Hybrid);
+        addedJob.City.Should().Be("Chattogram");
+        addedJob.Country.Should().Be("Bangladesh");
+    }
+
+    [Fact]
+    public async Task Handle_WithExpireAt_SetsExpireAtOnJob()
+    {
+        Job? addedJob = null;
+        _jobRepository
+            .Setup(r => r.AddAsync(It.IsAny<Job>(), It.IsAny<CancellationToken>()))
+            .Callback<Job, CancellationToken>((job, _) => addedJob = job)
+            .Returns(Task.CompletedTask);
+
+        var expireDate = DateTime.UtcNow.AddDays(60);
+        var command = ValidCommand(publish: false) with { ExpireAt = expireDate };
+
+        await _handler.Handle(command, CancellationToken.None);
+
+        addedJob!.ExpireAt.Should().Be(expireDate);
+    }
+
+    [Fact]
+    public async Task Handle_WithVacancies_SetsVacanciesOnJob()
+    {
+        Job? addedJob = null;
+        _jobRepository
+            .Setup(r => r.AddAsync(It.IsAny<Job>(), It.IsAny<CancellationToken>()))
+            .Callback<Job, CancellationToken>((job, _) => addedJob = job)
+            .Returns(Task.CompletedTask);
+
+        var command = ValidCommand(publish: false) with { Vacancies = 5 };
+
+        await _handler.Handle(command, CancellationToken.None);
+
+        addedJob!.Vacancies.Should().Be(5);
+    }
+
+    [Fact]
+    public async Task Handle_NormalizesCityAndCountry()
+    {
+        Job? addedJob = null;
+        _jobRepository
+            .Setup(r => r.AddAsync(It.IsAny<Job>(), It.IsAny<CancellationToken>()))
+            .Callback<Job, CancellationToken>((job, _) => addedJob = job)
+            .Returns(Task.CompletedTask);
+
+        var command = ValidCommand(publish: false) with
+        {
+            WorkArrangement = WorkArrangement.OnSite,
+            City = "  Dhaka  ",
+            Country = "  Bangladesh  "
+        };
+
+        await _handler.Handle(command, CancellationToken.None);
+
+        addedJob!.City.Should().Be("Dhaka");
+        addedJob.Country.Should().Be("Bangladesh");
     }
 }

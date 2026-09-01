@@ -14,5 +14,8 @@ public record CreateJobCommand(
     List<string> RequiredSkills,
     int Vacancies,
     DateTime ExpireAt,
-    bool Publish
+    bool Publish,
+    string? City = null,
+    string? Country = null,
+    short? MinOverlapHours = null
 ) : IRequest<Guid>;

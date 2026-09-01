@@ -240,8 +240,8 @@ namespace TalentX.Migrations.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<short?>("MinOverlapHours")
-                        .HasColumnType("smallint");
+                    b.Property<string>("RequiredTimezoneOverlap")
+                        .HasColumnType("text");
 
                     b.Property<string>("RequiredSkills")
                         .IsRequired()

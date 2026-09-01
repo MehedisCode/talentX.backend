@@ -21,4 +21,5 @@ public interface IJobRepository
         WorkArrangement? workArrangement = null);
 
     Task<Job?> GetPublishedJobByIdAsync(Guid id, CancellationToken cancellationToken);
+    Task<List<Job>> GetByEmployerIdAsync(string employerId, CancellationToken cancellationToken = default);
 }

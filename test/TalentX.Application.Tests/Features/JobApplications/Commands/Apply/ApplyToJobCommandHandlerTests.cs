@@ -42,7 +42,7 @@ public class ApplyToJobCommandHandlerTests
             _logger.Object);
     }
 
-    private static Job PublishedJob(WorkArrangement arrangement = WorkArrangement.Remote) =>
+    private static Job PublishedJob(WorkArrangement arrangement = WorkArrangement.RemoteButAccessible) =>
         Job.Create(
             "employer-1",
             "Backend Engineer",
@@ -78,7 +78,7 @@ public class ApplyToJobCommandHandlerTests
         location
     );
 
-    private void SetupPublishedJob(WorkArrangement arrangement = WorkArrangement.Remote)
+    private void SetupPublishedJob(WorkArrangement arrangement = WorkArrangement.RemoteButAccessible)
     {
         var job = PublishedJob(arrangement);
         _jobRepository
@@ -231,7 +231,7 @@ public class ApplyToJobCommandHandlerTests
     [Fact]
     public async Task Handle_WithRemoteJobAndMissingLocation_Succeeds()
     {
-        var job = PublishedJob(WorkArrangement.Remote);
+        var job = PublishedJob(WorkArrangement.RemoteButAccessible);
         _jobRepository
             .Setup(r => r.GetPublishedJobByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(job);

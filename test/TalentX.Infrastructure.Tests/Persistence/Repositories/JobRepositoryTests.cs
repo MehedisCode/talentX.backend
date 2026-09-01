@@ -26,12 +26,22 @@ public class JobRepositoryTests
         string location = "Dhaka",
         EmploymentType empType = EmploymentType.FullTime,
         ExperienceLevel expLevel = ExperienceLevel.MidLevel,
-        WorkArrangement arrangement = WorkArrangement.Remote,
+        WorkArrangement arrangement = WorkArrangement.RemoteButAccessible,
         int daysUntilExpiry = 30)
     {
         var job = Job.Create(
-            "employer-1", title, company, description, empType, expLevel, location,
-            arrangement, new List<string> { "C#" }, 2, DateTime.UtcNow.AddDays(daysUntilExpiry));
+            "employer-1",
+            title,
+            company,
+            description,
+            empType,
+            expLevel,
+            location,
+            arrangement,
+            new List<string> { "C#" },
+            2,
+            DateTime.UtcNow.AddDays(daysUntilExpiry)
+        );
         job.MarkAsPublished();
         return job;
     }
@@ -122,7 +132,7 @@ public class JobRepositoryTests
         var active = MakePublishedJob("Active Job", daysUntilExpiry: 10);
         var expired = Job.Create("emp", "Expired Job", "Co", "Desc",
             EmploymentType.FullTime, ExperienceLevel.MidLevel, "Dhaka",
-            WorkArrangement.Remote, new List<string>(), 1, DateTime.UtcNow.AddDays(-1));
+            WorkArrangement.RemoteButAccessible, new List<string>(), 1, DateTime.UtcNow.AddDays(-1));
         expired.MarkAsPublished();
 
         context.Jobs.AddRange(active, expired);
@@ -143,7 +153,7 @@ public class JobRepositoryTests
         var published = MakePublishedJob("Published Job");
         var draft = Job.Create("emp", "Draft Job", "Co", "Desc",
             EmploymentType.FullTime, ExperienceLevel.MidLevel, "Dhaka",
-            WorkArrangement.Remote, new List<string>(), 1, DateTime.UtcNow.AddDays(30));
+            WorkArrangement.RemoteButAccessible, new List<string>(), 1, DateTime.UtcNow.AddDays(30));
         // draft.MarkAsPublished() intentionally omitted
 
         context.Jobs.AddRange(published, draft);
@@ -279,16 +289,16 @@ public class JobRepositoryTests
         var repo = new JobRepository(context);
 
         context.Jobs.AddRange(
-            MakePublishedJob(arrangement: WorkArrangement.Remote),
+            MakePublishedJob(arrangement: WorkArrangement.RemoteButAccessible),
             MakePublishedJob(arrangement: WorkArrangement.OnSite),
             MakePublishedJob(arrangement: WorkArrangement.Hybrid));
         await context.SaveChangesAsync();
 
         var result = await repo.GetPublishedJobsAsync(
-            1, 20, CancellationToken.None, workArrangement: WorkArrangement.Remote);
+            1, 20, CancellationToken.None, workArrangement: WorkArrangement.RemoteButAccessible );
 
         result.Items.Should().HaveCount(1);
-        result.Items[0].WorkArrangement.Should().Be(WorkArrangement.Remote);
+        result.Items[0].WorkArrangement.Should().Be(WorkArrangement.RemoteButAccessible);
     }
 
     [Fact]
@@ -302,7 +312,7 @@ public class JobRepositoryTests
             expLevel: ExperienceLevel.SeniorLevel, arrangement: WorkArrangement.Hybrid));
         // Miss: FullTime + Senior + Remote
         context.Jobs.Add(MakePublishedJob("Miss", empType: EmploymentType.FullTime,
-            expLevel: ExperienceLevel.SeniorLevel, arrangement: WorkArrangement.Remote));
+            expLevel: ExperienceLevel.SeniorLevel, arrangement: WorkArrangement.RemoteButAccessible));
         await context.SaveChangesAsync();
 
         var result = await repo.GetPublishedJobsAsync(

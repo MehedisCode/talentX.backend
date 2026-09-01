@@ -36,7 +36,7 @@ public class GetPublishedJobsQueryTests
     private static Job MakeJob(string title = "Job 1", string company = "Co 1",
         EmploymentType empType = EmploymentType.FullTime,
         ExperienceLevel expLevel = ExperienceLevel.MidLevel,
-        WorkArrangement arrangement = WorkArrangement.Remote,
+        WorkArrangement arrangement = WorkArrangement.RemoteButAccessible,
         string location = "Dhaka")
     {
         var job = Job.Create("employer-1", title, company, "Desc", empType, expLevel, location,
@@ -48,8 +48,11 @@ public class GetPublishedJobsQueryTests
     [Fact]
     public async Task Handle_ReturnsPaginatedList()
     {
-        var job1 = MakeJob("Job 1");
-        var job2 = MakeJob("Job 2", "Co 2");
+        var job1 = Job.Create("employer-1", "Job 1", "Co 1", "Desc 1", EmploymentType.FullTime, ExperienceLevel.MidLevel, "Dhaka", WorkArrangement.FullRemote, new List<string>(), 1, DateTime.UtcNow.AddDays(10));
+        job1.MarkAsPublished();
+        var job2 = Job.Create("employer-1", "Job 2", "Co 2", "Desc 2", EmploymentType.FullTime, ExperienceLevel.MidLevel, "Dhaka", WorkArrangement.FullRemote, new List<string>(), 1, DateTime.UtcNow.AddDays(10));
+        job2.MarkAsPublished();
+
         var jobs = new List<Job> { job1, job2 };
         var paginatedJobs = new PaginatedList<Job>(jobs, 1, 20, 2);
 
