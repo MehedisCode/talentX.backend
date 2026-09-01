@@ -1,4 +1,5 @@
 using FluentValidation;
+using TalentX.Application.Common.Validation;
 
 namespace TalentX.Application.Features.JobApplications.Commands.Apply;
 
@@ -22,11 +23,7 @@ public class ApplyToJobCommandValidator : AbstractValidator<ApplyToJobCommand>
             .EmailAddress().WithMessage("Invalid email format.")
             .MaximumLength(255).WithMessage("Email must not exceed 255 characters.");
 
-        RuleFor(v => v.ResumeStorageKey)
-            .NotEmpty().WithMessage("Resume is required.")
-            .Must(resumeKey => !string.IsNullOrWhiteSpace(resumeKey))
-                .WithMessage("Resume is required.")
-            .MaximumLength(500).WithMessage("Resume file key must not exceed 500 characters.");
+        this.ApplyResumeFileValidationRules(v => v.ResumeFile);
 
         RuleFor(v => v.CoverLetter)
             .NotNull().WithMessage("Cover letter is required.")

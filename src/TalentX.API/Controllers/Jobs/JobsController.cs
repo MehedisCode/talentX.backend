@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using TalentX.Application.Features.JobApplications.Commands.Apply;
 using TalentX.Application.Features.Jobs.Commands.CreateJob;
 using TalentX.Application.Features.Jobs.Commands.GenerateJobDescription;
 using TalentX.Application.Features.Jobs.Commands.GenerateSkills;
@@ -9,9 +11,18 @@ using TalentX.Application.Features.Jobs.Queries.GetMyJob;
 using TalentX.Application.Features.Jobs.Queries.GetMyJobs;
 using TalentX.Application.Features.Jobs.Queries.GetPublishedJobs;
 using TalentX.Domain.Enums;
-using TalentX.Application.Features.JobApplications.Commands.Apply;
+using TalentX.Infrastructure.FileStorage;
 
 namespace TalentX.API.Controllers;
+
+public sealed record ApplyToJobRequestDto(
+    string ApplicantName,
+    string ApplicantEmail,
+    IFormFile ResumeFile,
+    string CoverLetter,
+    decimal ExpectedSalary,
+    decimal TotalYearsExperience,
+    string? Location);
 
 [ApiController]
 [Route("api/v1/[controller]")]
@@ -40,6 +51,7 @@ public class JobsController : BaseApiController
     }
 
     [HttpGet]
+    [AllowAnonymous]
     public async Task<IActionResult> GetJobs(
         [FromQuery] string? keyword = null,
         [FromQuery] string? location = null,
@@ -121,9 +133,23 @@ public class JobsController : BaseApiController
 
     [HttpPost("{id:guid}/apply")]
     [AllowAnonymous]
-    public async Task<IActionResult> Apply(Guid id, [FromBody] ApplyToJobCommand command)
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> Apply(
+        Guid id,
+        [FromForm] ApplyToJobRequestDto request,
+        CancellationToken cancellationToken)
     {
-        var response = await Sender.Send(command with { JobId = id });
+        var command = new ApplyToJobCommand(
+            id,
+            request.ApplicantName,
+            request.ApplicantEmail,
+            new FormFileUploadedFile(request.ResumeFile),
+            request.CoverLetter,
+            request.ExpectedSalary,
+            request.TotalYearsExperience,
+            request.Location);
+
+        var response = await Sender.Send(command, cancellationToken);
         return Ok(response);
     }
 }

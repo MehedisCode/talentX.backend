@@ -1,8 +1,10 @@
 using MediatR;
+using Microsoft.Extensions.Logging;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Common.Interfaces.Repositories;
 using TalentX.Application.Common.Security;
+using TalentX.Application.Features.Talents;
 using TalentX.Application.Identity.Interfaces;
 using TalentX.Domain;
 using TalentX.Domain.Entities;
@@ -17,7 +19,9 @@ public class ApplyToJobCommandHandler : IRequestHandler<ApplyToJobCommand, Apply
     private readonly IJobApplicationRepository _jobApplicationRepository;
     private readonly IIdentityService _identityService;
     private readonly IEmailService _emailService;
+    private readonly IFileStorageService _fileStorageService;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ILogger<ApplyToJobCommandHandler> _logger;
 
     public ApplyToJobCommandHandler(
         IJobRepository jobRepository,
@@ -25,14 +29,18 @@ public class ApplyToJobCommandHandler : IRequestHandler<ApplyToJobCommand, Apply
         IJobApplicationRepository jobApplicationRepository,
         IIdentityService identityService,
         IEmailService emailService,
-        IUnitOfWork unitOfWork)
+        IFileStorageService fileStorageService,
+        IUnitOfWork unitOfWork,
+        ILogger<ApplyToJobCommandHandler> logger)
     {
         _jobRepository = jobRepository;
         _talentRepository = talentRepository;
         _jobApplicationRepository = jobApplicationRepository;
         _identityService = identityService;
         _emailService = emailService;
+        _fileStorageService = fileStorageService;
         _unitOfWork = unitOfWork;
+        _logger = logger;
     }
 
     public async Task<ApplyToJobResponse> Handle(ApplyToJobCommand request, CancellationToken cancellationToken)
@@ -79,12 +87,29 @@ public class ApplyToJobCommandHandler : IRequestHandler<ApplyToJobCommand, Apply
             talentAccountCreated = true;
         }
 
+        var sanitizedResumeFileName = TalentMediaStorageKeyGuard.SanitizeFileNameSegment(request.ResumeFile.FileName);
+        var storageFileName = TalentMediaStorageKeyGuard.BuildStorageKey(
+            "resumes",
+            talentUserId,
+            $"{Guid.NewGuid()}_{sanitizedResumeFileName}");
+
+        string resumeStorageKey;
+        try
+        {
+            resumeStorageKey = await _fileStorageService.SaveAsync(request.ResumeFile, storageFileName, cancellationToken);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(exception, "Failed to save resume {FileName} to storage for user {UserId}", sanitizedResumeFileName, talentUserId);
+            throw new BadGatewayException("File storage is temporarily unavailable.");
+        }
+
         var application = new JobApplication(
             request.JobId,
             talentUserId,
             name,
             email,
-            request.ResumeStorageKey,
+            resumeStorageKey,
             request.CoverLetter,
             request.ExpectedSalary,
             request.TotalYearsExperience,
