@@ -33,7 +33,7 @@ public sealed class JobApplicationsController : BaseApiController
         return StatusCode(StatusCodes.Status201Created, result);
     }
 
-    [HttpPost("upload-application-resume")]
+    [HttpPost("application-resumes")]
     [Consumes("multipart/form-data")]
     [RequestSizeLimit(5 * 1024 * 1024)]
     public async Task<IActionResult> UploadApplicationResume(

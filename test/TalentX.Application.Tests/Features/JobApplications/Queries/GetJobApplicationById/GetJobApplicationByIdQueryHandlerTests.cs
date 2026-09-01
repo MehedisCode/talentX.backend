@@ -153,16 +153,6 @@ public class GetJobApplicationByIdQueryHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WhenCallerIsNotAuthenticated_ThrowsUnauthorizedException()
-    {
-        _currentUserService.SetupGet(u => u.UserId).Returns((string?)null);
-
-        var act = () => _handler.Handle(new GetJobApplicationByIdQuery(Guid.NewGuid()), CancellationToken.None);
-
-        await act.Should().ThrowAsync<UnauthorizedException>();
-    }
-
-    [Fact]
     public async Task Handle_MapsNullOptionalFieldsThrough()
     {
         var jobId = Guid.NewGuid();
@@ -178,5 +168,5 @@ public class GetJobApplicationByIdQueryHandlerTests
         result.ExpectedSalary.Should().BeNull();
         result.TotalYearsExperience.Should().BeNull();
         result.Location.Should().BeNull();
-    }
+}
 }

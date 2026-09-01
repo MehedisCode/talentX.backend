@@ -32,12 +32,11 @@ public sealed class UploadApplicationResumeCommandHandler
         UploadApplicationResumeCommand request,
         CancellationToken cancellationToken)
     {
-        var userId = _currentUserService.UserId
-            ?? throw new UnauthorizedException("You must be signed in to upload a resume.");
+        var userId = _currentUserService.UserId!;
 
         var sanitizedFileName = TalentMediaStorageKeyGuard.SanitizeFileNameSegment(request.File.FileName);
         var storageKey = TalentMediaStorageKeyGuard.BuildStorageKey(
-            "resumes",
+            "job-applications",
             userId,
             $"{Guid.NewGuid()}_{sanitizedFileName}");
 

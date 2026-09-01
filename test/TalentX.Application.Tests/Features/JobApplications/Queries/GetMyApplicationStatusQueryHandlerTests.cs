@@ -129,13 +129,4 @@ public class GetMyApplicationStatusQueryHandlerTests
             Times.Never);
     }
 
-    [Fact]
-    public async Task Handle_WhenCallerIsNotAuthenticated_ThrowsUnauthorizedException()
-    {
-        _currentUserService.SetupGet(u => u.UserId).Returns((string?)null);
-
-        var act = () => _handler.Handle(new GetMyApplicationStatusQuery(Guid.NewGuid()), CancellationToken.None);
-
-        await act.Should().ThrowAsync<UnauthorizedException>();
-    }
 }

@@ -142,19 +142,6 @@ public class ApplyToJobCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WhenCallerIsNotAuthenticated_ThrowsUnauthorizedException()
-    {
-        _currentUserService.SetupGet(u => u.UserId).Returns((string?)null);
-
-        var act = () => _handler.Handle(ValidCommand(Guid.NewGuid()), CancellationToken.None);
-
-        await act.Should().ThrowAsync<UnauthorizedException>();
-        _jobApplicationRepository.Verify(
-            r => r.AddAsync(It.IsAny<JobApplication>(), It.IsAny<CancellationToken>()), Times.Never);
-        _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
-    }
-
-    [Fact]
     public async Task Handle_WhenJobIsNotOpen_ThrowsNotFoundException_AndDoesNotPersist()
     {
         _jobRepository
@@ -189,5 +176,5 @@ public class ApplyToJobCommandHandlerTests
         _jobApplicationRepository.Verify(
             r => r.AddAsync(It.IsAny<JobApplication>(), It.IsAny<CancellationToken>()), Times.Never);
         _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
-    }
+}
 }

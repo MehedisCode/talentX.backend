@@ -30,8 +30,7 @@ public sealed class GetJobApplicationByIdQueryHandler
         GetJobApplicationByIdQuery request,
         CancellationToken cancellationToken)
     {
-        var userId = _currentUserService.UserId
-            ?? throw new UnauthorizedException("Something went wrong. Cannot find user id.");
+        var userId = _currentUserService.UserId!;
 
         var application = await _unitOfWork.JobApplications.GetByIdAsync(request.Id, cancellationToken)
             ?? throw new NotFoundException($"Application '{request.Id}' was not found.");

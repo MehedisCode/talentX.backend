@@ -25,8 +25,7 @@ public sealed class ApplyToJobCommandHandler
         ApplyToJobCommand request,
         CancellationToken cancellationToken)
     {
-        var talentUserId = _currentUserService.UserId
-            ?? throw new UnauthorizedException("Something went wrong cannot find user id");
+        var talentUserId = _currentUserService.UserId!;
 
         // Getting all the open jobs and published jobs
         var job = await _unitOfWork.Jobs.GetPublishedJobByIdAsync(request.JobId, cancellationToken)

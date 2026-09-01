@@ -24,8 +24,7 @@ public sealed class GetMyApplicationStatusQueryHandler
         GetMyApplicationStatusQuery request,
         CancellationToken cancellationToken)
     {
-        var talentUserId = _currentUserService.UserId
-            ?? throw new UnauthorizedException("You must be signed in to check application status.");
+        var talentUserId = _currentUserService.UserId!;
 
         // Only eligible jobs (Published and not expired) can be applied to, so an ineligible
         // or unknown job id is a 404 — consistent with GET /api/v1/Jobs/{id}.
