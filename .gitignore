@@ -9,6 +9,11 @@ appsettings.*.json
 !appsettings.Development.json
 !appsettings.example.json
 
+# Local agent/codebase context docs (not shared)
+AGENTS.md
+docs/CODEBASE.md
+docs/CODEBASE_REFERENCE.md
+
 # dotenv files
 .env
 .env.*

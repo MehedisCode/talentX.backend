@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using TalentX.Application.Common.Interfaces;
+using TalentX.Domain.Entities;
 using TalentX.Domain.Enums;
 using TalentX.Infrastructure.Identity.Models;
 
@@ -60,6 +61,64 @@ public static class IdentitySeeder
                 // Assign Employer role
                 await userManager.AddToRoleAsync(employerUser, UserRole.Employer.ToString());
             }
+        }
+
+        // 3. Seed Test Talent User
+        const string talentEmail = "talent@talentx.com";
+
+        var talentUser = await userManager.FindByEmailAsync(talentEmail);
+
+        if (talentUser == null)
+        {
+            talentUser = new ApplicationUser
+            {
+                UserName = talentEmail,
+                Email = talentEmail,
+                EmailConfirmed = true
+            };
+
+            var talentResult = await userManager.CreateAsync(talentUser, testPassword);
+
+            if (talentResult.Succeeded)
+            {
+                await userManager.AddToRoleAsync(talentUser, UserRole.Talent.ToString());
+            }
+        }
+
+        
+        if (await userManager.IsInRoleAsync(talentUser, UserRole.Talent.ToString()))
+        {
+            if (await unitOfWork.Talents.GetByUserIdAsync(talentUser.Id) == null)
+            {
+                var talent = new Talent(talentUser.Id, "Test Talent", talentEmail);
+                talent.UpdateProfile(
+                    name: "Test Talent",
+                    tagline: "Full-stack engineer",
+                    shortBio: "Seed account for local testing of the apply flow.",
+                    location: "Dhaka, Bangladesh",
+                    phone: null,
+                    linkedInUrl: null,
+                    additionalUrls: null,
+                    totalYearsExperience: 5m,
+                    expectedSalary: 90000m,
+                    skillPropositions: null);
+
+                await unitOfWork.Talents.AddAsync(talent);
+            }
+
+            if (await unitOfWork.Resumes.GetByUserIdAsync(talentUser.Id) == null)
+            {
+                var resume = new Resume(
+                    talentUser.Id,
+                    "resumes/seed/test-talent-resume.pdf",
+                    "test-talent-resume.pdf",
+                    "application/pdf",
+                    123456);
+
+                await unitOfWork.Resumes.AddAsync(resume);
+            }
+
+            await unitOfWork.SaveChangesAsync();
         }
     }
 }
