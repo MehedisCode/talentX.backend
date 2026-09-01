@@ -146,6 +146,7 @@ dotnet test
 
 | Topic | Documentation Link |
 | :--- | :--- |
+| **Agent / AI onboarding (start here)** | [docs/CODEBASE.md](docs/CODEBASE.md) · [docs/CODEBASE_REFERENCE.md](docs/CODEBASE_REFERENCE.md) |
 | **Architecture Overview** | [docs/architecture/overview.md](docs/architecture/overview.md) |
 | **Authentication & User Flows** | [docs/architecture/authentication-flow.md](docs/architecture/authentication-flow.md) |
 | **Error Handling & Problem Details** | [docs/architecture/error-handling.md](docs/architecture/error-handling.md) |

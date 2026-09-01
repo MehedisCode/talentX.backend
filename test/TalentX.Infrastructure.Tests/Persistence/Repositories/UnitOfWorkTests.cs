@@ -1,5 +1,7 @@
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
+using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Common.Interfaces.Repositories;
 using TalentX.Domain.Entities;
@@ -62,5 +64,50 @@ public class UnitOfWorkTests
 
         affectedRows.Should().Be(1);
         (await context.Jobs.FindAsync(job.Id)).Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task SaveChangesAsync_WhenAUniqueIndexIsViolated_ThrowsConflictException()
+    {
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+        var uniqueViolation = new DbUpdateException(
+            "insert failed",
+            new PostgresException("duplicate key", "ERROR", "ERROR", PostgresErrorCodes.UniqueViolation));
+
+        await using var context = new ThrowingDbContext(options, uniqueViolation);
+        var unitOfWork = new UnitOfWork(context);
+
+        var act = () => unitOfWork.SaveChangesAsync(CancellationToken.None);
+
+        await act.Should().ThrowAsync<ConflictException>();
+    }
+
+    [Fact]
+    public async Task SaveChangesAsync_WhenTheFailureIsNotAUniqueViolation_LetsItPropagate()
+    {
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+        var otherFailure = new DbUpdateException("insert failed", new InvalidOperationException("boom"));
+
+        await using var context = new ThrowingDbContext(options, otherFailure);
+        var unitOfWork = new UnitOfWork(context);
+
+        var act = () => unitOfWork.SaveChangesAsync(CancellationToken.None);
+
+        await act.Should().ThrowAsync<DbUpdateException>();
+    }
+
+    private sealed class ThrowingDbContext : ApplicationDbContext
+    {
+        private readonly Exception _toThrow;
+
+        public ThrowingDbContext(DbContextOptions<ApplicationDbContext> options, Exception toThrow)
+            : base(options) => _toThrow = toThrow;
+
+        public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+            => throw _toThrow;
     }
 }
