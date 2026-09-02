@@ -1,4 +1,4 @@
-using TalentX.Domain.Entities;
+using TalentX.Domain;
 
 namespace TalentX.Application.Common.Interfaces.Repositories;
 

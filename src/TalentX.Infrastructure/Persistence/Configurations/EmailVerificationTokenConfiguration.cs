@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using TalentX.Domain;
 using TalentX.Domain.Entities;
 
 namespace TalentX.Infrastructure.Persistence.Configurations;

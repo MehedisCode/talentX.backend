@@ -1,6 +1,6 @@
 using TalentX.Domain.Common;
 
-namespace TalentX.Domain.Entities;
+namespace TalentX.Domain;
 
 public sealed class EmailVerificationToken : BaseEntity
 {
