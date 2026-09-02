@@ -48,6 +48,9 @@ public sealed class JobApplicationConfiguration : IEntityTypeConfiguration<JobAp
             .HasMaxLength(50)
             .IsRequired();
 
+        builder.Property(application => application.AiMatchScore)
+            .HasPrecision(5, 2);
+
         builder.Property(application => application.AppliedAt)
             .IsRequired();
 
