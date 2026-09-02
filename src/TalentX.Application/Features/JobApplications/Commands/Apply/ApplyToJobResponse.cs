@@ -3,5 +3,6 @@ namespace TalentX.Application.Features.JobApplications.Commands.Apply;
 public record ApplyToJobResponse(
     Guid ApplicationId,
     Guid JobId,
-    bool VerificationEmailResent = false
+    bool VerificationEmailResent = false,
+    bool RequiresLogin = false
 );

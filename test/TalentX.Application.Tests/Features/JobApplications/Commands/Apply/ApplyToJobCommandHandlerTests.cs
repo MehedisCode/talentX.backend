@@ -18,6 +18,7 @@ public class ApplyToJobCommandHandlerTests
     private readonly Mock<IEmailService> _emailService = new();
     private readonly Mock<IFileStorageService> _fileStorageService = new();
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
+    private readonly Mock<IUserRepository> _userRepository = new();
     private readonly Mock<Microsoft.Extensions.Logging.ILogger<ApplyToJobCommandHandler>> _logger = new();
     private readonly ApplyToJobCommandHandler _handler;
 
@@ -26,6 +27,10 @@ public class ApplyToJobCommandHandlerTests
         _fileStorageService
             .Setup(s => s.SaveAsync(It.IsAny<IUploadedFile>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((IUploadedFile _, string key, CancellationToken _) => key);
+
+        _unitOfWork
+            .Setup(u => u.Users)
+            .Returns(_userRepository.Object);
 
         _handler = new ApplyToJobCommandHandler(
             _jobRepository.Object,

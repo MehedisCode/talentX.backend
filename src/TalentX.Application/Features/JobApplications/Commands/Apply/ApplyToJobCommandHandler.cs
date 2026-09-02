@@ -4,6 +4,7 @@ using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Common.Interfaces.Repositories;
 using TalentX.Application.Features.Talents;
+using TalentX.Domain;
 using TalentX.Domain.Entities;
 using TalentX.Domain.Enums;
 
@@ -49,6 +50,12 @@ public class ApplyToJobCommandHandler : IRequestHandler<ApplyToJobCommand, Apply
 
         var name = request.ApplicantName.Trim();
         var email = request.ApplicantEmail.Trim().ToLowerInvariant();
+
+        var existingUser = await _unitOfWork.Users.GetByEmailAsync(email);
+        if (existingUser is not null && existingUser.Role == UserRole.Talent)
+        {
+            return new ApplyToJobResponse(Guid.Empty, request.JobId, RequiresLogin: true);
+        }
 
         var existingPending = await _jobApplicationRepository.GetPendingByJobAndEmailAsync(request.JobId, email, cancellationToken);
 
