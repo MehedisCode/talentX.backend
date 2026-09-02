@@ -80,4 +80,10 @@ public sealed class JobRepository : RepositoryBase<Job>, IJobRepository
             .Where(j => j.EmployerId == employerId)
             .OrderByDescending(j => j.CreatedAt)
             .ToListAsync(cancellationToken);
+
+    public async Task<IEnumerable<Job>> GetActivePublishedJobsAsync(CancellationToken cancellationToken = default) =>
+        await Context.Jobs
+            .AsNoTracking()
+            .Where(j => j.ExpireAt >= DateTime.UtcNow && j.RequiredSkills.Count > 0)
+            .ToListAsync(cancellationToken);
 }

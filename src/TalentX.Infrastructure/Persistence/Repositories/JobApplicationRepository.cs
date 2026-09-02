@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using TalentX.Application.Common.Interfaces.Repositories;
+using TalentX.Application.Common.Models;
 using TalentX.Domain.Entities;
 using TalentX.Infrastructure.Persistence.Contexts;
 
@@ -47,5 +48,50 @@ public sealed class JobApplicationRepository : IJobApplicationRepository
         CancellationToken cancellationToken = default)
     {
         await _context.JobApplications.AddAsync(jobApplication, cancellationToken);
+    }
+
+    public async Task<PaginatedList<TalentApplicationRecord>> GetApplicationsForTalentAsync(
+        string talentUserId,
+        ApplicationStatus? status,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var query = from application in _context.JobApplications
+                    join job in _context.Jobs on application.JobId equals job.Id
+                    where application.TalentUserId == talentUserId
+                    select new
+                    {
+                        application.Id,
+                        application.JobId,
+                        JobTitle = job.Title,
+                        Company = job.CompanyName,
+                        application.AppliedAt,
+                        application.Status
+                    };
+
+        if (status.HasValue)
+        {
+            query = query.Where(a => a.Status == status.Value);
+        }
+
+        query = query.OrderByDescending(a => a.AppliedAt);
+
+        var totalCount = await query.CountAsync(cancellationToken);
+        var pagedItems = await query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        var records = pagedItems.Select(item => new TalentApplicationRecord(
+            item.Id,
+            item.JobId,
+            item.JobTitle,
+            item.Company,
+            item.AppliedAt,
+            item.Status
+        )).ToList();
+
+        return new PaginatedList<TalentApplicationRecord>(records, page, pageSize, totalCount);
     }
 }
