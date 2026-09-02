@@ -240,8 +240,8 @@ namespace TalentX.Migrations.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<string>("RequiredTimezoneOverlap")
-                        .HasColumnType("text");
+                    b.Property<short?>("MinOverlapHours")
+                        .HasColumnType("smallint");
 
                     b.Property<string>("RequiredSkills")
                         .IsRequired()
@@ -286,6 +286,10 @@ namespace TalentX.Migrations.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
+
+                    b.Property<decimal?>("AiMatchScore")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)");
 
                     b.Property<string>("ApplicantEmail")
                         .IsRequired()
