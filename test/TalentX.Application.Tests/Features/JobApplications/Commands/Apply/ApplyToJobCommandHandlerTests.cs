@@ -240,4 +240,52 @@ public class ApplyToJobCommandHandlerTests
         await act.Should().ThrowAsync<BadGatewayException>();
         _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
+
+    [Fact]
+    public async Task Handle_WhenUserExistsAsTalent_ReturnsRequiresLogin()
+    {
+        SetupPublishedJob();
+        _userRepository
+            .Setup(r => r.GetByEmailAsync("jane@example.com"))
+            .ReturnsAsync(new User("user-1", "Jane Doe", "jane@example.com", UserRole.Talent));
+
+        var command = ValidCommand();
+        var response = await _handler.Handle(command, CancellationToken.None);
+
+        response.RequiresLogin.Should().BeTrue();
+        response.ApplicationId.Should().BeEmpty();
+        _jobApplicationRepository.Verify(r => r.AddAsync(It.IsAny<JobApplication>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_WhenUserExistsAsGuest_ReturnsRequiresLogin()
+    {
+        SetupPublishedJob();
+        _userRepository
+            .Setup(r => r.GetByEmailAsync("jane@example.com"))
+            .ReturnsAsync(new User("user-1", "Jane Doe", "jane@example.com", UserRole.Guest));
+
+        var command = ValidCommand();
+        var response = await _handler.Handle(command, CancellationToken.None);
+
+        response.RequiresLogin.Should().BeTrue();
+        response.ApplicationId.Should().BeEmpty();
+        _jobApplicationRepository.Verify(r => r.AddAsync(It.IsAny<JobApplication>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_WhenUserExistsAsEmployer_ThrowsConflictException()
+    {
+        SetupPublishedJob();
+        _userRepository
+            .Setup(r => r.GetByEmailAsync("jane@example.com"))
+            .ReturnsAsync(new User("user-1", "Jane Doe", "jane@example.com", UserRole.Employer));
+
+        var command = ValidCommand();
+        var act = () => _handler.Handle(command, CancellationToken.None);
+
+        await act.Should().ThrowAsync<ConflictException>()
+            .WithMessage("*already registered as Employer*");
+        _jobApplicationRepository.Verify(r => r.AddAsync(It.IsAny<JobApplication>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
 }

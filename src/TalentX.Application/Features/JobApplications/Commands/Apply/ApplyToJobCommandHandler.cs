@@ -52,9 +52,15 @@ public class ApplyToJobCommandHandler : IRequestHandler<ApplyToJobCommand, Apply
         var email = request.ApplicantEmail.Trim().ToLowerInvariant();
 
         var existingUser = await _unitOfWork.Users.GetByEmailAsync(email);
-        if (existingUser is not null && existingUser.Role == UserRole.Talent)
+        if (existingUser is not null)
         {
-            return new ApplyToJobResponse(Guid.Empty, request.JobId, RequiresLogin: true);
+            if (existingUser.Role is UserRole.Talent or UserRole.Guest)
+            {
+                return new ApplyToJobResponse(Guid.Empty, request.JobId, RequiresLogin: true);
+            }
+
+            throw new ConflictException(
+                $"An account with email '{email}' is already registered as {existingUser.Role}. Please sign in with a talent account or use a different email.");
         }
 
         var existingPending = await _jobApplicationRepository.GetPendingByJobAndEmailAsync(request.JobId, email, cancellationToken);
@@ -71,7 +77,8 @@ public class ApplyToJobCommandHandler : IRequestHandler<ApplyToJobCommand, Apply
             await _verificationTokenRepository.AddAsync(resendTokenEntity, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            var newUrl = $"http://localhost:3000/verify-application?token={newToken}";
+            var baseUrl = GetFrontendBaseUrl();
+            var newUrl = $"{baseUrl}/verify-application?token={newToken}";
             _logger.LogInformation("[VERIFY] Verification link for {Email}: {Url}", email, newUrl);
             await _emailService.SendVerificationLinkEmailAsync(email, name, newUrl, cancellationToken);
 
@@ -117,11 +124,36 @@ public class ApplyToJobCommandHandler : IRequestHandler<ApplyToJobCommand, Apply
         await _verificationTokenRepository.AddAsync(tokenEntity, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        var verificationUrl = $"http://localhost:3000/verify-application?token={verificationToken}";
+        var frontendBaseUrl = GetFrontendBaseUrl();
+        var verificationUrl = $"{frontendBaseUrl}/verify-application?token={verificationToken}";
         _logger.LogInformation("[VERIFY] Verification link for {Email}: {Url}", email, verificationUrl);
         await _emailService.SendVerificationLinkEmailAsync(email, name, verificationUrl, cancellationToken);
 
         return new ApplyToJobResponse(application.Id, application.JobId);
+    }
+
+    private static string GetFrontendBaseUrl()
+    {
+        var frontendUrl = Environment.GetEnvironmentVariable("FRONTEND_URL");
+        if (!string.IsNullOrWhiteSpace(frontendUrl))
+        {
+            return frontendUrl.Trim().TrimEnd('/');
+        }
+
+        var corsOrigins = Environment.GetEnvironmentVariable("CORS_ALLOWED_ORIGINS");
+        if (!string.IsNullOrWhiteSpace(corsOrigins))
+        {
+            var firstOrigin = corsOrigins
+                .Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .FirstOrDefault();
+
+            if (!string.IsNullOrWhiteSpace(firstOrigin))
+            {
+                return firstOrigin.TrimEnd('/');
+            }
+        }
+
+        return "http://localhost:3000";
     }
 
     private static string GenerateSecureToken()

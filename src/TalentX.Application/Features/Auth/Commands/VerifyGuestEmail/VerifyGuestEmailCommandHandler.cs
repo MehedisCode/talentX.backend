@@ -60,18 +60,12 @@ public sealed class VerifyGuestEmailCommandHandler : IRequestHandler<VerifyGuest
         var existingTalent = await _talentRepository.GetByEmailAsync(email, cancellationToken);
 
         string talentUserId;
-        string temporaryPassword;
+        string? temporaryPassword = null;
+        var isNewTalent = false;
 
         if (existingTalent is not null)
         {
             talentUserId = existingTalent.UserId;
-            temporaryPassword = TemporaryPasswordGenerator.Generate();
-            var changeResult = await _identityService.ChangePasswordAsync(talentUserId, "!", temporaryPassword);
-            if (!changeResult.Success)
-            {
-                _logger.LogWarning("Failed to reset password for existing talent {UserId}: {Errors}",
-                    talentUserId, string.Join(", ", changeResult.Errors));
-            }
         }
         else
         {
@@ -84,6 +78,7 @@ public sealed class VerifyGuestEmailCommandHandler : IRequestHandler<VerifyGuest
             }
             talentUserId = createResult.Data.UserId;
             await _talentRepository.AddAsync(new Talent(talentUserId, application.ApplicantName, email), cancellationToken);
+            isNewTalent = true;
         }
 
         application.LinkTalentUser(talentUserId);
@@ -94,14 +89,18 @@ public sealed class VerifyGuestEmailCommandHandler : IRequestHandler<VerifyGuest
         {
             if (pending.Id != application.Id)
             {
-                pending.UpdateStatus(ApplicationStatus.Rejected);
+                pending.LinkTalentUser(talentUserId);
+                pending.UpdateStatus(ApplicationStatus.Applied);
             }
         }
 
         tokenEntity.MarkConsumed();
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        await _emailService.SendCredentialsEmailAsync(email, application.ApplicantName, temporaryPassword, cancellationToken);
+        if (isNewTalent && temporaryPassword is not null)
+        {
+            await _emailService.SendCredentialsEmailAsync(email, application.ApplicantName, temporaryPassword, cancellationToken);
+        }
 
         var tokenResult = await _tokenService.CreateAsync(talentUserId);
         if (!tokenResult.Success || tokenResult.Data is null)
