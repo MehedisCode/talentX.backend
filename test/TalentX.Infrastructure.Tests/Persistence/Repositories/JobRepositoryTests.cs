@@ -395,8 +395,6 @@ public class JobRepositoryTests
         result.Items[0].Country.Should().Be("Japan");
     }
 
-    // ---------- Employer Dashboard & Job Management Tests ----------
-
     [Fact]
     public async Task GetEmployerStatsAsync_WhenJobsExist_ReturnsAccurateMetrics()
     {

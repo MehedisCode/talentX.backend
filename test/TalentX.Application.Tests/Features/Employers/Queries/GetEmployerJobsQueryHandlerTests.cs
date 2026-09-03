@@ -79,7 +79,6 @@ public sealed class GetEmployerJobsQueryHandlerTests
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(expectedPaginatedList);
 
-        // Page = -1, PageSize = -5 will normalize to Page = 1, PageSize = 20 (DefaultPageSize)
         var query = new GetEmployerJobsQuery(
             Page: -1,
             PageSize: -5,
