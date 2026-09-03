@@ -2,7 +2,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using TalentX.Application.Features.JobApplications.Commands.Apply;
+using TalentX.Application.Features.Jobs.Commands.CloseJob;
 using TalentX.Application.Features.Jobs.Commands.CreateJob;
+using TalentX.Application.Features.Jobs.Commands.DeleteJob;
 using TalentX.Application.Features.Jobs.Commands.GenerateJobDescription;
 using TalentX.Application.Features.Jobs.Commands.GenerateSkills;
 using TalentX.Application.Features.Jobs.Commands.UpdateJob;
@@ -151,5 +153,30 @@ public class JobsController : BaseApiController
 
         var response = await Sender.Send(command, cancellationToken);
         return Ok(response);
+    }
+
+    [HttpPatch("{id:guid}/status")]
+    [HttpPut("{id:guid}/close")]
+    [Authorize(Roles = $"{nameof(UserRole.Employer)}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> CloseJob(Guid id, CancellationToken cancellationToken)
+    {
+        await Sender.Send(new CloseJobCommand(id), cancellationToken);
+        return NoContent();
+    }
+
+    [HttpDelete("{id:guid}")]
+    [Authorize(Roles = $"{nameof(UserRole.Employer)}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteJob(Guid id, CancellationToken cancellationToken)
+    {
+        await Sender.Send(new DeleteJobCommand(id), cancellationToken);
+        return NoContent();
     }
 }

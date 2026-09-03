@@ -2,12 +2,17 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using TalentX.Application.Common.Interfaces.Repositories;
+using TalentX.Application.Common.Models;
 using TalentX.Application.DTOs.Employers;
 using TalentX.Application.Features.Employers.Commands.CreateEmployer;
 using TalentX.Application.Features.Employers.Commands.GoogleSignIn;
 using TalentX.Application.Features.Employers.Commands.SendOtp;
 using TalentX.Application.Features.Employers.Commands.VerifyEmail;
+using TalentX.Application.Features.Employers.DTOs;
+using TalentX.Application.Features.Employers.Queries.GetEmployerDashboard;
+using TalentX.Application.Features.Employers.Queries.GetEmployerJobs;
 using TalentX.Application.Identity.Services;
+using TalentX.Domain.Enums;
 
 namespace TalentX.API.Controllers.Employers;
 
@@ -109,6 +114,32 @@ public sealed class EmployersController : BaseApiController
             Id = employer.Id.ToString(),
             CompanyName = employer.CompanyName
         });
+    }
+
+    [HttpGet("dashboard")]
+    [Authorize(Roles = $"{nameof(UserRole.Employer)}")]
+    [ProducesResponseType(typeof(EmployerDashboardDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> GetDashboard(CancellationToken cancellationToken)
+    {
+        var dashboard = await Sender.Send(new GetEmployerDashboardQuery(), cancellationToken);
+        return Ok(dashboard);
+    }
+
+    [HttpGet("jobs")]
+    [Authorize(Roles = $"{nameof(UserRole.Employer)}")]
+    [ProducesResponseType(typeof(PaginatedList<EmployerJobListItemDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> GetJobs(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10,
+        [FromQuery] JobStatus? status = null,
+        [FromQuery] bool? isExpired = null,
+        CancellationToken cancellationToken = default)
+    {
+        var query = new GetEmployerJobsQuery(page, pageSize, status, isExpired);
+        var jobs = await Sender.Send(query, cancellationToken);
+        return Ok(jobs);
     }
 }
 
