@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using TalentX.Application.Features.Auth.Commands.VerifyGuestEmail;
 using TalentX.Application.Features.Auth.ChangePassword;
 using TalentX.Application.Features.Auth.CurrentUser;
 using TalentX.Application.Features.Auth.Login;
@@ -79,6 +80,21 @@ public class AuthController : BaseApiController
             return BadRequest(result.Errors);
 
         return Ok(new { message = "Password changed successfully." });
+    }
+
+    [AllowAnonymous]
+    [HttpPost("verify-email")]
+    public async Task<IActionResult> VerifyGuestEmail(VerifyGuestEmailCommand command)
+    {
+        var result = await Sender.Send(command);
+
+        return Ok(new
+        {
+            result.UserId,
+            result.Email,
+            result.AccessToken,
+            result.RefreshToken
+        });
     }
 }
 
