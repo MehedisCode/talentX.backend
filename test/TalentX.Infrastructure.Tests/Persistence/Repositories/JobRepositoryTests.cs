@@ -394,5 +394,306 @@ public class JobRepositoryTests
         result.Items.Should().HaveCount(1);
         result.Items[0].Country.Should().Be("Japan");
     }
+
+    // ---------- Employer Dashboard & Job Management Tests ----------
+
+    [Fact]
+    public async Task GetEmployerStatsAsync_WhenJobsExist_ReturnsAccurateMetrics()
+    {
+        await using var context = NewContext();
+        var repository = new JobRepository(context);
+
+        var activeJob = MakeCustomJob("employer-1", "Active Job", JobStatus.Published, daysUntilExpiry: 10);
+        var expiredJob = MakeCustomJob("employer-1", "Expired Job", JobStatus.Published, daysUntilExpiry: -2);
+        var draftJob = MakeCustomJob("employer-1", "Draft Job", JobStatus.Draft, daysUntilExpiry: 30);
+        var closedJob = MakeCustomJob("employer-1", "Closed Job", JobStatus.Closed, daysUntilExpiry: 30);
+        var softDeletedJob = MakeCustomJob("employer-1", "Deleted Job", JobStatus.Published, daysUntilExpiry: 10);
+        softDeletedJob.SoftDelete();
+
+        var otherEmployerJob = MakeCustomJob("employer-2", "Other Employer Job", JobStatus.Published, daysUntilExpiry: 10);
+
+        context.Jobs.AddRange(activeJob, expiredJob, draftJob, closedJob, softDeletedJob, otherEmployerJob);
+        await context.SaveChangesAsync();
+
+        var stats = await repository.GetEmployerStatsAsync("employer-1");
+
+        stats.TotalPostedJobs.Should().Be(4);
+        stats.ActiveJobsCount.Should().Be(1);
+        stats.DraftJobsCount.Should().Be(1);
+        stats.ClosedJobsCount.Should().Be(1);
+        stats.ExpiredJobsCount.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task GetEmployerStatsAsync_WhenEmployerHasNoJobs_ReturnsAllZeros()
+    {
+        await using var context = NewContext();
+        var repository = new JobRepository(context);
+
+        var stats = await repository.GetEmployerStatsAsync("non-existent-employer");
+
+        stats.TotalPostedJobs.Should().Be(0);
+        stats.ActiveJobsCount.Should().Be(0);
+        stats.DraftJobsCount.Should().Be(0);
+        stats.ClosedJobsCount.Should().Be(0);
+        stats.ExpiredJobsCount.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task GetEmployerStatsAsync_ExcludesSoftDeletedJobs()
+    {
+        await using var context = NewContext();
+        var repository = new JobRepository(context);
+
+        var softDeletedJob = MakeCustomJob("employer-1", "Deleted Job", JobStatus.Published, daysUntilExpiry: 10);
+        softDeletedJob.SoftDelete();
+
+        context.Jobs.Add(softDeletedJob);
+        await context.SaveChangesAsync();
+
+        var stats = await repository.GetEmployerStatsAsync("employer-1");
+
+        stats.TotalPostedJobs.Should().Be(0);
+        stats.ActiveJobsCount.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task GetRecentJobsByEmployerIdAsync_WhenJobsExist_ReturnsTopJobsOrderedByCreatedAtWithApplicantCounts()
+    {
+        await using var context = NewContext();
+        var repository = new JobRepository(context);
+
+        var firstJob = MakeCustomJob("employer-1", "First Job", JobStatus.Published, daysUntilExpiry: 10);
+        var secondJob = MakeCustomJob("employer-1", "Second Job", JobStatus.Draft, daysUntilExpiry: 10);
+        var thirdJob = MakeCustomJob("employer-1", "Third Job", JobStatus.Closed, daysUntilExpiry: 10);
+        var fourthJob = MakeCustomJob("employer-1", "Fourth Job", JobStatus.Published, daysUntilExpiry: 10);
+        var deletedJob = MakeCustomJob("employer-1", "Deleted Job", JobStatus.Published, daysUntilExpiry: 10);
+        deletedJob.SoftDelete();
+        var otherEmployerJob = MakeCustomJob("employer-2", "Other Job", JobStatus.Published, daysUntilExpiry: 10);
+
+        context.Jobs.AddRange(firstJob, secondJob, thirdJob, fourthJob, deletedJob, otherEmployerJob);
+        await context.SaveChangesAsync();
+
+        context.Entry(firstJob).Property(job => job.CreatedAt).CurrentValue = DateTime.UtcNow.AddHours(-4);
+        context.Entry(secondJob).Property(job => job.CreatedAt).CurrentValue = DateTime.UtcNow.AddHours(-3);
+        context.Entry(thirdJob).Property(job => job.CreatedAt).CurrentValue = DateTime.UtcNow.AddHours(-2);
+        context.Entry(fourthJob).Property(job => job.CreatedAt).CurrentValue = DateTime.UtcNow.AddHours(-1);
+        await context.SaveChangesAsync();
+
+        var applicationOne = MakeJobApplication(fourthJob.Id, "talent-1");
+        var applicationTwo = MakeJobApplication(fourthJob.Id, "talent-2");
+        var applicationThree = MakeJobApplication(thirdJob.Id, "talent-3");
+        context.JobApplications.AddRange(applicationOne, applicationTwo, applicationThree);
+        await context.SaveChangesAsync();
+
+        var recentJobs = await repository.GetRecentJobsByEmployerIdAsync("employer-1", count: 2);
+
+        recentJobs.Should().HaveCount(2);
+        recentJobs[0].Id.Should().Be(fourthJob.Id);
+        recentJobs[0].ApplicantCount.Should().Be(2);
+        recentJobs[0].Status.Should().Be("Published");
+
+        recentJobs[1].Id.Should().Be(thirdJob.Id);
+        recentJobs[1].ApplicantCount.Should().Be(1);
+        recentJobs[1].Status.Should().Be("Closed");
+    }
+
+    [Fact]
+    public async Task GetRecentJobsByEmployerIdAsync_WhenJobIsExpired_ReportsExpiredStatus()
+    {
+        await using var context = NewContext();
+        var repository = new JobRepository(context);
+
+        var expiredJob = MakeCustomJob("employer-1", "Expired Job", JobStatus.Published, daysUntilExpiry: -5);
+        context.Jobs.Add(expiredJob);
+        await context.SaveChangesAsync();
+
+        var recentJobs = await repository.GetRecentJobsByEmployerIdAsync("employer-1", count: 5);
+
+        recentJobs.Should().HaveCount(1);
+        recentJobs[0].Status.Should().Be("Expired");
+    }
+
+    [Fact]
+    public async Task GetRecentJobsByEmployerIdAsync_WhenNoJobs_ReturnsEmptyList()
+    {
+        await using var context = NewContext();
+        var repository = new JobRepository(context);
+
+        var recentJobs = await repository.GetRecentJobsByEmployerIdAsync("employer-without-jobs");
+
+        recentJobs.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task GetEmployerJobsPaginatedAsync_Pagination_ReturnsCorrectPageSliceAndTotal()
+    {
+        await using var context = NewContext();
+        var repository = new JobRepository(context);
+
+        for (var index = 0; index < 5; index++)
+        {
+            var job = MakeCustomJob("employer-1", $"Job {index}");
+            context.Jobs.Add(job);
+        }
+        await context.SaveChangesAsync();
+
+        var pageOne = await repository.GetEmployerJobsPaginatedAsync("employer-1", null, null, page: 1, pageSize: 2);
+        var pageThree = await repository.GetEmployerJobsPaginatedAsync("employer-1", null, null, page: 3, pageSize: 2);
+
+        pageOne.Items.Should().HaveCount(2);
+        pageOne.TotalCount.Should().Be(5);
+        pageOne.Page.Should().Be(1);
+        pageOne.PageSize.Should().Be(2);
+
+        pageThree.Items.Should().HaveCount(1);
+        pageThree.TotalCount.Should().Be(5);
+        pageThree.Page.Should().Be(3);
+    }
+
+    [Fact]
+    public async Task GetEmployerJobsPaginatedAsync_StatusFilter_ReturnsOnlyMatchingStatus()
+    {
+        await using var context = NewContext();
+        var repository = new JobRepository(context);
+
+        var draftJob = MakeCustomJob("employer-1", "Draft Job", JobStatus.Draft);
+        var publishedJob = MakeCustomJob("employer-1", "Published Job", JobStatus.Published);
+        var closedJob = MakeCustomJob("employer-1", "Closed Job", JobStatus.Closed);
+
+        context.Jobs.AddRange(draftJob, publishedJob, closedJob);
+        await context.SaveChangesAsync();
+
+        var draftResult = await repository.GetEmployerJobsPaginatedAsync("employer-1", JobStatus.Draft, null, page: 1, pageSize: 10);
+        var closedResult = await repository.GetEmployerJobsPaginatedAsync("employer-1", JobStatus.Closed, null, page: 1, pageSize: 10);
+
+        draftResult.Items.Should().HaveCount(1);
+        draftResult.Items[0].Title.Should().Be("Draft Job");
+
+        closedResult.Items.Should().HaveCount(1);
+        closedResult.Items[0].Title.Should().Be("Closed Job");
+    }
+
+    [Fact]
+    public async Task GetEmployerJobsPaginatedAsync_ExpirationFilters_FiltersCorrectly()
+    {
+        await using var context = NewContext();
+        var repository = new JobRepository(context);
+
+        var activePublishedJob = MakeCustomJob("employer-1", "Active Published", JobStatus.Published, daysUntilExpiry: 10);
+        var expiredPublishedJob = MakeCustomJob("employer-1", "Expired Published", JobStatus.Published, daysUntilExpiry: -5);
+        var draftJob = MakeCustomJob("employer-1", "Draft Job", JobStatus.Draft, daysUntilExpiry: 10);
+
+        context.Jobs.AddRange(activePublishedJob, expiredPublishedJob, draftJob);
+        await context.SaveChangesAsync();
+
+        var publishedActiveResult = await repository.GetEmployerJobsPaginatedAsync(
+            "employer-1", JobStatus.Published, isExpired: false, page: 1, pageSize: 10);
+        var publishedExpiredResult = await repository.GetEmployerJobsPaginatedAsync(
+            "employer-1", JobStatus.Published, isExpired: true, page: 1, pageSize: 10);
+        var anyExpiredResult = await repository.GetEmployerJobsPaginatedAsync(
+            "employer-1", status: null, isExpired: true, page: 1, pageSize: 10);
+        var anyNotExpiredResult = await repository.GetEmployerJobsPaginatedAsync(
+            "employer-1", status: null, isExpired: false, page: 1, pageSize: 10);
+
+        publishedActiveResult.Items.Should().HaveCount(1);
+        publishedActiveResult.Items[0].Title.Should().Be("Active Published");
+        publishedActiveResult.Items[0].Status.Should().Be("Published");
+
+        publishedExpiredResult.Items.Should().HaveCount(1);
+        publishedExpiredResult.Items[0].Title.Should().Be("Expired Published");
+        publishedExpiredResult.Items[0].Status.Should().Be("Expired");
+
+        anyExpiredResult.Items.Should().HaveCount(1);
+        anyExpiredResult.Items[0].Title.Should().Be("Expired Published");
+
+        anyNotExpiredResult.Items.Should().HaveCount(2);
+        anyNotExpiredResult.Items.Select(item => item.Title).Should().Contain(["Active Published", "Draft Job"]);
+    }
+
+    [Fact]
+    public async Task GetEmployerJobsPaginatedAsync_ExcludesSoftDeletedJobsAndOtherEmployers()
+    {
+        await using var context = NewContext();
+        var repository = new JobRepository(context);
+
+        var validJob = MakeCustomJob("employer-1", "Valid Job");
+        var softDeletedJob = MakeCustomJob("employer-1", "Deleted Job");
+        softDeletedJob.SoftDelete();
+        var otherEmployerJob = MakeCustomJob("employer-2", "Other Employer Job");
+
+        context.Jobs.AddRange(validJob, softDeletedJob, otherEmployerJob);
+        await context.SaveChangesAsync();
+
+        var result = await repository.GetEmployerJobsPaginatedAsync("employer-1", null, null, page: 1, pageSize: 10);
+
+        result.Items.Should().HaveCount(1);
+        result.TotalCount.Should().Be(1);
+        result.Items[0].Title.Should().Be("Valid Job");
+    }
+
+    [Fact]
+    public async Task GetEmployerJobsPaginatedAsync_ComputesDisplayStatusAndApplicantCount()
+    {
+        await using var context = NewContext();
+        var repository = new JobRepository(context);
+
+        var job = MakeCustomJob("employer-1", "Engineering Manager", JobStatus.Published, daysUntilExpiry: 15);
+        context.Jobs.Add(job);
+        await context.SaveChangesAsync();
+
+        var application = MakeJobApplication(job.Id, "talent-1");
+        context.JobApplications.Add(application);
+        await context.SaveChangesAsync();
+
+        var result = await repository.GetEmployerJobsPaginatedAsync("employer-1", null, null, page: 1, pageSize: 10);
+
+        result.Items.Should().HaveCount(1);
+        result.Items[0].ApplicantCount.Should().Be(1);
+        result.Items[0].Status.Should().Be("Published");
+        result.Items[0].CompanyName.Should().Be("Acme Corp");
+    }
+
+    private static Job MakeCustomJob(
+        string employerId = "employer-1",
+        string title = "Backend Engineer",
+        JobStatus status = JobStatus.Published,
+        int daysUntilExpiry = 30)
+    {
+        var job = Job.Create(
+            employerId,
+            title,
+            "Acme Corp",
+            "Job description",
+            EmploymentType.FullTime,
+            ExperienceLevel.MidLevel,
+            "Remote",
+            WorkArrangement.RemoteButAccessible,
+            ["C#"],
+            1,
+            DateTime.UtcNow.AddDays(daysUntilExpiry));
+
+        if (status == JobStatus.Published)
+        {
+            job.MarkAsPublished();
+        }
+        else if (status == JobStatus.Closed)
+        {
+            job.MarkAsPublished();
+            job.MarkAsClosed();
+        }
+
+        return job;
+    }
+
+    private static JobApplication MakeJobApplication(Guid jobId, string talentUserId = "talent-1")
+    {
+        return new JobApplication(
+            jobId,
+            talentUserId,
+            "Applicant Name",
+            "applicant@example.com",
+            "resumes/resume.pdf");
+    }
 }
 

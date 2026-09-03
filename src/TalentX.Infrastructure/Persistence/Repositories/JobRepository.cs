@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Common.Interfaces.Repositories;
 using TalentX.Application.Common.Models;
+using TalentX.Application.Features.Employers.DTOs;
 using TalentX.Domain.Entities;
 using TalentX.Domain.Enums;
 using TalentX.Infrastructure.Persistence.Contexts;
@@ -80,4 +81,148 @@ public sealed class JobRepository : RepositoryBase<Job>, IJobRepository
             .Where(j => j.EmployerId == employerId)
             .OrderByDescending(j => j.CreatedAt)
             .ToListAsync(cancellationToken);
+
+    public async Task<EmployerJobStatsDto> GetEmployerStatsAsync(
+        string employerId,
+        CancellationToken cancellationToken = default)
+    {
+        var currentDate = DateTime.UtcNow.Date;
+
+        var statistics = await Context.Jobs
+            .AsNoTracking()
+            .Where(job => job.EmployerId == employerId)
+            .GroupBy(job => 1)
+            .Select(group => new
+            {
+                TotalPosted = group.Count(),
+                Active = group.Count(job => job.Status == JobStatus.Published && job.ExpireAt.Date >= currentDate),
+                Draft = group.Count(job => job.Status == JobStatus.Draft),
+                Closed = group.Count(job => job.Status == JobStatus.Closed),
+                Expired = group.Count(job => job.Status == JobStatus.Published && job.ExpireAt.Date < currentDate)
+            })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return new EmployerJobStatsDto(
+            statistics?.TotalPosted ?? 0,
+            statistics?.Active ?? 0,
+            statistics?.Draft ?? 0,
+            statistics?.Closed ?? 0,
+            statistics?.Expired ?? 0);
+    }
+
+    public async Task<List<EmployerRecentJobDto>> GetRecentJobsByEmployerIdAsync(
+        string employerId,
+        int count = 5,
+        CancellationToken cancellationToken = default)
+    {
+        var currentDate = DateTime.UtcNow.Date;
+
+        var recentJobs = await Context.Jobs
+            .AsNoTracking()
+            .Where(job => job.EmployerId == employerId)
+            .OrderByDescending(job => job.CreatedAt)
+            .Take(count)
+            .Select(job => new
+            {
+                job.Id,
+                job.Title,
+                job.Status,
+                job.CreatedAt,
+                job.ExpireAt,
+                job.Vacancies,
+                ApplicantCount = Context.JobApplications.Count(application => application.JobId == job.Id)
+            })
+            .ToListAsync(cancellationToken);
+
+        return recentJobs.Select(job => new EmployerRecentJobDto(
+            job.Id,
+            job.Title,
+            job.Status == JobStatus.Published && job.ExpireAt.Date < currentDate
+                ? "Expired"
+                : job.Status.ToString(),
+            job.CreatedAt,
+            job.ExpireAt,
+            job.Vacancies,
+            job.ApplicantCount)).ToList();
+    }
+
+    public async Task<PaginatedList<EmployerJobListItemDto>> GetEmployerJobsPaginatedAsync(
+        string employerId,
+        JobStatus? status,
+        bool? isExpired,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var currentDate = DateTime.UtcNow.Date;
+        var query = Context.Jobs
+            .AsNoTracking()
+            .Where(job => job.EmployerId == employerId);
+
+        if (status.HasValue)
+        {
+            if (status.Value == JobStatus.Published && isExpired == true)
+            {
+                query = query.Where(job => job.Status == JobStatus.Published && job.ExpireAt.Date < currentDate);
+            }
+            else if (status.Value == JobStatus.Published && isExpired == false)
+            {
+                query = query.Where(job => job.Status == JobStatus.Published && job.ExpireAt.Date >= currentDate);
+            }
+            else
+            {
+                query = query.Where(job => job.Status == status.Value);
+            }
+        }
+        else if (isExpired == true)
+        {
+            query = query.Where(job => job.Status == JobStatus.Published && job.ExpireAt.Date < currentDate);
+        }
+        else if (isExpired == false)
+        {
+            query = query.Where(job => !(job.Status == JobStatus.Published && job.ExpireAt.Date < currentDate));
+        }
+
+        var totalCount = await query.CountAsync(cancellationToken);
+
+        var pagedJobs = await query
+            .OrderByDescending(job => job.CreatedAt)
+            .ThenByDescending(job => job.Id)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(job => new
+            {
+                job.Id,
+                job.Title,
+                job.CompanyName,
+                job.Status,
+                job.EmploymentType,
+                job.WorkArrangement,
+                job.ExperienceLevel,
+                job.Location,
+                job.Vacancies,
+                job.ExpireAt,
+                job.CreatedAt,
+                ApplicantCount = Context.JobApplications.Count(application => application.JobId == job.Id)
+            })
+            .ToListAsync(cancellationToken);
+
+        var items = pagedJobs.Select(job => new EmployerJobListItemDto(
+            job.Id,
+            job.Title,
+            job.CompanyName,
+            job.Status == JobStatus.Published && job.ExpireAt.Date < currentDate
+                ? "Expired"
+                : job.Status.ToString(),
+            job.EmploymentType,
+            job.WorkArrangement,
+            job.ExperienceLevel,
+            job.Location,
+            job.Vacancies,
+            job.ExpireAt,
+            job.CreatedAt,
+            job.ApplicantCount)).ToList();
+
+        return new PaginatedList<EmployerJobListItemDto>(items, page, pageSize, totalCount);
+    }
 }

@@ -8,4 +8,5 @@ public interface IJobApplicationRepository
     Task<IReadOnlyList<JobApplication>> GetByJobIdAsync(Guid jobId, CancellationToken cancellationToken = default);
     Task<JobApplication?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task AddAsync(JobApplication jobApplication, CancellationToken cancellationToken = default);
+    Task<int> CountHiredByEmployerIdAsync(string employerId, CancellationToken cancellationToken = default);
 }

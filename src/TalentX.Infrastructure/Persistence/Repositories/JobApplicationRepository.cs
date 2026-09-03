@@ -48,4 +48,14 @@ public sealed class JobApplicationRepository : IJobApplicationRepository
     {
         await _context.JobApplications.AddAsync(jobApplication, cancellationToken);
     }
+
+    public async Task<int> CountHiredByEmployerIdAsync(
+        string employerId,
+        CancellationToken cancellationToken = default)
+    {
+        return await _context.JobApplications
+            .Where(application => application.Status == ApplicationStatus.Hired &&
+                                  _context.Jobs.Any(job => job.Id == application.JobId && job.EmployerId == employerId))
+            .CountAsync(cancellationToken);
+    }
 }
