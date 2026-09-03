@@ -7,6 +7,7 @@ using TalentX.Application.Features.Jobs.Commands.CreateJob;
 using TalentX.Application.Features.Jobs.Commands.DeleteJob;
 using TalentX.Application.Features.Jobs.Commands.GenerateJobDescription;
 using TalentX.Application.Features.Jobs.Commands.GenerateSkills;
+using TalentX.Application.Features.Jobs.Commands.ReopenJob;
 using TalentX.Application.Features.Jobs.Commands.UpdateJob;
 using TalentX.Application.Features.Jobs.Queries.GetJobDetails;
 using TalentX.Application.Features.Jobs.Queries.GetMyJob;
@@ -165,6 +166,20 @@ public class JobsController : BaseApiController
     public async Task<IActionResult> CloseJob(Guid id, CancellationToken cancellationToken)
     {
         await Sender.Send(new CloseJobCommand(id), cancellationToken);
+        return NoContent();
+    }
+
+    [HttpPost("{id:guid}/reopen")]
+    [HttpPatch("{id:guid}/reopen")]
+    [Authorize(Roles = $"{nameof(UserRole.Employer)}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ReopenJob(Guid id, CancellationToken cancellationToken)
+    {
+        await Sender.Send(new ReopenJobCommand(id), cancellationToken);
         return NoContent();
     }
 

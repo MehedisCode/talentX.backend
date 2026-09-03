@@ -11,6 +11,7 @@ using TalentX.Application.Common.Models;
 using TalentX.Application.Features.Jobs.Commands.CloseJob;
 using TalentX.Application.Features.Jobs.Commands.CreateJob;
 using TalentX.Application.Features.Jobs.Commands.DeleteJob;
+using TalentX.Application.Features.Jobs.Commands.ReopenJob;
 using TalentX.Application.Features.Jobs.Commands.UpdateJob;
 using TalentX.Application.Features.Jobs.DTOs;
 using TalentX.Application.Features.Jobs.Queries.GetJobDetails;
@@ -233,5 +234,19 @@ public class JobsControllerTests
 
         actionResult.Should().BeOfType<NoContentResult>();
         _sender.Verify(sender => sender.Send(new DeleteJobCommand(jobId), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ReopenJob_SendsCommandAndReturnsNoContent()
+    {
+        var jobId = Guid.NewGuid();
+        _sender
+            .Setup(sender => sender.Send(It.IsAny<ReopenJobCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Unit.Value);
+
+        var actionResult = await _controller.ReopenJob(jobId, CancellationToken.None);
+
+        actionResult.Should().BeOfType<NoContentResult>();
+        _sender.Verify(sender => sender.Send(new ReopenJobCommand(jobId), It.IsAny<CancellationToken>()), Times.Once);
     }
 }

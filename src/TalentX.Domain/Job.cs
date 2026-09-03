@@ -108,6 +108,22 @@ public class Job : BaseEntity
         UpdatedAt = DateTime.UtcNow;
     }
 
+    public void Reopen()
+    {
+        if (Status != JobStatus.Closed)
+        {
+            throw new InvalidOperationException("Only closed jobs can be reopened.");
+        }
+
+        if (ExpireAt < DateTime.UtcNow.Date)
+        {
+            throw new InvalidOperationException("Cannot reopen a job with an expired deadline. Update the application deadline before reopening.");
+        }
+
+        Status = JobStatus.Published;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
     public void SoftDelete()
     {
         IsDeleted = true;
