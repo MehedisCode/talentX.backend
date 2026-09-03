@@ -134,12 +134,6 @@ public class ApplyToJobCommandHandler : IRequestHandler<ApplyToJobCommand, Apply
 
     private static string GetFrontendBaseUrl()
     {
-        var frontendUrl = Environment.GetEnvironmentVariable("FRONTEND_URL");
-        if (!string.IsNullOrWhiteSpace(frontendUrl))
-        {
-            return frontendUrl.Trim().TrimEnd('/');
-        }
-
         var corsOrigins = Environment.GetEnvironmentVariable("CORS_ALLOWED_ORIGINS");
         if (!string.IsNullOrWhiteSpace(corsOrigins))
         {
