@@ -19,7 +19,7 @@ public sealed class JobApplicationRepositoryTests
         return new ApplicationDbContext(options);
     }
 
-    private static JobApplication NewApplication(Guid? jobId = null, string talentUserId = "talent-1")
+    private static JobApplication NewApplication(Guid? jobId = null, string? talentUserId = "talent-1")
     {
         return new JobApplication(
             jobId ?? Guid.NewGuid(),
@@ -51,7 +51,7 @@ public sealed class JobApplicationRepositoryTests
     }
 
     [Fact]
-    public async Task ExistsForJobAndTalentAsync_ReturnsCorrectStatus()
+    public async Task ExistsByJobIdAndTalentUserIdAsync_ReturnsCorrectStatus()
     {
         await using var context = NewContext();
         var repository = new JobApplicationRepository(context);
@@ -61,13 +61,35 @@ public sealed class JobApplicationRepositoryTests
         await repository.AddAsync(application);
         await context.SaveChangesAsync();
 
-        var exists = await repository.ExistsForJobAndTalentAsync(targetJobId, "talent-specific");
-        var notExistsDifferentTalent = await repository.ExistsForJobAndTalentAsync(targetJobId, "talent-other");
-        var notExistsDifferentJob = await repository.ExistsForJobAndTalentAsync(Guid.NewGuid(), "talent-specific");
+        var exists = await repository.ExistsByJobIdAndTalentUserIdAsync(targetJobId, "talent-specific");
+        var notExistsDifferentTalent = await repository.ExistsByJobIdAndTalentUserIdAsync(targetJobId, "talent-other");
+        var notExistsDifferentJob = await repository.ExistsByJobIdAndTalentUserIdAsync(Guid.NewGuid(), "talent-specific");
 
         exists.Should().BeTrue();
         notExistsDifferentTalent.Should().BeFalse();
         notExistsDifferentJob.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task ExistsPendingByJobIdAndEmailAsync_And_GetPendingByJobIdAndEmailAsync_WorkCorrectly()
+    {
+        await using var context = NewContext();
+        var repository = new JobApplicationRepository(context);
+        var targetJobId = Guid.NewGuid();
+        var guestApp = JobApplication.CreateGuestApplication(
+            targetJobId, "Guest User", "guest@example.com", "resumes/guest.pdf");
+
+        await repository.AddAsync(guestApp);
+        await context.SaveChangesAsync();
+
+        var exists = await repository.ExistsPendingByJobIdAndEmailAsync(targetJobId, "guest@example.com");
+        var notExistsDifferentEmail = await repository.ExistsPendingByJobIdAndEmailAsync(targetJobId, "other@example.com");
+        var pending = await repository.GetPendingByJobIdAndEmailAsync(targetJobId, "guest@example.com");
+
+        exists.Should().BeTrue();
+        notExistsDifferentEmail.Should().BeFalse();
+        pending.Should().NotBeNull();
+        pending!.Id.Should().Be(guestApp.Id);
     }
 
     [Fact]

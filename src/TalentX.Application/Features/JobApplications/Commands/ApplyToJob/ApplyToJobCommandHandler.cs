@@ -32,7 +32,7 @@ public sealed class ApplyToJobCommandHandler
             ?? throw new NotFoundException("This job is no longer open for applications.");
 
         // check to prevent duplicate applications
-        if (await _unitOfWork.JobApplications.ExistsForJobAndTalentAsync(job.Id, talentUserId, cancellationToken))
+        if (await _unitOfWork.JobApplications.ExistsByJobIdAndTalentUserIdAsync(job.Id, talentUserId, cancellationToken))
             throw new ConflictException("You have already applied to this job.");
 
         var application = new JobApplication(

@@ -6,7 +6,7 @@ namespace TalentX.Domain.Entities;
 public sealed class JobApplication : BaseEntity
 {
     public Guid JobId { get; private set; }
-    public string TalentUserId { get; private set; } = string.Empty;
+    public string? TalentUserId { get; private set; }
     public string ApplicantName { get; private set; } = string.Empty;
     public string ApplicantEmail { get; private set; } = string.Empty;
     public string ResumeStorageKey { get; private set; } = string.Empty;
@@ -21,7 +21,7 @@ public sealed class JobApplication : BaseEntity
 
     public JobApplication(
         Guid jobId,
-        string talentUserId,
+        string? talentUserId,
         string applicantName,
         string applicantEmail,
         string resumeStorageKey,
@@ -39,14 +39,42 @@ public sealed class JobApplication : BaseEntity
         ExpectedSalary = expectedSalary;
         TotalYearsExperience = totalYearsExperience;
         Location = location;
-        Status = ApplicationStatus.Applied;
+        Status = string.IsNullOrWhiteSpace(talentUserId) ? ApplicationStatus.PendingVerification : ApplicationStatus.Applied;
         AppliedAt = DateTime.UtcNow;
         CreatedAt = DateTime.UtcNow;
+    }
+
+    public static JobApplication CreateGuestApplication(
+        Guid jobId,
+        string applicantName,
+        string applicantEmail,
+        string resumeStorageKey,
+        string? coverLetter = null,
+        decimal? expectedSalary = null,
+        decimal? totalYearsExperience = null,
+        string? location = null)
+    {
+        return new JobApplication(
+            jobId,
+            talentUserId: null,
+            applicantName,
+            applicantEmail,
+            resumeStorageKey,
+            coverLetter,
+            expectedSalary,
+            totalYearsExperience,
+            location);
     }
 
     public void UpdateStatus(ApplicationStatus status)
     {
         Status = status;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void LinkTalentUser(string talentUserId)
+    {
+        TalentUserId = talentUserId;
         UpdatedAt = DateTime.UtcNow;
     }
 
