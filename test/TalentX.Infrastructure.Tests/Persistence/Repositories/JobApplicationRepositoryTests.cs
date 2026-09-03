@@ -92,7 +92,7 @@ public sealed class JobApplicationRepositoryTests
     }
 
     [Fact]
-    public async Task CountHiredByEmployerIdAsync_WhenApplicationsExist_CountsOnlyHiredForEmployerNonDeletedJobs()
+    public async Task CountHiredByEmployerIdAsync_WhenApplicationsExist_CountsHiredForEmployerIncludingSoftDeletedJobs()
     {
         await using var context = NewContext();
         var repository = new JobApplicationRepository(context);
@@ -133,7 +133,7 @@ public sealed class JobApplicationRepositoryTests
         var employerTwoCount = await repository.CountHiredByEmployerIdAsync("employer-2");
         var unknownEmployerCount = await repository.CountHiredByEmployerIdAsync("employer-unknown");
 
-        employerOneCount.Should().Be(2);
+        employerOneCount.Should().Be(3);
         employerTwoCount.Should().Be(1);
         unknownEmployerCount.Should().Be(0);
     }

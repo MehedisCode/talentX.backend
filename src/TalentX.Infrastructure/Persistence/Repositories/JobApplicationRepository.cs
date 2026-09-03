@@ -55,7 +55,7 @@ public sealed class JobApplicationRepository : IJobApplicationRepository
     {
         return await _context.JobApplications
             .Where(application => application.Status == ApplicationStatus.Hired &&
-                                  _context.Jobs.Any(job => job.Id == application.JobId && job.EmployerId == employerId))
+                                  _context.Jobs.IgnoreQueryFilters().Any(job => job.Id == application.JobId && job.EmployerId == employerId))
             .CountAsync(cancellationToken);
     }
 }
