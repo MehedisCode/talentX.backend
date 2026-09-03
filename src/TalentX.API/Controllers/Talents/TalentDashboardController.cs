@@ -58,7 +58,7 @@ public sealed class TalentDashboardController : BaseApiController
     public async Task<IActionResult> GetMatches(
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 10,
-        [FromQuery] int minScore = 60,
+        [FromQuery] int minScore = 50,
         CancellationToken cancellationToken = default)
     {
         var result = await Sender.Send(

@@ -10,7 +10,6 @@ namespace TalentX.Application.Features.Talents.Queries.GetTalentMatches;
 public sealed class GetTalentMatchesQueryHandler
     : IRequestHandler<GetTalentMatchesQuery, PaginatedList<TalentMatchDto>>
 {
-    private const decimal MatchThreshold = 0.60m;
 
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUserService;
@@ -46,13 +45,22 @@ public sealed class GetTalentMatchesQueryHandler
             return new PaginatedList<TalentMatchDto>([], page, pageSize, 0);
         }
 
-        var talentSkillSet = talent.TechnicalSkills
+        var talentTechnicalSkillSet = talent.TechnicalSkills
+            .Select(s => s.Trim().ToLowerInvariant())
+            .ToHashSet();
+        
+        var talentSoftSkillSet = talent.SoftSkills
+            .Select(s => s.Trim().ToLowerInvariant())
+            .ToHashSet();
+        
+        var talentToolsAndPlatforms = talent.ToolsAndPlatforms
             .Select(s => s.Trim().ToLowerInvariant())
             .ToHashSet();
 
         var openJobs = await _unitOfWork.Jobs.GetActivePublishedJobsAsync(cancellationToken);
 
-        // Score each job and filter to >= 60% match
+        decimal MatchThreshold = request.MinScore;
+
         var matches = new List<TalentMatchDto>();
 
         foreach (var job in openJobs)
@@ -66,16 +74,20 @@ public sealed class GetTalentMatchesQueryHandler
                 .Select(s => s.Trim().ToLowerInvariant())
                 .ToHashSet();
 
-            var matchedCount = requiredSkillSet.Count(skill => talentSkillSet.Contains(skill));
-            var matchRatio = (decimal)matchedCount / requiredSkillSet.Count;
+            var matchedCount = requiredSkillSet.Count(skill => talentTechnicalSkillSet.Contains(skill));
+            matchedCount += requiredSkillSet.Count(skill => talentSoftSkillSet.Contains(skill));
+            matchedCount += requiredSkillSet.Count(skill => talentToolsAndPlatforms.Contains(skill));
 
-            if (matchRatio >= MatchThreshold)
+            var matchRatio = (decimal)matchedCount / requiredSkillSet.Count;
+            var score = (int)Math.Round(matchRatio * 100);
+
+            if (score >= MatchThreshold)
             {
                 matches.Add(new TalentMatchDto(
                     job.Id,
                     job.Title,
                     job.CompanyName,
-                    (int)Math.Round(matchRatio * 100)
+                    score
                 ));
             }
         }

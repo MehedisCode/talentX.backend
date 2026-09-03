@@ -6,4 +6,4 @@ namespace TalentX.Application.Features.Talents.Queries.GetTalentMatches;
 public sealed record GetTalentMatchesQuery(
     int Page = 1,
     int PageSize = 10,
-    int MinScore = 60) : IRequest<PaginatedList<TalentMatchDto>>;
+    int MinScore = 50) : IRequest<PaginatedList<TalentMatchDto>>;
