@@ -63,7 +63,7 @@ public class ApplyToJobCommandHandler : IRequestHandler<ApplyToJobCommand, Apply
                 $"An account with email '{email}' is already registered as {existingUser.Role}. Please sign in with a talent account or use a different email.");
         }
 
-        var existingPending = await _jobApplicationRepository.GetPendingByJobAndEmailAsync(request.JobId, email, cancellationToken);
+        var existingPending = await _jobApplicationRepository.GetPendingByJobIdAndEmailAsync(request.JobId, email, cancellationToken);
 
         if (existingPending is not null)
         {

@@ -92,7 +92,7 @@ public class ApplyToJobCommandHandlerTests
     {
         SetupPublishedJob();
         _jobApplicationRepository
-            .Setup(r => r.ExistsPendingForJobAndEmailAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(r => r.ExistsPendingByJobIdAndEmailAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
 
         JobApplication? addedApplication = null;
@@ -143,7 +143,7 @@ public class ApplyToJobCommandHandlerTests
         var existingApp = JobApplication.CreateGuestApplication(
             Guid.NewGuid(), "Jane Doe", "jane@example.com", "resumes/old.pdf");
         _jobApplicationRepository
-            .Setup(r => r.GetPendingByJobAndEmailAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetPendingByJobIdAndEmailAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(existingApp);
 
         EmailVerificationToken? addedToken = null;
@@ -210,7 +210,7 @@ public class ApplyToJobCommandHandlerTests
     {
         SetupPublishedJob(WorkArrangement.RemoteButAccessible);
         _jobApplicationRepository
-            .Setup(r => r.ExistsPendingForJobAndEmailAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(r => r.ExistsPendingByJobIdAndEmailAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
 
         var command = ValidCommand(location: null);
@@ -227,7 +227,7 @@ public class ApplyToJobCommandHandlerTests
     {
         SetupPublishedJob();
         _jobApplicationRepository
-            .Setup(r => r.ExistsPendingForJobAndEmailAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(r => r.ExistsPendingByJobIdAndEmailAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
         _fileStorageService
             .Setup(s => s.SaveAsync(It.IsAny<IUploadedFile>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))

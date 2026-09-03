@@ -32,7 +32,7 @@ public sealed class EmailService : IEmailService
         _smtpUser    = Env("SMTP_USER");
         _smtpPass    = Env("SMTP_PASS");
         _senderEmail = Env("SENDER_EMAIL");
-        _senderName  = Env("SENDER_NAME") is { Length: > 0 } n ? n : "TalentX Support";
+        _senderName  = Env("SENDER_NAME") is { Length: > 0 } n ? n : EmailConstants.Defaults.SenderName;
     }
 
     public async Task SendOtpEmailAsync(
@@ -41,13 +41,13 @@ public sealed class EmailService : IEmailService
         string otpCode,
         CancellationToken cancellationToken = default)
     {
-        LogDispatch("OTP", recipientName, toEmail, otpCode);
+        LogDispatch(EmailConstants.Kinds.Otp, recipientName, toEmail, otpCode);
 
         var html = await _razor.CompileRenderAsync(
-            "TalentX.Infrastructure.Mailing.Templates.Emails.Otp",
+            EmailConstants.Templates.Otp,
             new OtpEmailModel(recipientName, otpCode));
 
-        DispatchAfterLogging(toEmail, recipientName, "Your TalentX Verification Code", html);
+        DispatchAfterLogging(toEmail, recipientName, EmailConstants.Subjects.Otp, html);
     }
 
     public async Task SendCredentialsEmailAsync(
@@ -56,13 +56,13 @@ public sealed class EmailService : IEmailService
         string temporaryPassword,
         CancellationToken cancellationToken = default)
     {
-        LogDispatch("CREDENTIALS", recipientName, toEmail, temporaryPassword);
+        LogDispatch(EmailConstants.Kinds.Credentials, recipientName, toEmail, temporaryPassword);
 
         var html = await _razor.CompileRenderAsync(
-            "TalentX.Infrastructure.Mailing.Templates.Emails.Credentials",
+            EmailConstants.Templates.Credentials,
             new CredentialsEmailModel(recipientName, toEmail, temporaryPassword));
 
-        DispatchAfterLogging(toEmail, recipientName, "Your TalentX Login Credentials", html);
+        DispatchAfterLogging(toEmail, recipientName, EmailConstants.Subjects.Credentials, html);
     }
 
     public async Task SendVerificationLinkEmailAsync(
@@ -72,14 +72,14 @@ public sealed class EmailService : IEmailService
         CancellationToken cancellationToken = default)
     {
         _logger.LogInformation(
-            "[EMAIL] VERIFICATION_LINK dispatch to {RecipientName} <{ToEmail}>: {Url}",
-            recipientName, toEmail, verificationUrl);
+            "[EMAIL] {Kind} dispatch to {RecipientName} <{ToEmail}>: {Url}",
+            EmailConstants.Kinds.VerificationLink, recipientName, toEmail, verificationUrl);
 
         var html = await _razor.CompileRenderAsync(
-            "TalentX.Infrastructure.Mailing.Templates.Emails.VerificationLink",
+            EmailConstants.Templates.VerificationLink,
             new VerificationLinkEmailModel(recipientName, verificationUrl));
 
-        DispatchAfterLogging(toEmail, recipientName, "Verify Your Email — TalentX", html);
+        DispatchAfterLogging(toEmail, recipientName, EmailConstants.Subjects.VerificationLink, html);
     }
 
     private void LogDispatch(string kind, string recipientName, string toEmail, string? secret)

@@ -14,7 +14,7 @@ public sealed class JobApplicationRepository : IJobApplicationRepository
         _context = context;
     }
 
-    public async Task<bool> ExistsForJobAndTalentAsync(
+    public async Task<bool> ExistsByJobIdAndTalentUserIdAsync(
         Guid jobId,
         string talentUserId,
         CancellationToken cancellationToken = default)
@@ -25,7 +25,7 @@ public sealed class JobApplicationRepository : IJobApplicationRepository
                 cancellationToken);
     }
 
-    public async Task<bool> ExistsPendingForJobAndEmailAsync(
+    public async Task<bool> ExistsPendingByJobIdAndEmailAsync(
         Guid jobId,
         string email,
         CancellationToken cancellationToken = default)
@@ -38,7 +38,7 @@ public sealed class JobApplicationRepository : IJobApplicationRepository
                 cancellationToken);
     }
 
-    public async Task<JobApplication?> GetPendingByJobAndEmailAsync(
+    public async Task<JobApplication?> GetPendingByJobIdAndEmailAsync(
         Guid jobId,
         string email,
         CancellationToken cancellationToken = default)
