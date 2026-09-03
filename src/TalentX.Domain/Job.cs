@@ -21,6 +21,8 @@ public class Job : BaseEntity
     public string? Country { get; private set; }
     public short? MinOverlapHours { get; private set; }
     public string? Responsibilities { get; private set; }
+    public bool IsDeleted { get; private set; }
+    public DateTime? DeletedAt { get; private set; }
 
     private Job() { }
 
@@ -98,5 +100,18 @@ public class Job : BaseEntity
     public void MarkAsPublished()
     {
         Status = JobStatus.Published;
+    }
+
+    public void MarkAsClosed()
+    {
+        Status = JobStatus.Closed;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void SoftDelete()
+    {
+        IsDeleted = true;
+        DeletedAt = DateTime.UtcNow;
+        UpdatedAt = DateTime.UtcNow;
     }
 }
