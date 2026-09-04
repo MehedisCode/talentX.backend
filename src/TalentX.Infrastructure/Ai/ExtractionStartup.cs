@@ -19,6 +19,9 @@ public static class ExtractionStartup
         // Job content generation service (new for multi-step wizard)
         services.AddHttpClient<IJobGenerationService, GeminiJobGenerationService>();
 
+        // AI talent matching service
+        services.AddHttpClient<ITalentMatchingService, GeminiTalentMatchingService>();
+
         return services;
     }
 }
