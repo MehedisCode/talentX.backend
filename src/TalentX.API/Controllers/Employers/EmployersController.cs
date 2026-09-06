@@ -2,12 +2,18 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using TalentX.Application.Common.Interfaces.Repositories;
+using TalentX.Application.Common.Models;
 using TalentX.Application.DTOs.Employers;
 using TalentX.Application.Features.Employers.Commands.CreateEmployer;
 using TalentX.Application.Features.Employers.Commands.GoogleSignIn;
 using TalentX.Application.Features.Employers.Commands.SendOtp;
 using TalentX.Application.Features.Employers.Commands.VerifyEmail;
+using TalentX.Application.Features.Employers.Constants;
+using TalentX.Application.Features.Employers.DTOs;
+using TalentX.Application.Features.Employers.Queries.GetEmployerDashboard;
+using TalentX.Application.Features.Employers.Queries.GetEmployerJobs;
 using TalentX.Application.Identity.Services;
+using TalentX.Domain.Enums;
 
 namespace TalentX.API.Controllers.Employers;
 
@@ -24,9 +30,6 @@ public sealed class EmployersController : BaseApiController
     [HttpPost]
     [HttpPost("register")]
     [AllowAnonymous]
-    [ProducesResponseType(typeof(AuthEmployerDto), StatusCodes.Status201Created)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> CreateEmployer(
         [FromBody] CreateEmployerCommand command,
         CancellationToken cancellationToken)
@@ -41,9 +44,6 @@ public sealed class EmployersController : BaseApiController
     [HttpPost("google")]
     [HttpPost("google-signin")]
     [AllowAnonymous]
-    [ProducesResponseType(typeof(AuthEmployerDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GoogleSignIn(
         [FromBody] GoogleSignInEmployerCommand command,
         CancellationToken cancellationToken)
@@ -57,9 +57,6 @@ public sealed class EmployersController : BaseApiController
     /// </summary>
     [HttpPost("verify-email")]
     [AllowAnonymous]
-    [ProducesResponseType(typeof(AuthEmployerDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> VerifyEmail(
         [FromBody] VerifyEmployerEmailCommand command,
         CancellationToken cancellationToken)
@@ -73,9 +70,6 @@ public sealed class EmployersController : BaseApiController
     /// </summary>
     [HttpPost("send-otp")]
     [AllowAnonymous]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> SendOtp(
         [FromBody] SendEmployerOtpCommand command,
         CancellationToken cancellationToken)
@@ -89,8 +83,6 @@ public sealed class EmployersController : BaseApiController
     /// </summary>
     [HttpGet("me")]
     [Authorize]
-    [ProducesResponseType(typeof(CurrentEmployerResult), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetMyProfile(
         [FromServices] ICurrentUserService currentUserService,
         [FromServices] IEmployerRepository employerRepository,
@@ -110,10 +102,26 @@ public sealed class EmployersController : BaseApiController
             CompanyName = employer.CompanyName
         });
     }
-}
 
-public sealed class CurrentEmployerResult
-{
-    public string Id { get; set; } = string.Empty;
-    public string CompanyName { get; set; } = string.Empty;
+    [HttpGet("dashboard")]
+    [Authorize(Roles = $"{nameof(UserRole.Employer)}")]
+    public async Task<IActionResult> GetDashboard(CancellationToken cancellationToken)
+    {
+        var dashboard = await Sender.Send(new GetEmployerDashboardQuery(), cancellationToken);
+        return Ok(dashboard);
+    }
+
+    [HttpGet("jobs")]
+    [Authorize(Roles = $"{nameof(UserRole.Employer)}")]
+    public async Task<IActionResult> GetJobs(
+        [FromQuery] int page = PaginationRequest.DefaultPageNumber,
+        [FromQuery] int pageSize = EmployerDashboardConstants.DefaultJobsPageSize,
+        [FromQuery] JobStatus? status = null,
+        [FromQuery] bool? isExpired = null,
+        CancellationToken cancellationToken = default)
+    {
+        var query = new GetEmployerJobsQuery(page, pageSize, status, isExpired);
+        var jobs = await Sender.Send(query, cancellationToken);
+        return Ok(jobs);
+    }
 }

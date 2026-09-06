@@ -199,4 +199,75 @@ public class JobTests
         job.UpdatedAt.Should().NotBeNull();
         job.UpdatedAt!.Value.Should().BeOnOrAfter(beforeUpdate).And.BeOnOrBefore(afterUpdate);
     }
+
+    [Fact]
+    public void MarkAsClosed_SetsStatusToClosedAndUpdatesTimestamp()
+    {
+        var job = CreateJob();
+        var beforeClosed = DateTime.UtcNow;
+
+        job.MarkAsClosed();
+
+        var afterClosed = DateTime.UtcNow;
+
+        job.Status.Should().Be(JobStatus.Closed);
+        job.UpdatedAt.Should().NotBeNull();
+        job.UpdatedAt!.Value.Should().BeOnOrAfter(beforeClosed).And.BeOnOrBefore(afterClosed);
+    }
+
+    [Fact]
+    public void SoftDelete_SetsIsDeletedAndDeletedAtAndUpdatesTimestamp()
+    {
+        var job = CreateJob();
+        var beforeDeleted = DateTime.UtcNow;
+
+        job.SoftDelete();
+
+        var afterDeleted = DateTime.UtcNow;
+
+        job.IsDeleted.Should().BeTrue();
+        job.DeletedAt.Should().NotBeNull();
+        job.DeletedAt!.Value.Should().BeOnOrAfter(beforeDeleted).And.BeOnOrBefore(afterDeleted);
+        job.UpdatedAt.Should().NotBeNull();
+        job.UpdatedAt!.Value.Should().BeOnOrAfter(beforeDeleted).And.BeOnOrBefore(afterDeleted);
+    }
+
+    [Fact]
+    public void Reopen_WhenClosedAndFutureExpiry_SetsStatusPublished()
+    {
+        var job = CreateJob();
+        job.MarkAsClosed();
+        var beforeReopen = DateTime.UtcNow;
+
+        job.Reopen();
+
+        var afterReopen = DateTime.UtcNow;
+        job.Status.Should().Be(JobStatus.Published);
+        job.UpdatedAt.Should().NotBeNull();
+        job.UpdatedAt!.Value.Should().BeOnOrAfter(beforeReopen).And.BeOnOrBefore(afterReopen);
+    }
+
+    [Fact]
+    public void Reopen_WhenNotClosed_ThrowsInvalidOperationException()
+    {
+        var job = CreateJob();
+
+        var reopenAction = () => job.Reopen();
+
+        reopenAction.Should().Throw<InvalidOperationException>()
+            .WithMessage("Only closed jobs can be reopened.");
+    }
+
+    [Fact]
+    public void Reopen_WhenExpiredDeadline_ThrowsInvalidOperationException()
+    {
+        var expiredDate = DateTime.UtcNow.AddDays(-2);
+        var job = CreateJob(expireAt: expiredDate);
+        job.MarkAsClosed();
+
+        var reopenAction = () => job.Reopen();
+
+        reopenAction.Should().Throw<InvalidOperationException>()
+            .WithMessage("Cannot reopen a job with an expired deadline. Update the application deadline before reopening.");
+    }
 }

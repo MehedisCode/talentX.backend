@@ -47,7 +47,6 @@ public class UpsertWorkExperienceCommandHandlerTests
 
         existing.CompanyName.Should().Be("Acme");
         existing.IsCurrent.Should().BeTrue();
-        _workExperienceRepository.Verify(r => r.Update(existing), Times.Once);
     }
 
     [Fact]

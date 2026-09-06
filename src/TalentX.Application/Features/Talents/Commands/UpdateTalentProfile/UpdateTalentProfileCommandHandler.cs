@@ -46,7 +46,6 @@ public sealed class UpdateTalentProfileCommandHandler : IRequestHandler<UpdateTa
             );
         }
 
-        _unitOfWork.Talents.Update(talent);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 }
