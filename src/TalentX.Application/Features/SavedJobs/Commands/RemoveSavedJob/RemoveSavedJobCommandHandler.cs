@@ -23,7 +23,8 @@ public sealed class RemoveSavedJobCommandHandler
         RemoveSavedJobCommand request,
         CancellationToken cancellationToken)
     {
-        var talentId = _currentUserService.UserId!;
+        var talentId = _currentUserService.UserId
+            ?? throw new UnauthorizedException("You must be signed in to remove saved jobs.");
 
         var savedJob = await _unitOfWork.SavedJobs.FindAsync(talentId, request.JobId, cancellationToken)
             ?? throw new NotFoundException("Saved job not found.");

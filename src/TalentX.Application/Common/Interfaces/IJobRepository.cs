@@ -9,6 +9,8 @@ namespace TalentX.Application.Common.Interfaces;
 public interface IJobRepository
 {
     Task<Job?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<Job?> GetByIdIncludingDeletedAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<List<Job>> GetByIdsAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken = default);
     Task AddAsync(Job job, CancellationToken cancellationToken = default);
     void Update(Job job);
 

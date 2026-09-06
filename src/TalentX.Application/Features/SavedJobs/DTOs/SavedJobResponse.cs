@@ -8,6 +8,6 @@ public class SavedJobResponse
     public string CompanyName { get; set; } = string.Empty;
     public string Location { get; set; } = string.Empty;
     public string EmploymentType { get; set; } = string.Empty;
-    public DateTime CreatedAt { get; set; }
+    public DateTime PostedDate { get; set; }
     public bool IsAvailable { get; set; }
 }

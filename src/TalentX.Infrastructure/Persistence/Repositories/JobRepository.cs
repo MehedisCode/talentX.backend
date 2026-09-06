@@ -226,4 +226,17 @@ public sealed class JobRepository : RepositoryBase<Job>, IJobRepository
 
         return new PaginatedList<EmployerJobListItemDto>(items, page, pageSize, totalCount);
     }
+
+    public async Task<Job?> GetByIdIncludingDeletedAsync(Guid id, CancellationToken cancellationToken = default) =>
+        await Context.Jobs
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .FirstOrDefaultAsync(j => j.Id == id, cancellationToken);
+
+    public async Task<List<Job>> GetByIdsAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken = default) =>
+        await Context.Jobs
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .Where(j => ids.Contains(j.Id))
+            .ToListAsync(cancellationToken);
 }

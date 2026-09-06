@@ -6,6 +6,7 @@ public class SavedJob : BaseEntity
 {
     public Guid JobId { get; private set; }
     public string TalentId { get; private set; } = string.Empty;
+    public Job Job { get; private set; } = null!;
 
     private SavedJob() { }
 

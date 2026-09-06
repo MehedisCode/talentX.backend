@@ -33,13 +33,16 @@ public sealed class GetSavedJobsQueryHandler
 
         var savedJobs = await _unitOfWork.SavedJobs.GetSavedJobsAsync(talentId, page, pageSize, cancellationToken);
 
-        var items = new List<SavedJobResponse>();
+        var jobIds = savedJobs.Items.Select(sj => sj.JobId).ToList();
 
-        foreach (var savedJob in savedJobs.Items)
+        var jobs = (await _unitOfWork.Jobs.GetByIdsAsync(jobIds, cancellationToken))
+            .ToDictionary(j => j.Id);
+
+        var items = savedJobs.Items.Select(savedJob =>
         {
-            var job = await _unitOfWork.Jobs.GetByIdAsync(savedJob.JobId, cancellationToken);
+            jobs.TryGetValue(savedJob.JobId, out var job);
 
-            items.Add(new SavedJobResponse
+            return new SavedJobResponse
             {
                 SavedJobId = savedJob.Id,
                 JobId = savedJob.JobId,
@@ -47,13 +50,13 @@ public sealed class GetSavedJobsQueryHandler
                 CompanyName = job?.CompanyName ?? string.Empty,
                 Location = job?.Location ?? string.Empty,
                 EmploymentType = job?.EmploymentType.ToString() ?? string.Empty,
-                CreatedAt = savedJob.CreatedAt,
+                PostedDate = job?.CreatedAt ?? default,
                 IsAvailable = job is not null
-                    && job.Status == JobStatus.Published
                     && !job.IsDeleted
+                    && job.Status == JobStatus.Published
                     && job.ExpireAt >= DateTime.UtcNow
-            });
-        }
+            };
+        }).ToList();
 
         return new PaginatedList<SavedJobResponse>(items, savedJobs.Page, savedJobs.PageSize, savedJobs.TotalCount);
     }

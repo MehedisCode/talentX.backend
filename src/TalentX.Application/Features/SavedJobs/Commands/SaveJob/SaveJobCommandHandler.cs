@@ -24,7 +24,8 @@ public sealed class SaveJobCommandHandler
         SaveJobCommand request,
         CancellationToken cancellationToken)
     {
-        var talentId = _currentUserService.UserId!;
+        var talentId = _currentUserService.UserId
+            ?? throw new UnauthorizedException("You must be signed in to save jobs.");
 
         var job = await _unitOfWork.Jobs.GetPublishedJobByIdAsync(request.JobId, cancellationToken)
             ?? throw new NotFoundException("This job is no longer available for saving.");
