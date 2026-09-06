@@ -102,7 +102,6 @@ public sealed class DeleteJobCommandHandlerTests
         targetJob.IsDeleted.Should().BeTrue();
         targetJob.DeletedAt.Should().NotBeNull();
         targetJob.UpdatedAt.Should().NotBeNull();
-        _jobRepository.Verify(repository => repository.Update(targetJob), Times.Once);
         _unitOfWork.Verify(unit => unit.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 }

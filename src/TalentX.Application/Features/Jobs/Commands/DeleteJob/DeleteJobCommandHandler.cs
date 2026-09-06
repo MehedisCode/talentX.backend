@@ -35,7 +35,6 @@ public sealed class DeleteJobCommandHandler : IRequestHandler<DeleteJobCommand, 
         }
 
         job.SoftDelete();
-        _jobRepository.Update(job);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return Unit.Value;
