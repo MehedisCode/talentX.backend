@@ -2,6 +2,7 @@ using MediatR;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Common.Interfaces.Repositories;
+using TalentX.Application.Features.Employers.Constants;
 using TalentX.Application.Features.Employers.DTOs;
 using TalentX.Application.Identity.Services;
 
@@ -32,7 +33,10 @@ public sealed class GetEmployerDashboardQueryHandler : IRequestHandler<GetEmploy
 
         var jobStats = await _jobRepository.GetEmployerStatsAsync(employerId, cancellationToken);
         var totalHires = await _jobApplicationRepository.CountHiredByEmployerIdAsync(employerId, cancellationToken);
-        var recentJobs = await _jobRepository.GetRecentJobsByEmployerIdAsync(employerId, 5, cancellationToken);
+        var recentJobs = await _jobRepository.GetRecentJobsByEmployerIdAsync(
+            employerId,
+            EmployerDashboardConstants.RecentJobsLimit,
+            cancellationToken);
 
         return new EmployerDashboardDto(
             jobStats.TotalPostedJobs,

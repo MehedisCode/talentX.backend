@@ -157,7 +157,6 @@ public class JobsController : BaseApiController
     }
 
     [HttpPatch("{id:guid}/status")]
-    [HttpPut("{id:guid}/close")]
     [Authorize(Roles = $"{nameof(UserRole.Employer)}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -169,7 +168,6 @@ public class JobsController : BaseApiController
         return NoContent();
     }
 
-    [HttpPost("{id:guid}/reopen")]
     [HttpPatch("{id:guid}/reopen")]
     [Authorize(Roles = $"{nameof(UserRole.Employer)}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]

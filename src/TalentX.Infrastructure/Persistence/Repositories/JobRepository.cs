@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Common.Interfaces.Repositories;
 using TalentX.Application.Common.Models;
+using TalentX.Application.Features.Employers.Constants;
 using TalentX.Application.Features.Employers.DTOs;
 using TalentX.Domain.Entities;
 using TalentX.Domain.Enums;
@@ -112,7 +113,7 @@ public sealed class JobRepository : RepositoryBase<Job>, IJobRepository
 
     public async Task<List<EmployerRecentJobDto>> GetRecentJobsByEmployerIdAsync(
         string employerId,
-        int count = 5,
+        int count = EmployerDashboardConstants.RecentJobsLimit,
         CancellationToken cancellationToken = default)
     {
         var currentDate = DateTime.UtcNow.Date;

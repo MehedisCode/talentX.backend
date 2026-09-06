@@ -3,6 +3,7 @@ using Moq;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Common.Interfaces.Repositories;
+using TalentX.Application.Features.Employers.Constants;
 using TalentX.Application.Features.Employers.DTOs;
 using TalentX.Application.Features.Employers.Queries.GetEmployerDashboard;
 using TalentX.Application.Identity.Services;
@@ -69,7 +70,10 @@ public sealed class GetEmployerDashboardQueryHandlerTests
         _jobApplicationRepository.Setup(repository => repository.CountHiredByEmployerIdAsync(currentEmployerUserId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(4);
 
-        _jobRepository.Setup(repository => repository.GetRecentJobsByEmployerIdAsync(currentEmployerUserId, 5, It.IsAny<CancellationToken>()))
+        _jobRepository.Setup(repository => repository.GetRecentJobsByEmployerIdAsync(
+                currentEmployerUserId,
+                EmployerDashboardConstants.RecentJobsLimit,
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync(recentJobsList);
 
         var dashboardResult = await _handler.Handle(new GetEmployerDashboardQuery(), CancellationToken.None);
