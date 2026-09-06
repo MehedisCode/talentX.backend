@@ -1,13 +1,14 @@
 using MediatR;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
+using TalentX.Application.Common.Models;
 using TalentX.Application.Features.JobApplications.DTOs;
 using TalentX.Application.Identity.Services;
 
 namespace TalentX.Application.Features.JobApplications.Queries.GetJobApplicants;
 
 public sealed class GetJobApplicantsQueryHandler
-    : IRequestHandler<GetJobApplicantsQuery, IReadOnlyList<JobApplicantListItemDto>>
+    : IRequestHandler<GetJobApplicantsQuery, PaginatedList<JobApplicantListItemDto>>
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUserService;
@@ -25,7 +26,7 @@ public sealed class GetJobApplicantsQueryHandler
         _presignedUrlService = presignedUrlService;
     }
 
-    public async Task<IReadOnlyList<JobApplicantListItemDto>> Handle(
+    public async Task<PaginatedList<JobApplicantListItemDto>> Handle(
         GetJobApplicantsQuery request,
         CancellationToken cancellationToken)
     {
@@ -40,10 +41,18 @@ public sealed class GetJobApplicantsQueryHandler
             throw new ForbiddenException("You do not have permission to view applicants for this job.");
         }
 
-        var applications = await _unitOfWork.JobApplications.GetByJobIdAsync(request.JobId, cancellationToken);
+        var page = Math.Max(request.Page, 1);
+        var pageSize = Math.Clamp(request.PageSize, 1, 100);
 
-        var tasks = applications
-            .OrderByDescending(app => app.AppliedAt)
+        var paginatedApplications = await _unitOfWork.JobApplications.GetByJobIdPaginatedAsync(
+            request.JobId,
+            request.Search,
+            request.Status,
+            page,
+            pageSize,
+            cancellationToken);
+
+        var tasks = paginatedApplications.Items
             .Select(async app =>
             {
                 string? resumeDownloadUrl = null;
@@ -71,6 +80,10 @@ public sealed class GetJobApplicantsQueryHandler
             });
 
         var results = await Task.WhenAll(tasks);
-        return results.ToList();
+        return new PaginatedList<JobApplicantListItemDto>(
+            results.ToList(),
+            paginatedApplications.Page,
+            paginatedApplications.PageSize,
+            paginatedApplications.TotalCount);
     }
 }
