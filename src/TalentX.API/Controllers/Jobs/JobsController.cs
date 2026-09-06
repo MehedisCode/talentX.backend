@@ -147,10 +147,6 @@ public class JobsController : BaseApiController
 
     [HttpPatch("{id:guid}/status")]
     [Authorize(Roles = $"{nameof(UserRole.Employer)}")]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> CloseJob(Guid id, CancellationToken cancellationToken)
     {
         await Sender.Send(new CloseJobCommand(id), cancellationToken);
@@ -159,11 +155,6 @@ public class JobsController : BaseApiController
 
     [HttpPatch("{id:guid}/reopen")]
     [Authorize(Roles = $"{nameof(UserRole.Employer)}")]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> ReopenJob(Guid id, CancellationToken cancellationToken)
     {
         await Sender.Send(new ReopenJobCommand(id), cancellationToken);
@@ -172,10 +163,6 @@ public class JobsController : BaseApiController
 
     [HttpDelete("{id:guid}")]
     [Authorize(Roles = $"{nameof(UserRole.Employer)}")]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteJob(Guid id, CancellationToken cancellationToken)
     {
         await Sender.Send(new DeleteJobCommand(id), cancellationToken);
