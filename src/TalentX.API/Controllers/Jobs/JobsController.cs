@@ -9,6 +9,7 @@ using TalentX.Application.Features.Jobs.Commands.GenerateJobDescription;
 using TalentX.Application.Features.Jobs.Commands.GenerateSkills;
 using TalentX.Application.Features.Jobs.Commands.ReopenJob;
 using TalentX.Application.Features.Jobs.Commands.UpdateJob;
+using TalentX.Application.Features.Jobs.DTOs;
 using TalentX.Application.Features.Jobs.Queries.GetJobDetails;
 using TalentX.Application.Features.Jobs.Queries.GetMyJob;
 using TalentX.Application.Features.Jobs.Queries.GetMyJobs;
@@ -56,23 +57,11 @@ public class JobsController : BaseApiController
     [HttpGet]
     [AllowAnonymous]
     public async Task<IActionResult> GetJobs(
-        [FromQuery] string? keyword = null,
-        [FromQuery] string? location = null,
-        [FromQuery] EmploymentType? employmentType = null,
-        [FromQuery] ExperienceLevel? experienceLevel = null,
-        [FromQuery] WorkArrangement? workArrangement = null,
-        [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 10,
+        [FromQuery] GetJobsQueryParams? queryParams = null,
         CancellationToken cancellationToken = default)
     {
-        var query = new GetPublishedJobsQuery(
-            Keyword: keyword,
-            Location: location,
-            EmploymentType: employmentType,
-            ExperienceLevel: experienceLevel,
-            WorkArrangement: workArrangement,
-            Page: page,
-            PageSize: pageSize);
+        var parameters = queryParams ?? new GetJobsQueryParams();
+        var query = new GetPublishedJobsQuery(parameters);
 
         var result = await Sender.Send(query, cancellationToken);
         return Ok(result);

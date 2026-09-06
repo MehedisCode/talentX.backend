@@ -8,6 +8,7 @@ using TalentX.Application.Features.Employers.Commands.CreateEmployer;
 using TalentX.Application.Features.Employers.Commands.GoogleSignIn;
 using TalentX.Application.Features.Employers.Commands.SendOtp;
 using TalentX.Application.Features.Employers.Commands.VerifyEmail;
+using TalentX.Application.Features.Employers.Constants;
 using TalentX.Application.Features.Employers.DTOs;
 using TalentX.Application.Features.Employers.Queries.GetEmployerDashboard;
 using TalentX.Application.Features.Employers.Queries.GetEmployerJobs;
@@ -131,8 +132,8 @@ public sealed class EmployersController : BaseApiController
     [ProducesResponseType(typeof(PaginatedList<EmployerJobListItemDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetJobs(
-        [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 10,
+        [FromQuery] int page = PaginationRequest.DefaultPageNumber,
+        [FromQuery] int pageSize = EmployerDashboardConstants.DefaultJobsPageSize,
         [FromQuery] JobStatus? status = null,
         [FromQuery] bool? isExpired = null,
         CancellationToken cancellationToken = default)

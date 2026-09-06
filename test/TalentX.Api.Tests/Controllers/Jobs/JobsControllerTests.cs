@@ -139,14 +139,16 @@ public class JobsControllerTests
                 sentQuery = (GetPublishedJobsQuery)req)
             .ReturnsAsync(paginatedList);
 
-        await _controller.GetJobs(
-            keyword: "engineer",
-            location: "Dhaka",
-            employmentType: EmploymentType.FullTime,
-            experienceLevel: ExperienceLevel.SeniorLevel,
-            workArrangement: WorkArrangement.Hybrid,
-            page: 2,
-            pageSize: 10);
+        var queryParams = new GetJobsQueryParams(
+            Keyword: "engineer",
+            Location: "Dhaka",
+            EmploymentType: EmploymentType.FullTime,
+            ExperienceLevel: ExperienceLevel.SeniorLevel,
+            WorkArrangement: WorkArrangement.Hybrid,
+            Page: 2,
+            PageSize: 10);
+
+        await _controller.GetJobs(queryParams);
 
         sentQuery.Should().NotBeNull();
         sentQuery!.Keyword.Should().Be("engineer");
