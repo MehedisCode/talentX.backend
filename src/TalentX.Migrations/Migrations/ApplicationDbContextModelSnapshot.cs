@@ -260,6 +260,9 @@ namespace TalentX.Migrations.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasColumnType("text");
@@ -279,12 +282,17 @@ namespace TalentX.Migrations.Migrations
                     b.Property<DateTime>("ExpireAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
                     b.Property<string>("Location")
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<string>("RequiredTimezoneOverlap")
-                        .HasColumnType("text");
+                    b.Property<short?>("MinOverlapHours")
+                        .HasColumnType("smallint");
 
                     b.Property<string>("RequiredSkills")
                         .IsRequired()
@@ -318,6 +326,8 @@ namespace TalentX.Migrations.Migrations
                     b.HasIndex("ExpireAt");
 
                     b.HasIndex("Status");
+
+                    b.HasIndex("EmployerId", "IsDeleted");
 
                     b.HasIndex("Status", "CreatedAt");
 

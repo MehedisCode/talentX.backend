@@ -2,10 +2,14 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using TalentX.Application.Features.JobApplications.Commands.Apply;
+using TalentX.Application.Features.Jobs.Commands.CloseJob;
 using TalentX.Application.Features.Jobs.Commands.CreateJob;
+using TalentX.Application.Features.Jobs.Commands.DeleteJob;
 using TalentX.Application.Features.Jobs.Commands.GenerateJobDescription;
 using TalentX.Application.Features.Jobs.Commands.GenerateSkills;
+using TalentX.Application.Features.Jobs.Commands.ReopenJob;
 using TalentX.Application.Features.Jobs.Commands.UpdateJob;
+using TalentX.Application.Features.Jobs.DTOs;
 using TalentX.Application.Features.Jobs.Queries.GetJobDetails;
 using TalentX.Application.Features.Jobs.Queries.GetMyJob;
 using TalentX.Application.Features.Jobs.Queries.GetMyJobs;
@@ -14,15 +18,6 @@ using TalentX.Domain.Enums;
 using TalentX.Infrastructure.FileStorage;
 
 namespace TalentX.API.Controllers;
-
-public sealed record ApplyToJobRequestDto(
-    string ApplicantName,
-    string ApplicantEmail,
-    IFormFile ResumeFile,
-    string CoverLetter,
-    decimal ExpectedSalary,
-    decimal TotalYearsExperience,
-    string? Location);
 
 [ApiController]
 [Route("api/v1/[controller]")]
@@ -53,23 +48,11 @@ public class JobsController : BaseApiController
     [HttpGet]
     [AllowAnonymous]
     public async Task<IActionResult> GetJobs(
-        [FromQuery] string? keyword = null,
-        [FromQuery] string? location = null,
-        [FromQuery] EmploymentType? employmentType = null,
-        [FromQuery] ExperienceLevel? experienceLevel = null,
-        [FromQuery] WorkArrangement? workArrangement = null,
-        [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 10,
+        [FromQuery] GetJobsQueryParams? queryParams = null,
         CancellationToken cancellationToken = default)
     {
-        var query = new GetPublishedJobsQuery(
-            Keyword: keyword,
-            Location: location,
-            EmploymentType: employmentType,
-            ExperienceLevel: experienceLevel,
-            WorkArrangement: workArrangement,
-            Page: page,
-            PageSize: pageSize);
+        var parameters = queryParams ?? new GetJobsQueryParams();
+        var query = new GetPublishedJobsQuery(parameters);
 
         var result = await Sender.Send(query, cancellationToken);
         return Ok(result);
@@ -151,5 +134,29 @@ public class JobsController : BaseApiController
 
         var response = await Sender.Send(command, cancellationToken);
         return Ok(response);
+    }
+
+    [HttpPatch("{id:guid}/status")]
+    [Authorize(Roles = $"{nameof(UserRole.Employer)}")]
+    public async Task<IActionResult> CloseJob(Guid id, CancellationToken cancellationToken)
+    {
+        await Sender.Send(new CloseJobCommand(id), cancellationToken);
+        return NoContent();
+    }
+
+    [HttpPatch("{id:guid}/reopen")]
+    [Authorize(Roles = $"{nameof(UserRole.Employer)}")]
+    public async Task<IActionResult> ReopenJob(Guid id, CancellationToken cancellationToken)
+    {
+        await Sender.Send(new ReopenJobCommand(id), cancellationToken);
+        return NoContent();
+    }
+
+    [HttpDelete("{id:guid}")]
+    [Authorize(Roles = $"{nameof(UserRole.Employer)}")]
+    public async Task<IActionResult> DeleteJob(Guid id, CancellationToken cancellationToken)
+    {
+        await Sender.Send(new DeleteJobCommand(id), cancellationToken);
+        return NoContent();
     }
 }

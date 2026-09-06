@@ -130,4 +130,13 @@ public sealed class JobApplicationRepository : IJobApplicationRepository
 
         return new PaginatedList<TalentApplicationRecord>(records, page, pageSize, totalCount);
     }
+    public async Task<int> CountHiredByEmployerIdAsync(
+        string employerId,
+        CancellationToken cancellationToken = default)
+    {
+        return await _context.JobApplications
+            .Where(application => application.Status == ApplicationStatus.Hired &&
+                                  _context.Jobs.IgnoreQueryFilters().Any(job => job.Id == application.JobId && job.EmployerId == employerId))
+            .CountAsync(cancellationToken);
+    }
 }

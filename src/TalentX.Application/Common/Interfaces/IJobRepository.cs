@@ -1,4 +1,6 @@
 using TalentX.Application.Common.Models;
+using TalentX.Application.Features.Employers.Constants;
+using TalentX.Application.Features.Employers.DTOs;
 using TalentX.Domain.Entities;
 using TalentX.Domain.Enums;
 
@@ -24,4 +26,11 @@ public interface IJobRepository
     Task<List<Job>> GetByEmployerIdAsync(string employerId, CancellationToken cancellationToken = default);
     Task<IEnumerable<Job>> GetActivePublishedJobsAsync(CancellationToken cancellationToken);
 
+    Task<EmployerJobStatsDto> GetEmployerStatsAsync(string employerId, CancellationToken cancellationToken = default);
+    Task<List<EmployerRecentJobDto>> GetRecentJobsByEmployerIdAsync(
+        string employerId,
+        int count = EmployerDashboardConstants.RecentJobsLimit,
+        CancellationToken cancellationToken = default);
+    Task<PaginatedList<EmployerJobListItemDto>> GetEmployerJobsPaginatedAsync(string employerId, JobStatus? status, bool? isExpired, int page, int pageSize, CancellationToken cancellationToken = default);
 }
+

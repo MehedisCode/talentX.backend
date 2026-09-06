@@ -26,4 +26,5 @@ public interface IJobApplicationRepository
         int page,
         int pageSize,
         CancellationToken cancellationToken = default);
+    Task<int> CountHiredByEmployerIdAsync(string employerId, CancellationToken cancellationToken = default);
 }
