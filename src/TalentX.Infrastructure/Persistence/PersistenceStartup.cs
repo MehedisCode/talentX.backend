@@ -33,7 +33,11 @@ public static class PersistenceStartup
         services.AddScoped<IResumeRepository, ResumeRepository>();
         services.AddScoped<IWorkExperienceRepository, WorkExperienceRepository>();
         services.AddScoped<IEducationRepository, EducationRepository>();
+<<<<<<< HEAD
         services.AddScoped<IInvitationRepository, InvitationRepository>();
+=======
+        services.AddScoped<IEmailVerificationTokenRepository, EmailVerificationTokenRepository>();
+>>>>>>> 8591f6c397eaa72bf142d9b26b87ea92a9e9e404
 
         return services;
     }

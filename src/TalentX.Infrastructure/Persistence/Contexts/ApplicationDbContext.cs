@@ -24,7 +24,11 @@ public class ApplicationDbContext
     public DbSet<Resume> Resumes => Set<Resume>();
     public DbSet<WorkExperience> WorkExperiences => Set<WorkExperience>();
     public DbSet<Education> Educations => Set<Education>();
+<<<<<<< HEAD
     public DbSet<Invitation> Invitations => Set<Invitation>();
+=======
+    public DbSet<EmailVerificationToken> EmailVerificationTokens => Set<EmailVerificationToken>();
+>>>>>>> 8591f6c397eaa72bf142d9b26b87ea92a9e9e404
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

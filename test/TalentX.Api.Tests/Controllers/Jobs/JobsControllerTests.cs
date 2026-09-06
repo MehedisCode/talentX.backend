@@ -187,7 +187,7 @@ public class JobsControllerTests
             "Dhaka"
         );
         ApplyToJobCommand? sentCommand = null;
-        var response = new ApplyToJobResponse(Guid.NewGuid(), routeId, false);
+        var response = new ApplyToJobResponse(Guid.NewGuid(), routeId);
         _sender
             .Setup(s => s.Send(It.IsAny<ApplyToJobCommand>(), It.IsAny<CancellationToken>()))
             .Callback<IRequest<ApplyToJobResponse>, CancellationToken>((req, _) => sentCommand = (ApplyToJobCommand)req)

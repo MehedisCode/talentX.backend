@@ -28,4 +28,14 @@ public interface IEmailService
         string temporaryPassword,
         CancellationToken cancellationToken = default
     );
+
+    /// <summary>
+    /// Sends an email with a verification link to confirm the recipient's email address.
+    /// </summary>
+    Task SendVerificationLinkEmailAsync(
+        string toEmail,
+        string recipientName,
+        string verificationUrl,
+        CancellationToken cancellationToken = default
+    );
 }
