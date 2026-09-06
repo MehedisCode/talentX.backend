@@ -195,8 +195,6 @@ public sealed class CreateEmployerCommandHandlerTests
         Assert.Equal("New Company Name", existingEmployer.CompanyName);
         Assert.True(existingEmployer.IsVerified);
         Assert.Equal("test-access-token", result.AccessToken);
-
-        _employerRepositoryMock.Verify(r => r.Update(existingEmployer), Times.Once);
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
         _otpServiceMock.Verify(o => o.ConsumeEmailVerificationAsync(command.Email, It.IsAny<CancellationToken>()), Times.Once);
     }

@@ -1,12 +1,17 @@
+using System.Reflection;
 using FluentAssertions;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using TalentX.API.Controllers;
 using TalentX.Application.Common.Models;
+using TalentX.Application.Features.Jobs.Commands.CloseJob;
 using TalentX.Application.Features.Jobs.Commands.CreateJob;
+using TalentX.Application.Features.Jobs.Commands.DeleteJob;
+using TalentX.Application.Features.Jobs.Commands.ReopenJob;
 using TalentX.Application.Features.Jobs.Commands.UpdateJob;
 using TalentX.Application.Features.Jobs.DTOs;
 using TalentX.Application.Features.Jobs.Queries.GetJobDetails;
@@ -134,14 +139,16 @@ public class JobsControllerTests
                 sentQuery = (GetPublishedJobsQuery)req)
             .ReturnsAsync(paginatedList);
 
-        await _controller.GetJobs(
-            keyword: "engineer",
-            location: "Dhaka",
-            employmentType: EmploymentType.FullTime,
-            experienceLevel: ExperienceLevel.SeniorLevel,
-            workArrangement: WorkArrangement.Hybrid,
-            page: 2,
-            pageSize: 10);
+        var queryParams = new GetJobsQueryParams(
+            Keyword: "engineer",
+            Location: "Dhaka",
+            EmploymentType: EmploymentType.FullTime,
+            ExperienceLevel: ExperienceLevel.SeniorLevel,
+            WorkArrangement: WorkArrangement.Hybrid,
+            Page: 2,
+            PageSize: 10);
+
+        await _controller.GetJobs(queryParams);
 
         sentQuery.Should().NotBeNull();
         sentQuery!.Keyword.Should().Be("engineer");
@@ -187,7 +194,7 @@ public class JobsControllerTests
             "Dhaka"
         );
         ApplyToJobCommand? sentCommand = null;
-        var response = new ApplyToJobResponse(Guid.NewGuid(), routeId, false);
+        var response = new ApplyToJobResponse(Guid.NewGuid(), routeId);
         _sender
             .Setup(s => s.Send(It.IsAny<ApplyToJobCommand>(), It.IsAny<CancellationToken>()))
             .Callback<IRequest<ApplyToJobResponse>, CancellationToken>((req, _) => sentCommand = (ApplyToJobCommand)req)
@@ -201,5 +208,47 @@ public class JobsControllerTests
         sentCommand!.JobId.Should().Be(routeId);
         sentCommand.ApplicantName.Should().Be("Jane Doe");
         sentCommand.ResumeFile.FileName.Should().Be("resume.pdf");
+    }
+
+    [Fact]
+    public async Task CloseJob_SendsCommandAndReturnsNoContent()
+    {
+        var jobId = Guid.NewGuid();
+        _sender
+            .Setup(sender => sender.Send(It.IsAny<CloseJobCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Unit.Value);
+
+        var actionResult = await _controller.CloseJob(jobId, CancellationToken.None);
+
+        actionResult.Should().BeOfType<NoContentResult>();
+        _sender.Verify(sender => sender.Send(new CloseJobCommand(jobId), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task DeleteJob_SendsCommandAndReturnsNoContent()
+    {
+        var jobId = Guid.NewGuid();
+        _sender
+            .Setup(sender => sender.Send(It.IsAny<DeleteJobCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Unit.Value);
+
+        var actionResult = await _controller.DeleteJob(jobId, CancellationToken.None);
+
+        actionResult.Should().BeOfType<NoContentResult>();
+        _sender.Verify(sender => sender.Send(new DeleteJobCommand(jobId), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ReopenJob_SendsCommandAndReturnsNoContent()
+    {
+        var jobId = Guid.NewGuid();
+        _sender
+            .Setup(sender => sender.Send(It.IsAny<ReopenJobCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Unit.Value);
+
+        var actionResult = await _controller.ReopenJob(jobId, CancellationToken.None);
+
+        actionResult.Should().BeOfType<NoContentResult>();
+        _sender.Verify(sender => sender.Send(new ReopenJobCommand(jobId), It.IsAny<CancellationToken>()), Times.Once);
     }
 }

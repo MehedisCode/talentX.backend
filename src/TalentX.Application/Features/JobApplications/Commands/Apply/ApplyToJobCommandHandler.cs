@@ -3,9 +3,7 @@ using Microsoft.Extensions.Logging;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Common.Interfaces.Repositories;
-using TalentX.Application.Common.Security;
 using TalentX.Application.Features.Talents;
-using TalentX.Application.Identity.Interfaces;
 using TalentX.Domain;
 using TalentX.Domain.Entities;
 using TalentX.Domain.Enums;
@@ -15,9 +13,8 @@ namespace TalentX.Application.Features.JobApplications.Commands.Apply;
 public class ApplyToJobCommandHandler : IRequestHandler<ApplyToJobCommand, ApplyToJobResponse>
 {
     private readonly IJobRepository _jobRepository;
-    private readonly ITalentRepository _talentRepository;
     private readonly IJobApplicationRepository _jobApplicationRepository;
-    private readonly IIdentityService _identityService;
+    private readonly IEmailVerificationTokenRepository _verificationTokenRepository;
     private readonly IEmailService _emailService;
     private readonly IFileStorageService _fileStorageService;
     private readonly IUnitOfWork _unitOfWork;
@@ -25,18 +22,16 @@ public class ApplyToJobCommandHandler : IRequestHandler<ApplyToJobCommand, Apply
 
     public ApplyToJobCommandHandler(
         IJobRepository jobRepository,
-        ITalentRepository talentRepository,
         IJobApplicationRepository jobApplicationRepository,
-        IIdentityService identityService,
+        IEmailVerificationTokenRepository verificationTokenRepository,
         IEmailService emailService,
         IFileStorageService fileStorageService,
         IUnitOfWork unitOfWork,
         ILogger<ApplyToJobCommandHandler> logger)
     {
         _jobRepository = jobRepository;
-        _talentRepository = talentRepository;
         _jobApplicationRepository = jobApplicationRepository;
-        _identityService = identityService;
+        _verificationTokenRepository = verificationTokenRepository;
         _emailService = emailService;
         _fileStorageService = fileStorageService;
         _unitOfWork = unitOfWork;
@@ -56,41 +51,44 @@ public class ApplyToJobCommandHandler : IRequestHandler<ApplyToJobCommand, Apply
         var name = request.ApplicantName.Trim();
         var email = request.ApplicantEmail.Trim().ToLowerInvariant();
 
-        var existingTalent = await _talentRepository.GetByEmailAsync(email, cancellationToken);
-
-        string? temporaryPassword = null;
-        string talentUserId;
-        var talentAccountCreated = false;
-
-        if (existingTalent is not null)
+        var existingUser = await _unitOfWork.Users.GetByEmailAsync(email);
+        if (existingUser is not null)
         {
-            talentUserId = existingTalent.UserId;
-
-            if (await _jobApplicationRepository.ExistsForJobAndTalentAsync(request.JobId, talentUserId, cancellationToken))
+            if (existingUser.Role is UserRole.Talent or UserRole.Guest)
             {
-                throw new ConflictException("You have already applied for this job.");
+                return new ApplyToJobResponse(Guid.Empty, request.JobId, RequiresLogin: true);
             }
+
+            throw new ConflictException(
+                $"An account with email '{email}' is already registered as {existingUser.Role}. Please sign in with a talent account or use a different email.");
         }
-        else
+
+        var existingPending = await _jobApplicationRepository.GetPendingByJobIdAndEmailAsync(request.JobId, email, cancellationToken);
+
+        if (existingPending is not null)
         {
-            temporaryPassword = TemporaryPasswordGenerator.Generate();
+            var newToken = GenerateSecureToken();
+            var resendTokenEntity = new EmailVerificationToken(
+                newToken,
+                email,
+                existingPending.Id,
+                TimeSpan.FromMinutes(30));
 
-            var createResult = await _identityService.CreateApplicationUserAsync(email, temporaryPassword, UserRole.Guest);
-            if (!createResult.Success || createResult.Data is null)
-            {
-                throw new ConflictException(
-                    $"An account is already registered with email '{email}'. Please sign in and apply instead.");
-            }
+            await _verificationTokenRepository.AddAsync(resendTokenEntity, cancellationToken);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            talentUserId = createResult.Data.UserId;
-            await _talentRepository.AddAsync(new Talent(talentUserId, name, email), cancellationToken);
-            talentAccountCreated = true;
+            var baseUrl = GetFrontendBaseUrl();
+            var newUrl = $"{baseUrl}/verify-application?token={newToken}";
+            _logger.LogInformation("[VERIFY] Verification link for {Email}: {Url}", email, newUrl);
+            await _emailService.SendVerificationLinkEmailAsync(email, name, newUrl, cancellationToken);
+
+            return new ApplyToJobResponse(existingPending.Id, existingPending.JobId, VerificationEmailResent: true);
         }
 
         var sanitizedResumeFileName = TalentMediaStorageKeyGuard.SanitizeFileNameSegment(request.ResumeFile.FileName);
         var storageFileName = TalentMediaStorageKeyGuard.BuildStorageKey(
             "resumes",
-            talentUserId,
+            "pending",
             $"{Guid.NewGuid()}_{sanitizedResumeFileName}");
 
         string resumeStorageKey;
@@ -100,29 +98,63 @@ public class ApplyToJobCommandHandler : IRequestHandler<ApplyToJobCommand, Apply
         }
         catch (Exception exception)
         {
-            _logger.LogError(exception, "Failed to save resume {FileName} to storage for user {UserId}", sanitizedResumeFileName, talentUserId);
+            _logger.LogError(exception, "Failed to save resume {FileName} to storage", sanitizedResumeFileName);
             throw new BadGatewayException("File storage is temporarily unavailable.");
         }
 
-        var application = new JobApplication(
+        var application = JobApplication.CreateGuestApplication(
             request.JobId,
-            talentUserId,
             name,
             email,
             resumeStorageKey,
-            request.CoverLetter,
-            request.ExpectedSalary,
-            request.TotalYearsExperience,
-            request.Location);
+            coverLetter: request.CoverLetter,
+            expectedSalary: request.ExpectedSalary,
+            totalYearsExperience: request.TotalYearsExperience,
+            location: request.Location);
 
         await _jobApplicationRepository.AddAsync(application, cancellationToken);
+
+        var verificationToken = GenerateSecureToken();
+        var tokenEntity = new EmailVerificationToken(
+            verificationToken,
+            email,
+            application.Id,
+            TimeSpan.FromMinutes(30));
+
+        await _verificationTokenRepository.AddAsync(tokenEntity, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        if (talentAccountCreated && temporaryPassword is not null)
+        var frontendBaseUrl = GetFrontendBaseUrl();
+        var verificationUrl = $"{frontendBaseUrl}/verify-application?token={verificationToken}";
+        _logger.LogInformation("[VERIFY] Verification link for {Email}: {Url}", email, verificationUrl);
+        await _emailService.SendVerificationLinkEmailAsync(email, name, verificationUrl, cancellationToken);
+
+        return new ApplyToJobResponse(application.Id, application.JobId);
+    }
+
+    private static string GetFrontendBaseUrl()
+    {
+        var corsOrigins = Environment.GetEnvironmentVariable("CORS_ALLOWED_ORIGINS");
+        if (!string.IsNullOrWhiteSpace(corsOrigins))
         {
-            await _emailService.SendCredentialsEmailAsync(email, name, temporaryPassword, cancellationToken);
+            var firstOrigin = corsOrigins
+                .Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .FirstOrDefault();
+
+            if (!string.IsNullOrWhiteSpace(firstOrigin))
+            {
+                return firstOrigin.TrimEnd('/');
+            }
         }
 
-        return new ApplyToJobResponse(application.Id, application.JobId, talentAccountCreated);
+        return "http://localhost:3000";
+    }
+
+    private static string GenerateSecureToken()
+    {
+        var bytes = new byte[32];
+        using var rng = System.Security.Cryptography.RandomNumberGenerator.Create();
+        rng.GetBytes(bytes);
+        return Convert.ToBase64String(bytes).Replace("+", "-").Replace("/", "_").TrimEnd('=');
     }
 }

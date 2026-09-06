@@ -54,9 +54,15 @@ public class JobConfiguration : IEntityTypeConfiguration<Job>
                 v => System.Text.Json.JsonSerializer.Deserialize<List<string>>(v, (System.Text.Json.JsonSerializerOptions?)null) ?? new List<string>())
             .Metadata.SetValueComparer(stringListComparer);
 
+        builder.Property(j => j.IsDeleted).HasDefaultValue(false).IsRequired();
+        builder.Property(j => j.DeletedAt).IsRequired(false);
+
+        builder.HasQueryFilter(j => !j.IsDeleted);
+
         builder.HasIndex(j => j.Status);
         builder.HasIndex(j => j.ExpireAt);
         builder.HasIndex(j => new { j.Status, j.CreatedAt });
+        builder.HasIndex(j => new { j.EmployerId, j.IsDeleted });
     }
 }
 

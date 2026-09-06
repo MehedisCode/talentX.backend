@@ -67,7 +67,6 @@ public class UpdateJobCommandHandler : IRequestHandler<UpdateJobCommand>
             }
         }
 
-        _jobRepository.Update(job);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 }

@@ -14,7 +14,7 @@ public sealed class JobApplicationRepository : IJobApplicationRepository
         _context = context;
     }
 
-    public async Task<bool> ExistsForJobAndTalentAsync(
+    public async Task<bool> ExistsByJobIdAndTalentUserIdAsync(
         Guid jobId,
         string talentUserId,
         CancellationToken cancellationToken = default)
@@ -23,6 +23,42 @@ public sealed class JobApplicationRepository : IJobApplicationRepository
             .AnyAsync(
                 application => application.JobId == jobId && application.TalentUserId == talentUserId,
                 cancellationToken);
+    }
+
+    public async Task<bool> ExistsPendingByJobIdAndEmailAsync(
+        Guid jobId,
+        string email,
+        CancellationToken cancellationToken = default)
+    {
+        return await _context.JobApplications
+            .AnyAsync(
+                application => application.JobId == jobId
+                    && application.ApplicantEmail == email
+                    && application.Status == Domain.Enums.ApplicationStatus.PendingVerification,
+                cancellationToken);
+    }
+
+    public async Task<JobApplication?> GetPendingByJobIdAndEmailAsync(
+        Guid jobId,
+        string email,
+        CancellationToken cancellationToken = default)
+    {
+        return await _context.JobApplications
+            .FirstOrDefaultAsync(
+                application => application.JobId == jobId
+                    && application.ApplicantEmail == email
+                    && application.Status == Domain.Enums.ApplicationStatus.PendingVerification,
+                cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<JobApplication>> GetPendingByEmailAsync(
+        string email,
+        CancellationToken cancellationToken = default)
+    {
+        return await _context.JobApplications
+            .Where(application => application.ApplicantEmail == email
+                && application.Status == Domain.Enums.ApplicationStatus.PendingVerification)
+            .ToListAsync(cancellationToken);
     }
 
     public async Task<IReadOnlyList<JobApplication>> GetByJobIdAsync(
@@ -47,5 +83,15 @@ public sealed class JobApplicationRepository : IJobApplicationRepository
         CancellationToken cancellationToken = default)
     {
         await _context.JobApplications.AddAsync(jobApplication, cancellationToken);
+    }
+
+    public async Task<int> CountHiredByEmployerIdAsync(
+        string employerId,
+        CancellationToken cancellationToken = default)
+    {
+        return await _context.JobApplications
+            .Where(application => application.Status == ApplicationStatus.Hired &&
+                                  _context.Jobs.IgnoreQueryFilters().Any(job => job.Id == application.JobId && job.EmployerId == employerId))
+            .CountAsync(cancellationToken);
     }
 }

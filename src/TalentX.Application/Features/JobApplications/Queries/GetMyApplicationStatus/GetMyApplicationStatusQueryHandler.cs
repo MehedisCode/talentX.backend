@@ -32,7 +32,7 @@ public sealed class GetMyApplicationStatusQueryHandler
             ?? throw new NotFoundException($"Job '{request.JobId}' was not found.");
 
         var hasApplied = await _unitOfWork.JobApplications
-            .ExistsForJobAndTalentAsync(job.Id, talentUserId, cancellationToken);
+            .ExistsByJobIdAndTalentUserIdAsync(job.Id, talentUserId, cancellationToken);
 
         return new MyApplicationStatusDto(hasApplied);
     }

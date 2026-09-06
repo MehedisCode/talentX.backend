@@ -52,7 +52,7 @@ public class GetMyApplicationStatusQueryHandlerTests
             .Setup(r => r.GetPublishedJobByIdAsync(job.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(job);
         _jobApplicationRepository
-            .Setup(r => r.ExistsForJobAndTalentAsync(job.Id, "talent-1", It.IsAny<CancellationToken>()))
+            .Setup(r => r.ExistsByJobIdAndTalentUserIdAsync(job.Id, "talent-1", It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
         var result = await _handler.Handle(new GetMyApplicationStatusQuery(job.Id), CancellationToken.None);
@@ -68,7 +68,7 @@ public class GetMyApplicationStatusQueryHandlerTests
             .Setup(r => r.GetPublishedJobByIdAsync(job.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(job);
         _jobApplicationRepository
-            .Setup(r => r.ExistsForJobAndTalentAsync(job.Id, "talent-1", It.IsAny<CancellationToken>()))
+            .Setup(r => r.ExistsByJobIdAndTalentUserIdAsync(job.Id, "talent-1", It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
 
         var result = await _handler.Handle(new GetMyApplicationStatusQuery(job.Id), CancellationToken.None);
@@ -85,14 +85,14 @@ public class GetMyApplicationStatusQueryHandlerTests
             .Setup(r => r.GetPublishedJobByIdAsync(job.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(job);
         _jobApplicationRepository
-            .Setup(r => r.ExistsForJobAndTalentAsync(job.Id, "talent-from-token", It.IsAny<CancellationToken>()))
+            .Setup(r => r.ExistsByJobIdAndTalentUserIdAsync(job.Id, "talent-from-token", It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
         var result = await _handler.Handle(new GetMyApplicationStatusQuery(job.Id), CancellationToken.None);
 
         result.HasApplied.Should().BeTrue();
         _jobApplicationRepository.Verify(
-            r => r.ExistsForJobAndTalentAsync(job.Id, "talent-from-token", It.IsAny<CancellationToken>()),
+            r => r.ExistsByJobIdAndTalentUserIdAsync(job.Id, "talent-from-token", It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -125,7 +125,7 @@ public class GetMyApplicationStatusQueryHandlerTests
         }
 
         _jobApplicationRepository.Verify(
-            r => r.ExistsForJobAndTalentAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            r => r.ExistsByJobIdAndTalentUserIdAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 

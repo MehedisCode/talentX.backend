@@ -49,7 +49,6 @@ public sealed class UpsertWorkExperienceCommandHandler : IRequestHandler<UpsertW
             request.EndDate,
             request.IsCurrent);
 
-        _unitOfWork.WorkExperiences.Update(existingWorkExperience);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return existingWorkExperience.Id;

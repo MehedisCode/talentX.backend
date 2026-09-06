@@ -41,7 +41,6 @@ public sealed class GoogleSignInEmployerCommandHandler : IRequestHandler<GoogleS
             if (!existingEmployer.IsVerified)
             {
                 existingEmployer.MarkAsVerified();
-                _unitOfWork.Employers.Update(existingEmployer);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
             }
 

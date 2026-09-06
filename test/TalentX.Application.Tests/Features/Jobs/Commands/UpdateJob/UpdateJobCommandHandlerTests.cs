@@ -129,7 +129,6 @@ public class UpdateJobCommandHandlerTests
         await _handler.Handle(CommandFor(job.Id), CancellationToken.None);
 
         job.Title.Should().Be("New Title");
-        _jobRepository.Verify(r => r.Update(job), Times.Once);
         _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 

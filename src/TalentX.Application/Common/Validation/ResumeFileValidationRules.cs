@@ -13,7 +13,7 @@ namespace TalentX.Application.Common.Validation;
 public static class ResumeFileValidationRules
 {
     private const long MaxFileSizeBytes = 5 * 1024 * 1024;
-    private static readonly string[] AllowedExtensions = [".pdf", ".docx"];
+    private static readonly string[] AllowedExtensions = [".pdf", ".docx", ".doc"];
     private static readonly string[] AllowedContentTypes =
     [
         "application/pdf",

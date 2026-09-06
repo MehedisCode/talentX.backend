@@ -140,7 +140,6 @@ public class UpdateTalentProfileCommandHandlerTests
 
         await _handler.Handle(ValidCommand(), CancellationToken.None);
 
-        _talentRepository.Verify(r => r.Update(talent), Times.Once);
         _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 }

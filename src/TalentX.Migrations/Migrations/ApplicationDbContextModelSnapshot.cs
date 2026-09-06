@@ -196,6 +196,49 @@ namespace TalentX.Migrations.Migrations
                     b.ToTable("Educations", (string)null);
                 });
 
+            modelBuilder.Entity("TalentX.Domain.Entities.EmailVerificationToken", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ApplicantEmail")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<DateTime?>("ConsumedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("JobApplicationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ApplicantEmail");
+
+                    b.HasIndex("JobApplicationId");
+
+                    b.HasIndex("Token")
+                        .IsUnique();
+
+                    b.ToTable("EmailVerificationTokens", (string)null);
+                });
+
             modelBuilder.Entity("TalentX.Domain.Entities.Job", b =>
                 {
                     b.Property<Guid>("Id")
@@ -217,6 +260,9 @@ namespace TalentX.Migrations.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasColumnType("text");
@@ -235,6 +281,11 @@ namespace TalentX.Migrations.Migrations
 
                     b.Property<DateTime>("ExpireAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
 
                     b.Property<string>("Location")
                         .IsRequired()
@@ -275,6 +326,8 @@ namespace TalentX.Migrations.Migrations
                     b.HasIndex("ExpireAt");
 
                     b.HasIndex("Status");
+
+                    b.HasIndex("EmployerId", "IsDeleted");
 
                     b.HasIndex("Status", "CreatedAt");
 
@@ -333,7 +386,6 @@ namespace TalentX.Migrations.Migrations
                         .HasColumnType("character varying(50)");
 
                     b.Property<string>("TalentUserId")
-                        .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
@@ -349,9 +401,6 @@ namespace TalentX.Migrations.Migrations
                     b.HasIndex("JobId");
 
                     b.HasIndex("TalentUserId");
-
-                    b.HasIndex("JobId", "TalentUserId")
-                        .IsUnique();
 
                     b.ToTable("JobApplications", (string)null);
                 });
@@ -714,6 +763,15 @@ namespace TalentX.Migrations.Migrations
                     b.HasOne("TalentX.Infrastructure.Identity.Models.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("TalentX.Domain.Entities.EmailVerificationToken", b =>
+                {
+                    b.HasOne("TalentX.Domain.Entities.JobApplication", null)
+                        .WithMany()
+                        .HasForeignKey("JobApplicationId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

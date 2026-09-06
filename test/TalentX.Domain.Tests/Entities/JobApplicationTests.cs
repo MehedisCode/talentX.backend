@@ -9,7 +9,7 @@ public sealed class JobApplicationTests
 {
     private static JobApplication CreateJobApplication(
         Guid? jobId = null,
-        string talentUserId = "talent-user-123",
+        string? talentUserId = "talent-user-123",
         string applicantName = "Jane Doe",
         string applicantEmail = "jane.doe@example.com",
         string resumeStorageKey = "resumes/jane-doe-resume.pdf",
@@ -62,6 +62,24 @@ public sealed class JobApplicationTests
         application.AppliedAt.Should().BeOnOrAfter(beforeCreation).And.BeOnOrBefore(afterCreation);
         application.CreatedAt.Should().BeOnOrAfter(beforeCreation).And.BeOnOrBefore(afterCreation);
         application.UpdatedAt.Should().BeNull();
+    }
+
+    [Fact]
+    public void CreateGuestApplication_SetsStatusToPendingVerification()
+    {
+        var targetJobId = Guid.NewGuid();
+        var application = JobApplication.CreateGuestApplication(
+            targetJobId,
+            "Alex Smith",
+            "alex@example.com",
+            "resumes/alex.pdf");
+
+        application.JobId.Should().Be(targetJobId);
+        application.TalentUserId.Should().BeNull();
+        application.ApplicantName.Should().Be("Alex Smith");
+        application.ApplicantEmail.Should().Be("alex@example.com");
+        application.ResumeStorageKey.Should().Be("resumes/alex.pdf");
+        application.Status.Should().Be(ApplicationStatus.PendingVerification);
     }
 
     [Fact]

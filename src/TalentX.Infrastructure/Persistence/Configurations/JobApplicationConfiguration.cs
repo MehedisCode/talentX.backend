@@ -17,7 +17,7 @@ public sealed class JobApplicationConfiguration : IEntityTypeConfiguration<JobAp
 
         builder.Property(application => application.TalentUserId)
             .HasMaxLength(200)
-            .IsRequired();
+            .IsRequired(false);
 
         builder.Property(application => application.ApplicantName)
             .HasMaxLength(120)
@@ -64,7 +64,5 @@ public sealed class JobApplicationConfiguration : IEntityTypeConfiguration<JobAp
 
         builder.HasIndex(application => application.JobId);
         builder.HasIndex(application => application.TalentUserId);
-        builder.HasIndex(application => new { application.JobId, application.TalentUserId })
-            .IsUnique();
     }
 }

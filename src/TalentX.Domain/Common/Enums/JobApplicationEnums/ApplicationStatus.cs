@@ -2,6 +2,7 @@ namespace TalentX.Domain.Enums;
 
 public enum ApplicationStatus
 {
+    PendingVerification = 0,
     Applied = 1,
     Reviewed = 2,
     Shortlisted = 3,
