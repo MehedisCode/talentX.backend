@@ -35,7 +35,6 @@ public sealed class CloseJobCommandHandler : IRequestHandler<CloseJobCommand, Un
         }
 
         job.MarkAsClosed();
-        _jobRepository.Update(job);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return Unit.Value;

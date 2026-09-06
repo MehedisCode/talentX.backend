@@ -35,7 +35,6 @@ public sealed class ConfirmProfileMediaUploadCommandHandler : IRequestHandler<Co
         var previousStorageKey = talent.ProfilePictureStorageKey;
 
         talent.UpdateProfilePicture(request.StorageKey);
-        _unitOfWork.Talents.Update(talent);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         if (!string.IsNullOrWhiteSpace(previousStorageKey) && previousStorageKey != request.StorageKey)

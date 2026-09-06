@@ -47,7 +47,6 @@ public sealed class VerifyEmployerEmailCommandHandler : IRequestHandler<VerifyEm
         }
 
         employer.MarkAsVerified();
-        _unitOfWork.Employers.Update(employer);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         var tokenResult = await _tokenService.CreateAsync(employer.UserId);

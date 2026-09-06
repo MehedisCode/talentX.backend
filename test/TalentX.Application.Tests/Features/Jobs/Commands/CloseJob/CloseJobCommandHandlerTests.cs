@@ -101,7 +101,6 @@ public sealed class CloseJobCommandHandlerTests
         commandResult.Should().Be(MediatR.Unit.Value);
         targetJob.Status.Should().Be(JobStatus.Closed);
         targetJob.UpdatedAt.Should().NotBeNull();
-        _jobRepository.Verify(repository => repository.Update(targetJob), Times.Once);
         _unitOfWork.Verify(unit => unit.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 }

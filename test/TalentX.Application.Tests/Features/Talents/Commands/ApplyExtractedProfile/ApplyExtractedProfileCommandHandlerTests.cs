@@ -196,7 +196,6 @@ public class ApplyExtractedProfileCommandHandlerTests
         await _handler.Handle(ValidCommand(ValidFileMock().Object), CancellationToken.None);
 
         _resumeRepository.Verify(r => r.AddAsync(It.IsAny<Resume>(), It.IsAny<CancellationToken>()), Times.Never);
-        _resumeRepository.Verify(r => r.Update(existingResume), Times.Once);
         existingResume.StorageKey.Should().Be("resumes/user-1/new-key.pdf");
     }
 

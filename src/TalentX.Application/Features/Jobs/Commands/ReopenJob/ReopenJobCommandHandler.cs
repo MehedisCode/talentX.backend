@@ -43,7 +43,6 @@ public sealed class ReopenJobCommandHandler : IRequestHandler<ReopenJobCommand, 
             throw new BadRequestException(exception.Message);
         }
 
-        _jobRepository.Update(job);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return Unit.Value;

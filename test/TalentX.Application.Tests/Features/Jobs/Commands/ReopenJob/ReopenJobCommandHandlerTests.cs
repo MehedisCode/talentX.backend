@@ -57,7 +57,6 @@ public sealed class ReopenJobCommandHandlerTests
         commandResult.Should().Be(Unit.Value);
         sampleJob.Status.Should().Be(JobStatus.Published);
         sampleJob.UpdatedAt.Should().NotBeNull();
-        _jobRepository.Verify(repository => repository.Update(sampleJob), Times.Once);
         _unitOfWork.Verify(unit => unit.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 

@@ -122,8 +122,6 @@ public sealed class GoogleSignInEmployerCommandHandlerTests
         Assert.Equal("existing@google.com", result.Employer.Email);
         Assert.Equal("mock-access-token", result.AccessToken);
         Assert.Equal("mock-refresh-token", result.RefreshToken);
-
-        _employerRepositoryMock.Verify(r => r.Update(existingEmployer), Times.Once);
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
         _tokenServiceMock.Verify(t => t.CreateAsync("existing-user-id"), Times.Once);
     }
