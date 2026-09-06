@@ -83,6 +83,6 @@ public sealed class JobRepository : RepositoryBase<Job>, IJobRepository
 
     public async Task<IEnumerable<Job>> GetActivePublishedJobsAsync(CancellationToken cancellationToken = default) =>
         await Context.Jobs
-            .Where(j => j.ExpireAt >= DateTime.UtcNow)
+            .Where(j => j.ExpireAt >= DateTime.UtcNow && j.Status == JobStatus.Published)
             .ToListAsync(cancellationToken);
 }

@@ -25,7 +25,7 @@ public sealed class TalentDashboardController : BaseApiController
     public async Task<IActionResult> GetApplications(
         [FromQuery] string? status,
         [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 20,
+        [FromQuery] int pageSize = 10,
         CancellationToken cancellationToken = default)
     {
         var result = await Sender.Send(
@@ -41,7 +41,7 @@ public sealed class TalentDashboardController : BaseApiController
     [HttpGet("invitations")]
     public async Task<IActionResult> GetInvitations(
         [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 20,
+        [FromQuery] int pageSize = 10,
         CancellationToken cancellationToken = default)
     {
         var result = await Sender.Send(
