@@ -57,4 +57,14 @@ public sealed class SavedJobRepository : ISavedJobRepository
 
         return new PaginatedList<SavedJob>(items, page, pageSize, totalCount);
     }
+
+    public async Task<List<Guid>> GetSavedJobIdsAsync(
+        string talentId,
+        CancellationToken cancellationToken = default)
+    {
+        return await _context.SavedJobs
+            .Where(savedJob => savedJob.TalentId == talentId)
+            .Select(savedJob => savedJob.JobId)
+            .ToListAsync(cancellationToken);
+    }
 }
