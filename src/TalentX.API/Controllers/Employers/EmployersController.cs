@@ -143,9 +143,3 @@ public sealed class EmployersController : BaseApiController
         return Ok(jobs);
     }
 }
-
-public sealed class CurrentEmployerResult
-{
-    public string Id { get; set; } = string.Empty;
-    public string CompanyName { get; set; } = string.Empty;
-}

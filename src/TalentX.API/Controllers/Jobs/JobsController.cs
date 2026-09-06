@@ -19,15 +19,6 @@ using TalentX.Infrastructure.FileStorage;
 
 namespace TalentX.API.Controllers;
 
-public sealed record ApplyToJobRequestDto(
-    string ApplicantName,
-    string ApplicantEmail,
-    IFormFile ResumeFile,
-    string CoverLetter,
-    decimal ExpectedSalary,
-    decimal TotalYearsExperience,
-    string? Location);
-
 [ApiController]
 [Route("api/v1/[controller]")]
 public class JobsController : BaseApiController
