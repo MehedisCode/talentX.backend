@@ -15,6 +15,7 @@ public interface IUnitOfWork
     IResumeRepository Resumes { get; }
     IWorkExperienceRepository WorkExperiences { get; }
     IEducationRepository Educations { get; }
+    ISavedJobRepository SavedJobs { get; }
 
     /// <summary>
     /// Asynchronously persists all changes made in the context to the database.

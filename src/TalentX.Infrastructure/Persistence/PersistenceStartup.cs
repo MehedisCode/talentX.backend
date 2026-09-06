@@ -34,6 +34,7 @@ public static class PersistenceStartup
         services.AddScoped<IWorkExperienceRepository, WorkExperienceRepository>();
         services.AddScoped<IEducationRepository, EducationRepository>();
         services.AddScoped<IEmailVerificationTokenRepository, EmailVerificationTokenRepository>();
+        services.AddScoped<ISavedJobRepository, SavedJobRepository>();
 
         return services;
     }

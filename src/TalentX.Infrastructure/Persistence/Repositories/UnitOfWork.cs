@@ -18,6 +18,7 @@ public sealed class UnitOfWork : IUnitOfWork
     public IResumeRepository Resumes { get; }
     public IWorkExperienceRepository WorkExperiences { get; }
     public IEducationRepository Educations { get; }
+    public ISavedJobRepository SavedJobs { get; }
 
     public UnitOfWork(ApplicationDbContext context)
     {
@@ -30,6 +31,7 @@ public sealed class UnitOfWork : IUnitOfWork
         Resumes = new ResumeRepository(_context);
         WorkExperiences = new WorkExperienceRepository(_context);
         Educations = new EducationRepository(_context);
+        SavedJobs = new SavedJobRepository(_context);
     }
 
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
