@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using TalentX.Application.Common.Interfaces.Repositories;
+using TalentX.Application.Common.Models;
 using TalentX.Domain.Entities;
 using TalentX.Infrastructure.Persistence.Contexts;
 
@@ -35,5 +36,25 @@ public sealed class SavedJobRepository : ISavedJobRepository
     public void Remove(SavedJob entity)
     {
         _context.SavedJobs.Remove(entity);
+    }
+
+    public async Task<PaginatedList<SavedJob>> GetSavedJobsAsync(
+        string talentId,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _context.SavedJobs
+            .Where(savedJob => savedJob.TalentId == talentId)
+            .OrderByDescending(savedJob => savedJob.CreatedAt);
+
+        var totalCount = await query.CountAsync(cancellationToken);
+
+        var items = await query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return new PaginatedList<SavedJob>(items, page, pageSize, totalCount);
     }
 }
