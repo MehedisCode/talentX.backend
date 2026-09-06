@@ -47,7 +47,6 @@ public sealed class UpsertEducationCommandHandler : IRequestHandler<UpsertEducat
             request.StartDate,
             request.EndDate);
 
-        _unitOfWork.Educations.Update(existingEducation);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return existingEducation.Id;

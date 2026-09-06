@@ -4,6 +4,6 @@ namespace TalentX.Application.Common.Exceptions;
 
 public class ValidationException : AppException
 {
-    public ValidationException(string message) : base(message) { }
+    public ValidationException(string message, string? resourceId = null) : base(message, resourceId) { }
     public override HttpStatusCode StatusCode => HttpStatusCode.BadRequest;
 }

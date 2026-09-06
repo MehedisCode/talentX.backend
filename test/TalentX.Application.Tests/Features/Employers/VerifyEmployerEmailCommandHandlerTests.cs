@@ -78,7 +78,6 @@ public sealed class VerifyEmployerEmailCommandHandlerTests
         Assert.Equal("mock-refresh-token", result.RefreshToken);
 
         _otpServiceMock.Verify(o => o.MarkEmailVerifiedAsync(command.Email, null, It.IsAny<CancellationToken>()), Times.Once);
-        _employerRepositoryMock.Verify(r => r.Update(employer), Times.Once);
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
         _tokenServiceMock.Verify(t => t.CreateAsync("user-1"), Times.Once);
     }

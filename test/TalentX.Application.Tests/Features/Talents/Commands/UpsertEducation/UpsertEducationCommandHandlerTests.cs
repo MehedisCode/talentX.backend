@@ -46,7 +46,6 @@ public class UpsertEducationCommandHandlerTests
         await _handler.Handle(command, CancellationToken.None);
 
         existing.Institution.Should().Be("State University");
-        _educationRepository.Verify(r => r.Update(existing), Times.Once);
     }
 
     [Fact]

@@ -112,4 +112,69 @@ public sealed class JobApplicationRepositoryTests
         applications.Should().HaveCount(2);
         applications.Select(app => app.Id).Should().Contain(new[] { application1.Id, application2.Id });
     }
+
+    [Fact]
+    public async Task CountHiredByEmployerIdAsync_WhenApplicationsExist_CountsHiredForEmployerIncludingSoftDeletedJobs()
+    {
+        await using var context = NewContext();
+        var repository = new JobApplicationRepository(context);
+
+        var employerOneJobOne = MakeJob("employer-1");
+        var employerOneJobTwo = MakeJob("employer-1");
+        var employerOneDeletedJob = MakeJob("employer-1");
+        employerOneDeletedJob.SoftDelete();
+
+        var employerTwoJob = MakeJob("employer-2");
+
+        context.Jobs.AddRange(employerOneJobOne, employerOneJobTwo, employerOneDeletedJob, employerTwoJob);
+
+        var hiredApplicationOne = NewApplication(jobId: employerOneJobOne.Id, talentUserId: "talent-1");
+        hiredApplicationOne.UpdateStatus(ApplicationStatus.Hired);
+
+        var appliedApplication = NewApplication(jobId: employerOneJobOne.Id, talentUserId: "talent-2");
+        appliedApplication.UpdateStatus(ApplicationStatus.Applied);
+
+        var hiredApplicationTwo = NewApplication(jobId: employerOneJobTwo.Id, talentUserId: "talent-3");
+        hiredApplicationTwo.UpdateStatus(ApplicationStatus.Hired);
+
+        var hiredApplicationOnDeletedJob = NewApplication(jobId: employerOneDeletedJob.Id, talentUserId: "talent-4");
+        hiredApplicationOnDeletedJob.UpdateStatus(ApplicationStatus.Hired);
+
+        var hiredApplicationEmployerTwo = NewApplication(jobId: employerTwoJob.Id, talentUserId: "talent-5");
+        hiredApplicationEmployerTwo.UpdateStatus(ApplicationStatus.Hired);
+
+        context.JobApplications.AddRange(
+            hiredApplicationOne,
+            appliedApplication,
+            hiredApplicationTwo,
+            hiredApplicationOnDeletedJob,
+            hiredApplicationEmployerTwo);
+        await context.SaveChangesAsync();
+
+        var employerOneCount = await repository.CountHiredByEmployerIdAsync("employer-1");
+        var employerTwoCount = await repository.CountHiredByEmployerIdAsync("employer-2");
+        var unknownEmployerCount = await repository.CountHiredByEmployerIdAsync("employer-unknown");
+
+        employerOneCount.Should().Be(3);
+        employerTwoCount.Should().Be(1);
+        unknownEmployerCount.Should().Be(0);
+    }
+
+    private static Job MakeJob(string employerId = "employer-1")
+    {
+        var job = Job.Create(
+            employerId,
+            "Software Engineer",
+            "Acme Corp",
+            "Job description",
+            EmploymentType.FullTime,
+            ExperienceLevel.MidLevel,
+            "Remote",
+            WorkArrangement.RemoteButAccessible,
+            ["C#"],
+            1,
+            DateTime.UtcNow.AddDays(30));
+        job.MarkAsPublished();
+        return job;
+    }
 }
