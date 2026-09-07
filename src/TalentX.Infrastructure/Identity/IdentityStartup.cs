@@ -39,6 +39,11 @@ public static class IdentityStartup
             .AddEntityFrameworkStores<ApplicationDbContext>()
             .AddDefaultTokenProviders();
 
+        services.Configure<DataProtectionTokenProviderOptions>(options =>
+        {
+            options.TokenLifespan = TimeSpan.FromMinutes(15);
+        });
+
         var jwtSettings = GetJwtSettings(configuration);
 
         services.Configure<JwtSettings>(options =>

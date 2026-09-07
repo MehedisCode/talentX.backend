@@ -99,6 +99,23 @@ public sealed class EmailService : IEmailService
         DispatchAfterLogging(toEmail, recipientName, subject, html);
     }
 
+    public async Task SendPasswordResetEmailAsync(
+        string toEmail,
+        string recipientName,
+        string resetUrl,
+        CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation(
+            "[EMAIL] {Kind} dispatch to {RecipientName} <{ToEmail}>: {Url}",
+            EmailConstants.Kinds.PasswordReset, recipientName, toEmail, resetUrl);
+
+        var html = await _razor.CompileRenderAsync(
+            EmailConstants.Templates.PasswordReset,
+            new PasswordResetEmailModel(recipientName, resetUrl));
+
+        DispatchAfterLogging(toEmail, recipientName, EmailConstants.Subjects.PasswordReset, html);
+    }
+
     private void LogDispatch(string kind, string recipientName, string toEmail, string? secret)
     {
         _logger.LogInformation(

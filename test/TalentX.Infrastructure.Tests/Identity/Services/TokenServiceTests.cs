@@ -30,7 +30,7 @@ public class TokenServiceTests : IAsyncLifetime
     {
         _userManagerMock = new Mock<UserManager<ApplicationUser>>(
             new Mock<IUserStore<ApplicationUser>>().Object,
-            null, null, null, null, null, null, null, null);
+            null!, null!, null!, null!, null!, null!, null!, null!);
 
         // Create JWT settings for testing
         _jwtSettings = new JwtSettings
@@ -682,6 +682,58 @@ public class TokenServiceTests : IAsyncLifetime
     }
 
     #endregion
+
+    #region RevokeOtherSessionsAsync Tests
+
+    [Fact]
+    public async Task RevokeOtherSessionsAsync_RevokesAllExceptCurrentToken()
+    {
+        var userId = "user-123";
+        var user = new ApplicationUser { Id = userId, Email = "user@example.com", UserName = "testuser" };
+
+        var firstTokenResponse = await CreateInitialToken(userId, user);
+        var currentTokenResponse = await CreateInitialToken(userId, user);
+        var thirdTokenResponse = await CreateInitialToken(userId, user);
+
+        var result = await _tokenService.RevokeOtherSessionsAsync(userId, currentTokenResponse.RefreshToken);
+
+        result.Success.Should().BeTrue();
+
+        var tokens = await _context.RefreshTokens
+            .Where(token => token.ApplicationUserId == userId)
+            .ToListAsync();
+
+        var currentHash = HashToken(currentTokenResponse.RefreshToken);
+        var activeTokens = tokens.Where(token => token.RevokedAt == null).ToList();
+        var revokedTokens = tokens.Where(token => token.RevokedAt != null).ToList();
+
+        activeTokens.Should().ContainSingle();
+        activeTokens.Single().TokenHash.Should().Be(currentHash);
+        revokedTokens.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public async Task RevokeOtherSessionsAsync_WhenCurrentRefreshTokenIsNullOrEmpty_ShouldRevokeAllActiveTokens()
+    {
+        var userId = "user-456";
+        var user = new ApplicationUser { Id = userId, Email = "user456@example.com", UserName = "testuser456" };
+
+        await CreateInitialToken(userId, user);
+        await CreateInitialToken(userId, user);
+
+        var result = await _tokenService.RevokeOtherSessionsAsync(userId, null);
+
+        result.Success.Should().BeTrue();
+
+        var tokens = await _context.RefreshTokens
+            .Where(token => token.ApplicationUserId == userId)
+            .ToListAsync();
+
+        tokens.Should().AllSatisfy(token => token.RevokedAt.Should().NotBeNull());
+    }
+
+    #endregion
+
 
     #region Token Hash and Validation Tests
 
