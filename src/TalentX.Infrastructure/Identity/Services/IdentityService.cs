@@ -154,6 +154,34 @@ public class IdentityService : IIdentityService
         return IdentityResponse.Ok();
     }
 
+    public async Task<IdentityResponse> AddPasswordAsync(
+        string userId,
+        string newPassword,
+        CancellationToken cancellationToken = default)
+    {
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user is null)
+        {
+            return IdentityResponse.Fail("User not found.");
+        }
+
+        if (await _userManager.HasPasswordAsync(user))
+        {
+            return IdentityResponse.Fail("User already has a password set. Use change password instead.");
+        }
+
+        var identityResult = await _userManager.AddPasswordAsync(user, newPassword);
+        if (!identityResult.Succeeded)
+        {
+            return IdentityResponse.Fail(identityResult.Errors.Select(identityError => identityError.Description));
+        }
+
+        await _userManager.UpdateSecurityStampAsync(user);
+
+        return IdentityResponse.Ok();
+    }
+
+
     public async Task<IdentityResponse> ChangeUserRoleAsync(string userId, string currentRole, string newRole)
     {
         var user = await _userManager.FindByIdAsync(userId);

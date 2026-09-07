@@ -818,4 +818,97 @@ public class IdentityServiceTests
         authStatus.HasPassword.Should().BeFalse();
         authStatus.AuthProviders.Should().Equal("google");
     }
+
+    [Fact]
+    public async Task AddPasswordAsync_WhenUserNotFound_ShouldReturnFail()
+    {
+        var userId = "non-existent-user";
+
+        _userManagerMock
+            .Setup(manager => manager.FindByIdAsync(userId))
+            .ReturnsAsync((ApplicationUser)null!);
+
+        var response = await _identityService.AddPasswordAsync(userId, "NewPassword123!");
+
+        response.Success.Should().BeFalse();
+        response.Errors.Should().Contain("User not found.");
+    }
+
+    [Fact]
+    public async Task AddPasswordAsync_WhenUserAlreadyHasPassword_ShouldReturnFail()
+    {
+        var userId = "existing-user-with-pass";
+        var user = new ApplicationUser { Id = userId, Email = "user@example.com" };
+
+        _userManagerMock
+            .Setup(manager => manager.FindByIdAsync(userId))
+            .ReturnsAsync(user);
+
+        _userManagerMock
+            .Setup(manager => manager.HasPasswordAsync(user))
+            .ReturnsAsync(true);
+
+        var response = await _identityService.AddPasswordAsync(userId, "NewPassword123!");
+
+        response.Success.Should().BeFalse();
+        response.Errors.Should().Contain("User already has a password set. Use change password instead.");
+        _userManagerMock.Verify(manager => manager.AddPasswordAsync(It.IsAny<ApplicationUser>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task AddPasswordAsync_WhenAddPasswordFails_ShouldReturnFail()
+    {
+        var userId = "user-without-pass";
+        var user = new ApplicationUser { Id = userId, Email = "user@example.com" };
+
+        _userManagerMock
+            .Setup(manager => manager.FindByIdAsync(userId))
+            .ReturnsAsync(user);
+
+        _userManagerMock
+            .Setup(manager => manager.HasPasswordAsync(user))
+            .ReturnsAsync(false);
+
+        var identityErrors = new[] { new IdentityError { Description = "Password does not meet complexity." } };
+        _userManagerMock
+            .Setup(manager => manager.AddPasswordAsync(user, "weak"))
+            .ReturnsAsync(IdentityResult.Failed(identityErrors));
+
+        var response = await _identityService.AddPasswordAsync(userId, "weak");
+
+        response.Success.Should().BeFalse();
+        response.Errors.Should().Contain("Password does not meet complexity.");
+        _userManagerMock.Verify(manager => manager.UpdateSecurityStampAsync(It.IsAny<ApplicationUser>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task AddPasswordAsync_WhenSuccessful_ShouldAddPasswordUpdateSecurityStampAndReturnOk()
+    {
+        var userId = "valid-user";
+        var user = new ApplicationUser { Id = userId, Email = "user@example.com" };
+
+        _userManagerMock
+            .Setup(manager => manager.FindByIdAsync(userId))
+            .ReturnsAsync(user);
+
+        _userManagerMock
+            .Setup(manager => manager.HasPasswordAsync(user))
+            .ReturnsAsync(false);
+
+        _userManagerMock
+            .Setup(manager => manager.AddPasswordAsync(user, "ValidPassword123!"))
+            .ReturnsAsync(IdentityResult.Success);
+
+        _userManagerMock
+            .Setup(manager => manager.UpdateSecurityStampAsync(user))
+            .ReturnsAsync(IdentityResult.Success);
+
+        var response = await _identityService.AddPasswordAsync(userId, "ValidPassword123!");
+
+        response.Success.Should().BeTrue();
+        response.Errors.Should().BeEmpty();
+        _userManagerMock.Verify(manager => manager.AddPasswordAsync(user, "ValidPassword123!"), Times.Once);
+        _userManagerMock.Verify(manager => manager.UpdateSecurityStampAsync(user), Times.Once);
+    }
 }
+
