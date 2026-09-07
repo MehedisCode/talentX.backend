@@ -52,36 +52,32 @@ public sealed class GetJobApplicantsQueryHandler
             pageSize,
             cancellationToken);
 
-        var tasks = paginatedApplications.Items
-            .Select(async app =>
-            {
-                string? resumeDownloadUrl = null;
-                if (!string.IsNullOrWhiteSpace(app.ResumeStorageKey))
-                {
-                    resumeDownloadUrl = await _presignedUrlService.CreateDownloadUrlAsync(
-                        app.ResumeStorageKey,
-                        PresignedUrlExpiry,
-                        cancellationToken);
-                }
+        var urlTasks = paginatedApplications.Items
+            .Select(app => string.IsNullOrWhiteSpace(app.ResumeStorageKey)
+                ? Task.FromResult<string?>(null)
+                : _presignedUrlService.CreateDownloadUrlAsync(app.ResumeStorageKey, PresignedUrlExpiry, cancellationToken))
+            .ToArray();
 
-                return new JobApplicantListItemDto(
-                    app.Id,
-                    app.JobId,
-                    app.TalentUserId,
-                    app.ApplicantName,
-                    app.ApplicantEmail,
-                    resumeDownloadUrl,
-                    app.Status.ToString(),
-                    app.AiMatchScore,
-                    app.ExpectedSalary,
-                    app.TotalYearsExperience,
-                    app.Location,
-                    app.AppliedAt);
-            });
+        var resumeUrls = await Task.WhenAll(urlTasks);
 
-        var results = await Task.WhenAll(tasks);
+        var results = paginatedApplications.Items
+            .Select((app, index) => new JobApplicantListItemDto(
+                app.Id,
+                app.JobId,
+                app.TalentUserId,
+                app.ApplicantName,
+                app.ApplicantEmail,
+                resumeUrls[index],
+                app.Status.ToString(),
+                app.AiMatchScore,
+                app.ExpectedSalary,
+                app.TotalYearsExperience,
+                app.Location,
+                app.AppliedAt))
+            .ToList();
+
         return new PaginatedList<JobApplicantListItemDto>(
-            results.ToList(),
+            results,
             paginatedApplications.Page,
             paginatedApplications.PageSize,
             paginatedApplications.TotalCount);

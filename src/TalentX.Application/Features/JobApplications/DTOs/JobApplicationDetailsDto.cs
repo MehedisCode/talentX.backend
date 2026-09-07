@@ -13,5 +13,6 @@ public sealed record JobApplicationDetailsDto(
     decimal? TotalYearsExperience,
     string? Location,
     string Status,
+    decimal? AiMatchScore,
     DateTime AppliedAt,
     DateTime? UpdatedAt);

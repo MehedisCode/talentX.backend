@@ -64,6 +64,7 @@ public sealed class GetJobApplicationByIdQueryHandler
             application.TotalYearsExperience,
             application.Location,
             application.Status.ToString(),
+            application.AiMatchScore,
             application.AppliedAt,
             application.UpdatedAt);
     }
