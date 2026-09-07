@@ -24,18 +24,19 @@ public sealed class ForgotPasswordCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WithConfiguredFrontendUrl_ShouldCallIdentityServiceWithConfiguredUrlAndReturnResult()
+    public async Task Handle_WithCorsAllowedOriginsContainingStagingUrl_ShouldCallIdentityServiceWithStagingUrl()
     {
-        var email = "localuser@example.com";
-        var configuredFrontendUrl = "https://app.talentx.com";
+        var email = "staging@example.com";
+        var stagingUrl = "https://talentx-stg-app.ait-us.co";
+        var corsAllowedOrigins = $"http://localhost:3000,{stagingUrl}";
         var expectedResult = new ForgotPasswordResult(true, "Local", "If an account exists, instructions have been sent.");
 
         _configurationMock
-            .Setup(configuration => configuration["Frontend:Url"])
-            .Returns(configuredFrontendUrl);
+            .Setup(configuration => configuration["CORS_ALLOWED_ORIGINS"])
+            .Returns(corsAllowedOrigins);
 
         _identityServiceMock
-            .Setup(service => service.InitiatePasswordResetAsync(email, configuredFrontendUrl, It.IsAny<CancellationToken>()))
+            .Setup(service => service.InitiatePasswordResetAsync(email, stagingUrl, It.IsAny<CancellationToken>()))
             .ReturnsAsync(expectedResult);
 
         var command = new ForgotPasswordCommand(email);
@@ -44,35 +45,7 @@ public sealed class ForgotPasswordCommandHandlerTests
 
         result.Should().Be(expectedResult);
         _identityServiceMock.Verify(
-            service => service.InitiatePasswordResetAsync(email, configuredFrontendUrl, It.IsAny<CancellationToken>()),
-            Times.Once);
-    }
-
-    [Fact]
-    public async Task Handle_WithAppFrontendUrlFallback_ShouldCallIdentityServiceWithAppFrontendUrl()
-    {
-        var email = "fallback@example.com";
-        var appFrontendUrl = "https://talentx.io";
-        var expectedResult = new ForgotPasswordResult(true, "Local", "If an account exists, instructions have been sent.");
-
-        _configurationMock
-            .Setup(configuration => configuration["Frontend:Url"])
-            .Returns((string?)null);
-        _configurationMock
-            .Setup(configuration => configuration["App:FrontendUrl"])
-            .Returns(appFrontendUrl);
-
-        _identityServiceMock
-            .Setup(service => service.InitiatePasswordResetAsync(email, appFrontendUrl, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(expectedResult);
-
-        var command = new ForgotPasswordCommand(email);
-
-        var result = await _handler.Handle(command, CancellationToken.None);
-
-        result.Should().Be(expectedResult);
-        _identityServiceMock.Verify(
-            service => service.InitiatePasswordResetAsync(email, appFrontendUrl, It.IsAny<CancellationToken>()),
+            service => service.InitiatePasswordResetAsync(email, stagingUrl, It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -84,10 +57,10 @@ public sealed class ForgotPasswordCommandHandlerTests
         var expectedResult = new ForgotPasswordResult(true, "Local", "If an account exists, instructions have been sent.");
 
         _configurationMock
-            .Setup(configuration => configuration["Frontend:Url"])
+            .Setup(configuration => configuration["CORS_ALLOWED_ORIGINS"])
             .Returns((string?)null);
         _configurationMock
-            .Setup(configuration => configuration["App:FrontendUrl"])
+            .Setup(configuration => configuration["Cors:AllowedOrigins"])
             .Returns((string?)null);
         _configurationMock
             .Setup(configuration => configuration["Cors:FrontendUrl"])
@@ -108,21 +81,15 @@ public sealed class ForgotPasswordCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WithNoConfiguredUrl_ShouldCallIdentityServiceWithDefaultStagingUrl()
+    public async Task Handle_WithOnlyLocalhostOrigins_ShouldCallIdentityServiceWithLocalhostUrl()
     {
-        var email = "default@example.com";
-        var expectedDefaultUrl = "https://talentx-stg-app.ait-us.co";
+        var email = "dev@example.com";
+        var expectedDefaultUrl = "http://localhost:3000";
         var expectedResult = new ForgotPasswordResult(true, "Local", "If an account exists, instructions have been sent.");
 
         _configurationMock
-            .Setup(configuration => configuration["Frontend:Url"])
-            .Returns((string?)null);
-        _configurationMock
-            .Setup(configuration => configuration["App:FrontendUrl"])
-            .Returns((string?)null);
-        _configurationMock
-            .Setup(configuration => configuration["Cors:FrontendUrl"])
-            .Returns((string?)null);
+            .Setup(configuration => configuration["CORS_ALLOWED_ORIGINS"])
+            .Returns("http://localhost:3000,http://127.0.0.1:3000");
 
         _identityServiceMock
             .Setup(service => service.InitiatePasswordResetAsync(email, expectedDefaultUrl, It.IsAny<CancellationToken>()))
@@ -139,24 +106,21 @@ public sealed class ForgotPasswordCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WhenInDevelopmentEnvironmentAndNoConfig_ShouldCallIdentityServiceWithLocalhostUrl()
+    public async Task Handle_WithNoCorsConfiguration_ShouldCallIdentityServiceWithLocalhostUrl()
     {
-        var email = "dev@example.com";
+        var email = "local@example.com";
         var expectedDefaultUrl = "http://localhost:3000";
         var expectedResult = new ForgotPasswordResult(true, "Local", "If an account exists, instructions have been sent.");
 
         _configurationMock
-            .Setup(configuration => configuration["Frontend:Url"])
+            .Setup(configuration => configuration["CORS_ALLOWED_ORIGINS"])
             .Returns((string?)null);
         _configurationMock
-            .Setup(configuration => configuration["App:FrontendUrl"])
+            .Setup(configuration => configuration["Cors:AllowedOrigins"])
             .Returns((string?)null);
         _configurationMock
             .Setup(configuration => configuration["Cors:FrontendUrl"])
             .Returns((string?)null);
-        _configurationMock
-            .Setup(configuration => configuration["ASPNETCORE_ENVIRONMENT"])
-            .Returns("Development");
 
         _identityServiceMock
             .Setup(service => service.InitiatePasswordResetAsync(email, expectedDefaultUrl, It.IsAny<CancellationToken>()))
