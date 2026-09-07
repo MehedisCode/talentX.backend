@@ -1,10 +1,10 @@
+using AutoMapper;
 using MediatR;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Common.Models;
 using TalentX.Application.Features.SavedJobs.DTOs;
 using TalentX.Application.Identity.Services;
-using TalentX.Domain.Enums;
 
 namespace TalentX.Application.Features.SavedJobs.Queries.GetSavedJobs;
 
@@ -13,13 +13,16 @@ public sealed class GetSavedJobsQueryHandler
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUserService;
+    private readonly IMapper _mapper;
 
     public GetSavedJobsQueryHandler(
         IUnitOfWork unitOfWork,
-        ICurrentUserService currentUserService)
+        ICurrentUserService currentUserService,
+        IMapper mapper)
     {
         _unitOfWork = unitOfWork;
         _currentUserService = currentUserService;
+        _mapper = mapper;
     }
 
     public async Task<PaginatedList<SavedJobResponse>> Handle(
@@ -42,20 +45,13 @@ public sealed class GetSavedJobsQueryHandler
         {
             jobs.TryGetValue(savedJob.JobId, out var job);
 
-            return new SavedJobResponse
-            {
-                SavedJobId = savedJob.Id,
-                JobId = savedJob.JobId,
-                JobTitle = job?.Title ?? string.Empty,
-                CompanyName = job?.CompanyName ?? string.Empty,
-                Location = job?.Location ?? string.Empty,
-                EmploymentType = job?.EmploymentType.ToString() ?? string.Empty,
-                PostedDate = job?.CreatedAt ?? default,
-                IsAvailable = job is not null
-                    && !job.IsDeleted
-                    && job.Status == JobStatus.Published
-                    && job.ExpireAt >= DateTime.UtcNow
-            };
+            var response = job is not null
+                ? _mapper.Map<SavedJobResponse>(job)
+                : new SavedJobResponse { IsAvailable = false };
+
+            response.SavedJobId = savedJob.Id;
+            response.JobId = savedJob.JobId;
+            return response;
         }).ToList();
 
         return new PaginatedList<SavedJobResponse>(items, savedJobs.Page, savedJobs.PageSize, savedJobs.TotalCount);

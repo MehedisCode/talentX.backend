@@ -21,8 +21,9 @@ public sealed class SavedJobConfiguration : IEntityTypeConfiguration<SavedJob>
         builder.Property(savedJob => savedJob.CreatedAt)
             .IsRequired();
 
-        builder.HasOne<Job>()
-            .WithMany()
+       // FIXED: Explicitly bind the Job navigation property
+        builder.HasOne(savedJob => savedJob.Job)
+            .WithMany() // or .WithMany(job => job.SavedJobs) if Job tracks SavedJobs
             .HasForeignKey(savedJob => savedJob.JobId)
             .OnDelete(DeleteBehavior.Cascade);
 

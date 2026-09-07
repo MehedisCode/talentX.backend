@@ -1,9 +1,11 @@
+using AutoMapper;
 using FluentAssertions;
 using Moq;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Common.Interfaces.Repositories;
 using TalentX.Application.Common.Models;
+using TalentX.Application.Features.SavedJobs.DTOs;
 using TalentX.Application.Features.SavedJobs.Queries.GetSavedJobs;
 using TalentX.Application.Identity.Services;
 using TalentX.Domain.Entities;
@@ -17,6 +19,7 @@ public class GetSavedJobsQueryHandlerTests
     private readonly Mock<ICurrentUserService> _currentUserService = new();
     private readonly Mock<ISavedJobRepository> _savedJobRepository = new();
     private readonly Mock<IJobRepository> _jobRepository = new();
+    private readonly IMapper _mapper;
     private readonly GetSavedJobsQueryHandler _handler;
 
     public GetSavedJobsQueryHandlerTests()
@@ -24,7 +27,21 @@ public class GetSavedJobsQueryHandlerTests
         _currentUserService.SetupGet(u => u.UserId).Returns("talent-1");
         _unitOfWork.Setup(u => u.SavedJobs).Returns(_savedJobRepository.Object);
         _unitOfWork.Setup(u => u.Jobs).Returns(_jobRepository.Object);
-        _handler = new GetSavedJobsQueryHandler(_unitOfWork.Object, _currentUserService.Object);
+
+        var mapperMock = new Mock<IMapper>();
+        mapperMock.Setup(m => m.Map<SavedJobResponse>(It.IsAny<Job>()))
+            .Returns((Job s) => new SavedJobResponse
+            {
+                JobTitle = s.Title,
+                CompanyName = s.CompanyName,
+                Location = s.Location,
+                EmploymentType = s.EmploymentType.ToString(),
+                PostedDate = s.CreatedAt,
+                IsAvailable = !s.IsDeleted && s.Status == JobStatus.Published && s.ExpireAt >= DateTime.UtcNow
+            });
+        _mapper = mapperMock.Object;
+
+        _handler = new GetSavedJobsQueryHandler(_unitOfWork.Object, _currentUserService.Object, _mapper);
     }
 
     private static Job CreatePublishedJob(Guid? jobId = null)
