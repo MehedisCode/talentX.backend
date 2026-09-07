@@ -3,6 +3,7 @@ namespace TalentX.Application.Identity.Models;
 public class IdentityResponse
 {
     public bool Success { get; }
+    public bool Succeeded => Success;
     public string[] Errors { get; }
 
     protected IdentityResponse(bool success, IEnumerable<string> errors)
