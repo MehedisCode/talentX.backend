@@ -58,6 +58,17 @@ public sealed class EmailDispatchLogRepository : IEmailDispatchLogRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<EmailDispatchLog>> GetStaleProcessingLogsAsync(
+        TimeSpan staleAfter,
+        CancellationToken cancellationToken = default)
+    {
+        var staleBefore = DateTime.UtcNow.Subtract(staleAfter);
+
+        return await _context.EmailDispatchLogs
+            .Where(x => x.Status == EmailDispatchStatus.Processing && x.LastAttemptAt <= staleBefore)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<EmailDispatchLog?> GetLatestByEmailAsync(
         string recipientEmail,
         CancellationToken cancellationToken = default)

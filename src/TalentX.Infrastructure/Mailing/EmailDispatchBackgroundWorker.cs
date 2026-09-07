@@ -10,6 +10,7 @@ public sealed class EmailDispatchBackgroundWorker : BackgroundService
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<EmailDispatchBackgroundWorker> _logger;
     private readonly TimeSpan _pollingInterval = TimeSpan.FromSeconds(10);
+    private readonly TimeSpan _staleProcessingThreshold = TimeSpan.FromMinutes(5);
 
     public EmailDispatchBackgroundWorker(
         IServiceScopeFactory scopeFactory,
@@ -46,6 +47,8 @@ public sealed class EmailDispatchBackgroundWorker : BackgroundService
         var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
         var emailService = scope.ServiceProvider.GetRequiredService<IEmailService>();
 
+        await ReclaimStaleProcessingLogsAsync(unitOfWork, stoppingToken);
+
         var pendingLogs = await unitOfWork.EmailDispatchLogs.ClaimPendingOrRetryableLogsAsync(10, stoppingToken);
         if (pendingLogs.Count == 0)
         {
@@ -81,6 +84,26 @@ public sealed class EmailDispatchBackgroundWorker : BackgroundService
 
             await unitOfWork.SaveChangesAsync(stoppingToken);
         }
+    }
+
+    private async Task ReclaimStaleProcessingLogsAsync(IUnitOfWork unitOfWork, CancellationToken stoppingToken)
+    {
+        var staleLogs = await unitOfWork.EmailDispatchLogs.GetStaleProcessingLogsAsync(_staleProcessingThreshold, stoppingToken);
+        if (staleLogs.Count == 0)
+        {
+            return;
+        }
+
+        _logger.LogWarning(
+            "[OUTBOX] Reclaiming {Count} log(s) stuck in Processing for over {Minutes} min (presumed worker crash).",
+            staleLogs.Count, _staleProcessingThreshold.TotalMinutes);
+
+        foreach (var log in staleLogs)
+        {
+            log.MarkFailed("Stuck in Processing for too long — presumed worker crash or restart.", TimeSpan.Zero);
+        }
+
+        await unitOfWork.SaveChangesAsync(stoppingToken);
     }
 
     private static TimeSpan GetExponentialBackoffDelay(int attemptCount)
