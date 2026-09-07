@@ -7,8 +7,6 @@ using TalentX.Domain.Enums;
 
 namespace TalentX.API.Controllers.JobApplications;
 
-public sealed record UpdateStatusRequestDto(ApplicationStatus NewStatus);
-
 [ApiController]
 [Route("api/v1/job-applications")]
 [Authorize(Roles = $"{nameof(UserRole.Employer)},{nameof(UserRole.Talent)}")]
