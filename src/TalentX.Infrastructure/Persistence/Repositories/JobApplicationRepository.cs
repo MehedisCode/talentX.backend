@@ -70,6 +70,42 @@ public sealed class JobApplicationRepository : IJobApplicationRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<TalentX.Application.Common.Models.PaginatedList<JobApplication>> GetByJobIdPaginatedAsync(
+        Guid jobId,
+        string? search,
+        TalentX.Domain.Enums.ApplicationStatus? status,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _context.JobApplications
+            .AsNoTracking()
+            .Where(application => application.JobId == jobId);
+
+        if (status.HasValue)
+        {
+            query = query.Where(application => application.Status == status.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var searchLower = search.Trim().ToLower();
+            query = query.Where(application =>
+                application.ApplicantName.ToLower().Contains(searchLower) ||
+                application.ApplicantEmail.ToLower().Contains(searchLower));
+        }
+
+        var totalCount = await query.CountAsync(cancellationToken);
+
+        var items = await query
+            .OrderByDescending(application => application.AppliedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return new TalentX.Application.Common.Models.PaginatedList<JobApplication>(items, page, pageSize, totalCount);
+    }
+
     public async Task<JobApplication?> GetByIdAsync(
         Guid id,
         CancellationToken cancellationToken = default)
