@@ -1,6 +1,9 @@
 using FluentAssertions;
 using Microsoft.AspNetCore.Identity;
 using Moq;
+using TalentX.Application.Common.Interfaces;
+using TalentX.Application.Features.Auth.ForgotPassword;
+using TalentX.Application.Identity.Interfaces;
 using TalentX.Application.Identity.Models;
 using TalentX.Domain.Enums;
 using TalentX.Infrastructure.Identity.Models;
@@ -18,19 +21,28 @@ public class IdentityServiceTests
 {
     private readonly Mock<UserManager<ApplicationUser>> _userManagerMock;
     private readonly Mock<RoleManager<IdentityRole>> _roleManagerMock;
+    private readonly Mock<ITokenService> _tokenServiceMock;
+    private readonly Mock<IEmailService> _emailServiceMock;
     private readonly IdentityService _identityService;
 
     public IdentityServiceTests()
     {
         _userManagerMock = new Mock<UserManager<ApplicationUser>>(
             new Mock<IUserStore<ApplicationUser>>().Object,
-            null, null, null, null, null, null, null, null);
+            null!, null!, null!, null!, null!, null!, null!, null!);
 
         _roleManagerMock = new Mock<RoleManager<IdentityRole>>(
             new Mock<IRoleStore<IdentityRole>>().Object,
-            null, null, null, null);
+            null!, null!, null!, null!);
 
-        _identityService = new IdentityService(_userManagerMock.Object, _roleManagerMock.Object);
+        _tokenServiceMock = new Mock<ITokenService>();
+        _emailServiceMock = new Mock<IEmailService>();
+
+        _identityService = new IdentityService(
+            _userManagerMock.Object,
+            _roleManagerMock.Object,
+            _tokenServiceMock.Object,
+            _emailServiceMock.Object);
     }
 
     #region CreateApplicationUserAsync - Happy Path
@@ -910,5 +922,274 @@ public class IdentityServiceTests
         _userManagerMock.Verify(manager => manager.AddPasswordAsync(user, "ValidPassword123!"), Times.Once);
         _userManagerMock.Verify(manager => manager.UpdateSecurityStampAsync(user), Times.Once);
     }
+
+    #region InitiatePasswordResetAsync Tests
+
+    [Fact]
+    public async Task InitiatePasswordResetAsync_WhenUserDoesNotExist_ShouldReturnGenericSuccessMessageWithNoEmailSent()
+    {
+        var email = "nonexistent@example.com";
+        _userManagerMock
+            .Setup(manager => manager.FindByEmailAsync(email))
+            .ReturnsAsync((ApplicationUser?)null);
+
+        var result = await _identityService.InitiatePasswordResetAsync(email, "https://app.talentx.com");
+
+        result.Success.Should().BeTrue();
+        result.Provider.Should().BeNull();
+        result.Message.Should().Be("If an account exists, instructions have been sent.");
+
+        _emailServiceMock.Verify(
+            service => service.SendPasswordResetEmailAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task InitiatePasswordResetAsync_WhenUserHasNoPasswordAndGoogleLogin_ShouldReturnGoogleFailureAndNoEmailSent()
+    {
+        var email = "google@example.com";
+        var user = new ApplicationUser
+        {
+            Id = "user-google",
+            Email = email,
+            UserName = "Google User"
+        };
+
+        _userManagerMock
+            .Setup(manager => manager.FindByEmailAsync(email))
+            .ReturnsAsync(user);
+
+        _userManagerMock
+            .Setup(manager => manager.HasPasswordAsync(user))
+            .ReturnsAsync(false);
+
+        _userManagerMock
+            .Setup(manager => manager.GetLoginsAsync(user))
+            .ReturnsAsync(new List<UserLoginInfo>
+            {
+                new("Google", "google-subject-id", "Google")
+            });
+
+        var result = await _identityService.InitiatePasswordResetAsync(email, "https://app.talentx.com");
+
+        result.Success.Should().BeFalse();
+        result.Provider.Should().Be("Google");
+        result.Message.Should().Be("This account is registered with Google. Please sign in with Google.");
+
+        _emailServiceMock.Verify(
+            service => service.SendPasswordResetEmailAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task InitiatePasswordResetAsync_WhenUserHasPassword_ShouldGenerateTokenSendEmailAndReturnSuccess()
+    {
+        var email = "local@example.com";
+        var user = new ApplicationUser
+        {
+            Id = "user-local",
+            Email = email,
+            UserName = "Local User"
+        };
+        var generatedToken = "reset-token-12345";
+        var frontendBaseUrl = "https://app.talentx.com/";
+
+        _userManagerMock
+            .Setup(manager => manager.FindByEmailAsync(email))
+            .ReturnsAsync(user);
+
+        _userManagerMock
+            .Setup(manager => manager.HasPasswordAsync(user))
+            .ReturnsAsync(true);
+
+        _userManagerMock
+            .Setup(manager => manager.GetLoginsAsync(user))
+            .ReturnsAsync(new List<UserLoginInfo>());
+
+        _userManagerMock
+            .Setup(manager => manager.GeneratePasswordResetTokenAsync(user))
+            .ReturnsAsync(generatedToken);
+
+        var result = await _identityService.InitiatePasswordResetAsync(email, frontendBaseUrl);
+
+        result.Success.Should().BeTrue();
+        result.Provider.Should().Be("Local");
+        result.Message.Should().Be("If an account exists, instructions have been sent.");
+
+        var expectedResetUrl = $"https://app.talentx.com/reset-password?token={Uri.EscapeDataString(generatedToken)}&email={Uri.EscapeDataString(email)}";
+
+        _emailServiceMock.Verify(
+            service => service.SendPasswordResetEmailAsync(
+                email,
+                "Local User",
+                expectedResetUrl,
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task InitiatePasswordResetAsync_WhenUserNameIsNull_ShouldUseDefaultUserInEmail()
+    {
+        var email = "nousername@example.com";
+        var user = new ApplicationUser
+        {
+            Id = "user-local-2",
+            Email = email,
+            UserName = null
+        };
+        var generatedToken = "reset-token-xyz";
+        var frontendBaseUrl = "http://localhost:3000";
+
+        _userManagerMock
+            .Setup(manager => manager.FindByEmailAsync(email))
+            .ReturnsAsync(user);
+
+        _userManagerMock
+            .Setup(manager => manager.HasPasswordAsync(user))
+            .ReturnsAsync(true);
+
+        _userManagerMock
+            .Setup(manager => manager.GetLoginsAsync(user))
+            .ReturnsAsync(new List<UserLoginInfo>());
+
+        _userManagerMock
+            .Setup(manager => manager.GeneratePasswordResetTokenAsync(user))
+            .ReturnsAsync(generatedToken);
+
+        var result = await _identityService.InitiatePasswordResetAsync(email, frontendBaseUrl);
+
+        result.Success.Should().BeTrue();
+        result.Provider.Should().Be("Local");
+
+        var expectedResetUrl = $"http://localhost:3000/reset-password?token={Uri.EscapeDataString(generatedToken)}&email={Uri.EscapeDataString(email)}";
+
+        _emailServiceMock.Verify(
+            service => service.SendPasswordResetEmailAsync(
+                email,
+                "User",
+                expectedResetUrl,
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    #endregion
+
+    #region ResetPasswordWithTokenAsync Tests
+
+    [Fact]
+    public async Task ResetPasswordWithTokenAsync_WhenUserDoesNotExist_ShouldReturnFailure()
+    {
+        var email = "missing@example.com";
+        _userManagerMock
+            .Setup(manager => manager.FindByEmailAsync(email))
+            .ReturnsAsync((ApplicationUser?)null);
+
+        var result = await _identityService.ResetPasswordWithTokenAsync(
+            email,
+            "any-token",
+            "ValidPassword123!");
+
+        result.Success.Should().BeFalse();
+        result.Errors.Should().Contain("Invalid or expired password reset token.");
+
+        _userManagerMock.Verify(
+            manager => manager.ResetPasswordAsync(
+                It.IsAny<ApplicationUser>(),
+                It.IsAny<string>(),
+                It.IsAny<string>()),
+            Times.Never);
+
+        _tokenServiceMock.Verify(
+            service => service.RevokeAllForUserAsync(It.IsAny<string>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task ResetPasswordWithTokenAsync_WhenResetPasswordFails_ShouldReturnFailure()
+    {
+        var email = "user@example.com";
+        var user = new ApplicationUser
+        {
+            Id = "user-123",
+            Email = email
+        };
+
+        _userManagerMock
+            .Setup(manager => manager.FindByEmailAsync(email))
+            .ReturnsAsync(user);
+
+        var invalidToken = "invalid-token";
+        var newPassword = "ValidPassword123!";
+
+        _userManagerMock
+            .Setup(manager => manager.ResetPasswordAsync(user, invalidToken, newPassword))
+            .ReturnsAsync(IdentityResult.Failed(new IdentityError { Description = "Invalid token." }));
+
+        var result = await _identityService.ResetPasswordWithTokenAsync(
+            email,
+            invalidToken,
+            newPassword);
+
+        result.Success.Should().BeFalse();
+        result.Errors.Should().Contain("Invalid or expired password reset token.");
+
+        _tokenServiceMock.Verify(
+            service => service.RevokeAllForUserAsync(It.IsAny<string>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task ResetPasswordWithTokenAsync_WhenResetPasswordSucceeds_ShouldRevokeAllSessionsAndReturnOk()
+    {
+        var email = "user@example.com";
+        var userId = "user-123";
+        var user = new ApplicationUser
+        {
+            Id = userId,
+            Email = email
+        };
+
+        _userManagerMock
+            .Setup(manager => manager.FindByEmailAsync(email))
+            .ReturnsAsync(user);
+
+        var validToken = "valid-token";
+        var newPassword = "ValidPassword123!";
+
+        _userManagerMock
+            .Setup(manager => manager.ResetPasswordAsync(user, validToken, newPassword))
+            .ReturnsAsync(IdentityResult.Success);
+
+        _tokenServiceMock
+            .Setup(service => service.RevokeAllForUserAsync(userId))
+            .ReturnsAsync(IdentityResponse.Ok());
+
+        var result = await _identityService.ResetPasswordWithTokenAsync(
+            email,
+            validToken,
+            newPassword);
+
+        result.Success.Should().BeTrue();
+        result.Errors.Should().BeEmpty();
+
+        _userManagerMock.Verify(
+            manager => manager.ResetPasswordAsync(user, validToken, newPassword),
+            Times.Once);
+
+        _tokenServiceMock.Verify(
+            service => service.RevokeAllForUserAsync(userId),
+            Times.Once);
+    }
+
+    #endregion
 }
+
 

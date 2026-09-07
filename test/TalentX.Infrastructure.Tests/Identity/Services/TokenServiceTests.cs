@@ -30,7 +30,7 @@ public class TokenServiceTests : IAsyncLifetime
     {
         _userManagerMock = new Mock<UserManager<ApplicationUser>>(
             new Mock<IUserStore<ApplicationUser>>().Object,
-            null, null, null, null, null, null, null, null);
+            null!, null!, null!, null!, null!, null!, null!, null!);
 
         // Create JWT settings for testing
         _jwtSettings = new JwtSettings

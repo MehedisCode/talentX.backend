@@ -1,87 +1,118 @@
 using FluentAssertions;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Moq;
-using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Features.Auth.ForgotPassword;
-using TalentX.Infrastructure.Identity.Models;
+using TalentX.Application.Identity.Interfaces;
 using Xunit;
 
 namespace TalentX.Application.Tests.Features.Auth.ForgotPassword;
 
 public sealed class ForgotPasswordCommandHandlerTests
 {
-    private readonly Mock<UserManager<ApplicationUser>> _userManagerMock;
-    private readonly Mock<IEmailService> _emailServiceMock;
+    private readonly Mock<IIdentityService> _identityServiceMock;
     private readonly Mock<IConfiguration> _configurationMock;
     private readonly ForgotPasswordCommandHandler _handler;
 
     public ForgotPasswordCommandHandlerTests()
     {
-        var userStoreMock = new Mock<IUserStore<ApplicationUser>>();
-        _userManagerMock = new Mock<UserManager<ApplicationUser>>(
-            userStoreMock.Object,
-            null!, null!, null!, null!, null!, null!, null!, null!);
-
-        _emailServiceMock = new Mock<IEmailService>();
+        _identityServiceMock = new Mock<IIdentityService>();
         _configurationMock = new Mock<IConfiguration>();
 
         _handler = new ForgotPasswordCommandHandler(
-            _userManagerMock.Object,
-            _emailServiceMock.Object,
+            _identityServiceMock.Object,
             _configurationMock.Object);
     }
 
     [Fact]
-    public async Task Handle_WhenUserDoesNotExist_ShouldReturnSuccessWithNoEmailSent()
+    public async Task Handle_WithConfiguredFrontendUrl_ShouldCallIdentityServiceWithConfiguredUrlAndReturnResult()
     {
-        var email = "nonexistent@example.com";
-        _userManagerMock
-            .Setup(manager => manager.FindByEmailAsync(email))
-            .ReturnsAsync((ApplicationUser?)null);
+        var email = "localuser@example.com";
+        var configuredFrontendUrl = "https://app.talentx.com";
+        var expectedResult = new ForgotPasswordResult(true, "Local", "If an account exists, instructions have been sent.");
+
+        _configurationMock
+            .Setup(configuration => configuration["Frontend:Url"])
+            .Returns(configuredFrontendUrl);
+
+        _identityServiceMock
+            .Setup(service => service.InitiatePasswordResetAsync(email, configuredFrontendUrl, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expectedResult);
 
         var command = new ForgotPasswordCommand(email);
 
         var result = await _handler.Handle(command, CancellationToken.None);
 
-        result.Success.Should().BeTrue();
-        result.Provider.Should().BeNull();
-        result.Message.Should().Be("If an account exists, instructions have been sent.");
-
-        _emailServiceMock.Verify(
-            service => service.SendPasswordResetEmailAsync(
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<CancellationToken>()),
-            Times.Never);
+        result.Should().Be(expectedResult);
+        _identityServiceMock.Verify(
+            service => service.InitiatePasswordResetAsync(email, configuredFrontendUrl, It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
-    public async Task Handle_WhenUserIsGoogleOnly_ShouldReturnFailureWithGoogleProviderAndNoEmailSent()
+    public async Task Handle_WithAppFrontendUrlFallback_ShouldCallIdentityServiceWithAppFrontendUrl()
     {
-        var email = "googleuser@example.com";
-        var user = new ApplicationUser
-        {
-            Id = "user-google-1",
-            Email = email,
-            UserName = "Google User"
-        };
+        var email = "fallback@example.com";
+        var appFrontendUrl = "https://talentx.io";
+        var expectedResult = new ForgotPasswordResult(true, "Local", "If an account exists, instructions have been sent.");
 
-        _userManagerMock
-            .Setup(manager => manager.FindByEmailAsync(email))
-            .ReturnsAsync(user);
+        _configurationMock
+            .Setup(configuration => configuration["Frontend:Url"])
+            .Returns((string?)null);
+        _configurationMock
+            .Setup(configuration => configuration["App:FrontendUrl"])
+            .Returns(appFrontendUrl);
 
-        _userManagerMock
-            .Setup(manager => manager.HasPasswordAsync(user))
-            .ReturnsAsync(false);
+        _identityServiceMock
+            .Setup(service => service.InitiatePasswordResetAsync(email, appFrontendUrl, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expectedResult);
 
-        _userManagerMock
-            .Setup(manager => manager.GetLoginsAsync(user))
-            .ReturnsAsync(new List<UserLoginInfo>
-            {
-                new("Google", "google-subject-id", "Google")
-            });
+        var command = new ForgotPasswordCommand(email);
+
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        result.Should().Be(expectedResult);
+        _identityServiceMock.Verify(
+            service => service.InitiatePasswordResetAsync(email, appFrontendUrl, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_WithNoConfiguredUrl_ShouldCallIdentityServiceWithDefaultLocalhostUrl()
+    {
+        var email = "default@example.com";
+        var expectedDefaultUrl = "http://localhost:3000";
+        var expectedResult = new ForgotPasswordResult(true, "Local", "If an account exists, instructions have been sent.");
+
+        _configurationMock
+            .Setup(configuration => configuration["Frontend:Url"])
+            .Returns((string?)null);
+        _configurationMock
+            .Setup(configuration => configuration["App:FrontendUrl"])
+            .Returns((string?)null);
+
+        _identityServiceMock
+            .Setup(service => service.InitiatePasswordResetAsync(email, expectedDefaultUrl, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expectedResult);
+
+        var command = new ForgotPasswordCommand(email);
+
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        result.Should().Be(expectedResult);
+        _identityServiceMock.Verify(
+            service => service.InitiatePasswordResetAsync(email, expectedDefaultUrl, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_WhenUserIsGoogleOnly_ShouldReturnGoogleFailureResultFromIdentityService()
+    {
+        var email = "google@example.com";
+        var expectedResult = new ForgotPasswordResult(false, "Google", "This account is registered with Google. Please sign in with Google.");
+
+        _identityServiceMock
+            .Setup(service => service.InitiatePasswordResetAsync(email, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expectedResult);
 
         var command = new ForgotPasswordCommand(email);
 
@@ -90,117 +121,24 @@ public sealed class ForgotPasswordCommandHandlerTests
         result.Success.Should().BeFalse();
         result.Provider.Should().Be("Google");
         result.Message.Should().Be("This account is registered with Google. Please sign in with Google.");
-
-        _emailServiceMock.Verify(
-            service => service.SendPasswordResetEmailAsync(
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<CancellationToken>()),
-            Times.Never);
     }
 
     [Fact]
-    public async Task Handle_WhenUserHasPassword_ShouldGenerateTokenSendEmailAndReturnSuccess()
+    public async Task Handle_WhenUserDoesNotExist_ShouldReturnSuccessResultFromIdentityService()
     {
-        var email = "localuser@example.com";
-        var user = new ApplicationUser
-        {
-            Id = "user-local-1",
-            Email = email,
-            UserName = "Local User"
-        };
+        var email = "nonexistent@example.com";
+        var expectedResult = new ForgotPasswordResult(true, null, "If an account exists, instructions have been sent.");
 
-        _userManagerMock
-            .Setup(manager => manager.FindByEmailAsync(email))
-            .ReturnsAsync(user);
-
-        _userManagerMock
-            .Setup(manager => manager.HasPasswordAsync(user))
-            .ReturnsAsync(true);
-
-        _userManagerMock
-            .Setup(manager => manager.GetLoginsAsync(user))
-            .ReturnsAsync(new List<UserLoginInfo>());
-
-        var generatedToken = "reset-token-12345";
-        _userManagerMock
-            .Setup(manager => manager.GeneratePasswordResetTokenAsync(user))
-            .ReturnsAsync(generatedToken);
-
-        _configurationMock
-            .Setup(config => config["Frontend:Url"])
-            .Returns("https://app.talentx.com");
+        _identityServiceMock
+            .Setup(service => service.InitiatePasswordResetAsync(email, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expectedResult);
 
         var command = new ForgotPasswordCommand(email);
 
         var result = await _handler.Handle(command, CancellationToken.None);
 
         result.Success.Should().BeTrue();
-        result.Provider.Should().Be("Local");
+        result.Provider.Should().BeNull();
         result.Message.Should().Be("If an account exists, instructions have been sent.");
-
-        var expectedResetUrl = $"https://app.talentx.com/reset-password?token={Uri.EscapeDataString(generatedToken)}&email={Uri.EscapeDataString(email)}";
-
-        _emailServiceMock.Verify(
-            service => service.SendPasswordResetEmailAsync(
-                email,
-                "Local User",
-                expectedResetUrl,
-                It.IsAny<CancellationToken>()),
-            Times.Once);
-    }
-
-    [Fact]
-    public async Task Handle_WhenConfigurationHasNoFrontendUrl_ShouldFallbackToDefaultLocalhostUrl()
-    {
-        var email = "fallback@example.com";
-        var user = new ApplicationUser
-        {
-            Id = "user-local-2",
-            Email = email,
-            UserName = null
-        };
-
-        _userManagerMock
-            .Setup(manager => manager.FindByEmailAsync(email))
-            .ReturnsAsync(user);
-
-        _userManagerMock
-            .Setup(manager => manager.HasPasswordAsync(user))
-            .ReturnsAsync(true);
-
-        _userManagerMock
-            .Setup(manager => manager.GetLoginsAsync(user))
-            .ReturnsAsync(new List<UserLoginInfo>());
-
-        var generatedToken = "fallback-token";
-        _userManagerMock
-            .Setup(manager => manager.GeneratePasswordResetTokenAsync(user))
-            .ReturnsAsync(generatedToken);
-
-        _configurationMock
-            .Setup(config => config["Frontend:Url"])
-            .Returns((string?)null);
-        _configurationMock
-            .Setup(config => config["App:FrontendUrl"])
-            .Returns((string?)null);
-
-        var command = new ForgotPasswordCommand(email);
-
-        var result = await _handler.Handle(command, CancellationToken.None);
-
-        result.Success.Should().BeTrue();
-        result.Provider.Should().Be("Local");
-
-        var expectedResetUrl = $"http://localhost:3000/reset-password?token={Uri.EscapeDataString(generatedToken)}&email={Uri.EscapeDataString(email)}";
-
-        _emailServiceMock.Verify(
-            service => service.SendPasswordResetEmailAsync(
-                email,
-                "User",
-                expectedResetUrl,
-                It.IsAny<CancellationToken>()),
-            Times.Once);
     }
 }
