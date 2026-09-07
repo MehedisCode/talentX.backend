@@ -46,7 +46,7 @@ public sealed class EmailDispatchBackgroundWorker : BackgroundService
         var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
         var emailService = scope.ServiceProvider.GetRequiredService<IEmailService>();
 
-        var pendingLogs = await unitOfWork.EmailDispatchLogs.GetPendingOrRetryableLogsAsync(10, stoppingToken);
+        var pendingLogs = await unitOfWork.EmailDispatchLogs.ClaimPendingOrRetryableLogsAsync(10, stoppingToken);
         if (pendingLogs.Count == 0)
         {
             return;
@@ -56,9 +56,6 @@ public sealed class EmailDispatchBackgroundWorker : BackgroundService
 
         foreach (var log in pendingLogs)
         {
-            log.MarkProcessing();
-            await unitOfWork.SaveChangesAsync(stoppingToken);
-
             try
             {
                 await emailService.DispatchDirectAsync(

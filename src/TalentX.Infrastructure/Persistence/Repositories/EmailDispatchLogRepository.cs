@@ -20,17 +20,41 @@ public sealed class EmailDispatchLogRepository : IEmailDispatchLogRepository
         await _context.EmailDispatchLogs.AddAsync(log, cancellationToken);
     }
 
-    public async Task<IReadOnlyList<EmailDispatchLog>> GetPendingOrRetryableLogsAsync(
+    public async Task<IReadOnlyList<EmailDispatchLog>> ClaimPendingOrRetryableLogsAsync(
         int batchSize,
         CancellationToken cancellationToken = default)
     {
         var now = DateTime.UtcNow;
 
-        return await _context.EmailDispatchLogs
+        var candidateIds = await _context.EmailDispatchLogs
             .Where(x => (x.Status == EmailDispatchStatus.Pending || x.Status == EmailDispatchStatus.Failed)
                         && x.NextAttemptAt <= now)
             .OrderBy(x => x.NextAttemptAt)
             .Take(batchSize)
+            .Select(x => x.Id)
+            .ToListAsync(cancellationToken);
+
+        if (candidateIds.Count == 0)
+        {
+            return Array.Empty<EmailDispatchLog>();
+        }
+
+        // Re-checks Status in the WHERE clause so this only claims rows still Pending/Failed at
+        // the moment of the update. If a concurrent caller (e.g. another worker instance) already
+        // claimed one of these ids, this update simply won't affect that row — no exception, no
+        // lock, it's just excluded from the result below. This bypasses SaveChangesAsync and
+        // commits immediately, unlike the rest of this app's unit-of-work pattern, which is
+        // intentional: the claim must be visible to other instances right away.
+        await _context.EmailDispatchLogs
+            .Where(x => candidateIds.Contains(x.Id)
+                        && (x.Status == EmailDispatchStatus.Pending || x.Status == EmailDispatchStatus.Failed))
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(x => x.Status, EmailDispatchStatus.Processing)
+                .SetProperty(x => x.AttemptCount, x => x.AttemptCount + 1)
+                .SetProperty(x => x.LastAttemptAt, now), cancellationToken);
+
+        return await _context.EmailDispatchLogs
+            .Where(x => candidateIds.Contains(x.Id) && x.Status == EmailDispatchStatus.Processing)
             .ToListAsync(cancellationToken);
     }
 
