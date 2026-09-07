@@ -97,6 +97,9 @@ public static class IdentityStartup
         services.AddSingleton<IOtpService, OtpService>();
         services.AddSingleton<IEmailService, EmailService>();
 
+        services.AddHostedService<EmailDispatchBackgroundWorker>();
+        services.AddHostedService<GmailBounceListenerWorker>();
+
         return services;
     }
 
