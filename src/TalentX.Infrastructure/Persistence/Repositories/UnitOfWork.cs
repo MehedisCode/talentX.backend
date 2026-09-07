@@ -18,6 +18,8 @@ public sealed class UnitOfWork : IUnitOfWork
     public IResumeRepository Resumes { get; }
     public IWorkExperienceRepository WorkExperiences { get; }
     public IEducationRepository Educations { get; }
+    public IInterviewInvitationRepository InterviewInvitations { get; }
+    public IEmailDispatchLogRepository EmailDispatchLogs { get; }
 
     public UnitOfWork(ApplicationDbContext context)
     {
@@ -30,6 +32,8 @@ public sealed class UnitOfWork : IUnitOfWork
         Resumes = new ResumeRepository(_context);
         WorkExperiences = new WorkExperienceRepository(_context);
         Educations = new EducationRepository(_context);
+        InterviewInvitations = new InterviewInvitationRepository(_context);
+        EmailDispatchLogs = new EmailDispatchLogRepository(_context);
     }
 
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
