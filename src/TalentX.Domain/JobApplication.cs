@@ -15,6 +15,7 @@ public sealed class JobApplication : BaseEntity
     public decimal? TotalYearsExperience { get; private set; }
     public string? Location { get; private set; }
     public ApplicationStatus Status { get; private set; }
+    public decimal? AiMatchScore { get; private set; }
     public DateTime AppliedAt { get; private set; }
 
     private JobApplication() { }
@@ -70,6 +71,11 @@ public sealed class JobApplication : BaseEntity
     {
         Status = status;
         UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void SetAiMatchScore(decimal? score)
+    {
+        AiMatchScore = score;
     }
 
     public void LinkTalentUser(string talentUserId)

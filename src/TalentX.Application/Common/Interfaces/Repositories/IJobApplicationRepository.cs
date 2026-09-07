@@ -1,4 +1,6 @@
+using TalentX.Application.Common.Models;
 using TalentX.Domain.Entities;
+using TalentX.Domain.Enums;
 
 namespace TalentX.Application.Common.Interfaces.Repositories;
 
@@ -9,6 +11,13 @@ public interface IJobApplicationRepository
     Task<JobApplication?> GetPendingByJobIdAndEmailAsync(Guid jobId, string email, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<JobApplication>> GetPendingByEmailAsync(string email, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<JobApplication>> GetByJobIdAsync(Guid jobId, CancellationToken cancellationToken = default);
+    Task<PaginatedList<JobApplication>> GetByJobIdPaginatedAsync(
+        Guid jobId,
+        string? search,
+        ApplicationStatus? status,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default);
     Task<JobApplication?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task AddAsync(JobApplication jobApplication, CancellationToken cancellationToken = default);
     Task<int> CountHiredByEmployerIdAsync(string employerId, CancellationToken cancellationToken = default);
