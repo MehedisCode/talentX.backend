@@ -46,6 +46,7 @@ public class JobApplicationDetailsControllerTests
         5m,
         "Dhaka",
         "Applied",
+        85m,
         DateTime.UtcNow,
         null);
 
