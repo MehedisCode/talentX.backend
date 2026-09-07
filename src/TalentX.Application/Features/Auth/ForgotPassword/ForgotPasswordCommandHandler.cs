@@ -19,7 +19,18 @@ public sealed class ForgotPasswordCommandHandler : IRequestHandler<ForgotPasswor
 
     public async Task<ForgotPasswordResult> Handle(ForgotPasswordCommand request, CancellationToken cancellationToken)
     {
-        var frontendUrl = _configuration["Frontend:Url"] ?? _configuration["App:FrontendUrl"] ?? "http://localhost:3000";
+        var isDevelopment = string.Equals(
+            _configuration["ASPNETCORE_ENVIRONMENT"] ?? Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"),
+            "Development",
+            StringComparison.OrdinalIgnoreCase);
+
+        var defaultFallbackUrl = isDevelopment ? "http://localhost:3000" : "https://talentx-stg-app.ait-us.co";
+
+        var frontendUrl = _configuration["Frontend:Url"]
+                       ?? _configuration["App:FrontendUrl"]
+                       ?? _configuration["Cors:FrontendUrl"]
+                       ?? defaultFallbackUrl;
+
         return await _identityService.InitiatePasswordResetAsync(request.Email, frontendUrl, cancellationToken);
     }
 }
