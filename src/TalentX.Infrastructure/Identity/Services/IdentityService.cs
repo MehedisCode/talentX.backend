@@ -187,5 +187,35 @@ public class IdentityService : IIdentityService
 
         return IdentityResponse.Ok();
     }
+
+    public async Task<UserAuthStatusResponse> GetUserAuthStatusAsync(
+        string userId,
+        CancellationToken cancellationToken = default)
+    {
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user is null)
+        {
+            return new UserAuthStatusResponse(false, []);
+        }
+
+        var hasPassword = await _userManager.HasPasswordAsync(user);
+        var logins = await _userManager.GetLoginsAsync(user);
+        var providers = logins
+            .Select(login => login.LoginProvider.ToLowerInvariant())
+            .Distinct()
+            .ToList();
+
+        if (hasPassword && !providers.Contains("password"))
+        {
+            providers.Add("password");
+        }
+
+        if (!hasPassword && providers.Count == 0)
+        {
+            providers.Add("google");
+        }
+
+        return new UserAuthStatusResponse(hasPassword, providers);
+    }
 }
 

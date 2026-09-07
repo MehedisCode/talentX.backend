@@ -13,4 +13,5 @@ public interface IIdentityService
     Task<IdentityResponse> DeleteApplicationUserAsync(string userId);
     Task<IdentityResponse> ChangePasswordAsync(string userId, string currentPassword, string newPassword);
     Task<IdentityResponse> ChangeUserRoleAsync(string userId, string currentRole, string newRole);
+    Task<UserAuthStatusResponse> GetUserAuthStatusAsync(string userId, CancellationToken cancellationToken = default);
 }

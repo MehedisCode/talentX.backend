@@ -1,6 +1,7 @@
 using FluentAssertions;
 using Microsoft.AspNetCore.Identity;
 using Moq;
+using TalentX.Application.Identity.Models;
 using TalentX.Domain.Enums;
 using TalentX.Infrastructure.Identity.Models;
 using TalentX.Infrastructure.Identity.Services;
@@ -745,4 +746,76 @@ public class IdentityServiceTests
     }
 
     #endregion
+
+    [Fact]
+    public async Task GetUserAuthStatusAsync_ExistingUser_ReturnsExpectedStatus()
+    {
+        var userId = "user-123";
+        var user = new ApplicationUser { Id = userId, UserName = "test@example.com", Email = "test@example.com" };
+        var logins = new List<UserLoginInfo>
+        {
+            new UserLoginInfo("Google", "google-key-123", "Google")
+        };
+
+        _userManagerMock
+            .Setup(manager => manager.FindByIdAsync(userId))
+            .ReturnsAsync(user);
+
+        _userManagerMock
+            .Setup(manager => manager.HasPasswordAsync(user))
+            .ReturnsAsync(true);
+
+        _userManagerMock
+            .Setup(manager => manager.GetLoginsAsync(user))
+            .ReturnsAsync(logins);
+
+        var authStatus = await _identityService.GetUserAuthStatusAsync(userId, CancellationToken.None);
+
+        authStatus.HasPassword.Should().BeTrue();
+        authStatus.AuthProviders.Should().Contain("google");
+        authStatus.AuthProviders.Should().Contain("password");
+        _userManagerMock.Verify(manager => manager.FindByIdAsync(userId), Times.Once);
+        _userManagerMock.Verify(manager => manager.HasPasswordAsync(user), Times.Once);
+        _userManagerMock.Verify(manager => manager.GetLoginsAsync(user), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetUserAuthStatusAsync_UserNotFound_ReturnsEmptyProvidersAndNoPassword()
+    {
+        var userId = "non-existent-user";
+
+        _userManagerMock
+            .Setup(manager => manager.FindByIdAsync(userId))
+            .ReturnsAsync((ApplicationUser)null!);
+
+        var authStatus = await _identityService.GetUserAuthStatusAsync(userId, CancellationToken.None);
+
+        authStatus.HasPassword.Should().BeFalse();
+        authStatus.AuthProviders.Should().BeEmpty();
+        _userManagerMock.Verify(manager => manager.FindByIdAsync(userId), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetUserAuthStatusAsync_UserWithoutPasswordAndLogins_FallsBackToGoogle()
+    {
+        var userId = "google-user-789";
+        var user = new ApplicationUser { Id = userId, UserName = "fallback@example.com", Email = "fallback@example.com" };
+
+        _userManagerMock
+            .Setup(manager => manager.FindByIdAsync(userId))
+            .ReturnsAsync(user);
+
+        _userManagerMock
+            .Setup(manager => manager.HasPasswordAsync(user))
+            .ReturnsAsync(false);
+
+        _userManagerMock
+            .Setup(manager => manager.GetLoginsAsync(user))
+            .ReturnsAsync(new List<UserLoginInfo>());
+
+        var authStatus = await _identityService.GetUserAuthStatusAsync(userId, CancellationToken.None);
+
+        authStatus.HasPassword.Should().BeFalse();
+        authStatus.AuthProviders.Should().Equal("google");
+    }
 }
