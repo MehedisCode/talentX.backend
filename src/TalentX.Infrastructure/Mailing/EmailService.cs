@@ -82,6 +82,23 @@ public sealed class EmailService : IEmailService
         DispatchAfterLogging(toEmail, recipientName, EmailConstants.Subjects.VerificationLink, html);
     }
 
+    public async Task SendJobInvitationEmailAsync(
+        string toEmail,
+        string recipientName,
+        string jobTitle,
+        string companyName,
+        CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation(
+            "[EMAIL] JobInvitation dispatch to {RecipientName} <{ToEmail}> for role {JobTitle} at {CompanyName}",
+            recipientName, toEmail, jobTitle, companyName);
+
+        var subject = $"You've been invited to apply for {jobTitle} at {companyName}!";
+        var html = $"<p>Hi {recipientName},</p><p>Great news! <strong>{companyName}</strong> has invited you to view and apply for the <strong>{jobTitle}</strong> position on TalentX.</p>";
+
+        DispatchAfterLogging(toEmail, recipientName, subject, html);
+    }
+
     private void LogDispatch(string kind, string recipientName, string toEmail, string? secret)
     {
         _logger.LogInformation(

@@ -12,13 +12,16 @@ public sealed class SendJobInvitationCommandHandler
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUserService;
+    private readonly IEmailService _emailService;
 
     public SendJobInvitationCommandHandler(
         IUnitOfWork unitOfWork,
-        ICurrentUserService currentUserService)
+        ICurrentUserService currentUserService,
+        IEmailService emailService)
     {
         _unitOfWork = unitOfWork;
         _currentUserService = currentUserService;
+        _emailService = emailService;
     }
 
     public async Task<SendJobInvitationResponse> Handle(
@@ -55,6 +58,16 @@ public sealed class SendJobInvitationCommandHandler
         var invitation = new Invitation(job.Id, request.TalentUserId);
         await _unitOfWork.Invitations.AddAsync(invitation, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        if (!string.IsNullOrWhiteSpace(talent.Email))
+        {
+            await _emailService.SendJobInvitationEmailAsync(
+                talent.Email,
+                talent.Name ?? "Candidate",
+                job.Title,
+                job.CompanyName ?? "TalentX Employer",
+                cancellationToken);
+        }
 
         return new SendJobInvitationResponse(
             invitation.Id,

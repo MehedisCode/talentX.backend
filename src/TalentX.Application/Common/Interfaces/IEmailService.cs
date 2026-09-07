@@ -38,4 +38,15 @@ public interface IEmailService
         string verificationUrl,
         CancellationToken cancellationToken = default
     );
+
+    /// <summary>
+    /// Sends a job invitation notification email to a candidate.
+    /// </summary>
+    Task SendJobInvitationEmailAsync(
+        string toEmail,
+        string recipientName,
+        string jobTitle,
+        string companyName,
+        CancellationToken cancellationToken = default
+    );
 }

@@ -19,6 +19,7 @@ public class SendJobInvitationCommandHandlerTests
     private readonly Mock<ITalentRepository> _talentRepo = new();
     private readonly Mock<IInvitationRepository> _invitationRepo = new();
     private readonly Mock<ICurrentUserService> _currentUserService = new();
+    private readonly Mock<IEmailService> _emailService = new();
     private readonly SendJobInvitationCommandHandler _handler;
 
     private const string CurrentEmployerId = "employer-1";
@@ -33,7 +34,7 @@ public class SendJobInvitationCommandHandlerTests
         _unitOfWork.SetupGet(u => u.Talents).Returns(_talentRepo.Object);
         _unitOfWork.SetupGet(u => u.Invitations).Returns(_invitationRepo.Object);
 
-        _handler = new SendJobInvitationCommandHandler(_unitOfWork.Object, _currentUserService.Object);
+        _handler = new SendJobInvitationCommandHandler(_unitOfWork.Object, _currentUserService.Object, _emailService.Object);
     }
 
     [Fact]

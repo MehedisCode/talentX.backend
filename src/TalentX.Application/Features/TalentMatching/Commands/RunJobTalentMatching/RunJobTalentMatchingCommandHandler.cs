@@ -47,8 +47,19 @@ public sealed class RunJobTalentMatchingCommandHandler
 
         // 1. Identify eligible talent profiles
         var allTalents = await _unitOfWork.Talents.GetAllAsync(cancellationToken);
+
+        // Filter out candidates who have already applied to this job
+        var existingApplications = _unitOfWork.JobApplications != null
+            ? await _unitOfWork.JobApplications.GetByJobIdAsync(job.Id, cancellationToken)
+            : Array.Empty<JobApplication>();
+        var appliedUserIds = existingApplications
+            .Where(a => !string.IsNullOrEmpty(a.TalentUserId))
+            .Select(a => a.TalentUserId!)
+            .ToHashSet();
+
         var eligibleTalents = allTalents
             .Where(t => !string.IsNullOrWhiteSpace(t.Name) &&
+                        !appliedUserIds.Contains(t.UserId) &&
                         (t.TechnicalSkills.Count > 0 ||
                          t.TotalYearsExperience.HasValue ||
                          !string.IsNullOrWhiteSpace(t.Tagline) ||
@@ -58,6 +69,17 @@ public sealed class RunJobTalentMatchingCommandHandler
         if (eligibleTalents.Count == 0)
         {
             return new RunJobTalentMatchingResponse(job.Id, 0, new List<MatchedCandidateDto>());
+        }
+
+        // Limit candidate batch size to top 50 candidates to prevent AI token window overflow and timeouts
+        if (eligibleTalents.Count > 50)
+        {
+            var requiredSkillsSet = job.RequiredSkills.Select(s => s.ToLowerInvariant()).ToHashSet();
+            eligibleTalents = eligibleTalents
+                .OrderByDescending(t => t.TechnicalSkills.Count(s => requiredSkillsSet.Contains(s.ToLowerInvariant())))
+                .ThenByDescending(t => t.TotalYearsExperience ?? 0)
+                .Take(50)
+                .ToList();
         }
 
         // 2. Build structured candidate data for AI matching

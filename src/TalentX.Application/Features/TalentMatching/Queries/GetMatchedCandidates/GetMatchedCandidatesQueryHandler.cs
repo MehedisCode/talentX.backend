@@ -3,6 +3,7 @@ using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Features.TalentMatching.DTOs;
 using TalentX.Application.Identity.Services;
+using TalentX.Domain.Entities;
 
 namespace TalentX.Application.Features.TalentMatching.Queries.GetMatchedCandidates;
 
@@ -41,6 +42,14 @@ public sealed class GetMatchedCandidatesQueryHandler
             return new List<MatchedCandidateDto>();
         }
 
+        var applications = _unitOfWork.JobApplications != null
+            ? await _unitOfWork.JobApplications.GetByJobIdAsync(job.Id, cancellationToken)
+            : Array.Empty<JobApplication>();
+        var appliedUserIds = applications
+            .Where(a => !string.IsNullOrEmpty(a.TalentUserId))
+            .Select(a => a.TalentUserId!)
+            .ToHashSet();
+
         var invitations = await _unitOfWork.Invitations.GetByJobIdAsync(job.Id, cancellationToken);
         var invitedUserIds = invitations
             .Where(i => i.IsActive)
@@ -51,6 +60,7 @@ public sealed class GetMatchedCandidatesQueryHandler
         var talentMap = allTalents.ToDictionary(t => t.UserId);
 
         return matches
+            .Where(m => !appliedUserIds.Contains(m.TalentUserId))
             .OrderByDescending(m => m.Score)
             .Select(m =>
             {
