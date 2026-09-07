@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using TalentX.Application.Common.Models;
 using TalentX.Application.Features.Interviews.Commands.AcceptInterviewInvitation;
 using TalentX.Application.Features.Interviews.Commands.DeclineInterviewInvitation;
 using TalentX.Application.Features.Interviews.Queries.GetTalentInterviews;
@@ -13,9 +14,12 @@ namespace TalentX.API.Controllers.Interviews;
 public sealed class TalentInterviewsController : BaseApiController
 {
     [HttpGet("me/interviews")]
-    public async Task<IActionResult> GetMyInterviews(CancellationToken cancellationToken)
+    public async Task<IActionResult> GetMyInterviews(
+        [FromQuery] int page = PaginationRequest.DefaultPageNumber,
+        [FromQuery] int pageSize = PaginationRequest.DefaultPageSize,
+        CancellationToken cancellationToken = default)
     {
-        var result = await Sender.Send(new GetTalentInterviewsQuery(), cancellationToken);
+        var result = await Sender.Send(new GetTalentInterviewsQuery(page, pageSize), cancellationToken);
         return Ok(result);
     }
 

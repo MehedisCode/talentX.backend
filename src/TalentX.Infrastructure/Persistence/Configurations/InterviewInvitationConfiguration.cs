@@ -32,6 +32,16 @@ public sealed class InterviewInvitationConfiguration : IEntityTypeConfiguration<
             .HasForeignKey(t => t.InterviewInvitationId)
             .OnDelete(DeleteBehavior.Cascade);
 
+        builder.HasOne(x => x.Job)
+            .WithMany()
+            .HasForeignKey(x => x.JobId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasOne(x => x.JobApplication)
+            .WithMany()
+            .HasForeignKey(x => x.JobApplicationId)
+            .OnDelete(DeleteBehavior.Cascade);
+
         builder.HasIndex(x => x.JobId);
         builder.HasIndex(x => x.JobApplicationId);
         builder.HasIndex(x => x.EmployerUserId);

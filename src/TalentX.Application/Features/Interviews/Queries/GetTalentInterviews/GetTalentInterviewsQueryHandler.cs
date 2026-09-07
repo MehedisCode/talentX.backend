@@ -1,6 +1,7 @@
 using MediatR;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
+using TalentX.Application.Common.Models;
 using TalentX.Application.Features.Interviews.DTOs;
 using TalentX.Application.Identity.Services;
 using TalentX.Domain.Enums;
@@ -8,7 +9,7 @@ using TalentX.Domain.Enums;
 namespace TalentX.Application.Features.Interviews.Queries.GetTalentInterviews;
 
 public sealed class GetTalentInterviewsQueryHandler
-    : IRequestHandler<GetTalentInterviewsQuery, IReadOnlyList<TalentInterviewDto>>
+    : IRequestHandler<GetTalentInterviewsQuery, PaginatedList<TalentInterviewDto>>
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUserService;
@@ -21,20 +22,22 @@ public sealed class GetTalentInterviewsQueryHandler
         _currentUserService = currentUserService;
     }
 
-    public async Task<IReadOnlyList<TalentInterviewDto>> Handle(
+    public async Task<PaginatedList<TalentInterviewDto>> Handle(
         GetTalentInterviewsQuery request,
         CancellationToken cancellationToken)
     {
         var userId = _currentUserService.UserId
             ?? throw new UnauthorizedException("You must be logged in to view your interview invitations.");
 
-        var invitations = await _unitOfWork.InterviewInvitations.GetByTalentUserIdAsync(userId, cancellationToken);
+        var (page, pageSize) = PaginationRequest.Normalize(request.Page, request.PageSize);
+
+        var invitations = await _unitOfWork.InterviewInvitations.GetByTalentUserIdPaginatedAsync(
+            userId, page, pageSize, cancellationToken);
+
         var result = new List<TalentInterviewDto>();
 
-        foreach (var invite in invitations)
+        foreach (var invite in invitations.Items)
         {
-            var job = await _unitOfWork.Jobs.GetByIdAsync(invite.JobId, cancellationToken);
-
             // Meeting URL stays hidden until the candidate has accepted a specific timeslot,
             // so it can't be scraped from a pending/declined invitation.
             string? revealedLocationOrLink = null;
@@ -56,8 +59,8 @@ public sealed class GetTalentInterviewsQueryHandler
                 invite.Id,
                 invite.JobId,
                 invite.JobApplicationId,
-                job?.Title ?? "Job Position",
-                job?.CompanyName ?? "Company",
+                invite.Job?.Title ?? "Job Position",
+                invite.Job?.CompanyName ?? "Company",
                 invite.Type.ToString(),
                 invite.Status.ToString(),
                 invite.Status == InterviewInvitationStatus.Accepted ? invite.AssessmentUrl : null,
@@ -71,6 +74,6 @@ public sealed class GetTalentInterviewsQueryHandler
                 timeslotDtos));
         }
 
-        return result;
+        return new PaginatedList<TalentInterviewDto>(result, invitations.Page, invitations.PageSize, invitations.TotalCount);
     }
 }

@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using TalentX.Application.Common.Interfaces.Repositories;
+using TalentX.Application.Common.Models;
 using TalentX.Domain.Entities;
 using TalentX.Infrastructure.Persistence.Contexts;
 
@@ -27,22 +28,47 @@ public sealed class InterviewInvitationRepository : IInterviewInvitationReposito
             .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
     }
 
-    public async Task<IReadOnlyList<InterviewInvitation>> GetByJobIdAsync(Guid jobId, CancellationToken cancellationToken = default)
+    public async Task<PaginatedList<InterviewInvitation>> GetByJobIdPaginatedAsync(
+        Guid jobId,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default)
     {
-        return await _context.InterviewInvitations
+        var query = _context.InterviewInvitations
+            .Include(x => x.JobApplication)
             .Include(x => x.Timeslots)
             .Where(x => x.JobId == jobId)
-            .OrderByDescending(x => x.SentAt)
+            .OrderByDescending(x => x.SentAt);
+
+        var totalCount = await query.CountAsync(cancellationToken);
+        var items = await query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .ToListAsync(cancellationToken);
+
+        return new PaginatedList<InterviewInvitation>(items, page, pageSize, totalCount);
     }
 
-    public async Task<IReadOnlyList<InterviewInvitation>> GetByTalentUserIdAsync(string talentUserId, CancellationToken cancellationToken = default)
+    public async Task<PaginatedList<InterviewInvitation>> GetByTalentUserIdPaginatedAsync(
+        string talentUserId,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default)
     {
-        return await _context.InterviewInvitations
+        var query = _context.InterviewInvitations
+            .IgnoreQueryFilters()
+            .Include(x => x.Job)
             .Include(x => x.Timeslots)
             .Where(x => x.TalentUserId == talentUserId)
-            .OrderByDescending(x => x.SentAt)
+            .OrderByDescending(x => x.SentAt);
+
+        var totalCount = await query.CountAsync(cancellationToken);
+        var items = await query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .ToListAsync(cancellationToken);
+
+        return new PaginatedList<InterviewInvitation>(items, page, pageSize, totalCount);
     }
 
     public async Task<InterviewInvitation?> GetByApplicationIdAsync(Guid applicationId, CancellationToken cancellationToken = default)

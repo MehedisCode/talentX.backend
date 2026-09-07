@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using TalentX.Application.Common.Models;
 using TalentX.Application.Features.Interviews.Commands.SendBatchInterviewInvitations;
 using TalentX.Application.Features.Interviews.Queries.GetEmployerJobInterviews;
 using TalentX.Domain.Enums;
@@ -25,9 +26,11 @@ public sealed class JobInterviewsController : BaseApiController
     [HttpGet("{jobId:guid}/interviews")]
     public async Task<IActionResult> GetEmployerJobInterviews(
         Guid jobId,
-        CancellationToken cancellationToken)
+        [FromQuery] int page = PaginationRequest.DefaultPageNumber,
+        [FromQuery] int pageSize = PaginationRequest.DefaultPageSize,
+        CancellationToken cancellationToken = default)
     {
-        var result = await Sender.Send(new GetEmployerJobInterviewsQuery(jobId), cancellationToken);
+        var result = await Sender.Send(new GetEmployerJobInterviewsQuery(jobId, page, pageSize), cancellationToken);
         return Ok(result);
     }
 }

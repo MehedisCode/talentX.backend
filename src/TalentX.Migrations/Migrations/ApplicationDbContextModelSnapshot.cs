@@ -965,6 +965,25 @@ namespace TalentX.Migrations.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("TalentX.Domain.Entities.InterviewInvitation", b =>
+                {
+                    b.HasOne("TalentX.Domain.Entities.JobApplication", "JobApplication")
+                        .WithMany()
+                        .HasForeignKey("JobApplicationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("TalentX.Domain.Entities.Job", "Job")
+                        .WithMany()
+                        .HasForeignKey("JobId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Job");
+
+                    b.Navigation("JobApplication");
+                });
+
             modelBuilder.Entity("TalentX.Domain.Entities.InterviewTimeslot", b =>
                 {
                     b.HasOne("TalentX.Domain.Entities.InterviewInvitation", null)

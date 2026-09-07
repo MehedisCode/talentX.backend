@@ -6,7 +6,9 @@ namespace TalentX.Domain.Entities;
 public sealed class InterviewInvitation : BaseEntity
 {
     public Guid JobId { get; private set; }
+    public Job? Job { get; private set; }
     public Guid JobApplicationId { get; private set; }
+    public JobApplication? JobApplication { get; private set; }
     public string EmployerUserId { get; private set; } = string.Empty;
     public string TalentUserId { get; private set; } = string.Empty;
 

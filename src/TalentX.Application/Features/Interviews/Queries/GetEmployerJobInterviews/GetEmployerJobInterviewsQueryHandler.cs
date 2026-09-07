@@ -1,13 +1,14 @@
 using MediatR;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
+using TalentX.Application.Common.Models;
 using TalentX.Application.Features.Interviews.DTOs;
 using TalentX.Application.Identity.Services;
 
 namespace TalentX.Application.Features.Interviews.Queries.GetEmployerJobInterviews;
 
 public sealed class GetEmployerJobInterviewsQueryHandler
-    : IRequestHandler<GetEmployerJobInterviewsQuery, IReadOnlyList<EmployerInterviewDto>>
+    : IRequestHandler<GetEmployerJobInterviewsQuery, PaginatedList<EmployerInterviewDto>>
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUserService;
@@ -20,7 +21,7 @@ public sealed class GetEmployerJobInterviewsQueryHandler
         _currentUserService = currentUserService;
     }
 
-    public async Task<IReadOnlyList<EmployerInterviewDto>> Handle(
+    public async Task<PaginatedList<EmployerInterviewDto>> Handle(
         GetEmployerJobInterviewsQuery request,
         CancellationToken cancellationToken)
     {
@@ -35,13 +36,15 @@ public sealed class GetEmployerJobInterviewsQueryHandler
             throw new ForbiddenException("You cannot view interview invitations for jobs you do not own.");
         }
 
-        var invitations = await _unitOfWork.InterviewInvitations.GetByJobIdAsync(request.JobId, cancellationToken);
+        var (page, pageSize) = PaginationRequest.Normalize(request.Page, request.PageSize);
+
+        var invitations = await _unitOfWork.InterviewInvitations.GetByJobIdPaginatedAsync(
+            request.JobId, page, pageSize, cancellationToken);
+
         var result = new List<EmployerInterviewDto>();
 
-        foreach (var invite in invitations)
+        foreach (var invite in invitations.Items)
         {
-            var application = await _unitOfWork.JobApplications.GetByIdAsync(invite.JobApplicationId, cancellationToken);
-
             var timeslotDtos = invite.Timeslots.Select(t => new InterviewTimeslotDto(
                 t.Id,
                 t.StartTime,
@@ -54,8 +57,8 @@ public sealed class GetEmployerJobInterviewsQueryHandler
                 invite.JobId,
                 invite.JobApplicationId,
                 invite.TalentUserId,
-                application?.ApplicantName ?? "Candidate",
-                application?.ApplicantEmail ?? "",
+                invite.JobApplication?.ApplicantName ?? "Candidate",
+                invite.JobApplication?.ApplicantEmail ?? "",
                 invite.Type.ToString(),
                 invite.Status.ToString(),
                 invite.AssessmentUrl,
@@ -70,6 +73,6 @@ public sealed class GetEmployerJobInterviewsQueryHandler
                 timeslotDtos));
         }
 
-        return result;
+        return new PaginatedList<EmployerInterviewDto>(result, invitations.Page, invitations.PageSize, invitations.TotalCount);
     }
 }
