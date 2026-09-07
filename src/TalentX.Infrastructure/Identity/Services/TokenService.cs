@@ -122,6 +122,32 @@ public class TokenService : ITokenService
         return IdentityResponse.Ok();
     }
 
+    public async Task<IdentityResponse> RevokeOtherSessionsAsync(
+        string userId,
+        string? currentRefreshToken = null,
+        CancellationToken cancellationToken = default)
+    {
+        var activeTokens = await _context.RefreshTokens
+            .Where(token => token.ApplicationUserId == userId && token.RevokedAt == null)
+            .ToListAsync(cancellationToken);
+
+        var currentHash = !string.IsNullOrEmpty(currentRefreshToken)
+            ? Hash(currentRefreshToken)
+            : null;
+
+        foreach (var activeToken in activeTokens)
+        {
+            if (currentHash is null || activeToken.TokenHash != currentHash)
+            {
+                activeToken.RevokedAt = DateTime.UtcNow;
+            }
+        }
+
+        await _context.SaveChangesAsync(cancellationToken);
+        return IdentityResponse.Ok();
+    }
+
+
     private string GenerateAccessToken(ApplicationUser user, IList<string> roles)
     {
         var claims = new List<Claim>

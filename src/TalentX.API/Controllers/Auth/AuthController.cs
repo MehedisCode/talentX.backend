@@ -2,11 +2,14 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TalentX.Application.Features.Auth.Commands.VerifyGuestEmail;
+using TalentX.Application.Features.Auth.AddPassword;
 using TalentX.Application.Features.Auth.ChangePassword;
 using TalentX.Application.Features.Auth.CurrentUser;
+using TalentX.Application.Features.Auth.ForgotPassword;
 using TalentX.Application.Features.Auth.Login;
 using TalentX.Application.Features.Auth.Logout;
 using TalentX.Application.Features.Auth.RefreshToken;
+using TalentX.Application.Features.Auth.ResetPassword;
 
 namespace TalentX.API.Controllers.Auth;
 
@@ -81,6 +84,31 @@ public class AuthController : BaseApiController
 
         return Ok(new { message = "Password changed successfully." });
     }
+
+    [Authorize]
+    [HttpPost("add-password")]
+    public async Task<IActionResult> AddPassword([FromBody] AddPasswordRequestDto request, CancellationToken cancellationToken)
+    {
+        await Sender.Send(new AddPasswordCommand(request.NewPassword, request.ConfirmPassword, request.CurrentRefreshToken), cancellationToken);
+        return NoContent();
+    }
+
+    [AllowAnonymous]
+    [HttpPost("forgot-password")]
+    public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequestDto request, CancellationToken cancellationToken)
+    {
+        var result = await Sender.Send(new ForgotPasswordCommand(request.Email), cancellationToken);
+        return Ok(result);
+    }
+
+    [AllowAnonymous]
+    [HttpPost("reset-password")]
+    public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequestDto request, CancellationToken cancellationToken)
+    {
+        await Sender.Send(new ResetPasswordCommand(request.Email, request.Token, request.NewPassword, request.ConfirmPassword), cancellationToken);
+        return NoContent();
+    }
+
 
     [AllowAnonymous]
     [HttpPost("verify-email")]
