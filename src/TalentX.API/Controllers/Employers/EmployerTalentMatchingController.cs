@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using TalentX.Application.Features.Invitations.Commands.SendJobInvitation;
 using TalentX.Application.Features.Invitations.DTOs;
@@ -23,10 +22,6 @@ public sealed class EmployerTalentMatchingController : BaseApiController
     /// Triggers AI candidate evaluation and scoring for a published job.
     /// </summary>
     [HttpPost("jobs/{jobId:guid}/match")]
-    [ProducesResponseType(typeof(RunJobTalentMatchingResponse), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> RunMatching(Guid jobId, CancellationToken cancellationToken)
     {
         var result = await Sender.Send(new RunJobTalentMatchingCommand(jobId), cancellationToken);
@@ -37,9 +32,6 @@ public sealed class EmployerTalentMatchingController : BaseApiController
     /// Retrieves ranked candidate matches for an employer's job.
     /// </summary>
     [HttpGet("jobs/{jobId:guid}/candidates")]
-    [ProducesResponseType(typeof(List<MatchedCandidateDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetMatchedCandidates(Guid jobId, CancellationToken cancellationToken)
     {
         var result = await Sender.Send(new GetMatchedCandidatesQuery(jobId), cancellationToken);
@@ -50,11 +42,6 @@ public sealed class EmployerTalentMatchingController : BaseApiController
     /// Sends a job application invitation to a recommended talent.
     /// </summary>
     [HttpPost("jobs/{jobId:guid}/invite")]
-    [ProducesResponseType(typeof(SendJobInvitationResponse), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> SendInvitation(
         Guid jobId,
         [FromBody] SendInvitationRequestDto request,
@@ -69,9 +56,6 @@ public sealed class EmployerTalentMatchingController : BaseApiController
     /// Lists all invitations issued for a specific job.
     /// </summary>
     [HttpGet("jobs/{jobId:guid}/invitations")]
-    [ProducesResponseType(typeof(List<JobInvitationDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetJobInvitations(Guid jobId, CancellationToken cancellationToken)
     {
         var result = await Sender.Send(new GetJobInvitationsQuery(jobId), cancellationToken);
@@ -82,8 +66,6 @@ public sealed class EmployerTalentMatchingController : BaseApiController
     /// Gets a comprehensive profile summary of a candidate for employer review.
     /// </summary>
     [HttpGet("candidates/{id}/summary")]
-    [ProducesResponseType(typeof(CandidateProfileSummary), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetCandidateSummary(string id, CancellationToken cancellationToken)
     {
         var result = await Sender.Send(new GetCandidateSummaryQuery(id), cancellationToken);
