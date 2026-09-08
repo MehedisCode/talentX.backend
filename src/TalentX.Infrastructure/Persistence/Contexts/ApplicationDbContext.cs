@@ -26,6 +26,9 @@ public class ApplicationDbContext
     public DbSet<Education> Educations => Set<Education>();
     public DbSet<EmailVerificationToken> EmailVerificationTokens => Set<EmailVerificationToken>();
     public DbSet<SavedJob> SavedJobs => Set<SavedJob>();
+    public DbSet<InterviewInvitation> InterviewInvitations => Set<InterviewInvitation>();
+    public DbSet<InterviewTimeslot> InterviewTimeslots => Set<InterviewTimeslot>();
+    public DbSet<EmailDispatchLog> EmailDispatchLogs => Set<EmailDispatchLog>();
     public DbSet<Invitation> Invitations => Set<Invitation>();
     public DbSet<JobTalentMatch> JobTalentMatches => Set<JobTalentMatch>();
 

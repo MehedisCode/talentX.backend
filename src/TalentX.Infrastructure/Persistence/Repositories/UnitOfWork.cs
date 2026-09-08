@@ -19,6 +19,8 @@ public sealed class UnitOfWork : IUnitOfWork
     public IWorkExperienceRepository WorkExperiences { get; }
     public IEducationRepository Educations { get; }
     public ISavedJobRepository SavedJobs { get; }
+    public IInterviewInvitationRepository InterviewInvitations { get; }
+    public IEmailDispatchLogRepository EmailDispatchLogs { get; }
     public IInvitationRepository Invitations { get; }
     public IJobTalentMatchRepository JobTalentMatches { get; }
 
@@ -34,6 +36,8 @@ public sealed class UnitOfWork : IUnitOfWork
         WorkExperiences = new WorkExperienceRepository(_context);
         Educations = new EducationRepository(_context);
         SavedJobs = new SavedJobRepository(_context);
+        InterviewInvitations = new InterviewInvitationRepository(_context);
+        EmailDispatchLogs = new EmailDispatchLogRepository(_context);
         Invitations = new InvitationRepository(_context);
         JobTalentMatches = new JobTalentMatchRepository(_context);
     }
