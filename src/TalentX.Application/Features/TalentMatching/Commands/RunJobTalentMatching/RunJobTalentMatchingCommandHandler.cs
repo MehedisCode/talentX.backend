@@ -29,11 +29,33 @@ public sealed class RunJobTalentMatchingCommandHandler
         RunJobTalentMatchingCommand request,
         CancellationToken cancellationToken)
     {
+        var job = await GetAndValidateJobAsync(request.JobId, cancellationToken);
+
+        var eligibleTalents = await GetEligibleTalentsAsync(job, cancellationToken);
+        if (eligibleTalents.Count == 0)
+        {
+            return new RunJobTalentMatchingResponse(job.Id, 0, new List<MatchedCandidateDto>());
+        }
+
+        var matchingRequest = await BuildMatchingRequestAsync(job, eligibleTalents, cancellationToken);
+
+        var matchResult = await _matchingService.MatchAsync(matchingRequest, cancellationToken);
+
+        await PersistMatchesAsync(job.Id, matchResult.Matches, cancellationToken);
+
+        var rankedCandidates = await BuildMatchedCandidateDtosAsync(
+            job.Id, eligibleTalents, matchResult.Matches, cancellationToken);
+
+        return new RunJobTalentMatchingResponse(job.Id, rankedCandidates.Count, rankedCandidates);
+    }
+
+    private async Task<Job> GetAndValidateJobAsync(Guid jobId, CancellationToken cancellationToken)
+    {
         var employerId = _currentUserService.UserId
             ?? throw new UnauthorizedException("You must be signed in as an employer to run AI matching.");
 
-        var job = await _unitOfWork.Jobs.GetByIdAsync(request.JobId, cancellationToken)
-            ?? throw new NotFoundException($"Job '{request.JobId}' was not found.");
+        var job = await _unitOfWork.Jobs.GetByIdAsync(jobId, cancellationToken)
+            ?? throw new NotFoundException($"Job '{jobId}' was not found.");
 
         if (job.EmployerId != employerId)
         {
@@ -45,13 +67,17 @@ public sealed class RunJobTalentMatchingCommandHandler
             throw new BadRequestException("AI matching can only be triggered for published jobs.");
         }
 
-        // 1. Identify eligible talent profiles
+        return job;
+    }
+
+    private async Task<List<Talent>> GetEligibleTalentsAsync(Job job, CancellationToken cancellationToken)
+    {
         var allTalents = await _unitOfWork.Talents.GetAllAsync(cancellationToken);
 
-        // Filter out candidates who have already applied to this job
         var existingApplications = _unitOfWork.JobApplications != null
             ? await _unitOfWork.JobApplications.GetByJobIdAsync(job.Id, cancellationToken)
             : Array.Empty<JobApplication>();
+
         var appliedUserIds = existingApplications
             .Where(a => !string.IsNullOrEmpty(a.TalentUserId))
             .Select(a => a.TalentUserId!)
@@ -66,12 +92,6 @@ public sealed class RunJobTalentMatchingCommandHandler
                          t.ToolsAndPlatforms.Count > 0))
             .ToList();
 
-        if (eligibleTalents.Count == 0)
-        {
-            return new RunJobTalentMatchingResponse(job.Id, 0, new List<MatchedCandidateDto>());
-        }
-
-        // Limit candidate batch size to top 50 candidates to prevent AI token window overflow and timeouts
         if (eligibleTalents.Count > 50)
         {
             var requiredSkillsSet = job.RequiredSkills.Select(s => s.ToLowerInvariant()).ToHashSet();
@@ -82,8 +102,16 @@ public sealed class RunJobTalentMatchingCommandHandler
                 .ToList();
         }
 
-        // 2. Build structured candidate data for AI matching
+        return eligibleTalents;
+    }
+
+    private async Task<TalentMatchingRequest> BuildMatchingRequestAsync(
+        Job job,
+        List<Talent> eligibleTalents,
+        CancellationToken cancellationToken)
+    {
         var candidateProfiles = new List<TalentProfileForMatching>();
+
         foreach (var talent in eligibleTalents)
         {
             var workExps = await _unitOfWork.WorkExperiences.GetByUserIdAsync(talent.UserId, cancellationToken);
@@ -119,7 +147,7 @@ public sealed class RunJobTalentMatchingCommandHandler
             });
         }
 
-        var matchingRequest = new TalentMatchingRequest
+        return new TalentMatchingRequest
         {
             Job = new JobProfileForMatching
             {
@@ -136,15 +164,17 @@ public sealed class RunJobTalentMatchingCommandHandler
             },
             Candidates = candidateProfiles
         };
+    }
 
-        // 3. Call AI matching service (if it throws, nothing is persisted)
-        var matchResult = await _matchingService.MatchAsync(matchingRequest, cancellationToken);
-
-        // 4. Persist matches in JobTalentMatches table
-        var existingMatches = await _unitOfWork.JobTalentMatches.GetByJobIdAsync(job.Id, cancellationToken);
+    private async Task PersistMatchesAsync(
+        Guid jobId,
+        List<CandidateMatchResult> matches,
+        CancellationToken cancellationToken)
+    {
+        var existingMatches = await _unitOfWork.JobTalentMatches.GetByJobIdAsync(jobId, cancellationToken);
         var existingMap = existingMatches.ToDictionary(m => m.TalentUserId);
 
-        foreach (var item in matchResult.Matches)
+        foreach (var item in matches)
         {
             if (existingMap.TryGetValue(item.TalentUserId, out var existing))
             {
@@ -153,15 +183,21 @@ public sealed class RunJobTalentMatchingCommandHandler
             }
             else
             {
-                var newMatch = new JobTalentMatch(job.Id, item.TalentUserId, item.Score, item.Explanation);
+                var newMatch = new JobTalentMatch(jobId, item.TalentUserId, item.Score, item.Explanation);
                 await _unitOfWork.JobTalentMatches.AddAsync(newMatch, cancellationToken);
             }
         }
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+    }
 
-        // 5. Query active invitations for this job
-        var invitations = await _unitOfWork.Invitations.GetByJobIdAsync(job.Id, cancellationToken);
+    private async Task<List<MatchedCandidateDto>> BuildMatchedCandidateDtosAsync(
+        Guid jobId,
+        List<Talent> eligibleTalents,
+        List<CandidateMatchResult> matches,
+        CancellationToken cancellationToken)
+    {
+        var invitations = await _unitOfWork.Invitations.GetByJobIdAsync(jobId, cancellationToken);
         var invitedUserIds = invitations
             .Where(i => i.IsActive)
             .Select(i => i.TalentUserId)
@@ -169,7 +205,7 @@ public sealed class RunJobTalentMatchingCommandHandler
 
         var talentMap = eligibleTalents.ToDictionary(t => t.UserId);
 
-        var rankedCandidates = matchResult.Matches
+        return matches
             .OrderByDescending(m => m.Score)
             .Select(m =>
             {
@@ -191,7 +227,5 @@ public sealed class RunJobTalentMatchingCommandHandler
                 };
             })
             .ToList();
-
-        return new RunJobTalentMatchingResponse(job.Id, rankedCandidates.Count, rankedCandidates);
     }
 }

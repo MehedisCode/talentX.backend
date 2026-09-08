@@ -25,16 +25,7 @@ public sealed class GetMatchedCandidatesQueryHandler
         GetMatchedCandidatesQuery request,
         CancellationToken cancellationToken)
     {
-        var employerId = _currentUserService.UserId
-            ?? throw new UnauthorizedException("You must be signed in as an employer to view candidate matches.");
-
-        var job = await _unitOfWork.Jobs.GetByIdAsync(request.JobId, cancellationToken)
-            ?? throw new NotFoundException($"Job '{request.JobId}' was not found.");
-
-        if (job.EmployerId != employerId)
-        {
-            throw new ForbiddenException("You do not have permission to view candidates for this job.");
-        }
+        var job = await GetAndValidateJobAccessAsync(request.JobId, cancellationToken);
 
         var matches = await _unitOfWork.JobTalentMatches.GetByJobIdAsync(job.Id, cancellationToken);
         if (matches.Count == 0)
@@ -42,15 +33,40 @@ public sealed class GetMatchedCandidatesQueryHandler
             return new List<MatchedCandidateDto>();
         }
 
+        return await MapToMatchedCandidateDtosAsync(job.Id, matches, cancellationToken);
+    }
+
+    private async Task<Job> GetAndValidateJobAccessAsync(Guid jobId, CancellationToken cancellationToken)
+    {
+        var employerId = _currentUserService.UserId
+            ?? throw new UnauthorizedException("You must be signed in as an employer to view candidate matches.");
+
+        var job = await _unitOfWork.Jobs.GetByIdAsync(jobId, cancellationToken)
+            ?? throw new NotFoundException($"Job '{jobId}' was not found.");
+
+        if (job.EmployerId != employerId)
+        {
+            throw new ForbiddenException("You do not have permission to view candidates for this job.");
+        }
+
+        return job;
+    }
+
+    private async Task<List<MatchedCandidateDto>> MapToMatchedCandidateDtosAsync(
+        Guid jobId,
+        IReadOnlyList<JobTalentMatch> matches,
+        CancellationToken cancellationToken)
+    {
         var applications = _unitOfWork.JobApplications != null
-            ? await _unitOfWork.JobApplications.GetByJobIdAsync(job.Id, cancellationToken)
+            ? await _unitOfWork.JobApplications.GetByJobIdAsync(jobId, cancellationToken)
             : Array.Empty<JobApplication>();
+
         var appliedUserIds = applications
             .Where(a => !string.IsNullOrEmpty(a.TalentUserId))
             .Select(a => a.TalentUserId!)
             .ToHashSet();
 
-        var invitations = await _unitOfWork.Invitations.GetByJobIdAsync(job.Id, cancellationToken);
+        var invitations = await _unitOfWork.Invitations.GetByJobIdAsync(jobId, cancellationToken);
         var invitedUserIds = invitations
             .Where(i => i.IsActive)
             .Select(i => i.TalentUserId)
