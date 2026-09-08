@@ -40,6 +40,53 @@ public interface IEmailService
     );
 
     /// <summary>
+    /// Renders the HTML body for a new-interview-invitation notification email.
+    /// </summary>
+    Task<string> RenderInterviewInvitationEmailAsync(
+        string recipientName,
+        string jobTitle,
+        string companyName,
+        CancellationToken cancellationToken = default
+    );
+
+    /// <summary>
+    /// Renders the HTML body for an interview-details-confirmed email.
+    /// </summary>
+    Task<string> RenderInterviewConfirmationEmailAsync(
+        string recipientName,
+        string jobTitle,
+        string companyName,
+        string interviewType,
+        string locationOrLink,
+        string scheduledTimeOrDeadline,
+        string? instructions,
+        CancellationToken cancellationToken = default
+    );
+
+    /// <summary>
+    /// Synchronously dispatches a pre-rendered email via SMTP, throwing on failure so the
+    /// caller (the email outbox background worker) can record the failure and retry.
+    /// </summary>
+    Task DispatchDirectAsync(
+        string toEmail,
+        string recipientName,
+        string subject,
+        string htmlBody,
+        CancellationToken cancellationToken = default
+    );
+
+    /// <summary>
+    /// Sends a job invitation notification email to a candidate.
+    /// </summary>
+    Task SendJobInvitationEmailAsync(
+        string toEmail,
+        string recipientName,
+        string jobTitle,
+        string companyName,
+        CancellationToken cancellationToken = default
+    );
+
+    /// <summary>
     /// Sends an email with a password reset link to the recipient.
     /// </summary>
     Task SendPasswordResetEmailAsync(

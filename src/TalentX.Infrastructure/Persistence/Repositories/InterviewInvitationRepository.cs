@@ -1,0 +1,90 @@
+using Microsoft.EntityFrameworkCore;
+using TalentX.Application.Common.Interfaces.Repositories;
+using TalentX.Application.Common.Models;
+using TalentX.Domain.Entities;
+using TalentX.Infrastructure.Persistence.Contexts;
+
+namespace TalentX.Infrastructure.Persistence.Repositories;
+
+public sealed class InterviewInvitationRepository : IInterviewInvitationRepository
+{
+    private readonly ApplicationDbContext _context;
+
+    public InterviewInvitationRepository(ApplicationDbContext context)
+    {
+        _context = context;
+    }
+
+    public async Task<InterviewInvitation?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        return await _context.InterviewInvitations
+            .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+    }
+
+    public async Task<InterviewInvitation?> GetByIdWithTimeslotsAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        return await _context.InterviewInvitations
+            .Include(x => x.Timeslots)
+            .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+    }
+
+    public async Task<PaginatedList<InterviewInvitation>> GetByJobIdPaginatedAsync(
+        Guid jobId,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _context.InterviewInvitations
+            .Include(x => x.JobApplication)
+            .Include(x => x.Timeslots)
+            .Where(x => x.JobId == jobId)
+            .OrderByDescending(x => x.SentAt);
+
+        var totalCount = await query.CountAsync(cancellationToken);
+        var items = await query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return new PaginatedList<InterviewInvitation>(items, page, pageSize, totalCount);
+    }
+
+    public async Task<PaginatedList<InterviewInvitation>> GetByTalentUserIdPaginatedAsync(
+        string talentUserId,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _context.InterviewInvitations
+            .IgnoreQueryFilters()
+            .Include(x => x.Job)
+            .Include(x => x.Timeslots)
+            .Where(x => x.TalentUserId == talentUserId)
+            .OrderByDescending(x => x.SentAt);
+
+        var totalCount = await query.CountAsync(cancellationToken);
+        var items = await query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return new PaginatedList<InterviewInvitation>(items, page, pageSize, totalCount);
+    }
+
+    public async Task<InterviewInvitation?> GetByApplicationIdAsync(Guid applicationId, CancellationToken cancellationToken = default)
+    {
+        return await _context.InterviewInvitations
+            .Include(x => x.Timeslots)
+            .FirstOrDefaultAsync(x => x.JobApplicationId == applicationId, cancellationToken);
+    }
+
+    public async Task AddAsync(InterviewInvitation invitation, CancellationToken cancellationToken = default)
+    {
+        await _context.InterviewInvitations.AddAsync(invitation, cancellationToken);
+    }
+
+    public void Update(InterviewInvitation invitation)
+    {
+        _context.InterviewInvitations.Update(invitation);
+    }
+}

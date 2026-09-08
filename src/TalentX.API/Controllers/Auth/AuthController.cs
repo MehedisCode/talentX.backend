@@ -10,6 +10,7 @@ using TalentX.Application.Features.Auth.Login;
 using TalentX.Application.Features.Auth.Logout;
 using TalentX.Application.Features.Auth.RefreshToken;
 using TalentX.Application.Features.Auth.ResetPassword;
+using TalentX.Application.Features.Auth.ValidateResetToken;
 
 namespace TalentX.API.Controllers.Auth;
 
@@ -98,6 +99,17 @@ public class AuthController : BaseApiController
     public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequestDto request, CancellationToken cancellationToken)
     {
         var result = await Sender.Send(new ForgotPasswordCommand(request.Email), cancellationToken);
+        return Ok(result);
+    }
+
+    [AllowAnonymous]
+    [HttpGet("validate-reset-token")]
+    public async Task<ActionResult<ValidateResetTokenResult>> ValidateResetToken(
+        [FromQuery] string email,
+        [FromQuery] string token,
+        CancellationToken cancellationToken)
+    {
+        var result = await Sender.Send(new ValidateResetTokenQuery(email, token), cancellationToken);
         return Ok(result);
     }
 

@@ -1,0 +1,79 @@
+using MediatR;
+using TalentX.Application.Common.Exceptions;
+using TalentX.Application.Common.Interfaces;
+using TalentX.Application.Common.Models;
+using TalentX.Application.Features.Interviews.DTOs;
+using TalentX.Application.Identity.Services;
+using TalentX.Domain.Enums;
+
+namespace TalentX.Application.Features.Interviews.Queries.GetTalentInterviews;
+
+public sealed class GetTalentInterviewsQueryHandler
+    : IRequestHandler<GetTalentInterviewsQuery, PaginatedList<TalentInterviewDto>>
+{
+    private readonly IUnitOfWork _unitOfWork;
+    private readonly ICurrentUserService _currentUserService;
+
+    public GetTalentInterviewsQueryHandler(
+        IUnitOfWork unitOfWork,
+        ICurrentUserService currentUserService)
+    {
+        _unitOfWork = unitOfWork;
+        _currentUserService = currentUserService;
+    }
+
+    public async Task<PaginatedList<TalentInterviewDto>> Handle(
+        GetTalentInterviewsQuery request,
+        CancellationToken cancellationToken)
+    {
+        var userId = _currentUserService.UserId
+            ?? throw new UnauthorizedException("You must be logged in to view your interview invitations.");
+
+        var (page, pageSize) = PaginationRequest.Normalize(request.Page, request.PageSize);
+
+        var invitations = await _unitOfWork.InterviewInvitations.GetByTalentUserIdPaginatedAsync(
+            userId, page, pageSize, cancellationToken);
+
+        var result = new List<TalentInterviewDto>();
+
+        foreach (var invite in invitations.Items)
+        {
+            // Meeting URL stays hidden until the candidate has accepted a specific timeslot,
+            // so it can't be scraped from a pending/declined invitation.
+            string? revealedLocationOrLink = null;
+            if (invite.Status == InterviewInvitationStatus.Accepted)
+            {
+                var bookedSlot = invite.Timeslots.FirstOrDefault(t => t.Id == invite.SelectedTimeslotId);
+                revealedLocationOrLink = bookedSlot?.MeetingUrl ?? invite.LocationOrLink;
+            }
+
+            var timeslotDtos = invite.Timeslots.Select(t => new InterviewTimeslotDto(
+                t.Id,
+                t.StartTime,
+                t.EndTime,
+                t.IsBooked,
+                null // per-slot meeting URLs stay hidden in the list; only the booked slot is revealed above
+            )).ToList();
+
+            result.Add(new TalentInterviewDto(
+                invite.Id,
+                invite.JobId,
+                invite.JobApplicationId,
+                invite.Job?.Title ?? "Job Position",
+                invite.Job?.CompanyName ?? "Company",
+                invite.Type.ToString(),
+                invite.Status.ToString(),
+                invite.Status == InterviewInvitationStatus.Accepted ? invite.AssessmentUrl : null,
+                invite.AssessmentDeadline,
+                revealedLocationOrLink,
+                invite.Instructions,
+                invite.SelectedTimeslotId,
+                invite.ScheduledAt,
+                invite.SentAt,
+                invite.RespondedAt,
+                timeslotDtos));
+        }
+
+        return new PaginatedList<TalentInterviewDto>(result, invitations.Page, invitations.PageSize, invitations.TotalCount);
+    }
+}
