@@ -125,3 +125,105 @@ erDiagram
 | `CreatedAt` | `timestamptz` | `NOT NULL, DEFAULT CURRENT_TIMESTAMP` | Token creation timestamp |
 | `ExpiresAt` | `timestamptz` | `NOT NULL` | Token expiry timestamp (7 days) |
 | `RevokedAt` | `timestamptz` | `NULL` | Revocation timestamp if logged out |
+
+---
+
+### 5. `Talents` (Table-per-Type Derived Table)
+| Column | Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `Id` | `uuid` | `PRIMARY KEY, FK -> DomainUsers(Id)` | Shared identifier with `DomainUsers` |
+| `ProfilePictureStorageKey` | `varchar(500)` | `NULL` | Storage key for profile picture |
+| `Tagline` | `varchar(160)` | `NULL` | Professional headline |
+| `ShortBio` | `varchar(1000)` | `NULL` | Brief biography |
+| `Location` | `varchar(200)` | `NULL` | Geographic location |
+| `Phone` | `varchar(40)` | `NULL` | Contact phone number |
+| `LinkedInUrl` | `varchar(500)` | `NULL` | LinkedIn profile link |
+| `AdditionalUrls` | `text` | `NOT NULL` | JSON serialized list of external links |
+| `VideoIntroStorageKey` | `varchar(500)` | `NULL` | Storage key for video introduction |
+| `TotalYearsExperience` | `numeric(4,1)` | `NULL` | Years of industry experience |
+| `ExpectedSalary` | `numeric(12,2)` | `NULL` | Target compensation |
+| `SkillPropositions` | `text` | `NOT NULL` | JSON serialized value propositions |
+| `TechnicalSkills` | `text` | `NOT NULL` | JSON serialized list of technical skills |
+| `SoftSkills` | `text` | `NOT NULL` | JSON serialized list of soft skills |
+| `ToolsAndPlatforms` | `text` | `NOT NULL` | JSON serialized list of tools and platforms |
+
+---
+
+### 6. `JobApplications`
+| Column | Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `Id` | `uuid` | `PRIMARY KEY` | Application unique identifier |
+| `JobId` | `uuid` | `NOT NULL, FK -> Jobs(Id)` | Associated job posting |
+| `ApplicantName` | `varchar(120)` | `NOT NULL` | Candidate name |
+| `ApplicantEmail` | `varchar(255)` | `NOT NULL` | Candidate contact email |
+| `TalentUserId` | `varchar(200)` | `NULL` | Linked Identity UserId (populated on verification) |
+| `ResumeDownloadUrl` | `varchar(500)` | `NOT NULL` | Storage path/URL for resume file |
+| `CoverLetter` | `varchar(5000)` | `NULL` | Optional cover letter text |
+| `Status` | `varchar(50)` | `NOT NULL` | Enum: `PendingEmailVerification`, `Applied`, `Reviewing`, `Accepted`, `Rejected` |
+| `ExpectedSalary` | `numeric(12,2)` | `NULL` | Salary expectation at time of application |
+| `TotalYearsExperience`| `numeric(4,1)` | `NULL` | Experience level at time of application |
+| `Location` | `varchar(200)` | `NULL` | Candidate location |
+| `AiMatchScore` | `numeric(5,2)` | `NULL` | AI-computed job suitability match score |
+| `CreatedAt` | `timestamptz` | `NOT NULL` | Submission timestamp (UTC) |
+| `UpdatedAt` | `timestamptz` | `NULL` | Last status update timestamp (UTC) |
+
+---
+
+### 7. `EmailVerificationTokens`
+| Column | Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `Id` | `uuid` | `PRIMARY KEY` | Verification token identifier |
+| `Token` | `varchar(256)` | `NOT NULL, UNIQUE` | Cryptographic verification token |
+| `ApplicantEmail` | `varchar(255)` | `NOT NULL` | Associated applicant email |
+| `JobApplicationId` | `uuid` | `NOT NULL` | Linked job application id |
+| `ExpiresAt` | `timestamptz` | `NOT NULL` | Expiration timestamp (30 minutes) |
+| `IsConsumed` | `boolean` | `NOT NULL, DEFAULT false`| Whether token has already been used |
+| `ConsumedAt` | `timestamptz` | `NULL` | Consumption timestamp |
+| `CreatedAt` | `timestamptz` | `NOT NULL` | Creation timestamp |
+
+---
+
+### 8. `WorkExperiences`
+| Column | Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `Id` | `uuid` | `PRIMARY KEY` | Experience record identifier |
+| `UserId` | `varchar(200)` | `NOT NULL, INDEXED` | Owning talent user ID |
+| `CompanyName` | `varchar(200)` | `NOT NULL` | Employer company name |
+| `JobTitle` | `varchar(200)` | `NOT NULL` | Position title |
+| `StartDate` | `varchar(50)` | `NULL` | Employment start date string |
+| `EndDate` | `varchar(50)` | `NULL` | Employment end date string |
+| `IsCurrent` | `boolean` | `NOT NULL, DEFAULT false`| Whether position is current |
+| `Description` | `varchar(2000)` | `NULL` | Job responsibilities & achievements |
+| `CreatedAt` | `timestamptz` | `NOT NULL` | Creation timestamp |
+| `UpdatedAt` | `timestamptz` | `NULL` | Modification timestamp |
+
+---
+
+### 9. `Educations`
+| Column | Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `Id` | `uuid` | `PRIMARY KEY` | Education record identifier |
+| `UserId` | `varchar(200)` | `NOT NULL, INDEXED` | Owning talent user ID |
+| `Institution` | `varchar(200)` | `NOT NULL` | University or institution name |
+| `Degree` | `varchar(200)` | `NULL` | Degree earned |
+| `FieldOfStudy` | `varchar(200)` | `NULL` | Major or specialization |
+| `StartYear` | `int` | `NULL` | Beginning year |
+| `EndYear` | `int` | `NULL` | Completion year |
+| `IsCurrent` | `boolean` | `NOT NULL, DEFAULT false`| Ongoing degree program flag |
+| `Description` | `varchar(1000)` | `NULL` | Honors or activities |
+| `CreatedAt` | `timestamptz` | `NOT NULL` | Creation timestamp |
+| `UpdatedAt` | `timestamptz` | `NULL` | Modification timestamp |
+
+---
+
+### 10. `Resumes`
+| Column | Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `Id` | `uuid` | `PRIMARY KEY` | Resume record identifier |
+| `UserId` | `varchar(200)` | `NOT NULL, INDEXED` | Owning talent user ID |
+| `StorageKey` | `varchar(500)` | `NOT NULL` | Storage service key |
+| `FileName` | `varchar(255)` | `NOT NULL` | Sanitized original filename |
+| `ContentType` | `varchar(100)` | `NOT NULL` | MIME content type (PDF/DOCX) |
+| `FileSizeBytes` | `bigint` | `NOT NULL` | File size in bytes |
+| `UploadedAt` | `timestamptz` | `NOT NULL` | Upload timestamp |
+
