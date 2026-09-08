@@ -1,4 +1,5 @@
 using MediatR;
+using Microsoft.Extensions.Configuration;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Features.TalentMatching.DTOs;
@@ -9,16 +10,18 @@ namespace TalentX.Application.Features.TalentMatching.Queries.GetCandidateSummar
 public sealed class GetCandidateSummaryQueryHandler
     : IRequestHandler<GetCandidateSummaryQuery, CandidateProfileSummary>
 {
-    private static readonly TimeSpan DownloadUrlExpiry = TimeSpan.FromMinutes(15);
     private readonly IUnitOfWork _unitOfWork;
     private readonly IPresignedUrlService _presignedUrlService;
+    private readonly IConfiguration _configuration;
 
     public GetCandidateSummaryQueryHandler(
         IUnitOfWork unitOfWork,
-        IPresignedUrlService presignedUrlService)
+        IPresignedUrlService presignedUrlService,
+        IConfiguration configuration)
     {
         _unitOfWork = unitOfWork;
         _presignedUrlService = presignedUrlService;
+        _configuration = configuration;
     }
 
     public async Task<CandidateProfileSummary> Handle(
@@ -45,8 +48,17 @@ public sealed class GetCandidateSummaryQueryHandler
         string? profilePictureUrl = null;
         if (!string.IsNullOrWhiteSpace(talent.ProfilePictureStorageKey))
         {
+            var expiryStr = _configuration["PRESIGNED_URL_EXPIRY_MINUTES"]
+                ?? _configuration["PresignedUrl:ExpiryMinutes"];
+
+            var expiryMinutes = int.TryParse(expiryStr, out var parsedMinutes) && parsedMinutes > 0
+                ? parsedMinutes
+                : 15;
+
+            var downloadUrlExpiry = TimeSpan.FromMinutes(expiryMinutes);
+
             profilePictureUrl = await _presignedUrlService.CreateDownloadUrlAsync(
-                talent.ProfilePictureStorageKey, DownloadUrlExpiry, cancellationToken);
+                talent.ProfilePictureStorageKey, downloadUrlExpiry, cancellationToken);
         }
 
         return new CandidateProfileSummary

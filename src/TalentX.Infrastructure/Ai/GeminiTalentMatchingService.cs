@@ -1,20 +1,26 @@
 using System.Net.Http.Json;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Features.TalentMatching.DTOs;
 using TalentX.Infrastructure.Ai.Models;
+using TalentX.Infrastructure.Ai.Prompts;
 
 namespace TalentX.Infrastructure.Ai;
 
 public sealed class GeminiTalentMatchingService : ITalentMatchingService
 {
     private readonly HttpClient _httpClient;
+    private readonly ITalentMatchingPromptFactory _promptFactory;
     private readonly ILogger<GeminiTalentMatchingService> _logger;
+
     private readonly string _apiKey;
     private readonly string _modelName;
+    private readonly string _promptVersion;
+    private readonly double _temperature;
+    private readonly double _topP;
+    private readonly int _maxOutputTokens;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -24,26 +30,38 @@ public sealed class GeminiTalentMatchingService : ITalentMatchingService
     public GeminiTalentMatchingService(
         HttpClient httpClient,
         IConfiguration configuration,
+        ITalentMatchingPromptFactory promptFactory,
         ILogger<GeminiTalentMatchingService> logger)
     {
         _httpClient = httpClient;
+        _promptFactory = promptFactory;
         _logger = logger;
 
-        var baseUrl = Environment.GetEnvironmentVariable("GEMINI_BASE_URL")
-            ?? configuration["GEMINI_BASE_URL"]
+        var baseUrl = configuration["GEMINI_BASE_URL"]
             ?? configuration["Gemini:BaseUrl"]
             ?? "https://generativelanguage.googleapis.com";
         _httpClient.BaseAddress = new Uri(baseUrl);
 
-        _apiKey = Environment.GetEnvironmentVariable("GEMINI_API_KEY")
-            ?? configuration["GEMINI_API_KEY"]
+        _apiKey = configuration["GEMINI_API_KEY"]
             ?? configuration["Gemini:ApiKey"]
             ?? string.Empty;
 
-        _modelName = Environment.GetEnvironmentVariable("GEMINI_MODEL_NAME")
-            ?? configuration["GEMINI_MODEL_NAME"]
+        _modelName = configuration["GEMINI_MODEL_NAME"]
             ?? configuration["Gemini:ModelName"]
             ?? "gemini-3.7-flash";
+
+        _promptVersion = configuration["GEMINI_PROMPT_VERSION"]
+            ?? configuration["Gemini:PromptVersion"]
+            ?? "v1";
+
+        var tempStr = configuration["GEMINI_TEMPERATURE"] ?? configuration["Gemini:Temperature"];
+        _temperature = double.TryParse(tempStr, out var tempVal) ? tempVal : 0.1;
+
+        var topPStr = configuration["GEMINI_TOP_P"] ?? configuration["Gemini:TopP"];
+        _topP = double.TryParse(topPStr, out var topPVal) ? topPVal : 0.95;
+
+        var maxTokensStr = configuration["GEMINI_MAX_OUTPUT_TOKENS"] ?? configuration["Gemini:MaxOutputTokens"];
+        _maxOutputTokens = int.TryParse(maxTokensStr, out var maxTokensVal) ? maxTokensVal : 4096;
     }
 
     public async Task<TalentMatchingResult> MatchAsync(
@@ -61,7 +79,8 @@ public sealed class GeminiTalentMatchingService : ITalentMatchingService
             throw new InvalidOperationException("Gemini API key is not configured.");
         }
 
-        var prompt = BuildPrompt(request);
+        var promptEngine = _promptFactory.GetPrompt(_promptVersion);
+        var prompt = promptEngine.BuildPrompt(request);
 
         var requestBody = new
         {
@@ -77,9 +96,9 @@ public sealed class GeminiTalentMatchingService : ITalentMatchingService
             },
             generationConfig = new
             {
-                temperature = 0.1,
-                top_p = 0.95,
-                max_output_tokens = 4096
+                temperature = _temperature,
+                top_p = _topP,
+                max_output_tokens = _maxOutputTokens
             }
         };
 
@@ -109,44 +128,6 @@ public sealed class GeminiTalentMatchingService : ITalentMatchingService
         }
 
         return ParseGeminiResponse(text);
-    }
-
-    private static string BuildPrompt(TalentMatchingRequest request)
-    {
-        var jobJson = JsonSerializer.Serialize(request.Job, new JsonSerializerOptions { WriteIndented = true });
-        var candidatesJson = JsonSerializer.Serialize(request.Candidates, new JsonSerializerOptions { WriteIndented = true });
-
-        return $$"""
-You are an expert AI recruiting and candidate matching engine.
-Your task is to analyze candidate profiles against a specific job posting and calculate a numeric compatibility match score (0 to 100) along with a concise explanation for each candidate.
-
-CRITICAL MATCHING CRITERIA TO EVALUATE:
-1. Skills & Technologies: Compare job's RequiredSkills with candidate's TechnicalSkills, ToolsAndPlatforms, and SkillPropositions.
-2. Experience Level & Years: Compare job's ExperienceLevel with candidate's TotalYearsExperience.
-3. Job Title & Past Roles: Compare job title and description with candidate's past WorkExperience job titles and companies.
-4. Industry Experience: Consider relevance of past companies and roles where available.
-5. Location & Work Arrangement: Compare job's Location, City, Country, and WorkArrangement (Remote, Hybrid, OnSite) with candidate's Location. Remote jobs are location-flexible.
-6. Education Level: Consider candidate's degrees and fields of study from Educations where available.
-7. Salary Expectation: Consider candidate's ExpectedSalary alignment where available.
-
-JOB DETAILS:
-{{jobJson}}
-
-CANDIDATES:
-{{candidatesJson}}
-
-RESPONSE INSTRUCTIONS:
-Return ONLY valid JSON with no preamble or markdown formatting, following this exact schema:
-{
-  "matches": [
-    {
-      "talentUserId": "the candidate's talentUserId",
-      "score": 85.5,
-      "explanation": "Clear, concise 1-2 sentence justification explaining why this candidate matches the role based on skills, experience, and criteria."
-    }
-  ]
-}
-""";
     }
 
     private TalentMatchingResult ParseGeminiResponse(string rawText)
