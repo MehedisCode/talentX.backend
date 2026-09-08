@@ -26,6 +26,8 @@ public class ApplicationDbContext
     public DbSet<Education> Educations => Set<Education>();
     public DbSet<EmailVerificationToken> EmailVerificationTokens => Set<EmailVerificationToken>();
     public DbSet<SavedJob> SavedJobs => Set<SavedJob>();
+    public DbSet<Invitation> Invitations => Set<Invitation>();
+    public DbSet<JobTalentMatch> JobTalentMatches => Set<JobTalentMatch>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

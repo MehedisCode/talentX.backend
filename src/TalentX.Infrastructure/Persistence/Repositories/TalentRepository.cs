@@ -32,6 +32,13 @@ public sealed class TalentRepository : ITalentRepository
             .FirstOrDefaultAsync(talent => talent.Email == email, cancellationToken);
     }
 
+    public async Task<IReadOnlyList<Talent>> GetAllAsync(CancellationToken cancellationToken = default)
+    {
+        return await _context.Talents
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task AddAsync(Talent talent, CancellationToken cancellationToken = default)
     {
         await _context.Talents.AddAsync(talent, cancellationToken);
