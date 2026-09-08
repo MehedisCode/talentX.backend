@@ -2,6 +2,7 @@ using AutoMapper;
 using MediatR;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
+using TalentX.Application.DTOs.Auth;
 using TalentX.Application.DTOs.Employers;
 using TalentX.Application.Identity.Interfaces;
 using TalentX.Domain;
@@ -9,7 +10,7 @@ using TalentX.Domain.Enums;
 
 namespace TalentX.Application.Features.Employers.Commands.GoogleSignIn;
 
-public sealed class GoogleSignInEmployerCommandHandler : IRequestHandler<GoogleSignInEmployerCommand, AuthEmployerDto>
+public sealed class GoogleSignInEmployerCommandHandler : IRequestHandler<GoogleSignInEmployerCommand, AuthResponseDto>
 {
     private readonly IGoogleAuthService _googleAuthService;
     private readonly IExternalIdentityService _externalIdentityService;
@@ -31,9 +32,39 @@ public sealed class GoogleSignInEmployerCommandHandler : IRequestHandler<GoogleS
         _mapper = mapper;
     }
 
-    public async Task<AuthEmployerDto> Handle(GoogleSignInEmployerCommand request, CancellationToken cancellationToken)
+    public async Task<AuthResponseDto> Handle(GoogleSignInEmployerCommand request, CancellationToken cancellationToken)
     {
         var googleUser = await _googleAuthService.VerifyIdTokenAsync(request.IdToken, cancellationToken);
+
+        var (_, userId) = await _externalIdentityService.FindOrCreateExternalUserAsync(
+            googleUser.Email,
+            UserRole.Employer.ToString(),
+            cancellationToken
+        );
+
+        var existingTalent = await _unitOfWork.Talents.GetByUserIdAsync(userId, cancellationToken)
+            ?? await _unitOfWork.Talents.GetByEmailAsync(googleUser.Email, cancellationToken);
+
+        if (existingTalent != null)
+        {
+            if (!existingTalent.IsVerified)
+            {
+                existingTalent.MarkAsVerified();
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+            }
+
+            var talentTokenResult = await _tokenService.CreateAsync(userId);
+            if (!talentTokenResult.Success || talentTokenResult.Data is null)
+            {
+                throw new ValidationException(string.Join("; ", talentTokenResult.Errors));
+            }
+
+            return new AuthResponseDto(
+                Employer: null,
+                AccessToken: talentTokenResult.Data.AccessToken,
+                RefreshToken: talentTokenResult.Data.RefreshToken
+            );
+        }
 
         var existingEmployer = await _unitOfWork.Employers.GetByEmailAsync(googleUser.Email, cancellationToken);
         if (existingEmployer != null)
@@ -50,18 +81,12 @@ public sealed class GoogleSignInEmployerCommandHandler : IRequestHandler<GoogleS
                 throw new ValidationException(string.Join("; ", existingTokenResult.Errors));
             }
 
-            return new AuthEmployerDto(
+            return new AuthResponseDto(
                 Employer: _mapper.Map<EmployerDto>(existingEmployer),
                 AccessToken: existingTokenResult.Data.AccessToken,
                 RefreshToken: existingTokenResult.Data.RefreshToken
             );
         }
-
-        var (_, userId) = await _externalIdentityService.FindOrCreateExternalUserAsync(
-            googleUser.Email,
-            UserRole.Employer.ToString(),
-            cancellationToken
-        );
 
         var employer = new Employer(
             userId,
@@ -80,7 +105,7 @@ public sealed class GoogleSignInEmployerCommandHandler : IRequestHandler<GoogleS
             throw new ValidationException(string.Join("; ", tokenResult.Errors));
         }
 
-        return new AuthEmployerDto(
+        return new AuthResponseDto(
             Employer: _mapper.Map<EmployerDto>(employer),
             AccessToken: tokenResult.Data.AccessToken,
             RefreshToken: tokenResult.Data.RefreshToken

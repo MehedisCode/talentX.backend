@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Identity;
 using TalentX.Application.Common.Interfaces;
+using TalentX.Domain.Enums;
 using TalentX.Infrastructure.Identity.Models;
 
 namespace TalentX.Infrastructure.Identity.Services;
@@ -35,6 +36,7 @@ public sealed class ExternalIdentityService : IExternalIdentityService
         if (existingUser != null)
         {
             await EnsureGoogleLoginAsync(existingUser, providerKey ?? email);
+            await PromoteGuestToTalentAsync(existingUser);
             return (IsNewUser: false, UserId: existingUser.Id);
         }
 
@@ -54,18 +56,33 @@ public sealed class ExternalIdentityService : IExternalIdentityService
 
         if (!string.IsNullOrWhiteSpace(role))
         {
-            var roleExists = await _roleManager.RoleExistsAsync(role);
-            if (!roleExists)
-            {
-                await _roleManager.CreateAsync(new IdentityRole(role));
-            }
-
+            await EnsureRoleExistsAsync(role);
             await _userManager.AddToRoleAsync(user, role);
         }
 
         await EnsureGoogleLoginAsync(user, providerKey ?? email);
 
         return (IsNewUser: true, UserId: user.Id);
+    }
+
+    private async Task PromoteGuestToTalentAsync(ApplicationUser user)
+    {
+        var isGuest = await _userManager.IsInRoleAsync(user, UserRole.Guest.ToString());
+        if (isGuest)
+        {
+            await _userManager.RemoveFromRoleAsync(user, UserRole.Guest.ToString());
+            await EnsureRoleExistsAsync(UserRole.Talent.ToString());
+            await _userManager.AddToRoleAsync(user, UserRole.Talent.ToString());
+        }
+    }
+
+    private async Task EnsureRoleExistsAsync(string role)
+    {
+        var roleExists = await _roleManager.RoleExistsAsync(role);
+        if (!roleExists)
+        {
+            await _roleManager.CreateAsync(new IdentityRole(role));
+        }
     }
 
     private async Task EnsureGoogleLoginAsync(ApplicationUser user, string providerKey)
