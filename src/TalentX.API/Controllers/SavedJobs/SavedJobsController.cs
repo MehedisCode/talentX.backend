@@ -17,10 +17,6 @@ namespace TalentX.API.Controllers.SavedJobs;
 public class SavedJobsController : BaseApiController
 {
     [HttpPost("{jobId:guid}")]
-    [ProducesResponseType(typeof(Guid), StatusCodes.Status201Created)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> SaveJob(Guid jobId, CancellationToken cancellationToken)
     {
         var savedJobId = await Sender.Send(new SaveJobCommand(jobId), cancellationToken);
@@ -28,9 +24,6 @@ public class SavedJobsController : BaseApiController
     }
 
     [HttpDelete("{jobId:guid}")]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> RemoveSavedJob(Guid jobId, CancellationToken cancellationToken)
     {
         await Sender.Send(new RemoveSavedJobCommand(jobId), cancellationToken);
@@ -38,8 +31,6 @@ public class SavedJobsController : BaseApiController
     }
 
     [HttpGet]
-    [ProducesResponseType(typeof(PaginatedList<SavedJobResponse>), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetSavedJobs(
         [FromQuery] int page = PaginationRequest.DefaultPageNumber,
         [FromQuery] int pageSize = PaginationRequest.DefaultPageSize,
@@ -50,8 +41,6 @@ public class SavedJobsController : BaseApiController
     }
 
     [HttpGet("ids")]
-    [ProducesResponseType(typeof(List<Guid>), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetSavedJobIds(CancellationToken cancellationToken)
     {
         var result = await Sender.Send(new GetSavedJobIdsQuery(), cancellationToken);

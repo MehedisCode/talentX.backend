@@ -60,7 +60,7 @@ public sealed class JobRepository : RepositoryBase<Job>, IJobRepository
         var totalCount = await query.CountAsync(cancellationToken);
 
         var items = await query
-            .OrderByDescending(j => j.CreatedAt)
+            .OrderByDescending(j => j.PublishedAt ?? j.CreatedAt)
             .ThenByDescending(j => j.Id)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)

@@ -11,8 +11,10 @@ public sealed class JobMappingProfile : Profile
         CreateMap<Job, JobListItemDto>()
             .ForMember(d => d.EmploymentType, o => o.MapFrom(s => s.EmploymentType.ToString()))
             .ForMember(d => d.ExperienceLevel, o => o.MapFrom(s => s.ExperienceLevel.ToString()))
-            .ForMember(d => d.WorkArrangement, o => o.MapFrom(s => s.WorkArrangement.ToString()));
+            .ForMember(d => d.WorkArrangement, o => o.MapFrom(s => s.WorkArrangement.ToString()))
+            .ForMember(d => d.CreatedAt, o => o.MapFrom(s => s.PublishedAt ?? s.CreatedAt));
 
-        CreateMap<Job, JobDetailsDto>();
+        CreateMap<Job, JobDetailsDto>()
+            .ForMember(d => d.CreatedAt, o => o.MapFrom(s => s.PublishedAt ?? s.CreatedAt));
     }
 }

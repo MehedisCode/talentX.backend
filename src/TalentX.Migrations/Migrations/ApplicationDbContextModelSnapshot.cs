@@ -294,6 +294,9 @@ namespace TalentX.Migrations.Migrations
                     b.Property<short?>("MinOverlapHours")
                         .HasColumnType("smallint");
 
+                    b.Property<DateTime?>("PublishedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("RequiredSkills")
                         .IsRequired()
                         .HasColumnType("text");
@@ -330,6 +333,8 @@ namespace TalentX.Migrations.Migrations
                     b.HasIndex("EmployerId", "IsDeleted");
 
                     b.HasIndex("Status", "CreatedAt");
+
+                    b.HasIndex("Status", "PublishedAt");
 
                     b.ToTable("Jobs", (string)null);
                 });
@@ -815,11 +820,13 @@ namespace TalentX.Migrations.Migrations
 
             modelBuilder.Entity("TalentX.Domain.Entities.SavedJob", b =>
                 {
-                    b.HasOne("TalentX.Domain.Entities.Job", null)
+                    b.HasOne("TalentX.Domain.Entities.Job", "Job")
                         .WithMany()
                         .HasForeignKey("JobId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Job");
                 });
 
             modelBuilder.Entity("TalentX.Infrastructure.Identity.Models.RefreshToken", b =>

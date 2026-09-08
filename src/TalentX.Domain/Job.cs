@@ -23,6 +23,7 @@ public class Job : BaseEntity
     public string? Responsibilities { get; private set; }
     public bool IsDeleted { get; private set; }
     public DateTime? DeletedAt { get; private set; }
+    public DateTime? PublishedAt { get; private set; }
 
     private Job() { }
 
@@ -100,6 +101,7 @@ public class Job : BaseEntity
     public void MarkAsPublished()
     {
         Status = JobStatus.Published;
+        PublishedAt = DateTime.UtcNow;
     }
 
     public void MarkAsClosed()
@@ -121,6 +123,7 @@ public class Job : BaseEntity
         }
 
         Status = JobStatus.Published;
+        PublishedAt = DateTime.UtcNow;
         UpdatedAt = DateTime.UtcNow;
     }
 

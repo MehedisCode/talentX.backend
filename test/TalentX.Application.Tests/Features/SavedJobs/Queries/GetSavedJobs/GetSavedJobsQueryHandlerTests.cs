@@ -36,7 +36,7 @@ public class GetSavedJobsQueryHandlerTests
                 CompanyName = s.CompanyName,
                 Location = s.Location,
                 EmploymentType = s.EmploymentType.ToString(),
-                PostedDate = s.CreatedAt,
+                PostedDate = s.PublishedAt ?? s.CreatedAt,
                 IsAvailable = !s.IsDeleted && s.Status == JobStatus.Published && s.ExpireAt >= DateTime.UtcNow
             });
         _mapper = mapperMock.Object;
@@ -82,7 +82,7 @@ public class GetSavedJobsQueryHandlerTests
         result.Items.Should().HaveCount(1);
         result.Items.First().JobTitle.Should().Be("Backend Engineer");
         result.Items.First().CompanyName.Should().Be("Acme Corp");
-        result.Items.First().PostedDate.Should().Be(job.CreatedAt);
+        result.Items.First().PostedDate.Should().Be(job.PublishedAt);
     }
 
     [Fact]
@@ -166,7 +166,7 @@ public class GetSavedJobsQueryHandlerTests
     }
 
     [Fact]
-    public async Task Handle_PostedDateMapsFromJobCreatedAt()
+    public async Task Handle_PostedDateMapsFromJobPublishedAt()
     {
         var job = CreatePublishedJob();
         var savedJob = SavedJob.Create(job.Id, "talent-1");
@@ -181,7 +181,9 @@ public class GetSavedJobsQueryHandlerTests
 
         var result = await _handler.Handle(new GetSavedJobsQuery(1, 20), CancellationToken.None);
 
-        result.Items.First().PostedDate.Should().Be(job.CreatedAt);
+        // CreatePublishedJob() calls MarkAsPublished(), which sets PublishedAt —
+        // that's what "posted date" should reflect, not the draft's CreatedAt.
+        result.Items.First().PostedDate.Should().Be(job.PublishedAt);
         result.Items.First().PostedDate.Should().NotBe(savedJob.CreatedAt);
     }
 
