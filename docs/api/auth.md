@@ -174,9 +174,30 @@ Initiates the password recovery flow. If the account was registered exclusively 
 
 ---
 
-## 8. Reset Password
+## 8. Validate Password Reset Token
 
-Resets a user's password using the single-use token received via email. Revokes all active refresh tokens. If executed for a guest candidate account (`UserRole.Guest`), automatically graduates the user's role to `Talent` and marks their domain user verified.
+Checks whether a password reset token is valid, unexpired, and not yet used before presenting the password reset form.
+
+* **Method**: `GET`
+* **Route**: `/api/v1/auth/validate-reset-token?email={email}&token={token}`
+* **Auth**: Public (`[AllowAnonymous]`)
+
+### Query Parameters
+* `email` (string, required): The user's email address.
+* `token` (string, required): The password reset token.
+
+### Response (`200 OK`)
+```json
+{
+  "isValid": true
+}
+```
+
+---
+
+## 9. Reset Password
+
+Resets an account password using a single-use secure reset token received via email. If the account is in the `Guest` role (candidate provisioned via job application), graduating to `Talent` and marking verified is performed automatically upon successful reset. All existing refresh tokens for the user are revoked upon reset.
 
 * **Method**: `POST`
 * **Route**: `/api/v1/auth/reset-password`

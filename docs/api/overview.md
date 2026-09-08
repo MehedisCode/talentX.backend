@@ -35,6 +35,7 @@ The TalentX REST API is built on **ASP.NET Core (.NET 10)** following RESTful de
 | `POST` | `/api/v1/auth/change-password` | Change password (promotes Guest to Talent) | **Yes (`Bearer`)** |
 | `POST` | `/api/v1/auth/add-password` | Set password for Google-only users & revoke other sessions | **Yes (`Bearer`)** |
 | `POST` | `/api/v1/auth/forgot-password` | Request password reset token or Google sign-in prompt | No |
+| `GET` | `/api/v1/auth/validate-reset-token` | Validate password reset token before form presentation | No |
 | `POST` | `/api/v1/auth/reset-password` | Reset password via token (promotes Guest to Talent) | No |
 | `POST` | `/api/v1/auth/verify-email` | Verify candidate job application token & issue tokens | No |
 

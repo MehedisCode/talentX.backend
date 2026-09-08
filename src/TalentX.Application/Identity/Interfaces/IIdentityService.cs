@@ -17,4 +17,5 @@ public interface IIdentityService
     Task<UserAuthStatusResponse> GetUserAuthStatusAsync(string userId, CancellationToken cancellationToken = default);
     Task<ForgotPasswordResult> InitiatePasswordResetAsync(string email, string frontendBaseUrl, CancellationToken cancellationToken = default);
     Task<IdentityResponse> ResetPasswordWithTokenAsync(string email, string token, string newPassword, CancellationToken cancellationToken = default);
+    Task<bool> ValidatePasswordResetTokenAsync(string email, string token, CancellationToken cancellationToken = default);
 }
