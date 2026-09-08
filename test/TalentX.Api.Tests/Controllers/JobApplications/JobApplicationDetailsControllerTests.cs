@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using TalentX.API.Controllers.JobApplications;
+using TalentX.Application.Features.JobApplications.Commands.UpdateApplicationStatus;
 using TalentX.Application.Features.JobApplications.DTOs;
 using TalentX.Application.Features.JobApplications.Queries.GetJobApplicationById;
 using TalentX.Application.Features.Talents.DTOs;
@@ -81,20 +82,22 @@ public class JobApplicationDetailsControllerTests
     }
 
     [Fact]
-    public async Task UpdateStatus_SendsCommandToMediator_ReturnsNoContent()
+    public async Task UpdateStatus_SendsCommandToMediator_ReturnsOkWithResponse()
     {
         var id = Guid.NewGuid();
         var requestDto = new UpdateStatusRequestDto(ApplicationStatus.Shortlisted);
+        var expectedResponse = new StatusUpdateResponseDto("Application status updated to Shortlisted.");
 
         _sender
-            .Setup(s => s.Send(It.Is<TalentX.Application.Features.JobApplications.Commands.UpdateApplicationStatus.UpdateApplicationStatusCommand>(c => c.ApplicationId == id && c.NewStatus == ApplicationStatus.Shortlisted), It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
+            .Setup(s => s.Send(It.Is<UpdateApplicationStatusCommand>(c => c.ApplicationId == id && c.NewStatus == ApplicationStatus.Shortlisted), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expectedResponse);
 
         var result = await _controller.UpdateStatus(id, requestDto, CancellationToken.None);
 
-        result.Should().BeOfType<NoContentResult>();
+        var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
+        okResult.Value.Should().Be(expectedResponse);
         _sender.Verify(
-            s => s.Send(It.Is<TalentX.Application.Features.JobApplications.Commands.UpdateApplicationStatus.UpdateApplicationStatusCommand>(c => c.ApplicationId == id && c.NewStatus == ApplicationStatus.Shortlisted), It.IsAny<CancellationToken>()),
+            s => s.Send(It.Is<UpdateApplicationStatusCommand>(c => c.ApplicationId == id && c.NewStatus == ApplicationStatus.Shortlisted), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 

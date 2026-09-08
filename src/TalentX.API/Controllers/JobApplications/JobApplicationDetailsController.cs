@@ -26,8 +26,8 @@ public sealed class JobApplicationDetailsController : BaseApiController
         [FromBody] UpdateStatusRequestDto request,
         CancellationToken cancellationToken)
     {
-        await Sender.Send(new UpdateApplicationStatusCommand(id, request.NewStatus), cancellationToken);
-        return NoContent();
+        var result = await Sender.Send(new UpdateApplicationStatusCommand(id, request.NewStatus), cancellationToken);
+        return Ok(result);
     }
 
     [HttpGet("{id:guid}/candidate-profile")]

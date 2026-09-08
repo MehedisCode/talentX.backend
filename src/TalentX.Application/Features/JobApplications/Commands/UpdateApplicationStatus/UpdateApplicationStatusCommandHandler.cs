@@ -1,11 +1,12 @@
 using MediatR;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
+using TalentX.Application.Features.JobApplications.DTOs;
 using TalentX.Application.Identity.Services;
 
 namespace TalentX.Application.Features.JobApplications.Commands.UpdateApplicationStatus;
 
-public sealed class UpdateApplicationStatusCommandHandler : IRequestHandler<UpdateApplicationStatusCommand>
+public sealed class UpdateApplicationStatusCommandHandler : IRequestHandler<UpdateApplicationStatusCommand, StatusUpdateResponseDto>
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUserService;
@@ -18,7 +19,7 @@ public sealed class UpdateApplicationStatusCommandHandler : IRequestHandler<Upda
         _currentUserService = currentUserService;
     }
 
-    public async Task Handle(UpdateApplicationStatusCommand request, CancellationToken cancellationToken)
+    public async Task<StatusUpdateResponseDto> Handle(UpdateApplicationStatusCommand request, CancellationToken cancellationToken)
     {
         var currentUserId = _currentUserService.UserId
             ?? throw new UnauthorizedException("You must be authenticated to update an application status.");
@@ -34,5 +35,7 @@ public sealed class UpdateApplicationStatusCommandHandler : IRequestHandler<Upda
 
         application.UpdateStatus(request.NewStatus);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return new StatusUpdateResponseDto($"Application status updated to {request.NewStatus}.");
     }
 }
