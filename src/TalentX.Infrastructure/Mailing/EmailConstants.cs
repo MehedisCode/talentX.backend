@@ -11,6 +11,8 @@ public static class EmailConstants
         public const string Otp = "TalentX.Infrastructure.Mailing.Templates.Emails.Otp";
         public const string Credentials = "TalentX.Infrastructure.Mailing.Templates.Emails.Credentials";
         public const string VerificationLink = "TalentX.Infrastructure.Mailing.Templates.Emails.VerificationLink";
+        public const string InterviewInvitation = "TalentX.Infrastructure.Mailing.Templates.Emails.InterviewInvitation";
+        public const string InterviewConfirmation = "TalentX.Infrastructure.Mailing.Templates.Emails.InterviewConfirmation";
         public const string PasswordReset = "TalentX.Infrastructure.Mailing.Templates.Emails.PasswordReset";
     }
 
@@ -32,6 +34,8 @@ public static class EmailConstants
         public const string Otp = "OTP";
         public const string Credentials = "CREDENTIALS";
         public const string VerificationLink = "VERIFICATION_LINK";
+        public const string InterviewInvitation = "INTERVIEW_INVITATION";
+        public const string InterviewConfirmation = "INTERVIEW_CONFIRMATION";
         public const string PasswordReset = "PASSWORD_RESET";
     }
 }

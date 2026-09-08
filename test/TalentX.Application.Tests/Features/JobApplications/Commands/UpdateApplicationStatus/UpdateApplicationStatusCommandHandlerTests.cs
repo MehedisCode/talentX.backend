@@ -5,7 +5,7 @@ using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Common.Interfaces.Repositories;
 using TalentX.Application.Features.JobApplications.Commands.UpdateApplicationStatus;
 using TalentX.Application.Identity.Services;
-using TalentX.Domain;
+using TalentX.Application.Features.JobApplications.DTOs;
 using TalentX.Domain.Entities;
 using TalentX.Domain.Enums;
 using Xunit;
@@ -58,7 +58,7 @@ public class UpdateApplicationStatusCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WhenCallerOwnsJob_UpdatesStatusAndSavesUnitOfWork()
+    public async Task Handle_WhenCallerOwnsJob_UpdatesStatusAndReturnsResponse()
     {
         var job = CreateJob("employer-1");
         var application = CreateApplication(job.Id, "talent-1");
@@ -73,10 +73,12 @@ public class UpdateApplicationStatusCommandHandlerTests
 
         var command = new UpdateApplicationStatusCommand(application.Id, ApplicationStatus.Shortlisted);
 
-        await _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, CancellationToken.None);
 
         application.Status.Should().Be(ApplicationStatus.Shortlisted);
         _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        result.Should().BeOfType<StatusUpdateResponseDto>();
+        result.Message.Should().Be("Application status updated to Shortlisted.");
     }
 
     [Fact]

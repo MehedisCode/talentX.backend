@@ -1,0 +1,33 @@
+@model TalentX.Infrastructure.Mailing.Models.InterviewConfirmationEmailModel
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>Interview Details Confirmed</title></head>
+<body style="font-family:Arial,sans-serif;background:#f4f6f8;margin:0;padding:20px;">
+  <div style="max-width:520px;margin:0 auto;background:#fff;border-radius:8px;padding:32px;box-shadow:0 2px 8px rgba(0,0,0,.05);">
+    <h2 style="color:#111827;margin-top:0;">Interview Details Confirmed</h2>
+    <p style="color:#4b5563;font-size:15px;line-height:1.5;">
+      Hi @Model.RecipientName,<br><br>
+      Your interview for <strong>@Model.JobTitle</strong> at <strong>@Model.CompanyName</strong> has been confirmed.
+    </p>
+    <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:20px;margin:24px 0;">
+      <p style="margin:0 0 8px;color:#6b7280;font-size:13px;">Interview Type</p>
+      <p style="margin:0 0 16px;font-size:15px;font-weight:600;color:#111827;">@Model.InterviewType</p>
+      <p style="margin:0 0 8px;color:#6b7280;font-size:13px;">Time / Deadline</p>
+      <p style="margin:0 0 16px;font-size:15px;font-weight:600;color:#111827;">@Model.ScheduledTimeOrDeadline</p>
+      <p style="margin:0 0 8px;color:#6b7280;font-size:13px;">Location / Link</p>
+      <p style="margin:0;font-size:15px;font-weight:600;color:#111827;">@Model.LocationOrLink</p>
+    </div>
+    @if (!string.IsNullOrWhiteSpace(Model.Instructions))
+    {
+      <p style="color:#4b5563;font-size:15px;line-height:1.5;">
+        <strong>Instructions / Message from Employer:</strong><br>@Model.Instructions
+      </p>
+    }
+    <p style="color:#4b5563;font-size:15px;line-height:1.5;">
+      Log in to your <a href="https://talentx.com/dashboard" style="color:#2563eb;">TalentX Dashboard</a> anytime to view your scheduled interviews.
+    </p>
+    <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;">
+    <p style="color:#9ca3af;font-size:12px;text-align:center;margin:0;">&copy; @DateTime.UtcNow.Year TalentX Inc.</p>
+  </div>
+</body>
+</html>

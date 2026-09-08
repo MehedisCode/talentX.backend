@@ -82,6 +82,53 @@ public sealed class EmailService : IEmailService
         DispatchAfterLogging(toEmail, recipientName, EmailConstants.Subjects.VerificationLink, html);
     }
 
+    public Task<string> RenderInterviewInvitationEmailAsync(
+        string recipientName,
+        string jobTitle,
+        string companyName,
+        CancellationToken cancellationToken = default)
+    {
+        LogDispatch(EmailConstants.Kinds.InterviewInvitation, recipientName, jobTitle, companyName);
+
+        return _razor.CompileRenderAsync(
+            EmailConstants.Templates.InterviewInvitation,
+            new InterviewInvitationEmailModel(recipientName, jobTitle, companyName));
+    }
+
+    public Task<string> RenderInterviewConfirmationEmailAsync(
+        string recipientName,
+        string jobTitle,
+        string companyName,
+        string interviewType,
+        string locationOrLink,
+        string scheduledTimeOrDeadline,
+        string? instructions,
+        CancellationToken cancellationToken = default)
+    {
+        LogDispatch(EmailConstants.Kinds.InterviewConfirmation, recipientName, jobTitle, companyName);
+
+        return _razor.CompileRenderAsync(
+            EmailConstants.Templates.InterviewConfirmation,
+            new InterviewConfirmationEmailModel(
+                recipientName, jobTitle, companyName, interviewType, locationOrLink, scheduledTimeOrDeadline, instructions));
+    }
+
+    public async Task DispatchDirectAsync(
+        string toEmail,
+        string recipientName,
+        string subject,
+        string htmlBody,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(_smtpHost) || string.IsNullOrWhiteSpace(_smtpUser))
+        {
+            _logger.LogWarning("SMTP not configured, skipping direct dispatch for {ToEmail}.", toEmail);
+            throw new InvalidOperationException($"SMTP settings missing (host='{_smtpHost}', user='{_smtpUser}').");
+        }
+
+        await SendSmtpAsync(toEmail, recipientName, subject, htmlBody);
+    }
+
     public async Task SendJobInvitationEmailAsync(
         string toEmail,
         string recipientName,
@@ -138,40 +185,51 @@ public sealed class EmailService : IEmailService
     {
         try
         {
-            var message = new MimeMessage();
-            message.From.Add(new MailboxAddress(_senderName, _senderEmail));
-            message.To.Add(new MailboxAddress(recipientName, toEmail));
-            message.Subject = subject;
-            message.Body = new BodyBuilder { HtmlBody = htmlBody }.ToMessageBody();
-
-            using var client = new SmtpClient();
-
-            client.ServerCertificateValidationCallback = (_, certificate, chain, errors) =>
-            {
-                if (errors == System.Net.Security.SslPolicyErrors.None)
-                    return true;
-
-                return chain?.ChainStatus.All(s =>
-                    s.Status is System.Security.Cryptography.X509Certificates.X509ChainStatusFlags.NoError
-                             or System.Security.Cryptography.X509Certificates.X509ChainStatusFlags.RevocationStatusUnknown
-                             or System.Security.Cryptography.X509Certificates.X509ChainStatusFlags.OfflineRevocation) ?? false;
-            };
-
-            var socketOptions = _smtpPort == 465
-                ? SecureSocketOptions.SslOnConnect
-                : SecureSocketOptions.StartTls;
-
-            await client.ConnectAsync(_smtpHost, _smtpPort, socketOptions);
-            await client.AuthenticateAsync(_smtpUser, _smtpPass);
-            await client.SendAsync(message);
-            await client.DisconnectAsync(quit: true);
-
-            _logger.LogInformation("[EMAIL] Dispatched successfully to {ToEmail} via {Host}:{Port}.", toEmail, _smtpHost, _smtpPort);
+            await SendSmtpAsync(toEmail, recipientName, subject, htmlBody);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "[EMAIL] Failed to dispatch to {ToEmail}.", toEmail);
         }
+    }
+
+    private async Task SendSmtpAsync(string toEmail, string recipientName, string subject, string htmlBody)
+    {
+        var message = new MimeMessage();
+        message.From.Add(new MailboxAddress(_senderName, _senderEmail));
+        message.To.Add(new MailboxAddress(recipientName, toEmail));
+        message.Subject = subject;
+        message.Body = new BodyBuilder { HtmlBody = htmlBody }.ToMessageBody();
+
+        using var client = new SmtpClient
+        {
+            Timeout = 15000 // 15s to allow DNS + TCP + TLS handshake over remote latency
+        };
+
+        client.ServerCertificateValidationCallback = (_, certificate, chain, errors) =>
+        {
+            if (errors == System.Net.Security.SslPolicyErrors.None)
+                return true;
+
+            return chain?.ChainStatus.All(s =>
+                s.Status is System.Security.Cryptography.X509Certificates.X509ChainStatusFlags.NoError
+                         or System.Security.Cryptography.X509Certificates.X509ChainStatusFlags.RevocationStatusUnknown
+                         or System.Security.Cryptography.X509Certificates.X509ChainStatusFlags.OfflineRevocation) ?? false;
+        };
+
+        var socketOptions = _smtpPort switch
+        {
+            465 => SecureSocketOptions.SslOnConnect,
+            587 or 2587 => SecureSocketOptions.StartTls,
+            _ => SecureSocketOptions.Auto
+        };
+
+        await client.ConnectAsync(_smtpHost, _smtpPort, socketOptions);
+        await client.AuthenticateAsync(_smtpUser, _smtpPass);
+        await client.SendAsync(message);
+        await client.DisconnectAsync(quit: true);
+
+        _logger.LogInformation("[EMAIL] Dispatched successfully to {ToEmail} via {Host}:{Port}.", toEmail, _smtpHost, _smtpPort);
     }
 
     private static string Env(string key) =>

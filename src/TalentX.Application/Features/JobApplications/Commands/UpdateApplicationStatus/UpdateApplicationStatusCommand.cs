@@ -1,4 +1,5 @@
 using MediatR;
+using TalentX.Application.Features.JobApplications.DTOs;
 using TalentX.Domain.Enums;
 
 namespace TalentX.Application.Features.JobApplications.Commands.UpdateApplicationStatus;
@@ -6,4 +7,4 @@ namespace TalentX.Application.Features.JobApplications.Commands.UpdateApplicatio
 public sealed record UpdateApplicationStatusCommand(
     Guid ApplicationId,
     ApplicationStatus NewStatus
-) : IRequest;
+) : IRequest<StatusUpdateResponseDto>;
