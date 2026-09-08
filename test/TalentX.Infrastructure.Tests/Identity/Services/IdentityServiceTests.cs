@@ -1189,6 +1189,111 @@ public class IdentityServiceTests
             Times.Once);
     }
 
+    [Fact]
+    public async Task ResetPasswordWithTokenAsync_WhenUserIsGuest_ShouldGraduateToTalentRole()
+    {
+        var email = "guest@example.com";
+        var userId = "guest-user-123";
+        var user = new ApplicationUser
+        {
+            Id = userId,
+            Email = email
+        };
+
+        _userManagerMock
+            .Setup(manager => manager.FindByEmailAsync(email))
+            .ReturnsAsync(user);
+
+        var validToken = "valid-token";
+        var newPassword = "ValidPassword123!";
+
+        _userManagerMock
+            .Setup(manager => manager.ResetPasswordAsync(user, validToken, newPassword))
+            .ReturnsAsync(IdentityResult.Success);
+
+        _userManagerMock
+            .Setup(manager => manager.IsInRoleAsync(user, UserRole.Guest.ToString()))
+            .ReturnsAsync(true);
+
+        _userManagerMock
+            .Setup(manager => manager.RemoveFromRoleAsync(user, UserRole.Guest.ToString()))
+            .ReturnsAsync(IdentityResult.Success);
+
+        _userManagerMock
+            .Setup(manager => manager.IsInRoleAsync(user, UserRole.Talent.ToString()))
+            .ReturnsAsync(false);
+
+        _userManagerMock
+            .Setup(manager => manager.AddToRoleAsync(user, UserRole.Talent.ToString()))
+            .ReturnsAsync(IdentityResult.Success);
+
+        _tokenServiceMock
+            .Setup(service => service.RevokeAllForUserAsync(userId))
+            .ReturnsAsync(IdentityResponse.Ok());
+
+        var result = await _identityService.ResetPasswordWithTokenAsync(
+            email,
+            validToken,
+            newPassword);
+
+        result.Success.Should().BeTrue();
+        result.Errors.Should().BeEmpty();
+
+        _userManagerMock.Verify(
+            manager => manager.RemoveFromRoleAsync(user, UserRole.Guest.ToString()),
+            Times.Once);
+
+        _userManagerMock.Verify(
+            manager => manager.AddToRoleAsync(user, UserRole.Talent.ToString()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task ResetPasswordWithTokenAsync_WhenUserIsNotGuest_ShouldNotModifyRoles()
+    {
+        var email = "employer@example.com";
+        var userId = "employer-user-123";
+        var user = new ApplicationUser
+        {
+            Id = userId,
+            Email = email
+        };
+
+        _userManagerMock
+            .Setup(manager => manager.FindByEmailAsync(email))
+            .ReturnsAsync(user);
+
+        var validToken = "valid-token";
+        var newPassword = "ValidPassword123!";
+
+        _userManagerMock
+            .Setup(manager => manager.ResetPasswordAsync(user, validToken, newPassword))
+            .ReturnsAsync(IdentityResult.Success);
+
+        _userManagerMock
+            .Setup(manager => manager.IsInRoleAsync(user, UserRole.Guest.ToString()))
+            .ReturnsAsync(false);
+
+        _tokenServiceMock
+            .Setup(service => service.RevokeAllForUserAsync(userId))
+            .ReturnsAsync(IdentityResponse.Ok());
+
+        var result = await _identityService.ResetPasswordWithTokenAsync(
+            email,
+            validToken,
+            newPassword);
+
+        result.Success.Should().BeTrue();
+
+        _userManagerMock.Verify(
+            manager => manager.RemoveFromRoleAsync(user, It.IsAny<string>()),
+            Times.Never);
+
+        _userManagerMock.Verify(
+            manager => manager.AddToRoleAsync(user, It.IsAny<string>()),
+            Times.Never);
+    }
+
     #endregion
 }
 

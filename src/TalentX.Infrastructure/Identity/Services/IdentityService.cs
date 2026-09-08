@@ -295,6 +295,16 @@ public class IdentityService : IIdentityService
             return IdentityResponse.Fail("Invalid or expired password reset token.");
         }
 
+        var isGuest = await _userManager.IsInRoleAsync(user, UserRole.Guest.ToString());
+        if (isGuest)
+        {
+            await _userManager.RemoveFromRoleAsync(user, UserRole.Guest.ToString());
+            if (!await _userManager.IsInRoleAsync(user, UserRole.Talent.ToString()))
+            {
+                await _userManager.AddToRoleAsync(user, UserRole.Talent.ToString());
+            }
+        }
+
         await _tokenService.RevokeAllForUserAsync(user.Id);
 
         return IdentityResponse.Ok();
