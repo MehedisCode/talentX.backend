@@ -28,6 +28,8 @@ public class ApplicationDbContext
     public DbSet<InterviewInvitation> InterviewInvitations => Set<InterviewInvitation>();
     public DbSet<InterviewTimeslot> InterviewTimeslots => Set<InterviewTimeslot>();
     public DbSet<EmailDispatchLog> EmailDispatchLogs => Set<EmailDispatchLog>();
+    public DbSet<Invitation> Invitations => Set<Invitation>();
+    public DbSet<JobTalentMatch> JobTalentMatches => Set<JobTalentMatch>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

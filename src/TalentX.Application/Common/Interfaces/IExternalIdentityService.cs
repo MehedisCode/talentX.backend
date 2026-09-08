@@ -18,4 +18,11 @@ public interface IExternalIdentityService
         string role,
         CancellationToken cancellationToken = default
     );
+
+    Task<(bool IsNewUser, string UserId)> FindOrCreateExternalUserAsync(
+        string email,
+        string role,
+        string? providerKey,
+        CancellationToken cancellationToken = default
+    );
 }

@@ -74,4 +74,25 @@ public interface IEmailService
         string htmlBody,
         CancellationToken cancellationToken = default
     );
+
+    /// <summary>
+    /// Sends a job invitation notification email to a candidate.
+    /// </summary>
+    Task SendJobInvitationEmailAsync(
+        string toEmail,
+        string recipientName,
+        string jobTitle,
+        string companyName,
+        CancellationToken cancellationToken = default
+    );
+
+    /// <summary>
+    /// Sends an email with a password reset link to the recipient.
+    /// </summary>
+    Task SendPasswordResetEmailAsync(
+        string toEmail,
+        string recipientName,
+        string resetUrl,
+        CancellationToken cancellationToken = default
+    );
 }

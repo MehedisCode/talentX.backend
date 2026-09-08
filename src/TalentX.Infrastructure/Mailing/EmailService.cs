@@ -129,6 +129,40 @@ public sealed class EmailService : IEmailService
         await SendSmtpAsync(toEmail, recipientName, subject, htmlBody);
     }
 
+    public async Task SendJobInvitationEmailAsync(
+        string toEmail,
+        string recipientName,
+        string jobTitle,
+        string companyName,
+        CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation(
+            "[EMAIL] JobInvitation dispatch to {RecipientName} <{ToEmail}> for role {JobTitle} at {CompanyName}",
+            recipientName, toEmail, jobTitle, companyName);
+
+        var subject = $"You've been invited to apply for {jobTitle} at {companyName}!";
+        var html = $"<p>Hi {recipientName},</p><p>Great news! <strong>{companyName}</strong> has invited you to view and apply for the <strong>{jobTitle}</strong> position on TalentX.</p>";
+
+        DispatchAfterLogging(toEmail, recipientName, subject, html);
+    }
+
+    public async Task SendPasswordResetEmailAsync(
+        string toEmail,
+        string recipientName,
+        string resetUrl,
+        CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation(
+            "[EMAIL] {Kind} dispatch to {RecipientName} <{ToEmail}>: {Url}",
+            EmailConstants.Kinds.PasswordReset, recipientName, toEmail, resetUrl);
+
+        var html = await _razor.CompileRenderAsync(
+            EmailConstants.Templates.PasswordReset,
+            new PasswordResetEmailModel(recipientName, resetUrl));
+
+        DispatchAfterLogging(toEmail, recipientName, EmailConstants.Subjects.PasswordReset, html);
+    }
+
     private void LogDispatch(string kind, string recipientName, string toEmail, string? secret)
     {
         _logger.LogInformation(

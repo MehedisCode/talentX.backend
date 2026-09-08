@@ -17,6 +17,8 @@ public interface IUnitOfWork
     IEducationRepository Educations { get; }
     IInterviewInvitationRepository InterviewInvitations { get; }
     IEmailDispatchLogRepository EmailDispatchLogs { get; }
+    IInvitationRepository Invitations { get; }
+    IJobTalentMatchRepository JobTalentMatches { get; }
 
     /// <summary>
     /// Asynchronously persists all changes made in the context to the database.

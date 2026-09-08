@@ -13,6 +13,7 @@ public static class EmailConstants
         public const string VerificationLink = "TalentX.Infrastructure.Mailing.Templates.Emails.VerificationLink";
         public const string InterviewInvitation = "TalentX.Infrastructure.Mailing.Templates.Emails.InterviewInvitation";
         public const string InterviewConfirmation = "TalentX.Infrastructure.Mailing.Templates.Emails.InterviewConfirmation";
+        public const string PasswordReset = "TalentX.Infrastructure.Mailing.Templates.Emails.PasswordReset";
     }
 
     public static class Subjects
@@ -20,6 +21,7 @@ public static class EmailConstants
         public const string Otp = "Your TalentX Verification Code";
         public const string Credentials = "Your TalentX Login Credentials";
         public const string VerificationLink = "Verify Your Email — TalentX";
+        public const string PasswordReset = "Reset Your TalentX Password";
     }
 
     public static class Defaults
@@ -34,5 +36,6 @@ public static class EmailConstants
         public const string VerificationLink = "VERIFICATION_LINK";
         public const string InterviewInvitation = "INTERVIEW_INVITATION";
         public const string InterviewConfirmation = "INTERVIEW_CONFIRMATION";
+        public const string PasswordReset = "PASSWORD_RESET";
     }
 }
