@@ -2,12 +2,13 @@ using AutoMapper;
 using MediatR;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
+using TalentX.Application.DTOs.Auth;
 using TalentX.Application.DTOs.Employers;
 using TalentX.Application.Identity.Interfaces;
 
 namespace TalentX.Application.Features.Employers.Commands.VerifyEmail;
 
-public sealed class VerifyEmployerEmailCommandHandler : IRequestHandler<VerifyEmployerEmailCommand, AuthEmployerDto>
+public sealed class VerifyEmployerEmailCommandHandler : IRequestHandler<VerifyEmployerEmailCommand, AuthResponseDto>
 {
     private readonly IOtpService _otpService;
     private readonly ITokenService _tokenService;
@@ -26,7 +27,7 @@ public sealed class VerifyEmployerEmailCommandHandler : IRequestHandler<VerifyEm
         _mapper = mapper;
     }
 
-    public async Task<AuthEmployerDto> Handle(VerifyEmployerEmailCommand request, CancellationToken cancellationToken)
+    public async Task<AuthResponseDto> Handle(VerifyEmployerEmailCommand request, CancellationToken cancellationToken)
     {
         var isValid = await _otpService.VerifyOtpAsync(request.Email, request.Otp, cancellationToken);
         if (!isValid)
@@ -39,7 +40,7 @@ public sealed class VerifyEmployerEmailCommandHandler : IRequestHandler<VerifyEm
         var employer = await _unitOfWork.Employers.GetByEmailAsync(request.Email, cancellationToken);
         if (employer == null)
         {
-            return new AuthEmployerDto(
+            return new AuthResponseDto(
                 Employer: null,
                 AccessToken: string.Empty,
                 RefreshToken: string.Empty
@@ -55,7 +56,7 @@ public sealed class VerifyEmployerEmailCommandHandler : IRequestHandler<VerifyEm
             throw new ValidationException(string.Join("; ", tokenResult.Errors));
         }
 
-        return new AuthEmployerDto(
+        return new AuthResponseDto(
             Employer: _mapper.Map<EmployerDto>(employer),
             AccessToken: tokenResult.Data.AccessToken,
             RefreshToken: tokenResult.Data.RefreshToken

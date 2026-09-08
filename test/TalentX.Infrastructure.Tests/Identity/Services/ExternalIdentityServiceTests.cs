@@ -124,4 +124,80 @@ public class ExternalIdentityServiceTests
                 It.Is<UserLoginInfo>(info => info.LoginProvider == "Google" && info.ProviderKey == providerKey)),
             Times.Once);
     }
+
+    [Fact]
+    public async Task FindOrCreateExternalUserAsync_ExistingGuestUser_PromotesGuestToTalent()
+    {
+        var email = "guest-applicant@example.com";
+        var existingUser = new ApplicationUser { Id = "existing-guest-id", Email = email, UserName = email };
+        var existingLogins = new List<UserLoginInfo>
+        {
+            new UserLoginInfo("Google", "google-sub-456", "Google")
+        };
+
+        _userManagerMock
+            .Setup(manager => manager.FindByEmailAsync(email))
+            .ReturnsAsync(existingUser);
+
+        _userManagerMock
+            .Setup(manager => manager.GetLoginsAsync(existingUser))
+            .ReturnsAsync(existingLogins);
+
+        _userManagerMock
+            .Setup(manager => manager.IsInRoleAsync(existingUser, "Guest"))
+            .ReturnsAsync(true);
+
+        _userManagerMock
+            .Setup(manager => manager.RemoveFromRoleAsync(existingUser, "Guest"))
+            .ReturnsAsync(IdentityResult.Success);
+
+        _roleManagerMock
+            .Setup(manager => manager.RoleExistsAsync("Talent"))
+            .ReturnsAsync(true);
+
+        _userManagerMock
+            .Setup(manager => manager.AddToRoleAsync(existingUser, "Talent"))
+            .ReturnsAsync(IdentityResult.Success);
+
+        var result = await _service.FindOrCreateExternalUserAsync(email, "Employer");
+
+        result.IsNewUser.Should().BeFalse();
+        result.UserId.Should().Be("existing-guest-id");
+        _userManagerMock.Verify(manager => manager.RemoveFromRoleAsync(existingUser, "Guest"), Times.Once);
+        _userManagerMock.Verify(manager => manager.AddToRoleAsync(existingUser, "Talent"), Times.Once);
+    }
+
+    [Fact]
+    public async Task FindOrCreateExternalUserAsync_ExistingUserAlreadyInRole_DoesNotModifyRoles()
+    {
+        var email = "already-employer@example.com";
+        var existingUser = new ApplicationUser { Id = "existing-employer-id", Email = email, UserName = email };
+        var existingLogins = new List<UserLoginInfo>
+        {
+            new UserLoginInfo("Google", "google-sub-789", "Google")
+        };
+
+        _userManagerMock
+            .Setup(manager => manager.FindByEmailAsync(email))
+            .ReturnsAsync(existingUser);
+
+        _userManagerMock
+            .Setup(manager => manager.GetLoginsAsync(existingUser))
+            .ReturnsAsync(existingLogins);
+
+        _userManagerMock
+            .Setup(manager => manager.IsInRoleAsync(existingUser, "Guest"))
+            .ReturnsAsync(false);
+
+        _userManagerMock
+            .Setup(manager => manager.IsInRoleAsync(existingUser, "Employer"))
+            .ReturnsAsync(true);
+
+        var result = await _service.FindOrCreateExternalUserAsync(email, "Employer");
+
+        result.IsNewUser.Should().BeFalse();
+        result.UserId.Should().Be("existing-employer-id");
+        _userManagerMock.Verify(manager => manager.RemoveFromRoleAsync(existingUser, "Guest"), Times.Never);
+        _userManagerMock.Verify(manager => manager.AddToRoleAsync(existingUser, "Employer"), Times.Never);
+    }
 }
