@@ -59,7 +59,29 @@ public sealed class GetEmployerJobsQueryValidatorTests
 
         var validationResult = _validator.TestValidate(query);
 
-        validationResult.ShouldHaveValidationErrorFor(q => q.PageSize)
+        validationResult.ShouldHaveValidationErrorFor(query => query.PageSize)
             .WithErrorMessage("PageSize must be between 1 and 100.");
+    }
+
+    [Fact]
+    public void Validate_WithValidSearchTerm_HasNoValidationErrors()
+    {
+        var query = ValidQuery() with { SearchTerm = "Lead AI Engineer" };
+
+        var validationResult = _validator.TestValidate(query);
+
+        validationResult.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Fact]
+    public void Validate_WithSearchTermExceedingMaxLength_HasValidationError()
+    {
+        var overlyLongSearchTerm = new string('a', 101);
+        var query = ValidQuery() with { SearchTerm = overlyLongSearchTerm };
+
+        var validationResult = _validator.TestValidate(query);
+
+        validationResult.ShouldHaveValidationErrorFor(targetQuery => targetQuery.SearchTerm)
+            .WithErrorMessage("SearchTerm must not exceed 100 characters.");
     }
 }

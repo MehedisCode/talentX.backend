@@ -114,13 +114,16 @@ public sealed class EmployersController : BaseApiController
     [HttpGet("jobs")]
     [Authorize(Roles = $"{nameof(UserRole.Employer)}")]
     public async Task<IActionResult> GetJobs(
-        [FromQuery] int page = PaginationRequest.DefaultPageNumber,
-        [FromQuery] int pageSize = EmployerDashboardConstants.DefaultJobsPageSize,
-        [FromQuery] JobStatus? status = null,
-        [FromQuery] bool? isExpired = null,
+        [FromQuery] GetEmployerJobsQueryParams? queryParams = null,
         CancellationToken cancellationToken = default)
     {
-        var query = new GetEmployerJobsQuery(page, pageSize, status, isExpired);
+        var parameters = queryParams ?? new GetEmployerJobsQueryParams();
+        var query = new GetEmployerJobsQuery(
+            parameters.Page,
+            parameters.PageSize,
+            parameters.Status,
+            parameters.IsExpired,
+            parameters.SearchTerm);
         var jobs = await Sender.Send(query, cancellationToken);
         return Ok(jobs);
     }

@@ -652,6 +652,134 @@ public class JobRepositoryTests
         result.Items[0].CompanyName.Should().Be("Acme Corp");
     }
 
+    [Fact]
+    public async Task GetEmployerJobsPaginatedAsync_WhenSearchTermProvided_FiltersByTitleAndCompanyNameCaseInsensitively()
+    {
+        await using var context = NewContext();
+        var repository = new JobRepository(context);
+
+        var firstJob = MakeEmployerJob("employer-1", "Senior AI Engineer", "TechNova Corp");
+        var secondJob = MakeEmployerJob("employer-1", "Junior Frontend Developer", "Senior Staffing Group");
+        var thirdJob = MakeEmployerJob("employer-1", "DevOps Engineer", "Cloud Infrastructure LLC");
+        var fourthJob = MakeEmployerJob("employer-1", "Product Manager", "Innovate Labs");
+
+        context.Jobs.AddRange(firstJob, secondJob, thirdJob, fourthJob);
+        await context.SaveChangesAsync();
+
+        var titleAndCompanySearchResult = await repository.GetEmployerJobsPaginatedAsync(
+            "employer-1",
+            status: null,
+            isExpired: null,
+            page: 1,
+            pageSize: 10,
+            searchTerm: "senior");
+
+        titleAndCompanySearchResult.TotalCount.Should().Be(2);
+        titleAndCompanySearchResult.Items.Should().HaveCount(2);
+        titleAndCompanySearchResult.Items.Select(item => item.Title)
+            .Should().Contain(["Senior AI Engineer", "Junior Frontend Developer"]);
+
+        var caseInsensitiveSearchResult = await repository.GetEmployerJobsPaginatedAsync(
+            "employer-1",
+            status: null,
+            isExpired: null,
+            page: 1,
+            pageSize: 10,
+            searchTerm: "SENIOR");
+
+        caseInsensitiveSearchResult.TotalCount.Should().Be(2);
+        caseInsensitiveSearchResult.Items.Should().HaveCount(2);
+
+        var trimmedSearchResult = await repository.GetEmployerJobsPaginatedAsync(
+            "employer-1",
+            status: null,
+            isExpired: null,
+            page: 1,
+            pageSize: 10,
+            searchTerm: "   senior   ");
+
+        trimmedSearchResult.TotalCount.Should().Be(2);
+        trimmedSearchResult.Items.Should().HaveCount(2);
+
+        var companyOnlySearchResult = await repository.GetEmployerJobsPaginatedAsync(
+            "employer-1",
+            status: null,
+            isExpired: null,
+            page: 1,
+            pageSize: 10,
+            searchTerm: "Cloud Infrastructure");
+
+        companyOnlySearchResult.TotalCount.Should().Be(1);
+        companyOnlySearchResult.Items[0].Title.Should().Be("DevOps Engineer");
+
+        var pagedSearchResult = await repository.GetEmployerJobsPaginatedAsync(
+            "employer-1",
+            status: null,
+            isExpired: null,
+            page: 1,
+            pageSize: 1,
+            searchTerm: "Engineer");
+
+        pagedSearchResult.TotalCount.Should().Be(2);
+        pagedSearchResult.TotalPages.Should().Be(2);
+        pagedSearchResult.Items.Should().HaveCount(1);
+
+        var whitespaceSearchResult = await repository.GetEmployerJobsPaginatedAsync(
+            "employer-1",
+            status: null,
+            isExpired: null,
+            page: 1,
+            pageSize: 10,
+            searchTerm: "   ");
+
+        whitespaceSearchResult.TotalCount.Should().Be(4);
+        whitespaceSearchResult.Items.Should().HaveCount(4);
+
+        var nonMatchingSearchResult = await repository.GetEmployerJobsPaginatedAsync(
+            "employer-1",
+            status: null,
+            isExpired: null,
+            page: 1,
+            pageSize: 10,
+            searchTerm: "NonexistentQuery");
+
+        nonMatchingSearchResult.TotalCount.Should().Be(0);
+        nonMatchingSearchResult.Items.Should().BeEmpty();
+    }
+
+    private static Job MakeEmployerJob(
+        string employerId,
+        string title,
+        string companyName,
+        JobStatus status = JobStatus.Published,
+        int daysUntilExpiry = 30)
+    {
+        var job = Job.Create(
+            employerId,
+            title,
+            companyName,
+            "Job description",
+            EmploymentType.FullTime,
+            ExperienceLevel.MidLevel,
+            "Remote",
+            WorkArrangement.RemoteButAccessible,
+            ["C#"],
+            1,
+            DateTime.UtcNow.AddDays(daysUntilExpiry));
+
+        if (status == JobStatus.Published)
+        {
+            job.MarkAsPublished();
+        }
+        else if (status == JobStatus.Closed)
+        {
+            job.MarkAsPublished();
+            job.MarkAsClosed();
+        }
+
+        return job;
+    }
+
     private static Job MakeCustomJob(
         string employerId = "employer-1",
         string title = "Backend Engineer",
