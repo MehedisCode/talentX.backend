@@ -19,7 +19,7 @@ public sealed class TalentDashboardController : BaseApiController
 {
     /// <summary>
     /// Returns a paginated list of jobs the authenticated talent has applied to.
-    /// Optionally filter by status: Applied | Viewed | Interview | Hired | Rejected.
+    /// Optionally filter by status: Applied | Reviewed | Interview | Hired | Rejected.
     /// </summary>
     [HttpGet("applications")]
     public async Task<IActionResult> GetApplications(

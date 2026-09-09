@@ -32,6 +32,9 @@ public class IdentityService : IIdentityService
         string password,
         UserRole role)
     {
+        email = email.Trim();
+        password = password.Trim();
+
         if (!await _roleManager.RoleExistsAsync(role.ToString()))
         {
             return IdentityResponse<CreateUserResult>.Fail("Invalid user role.");
@@ -65,6 +68,8 @@ public class IdentityService : IIdentityService
         string email,
         string password)
     {
+        email = email.Trim();
+        password = password.Trim();
         var user = await _userManager.FindByEmailAsync(email);
         if (user is null)
         {
@@ -144,6 +149,8 @@ public class IdentityService : IIdentityService
 
     public async Task<IdentityResponse> ChangePasswordAsync(string userId, string currentPassword, string newPassword)
     {
+        currentPassword = currentPassword.Trim();
+        newPassword = newPassword.Trim();
         var user = await _userManager.FindByIdAsync(userId);
         if (user is null)
         {
@@ -283,6 +290,8 @@ public class IdentityService : IIdentityService
         string newPassword,
         CancellationToken cancellationToken = default)
     {
+        email = email.Trim();
+        newPassword = newPassword.Trim();
         var user = await _userManager.FindByEmailAsync(email);
         if (user is null)
         {

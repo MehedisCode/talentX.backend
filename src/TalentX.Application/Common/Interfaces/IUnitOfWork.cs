@@ -16,6 +16,7 @@ public interface IUnitOfWork
     IWorkExperienceRepository WorkExperiences { get; }
     IEducationRepository Educations { get; }
     IInvitationRepository Invitations { get; }
+    ISavedJobRepository SavedJobs { get; }
     IInterviewInvitationRepository InterviewInvitations { get; }
     IEmailDispatchLogRepository EmailDispatchLogs { get; }
     IJobTalentMatchRepository JobTalentMatches { get; }
