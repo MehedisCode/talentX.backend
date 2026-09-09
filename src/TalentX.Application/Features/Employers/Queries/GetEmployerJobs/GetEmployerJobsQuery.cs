@@ -10,4 +10,5 @@ public sealed record GetEmployerJobsQuery(
     int Page = PaginationRequest.DefaultPageNumber,
     int PageSize = EmployerDashboardConstants.DefaultJobsPageSize,
     JobStatus? Status = null,
-    bool? IsExpired = null) : IRequest<PaginatedList<EmployerJobListItemDto>>;
+    bool? IsExpired = null,
+    string? SearchTerm = null) : IRequest<PaginatedList<EmployerJobListItemDto>>;

@@ -153,6 +153,7 @@ public sealed class JobRepository : RepositoryBase<Job>, IJobRepository
         bool? isExpired,
         int page,
         int pageSize,
+        string? searchTerm = null,
         CancellationToken cancellationToken = default)
     {
         var currentDate = DateTime.UtcNow.Date;
@@ -182,6 +183,14 @@ public sealed class JobRepository : RepositoryBase<Job>, IJobRepository
         else if (isExpired == false)
         {
             query = query.Where(job => !(job.Status == JobStatus.Published && job.ExpireAt.Date < currentDate));
+        }
+
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            var trimmedSearchTerm = searchTerm.Trim().ToLower();
+            query = query.Where(job =>
+                job.Title.ToLower().Contains(trimmedSearchTerm) ||
+                job.CompanyName.ToLower().Contains(trimmedSearchTerm));
         }
 
         var totalCount = await query.CountAsync(cancellationToken);

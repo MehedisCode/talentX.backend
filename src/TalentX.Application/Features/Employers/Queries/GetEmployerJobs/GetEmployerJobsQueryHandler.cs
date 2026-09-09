@@ -35,6 +35,7 @@ public sealed class GetEmployerJobsQueryHandler : IRequestHandler<GetEmployerJob
             request.IsExpired,
             normalizedPage,
             normalizedPageSize,
+            request.SearchTerm,
             cancellationToken);
     }
 }

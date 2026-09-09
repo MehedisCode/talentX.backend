@@ -108,7 +108,8 @@ public sealed class EmployersControllerTests
                 capturedQuery = (GetEmployerJobsQuery)request)
             .ReturnsAsync(expectedPaginatedList);
 
-        var actionResult = await _controller.GetJobs(1, 10, JobStatus.Published, false, CancellationToken.None);
+        var queryParams = new GetEmployerJobsQueryParams(1, 10, JobStatus.Published, false, null);
+        var actionResult = await _controller.GetJobs(queryParams, CancellationToken.None);
 
         var okResult = actionResult.Should().BeOfType<OkObjectResult>().Subject;
         okResult.StatusCode.Should().Be(StatusCodes.Status200OK);
@@ -119,6 +120,31 @@ public sealed class EmployersControllerTests
         capturedQuery.PageSize.Should().Be(10);
         capturedQuery.Status.Should().Be(JobStatus.Published);
         capturedQuery.IsExpired.Should().Be(false);
+        capturedQuery.SearchTerm.Should().BeNull();
+        _sender.Verify(sender => sender.Send(It.IsAny<GetEmployerJobsQuery>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetJobs_WithSearchTerm_BindsAndSendsSearchTermInQuery()
+    {
+        var expectedPaginatedList = new PaginatedList<EmployerJobListItemDto>([], 1, 10, 0);
+
+        GetEmployerJobsQuery? capturedQuery = null;
+        _sender
+            .Setup(sender => sender.Send(It.IsAny<GetEmployerJobsQuery>(), It.IsAny<CancellationToken>()))
+            .Callback<IRequest<PaginatedList<EmployerJobListItemDto>>, CancellationToken>((request, _) =>
+                capturedQuery = (GetEmployerJobsQuery)request)
+            .ReturnsAsync(expectedPaginatedList);
+
+        var queryParams = new GetEmployerJobsQueryParams(1, 10, JobStatus.Published, false, "Backend");
+        var actionResult = await _controller.GetJobs(queryParams, CancellationToken.None);
+
+        var okResult = actionResult.Should().BeOfType<OkObjectResult>().Subject;
+        okResult.StatusCode.Should().Be(StatusCodes.Status200OK);
+        okResult.Value.Should().BeEquivalentTo(expectedPaginatedList);
+
+        capturedQuery.Should().NotBeNull();
+        capturedQuery!.SearchTerm.Should().Be("Backend");
         _sender.Verify(sender => sender.Send(It.IsAny<GetEmployerJobsQuery>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 }
