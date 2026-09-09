@@ -37,6 +37,8 @@ public static class PersistenceStartup
         services.AddScoped<IEmailVerificationTokenRepository, EmailVerificationTokenRepository>();
         services.AddScoped<IInterviewInvitationRepository, InterviewInvitationRepository>();
         services.AddScoped<IEmailDispatchLogRepository, EmailDispatchLogRepository>();
+        services.AddScoped<IInvitationRepository, InvitationRepository>();
+        services.AddScoped<IEmailVerificationTokenRepository, EmailVerificationTokenRepository>();
 
         return services;
     }
