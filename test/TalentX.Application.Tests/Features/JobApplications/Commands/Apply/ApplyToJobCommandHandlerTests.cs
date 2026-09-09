@@ -274,7 +274,7 @@ public class ApplyToJobCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WhenUserExistsAsEmployer_ThrowsConflictException()
+    public async Task Handle_WhenUserExistsAsEmployer_ReturnsRequiresLogin()
     {
         SetupPublishedJob();
         _userRepository
@@ -282,10 +282,10 @@ public class ApplyToJobCommandHandlerTests
             .ReturnsAsync(new User("user-1", "Jane Doe", "jane@example.com", UserRole.Employer));
 
         var command = ValidCommand();
-        var act = () => _handler.Handle(command, CancellationToken.None);
+        var response = await _handler.Handle(command, CancellationToken.None);
 
-        await act.Should().ThrowAsync<ConflictException>()
-            .WithMessage("*already registered as Employer*");
+        response.RequiresLogin.Should().BeTrue();
+        response.ApplicationId.Should().BeEmpty();
         _jobApplicationRepository.Verify(r => r.AddAsync(It.IsAny<JobApplication>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 }
