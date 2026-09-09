@@ -41,6 +41,7 @@ public sealed class GetEmployerJobsQueryHandlerTests
                 It.IsAny<bool?>(),
                 It.IsAny<int>(),
                 It.IsAny<int>(),
+                It.IsAny<string?>(),
                 It.IsAny<CancellationToken>()),
             Times.Never);
     }
@@ -76,6 +77,7 @@ public sealed class GetEmployerJobsQueryHandlerTests
                 false,
                 1,
                 20,
+                null,
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(expectedPaginatedList);
 
@@ -98,6 +100,48 @@ public sealed class GetEmployerJobsQueryHandlerTests
                 false,
                 1,
                 20,
+                null,
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_WhenSearchTermProvided_ForwardsSearchTermToRepository()
+    {
+        const string currentEmployerUserId = "employer-user-456";
+        const string searchTerm = "Engineer";
+        _currentUserService.SetupGet(service => service.UserId).Returns(currentEmployerUserId);
+
+        var expectedPaginatedList = new PaginatedList<EmployerJobListItemDto>([], 1, 10, 0);
+
+        _jobRepository.Setup(repository => repository.GetEmployerJobsPaginatedAsync(
+                currentEmployerUserId,
+                JobStatus.Published,
+                null,
+                1,
+                10,
+                searchTerm,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expectedPaginatedList);
+
+        var query = new GetEmployerJobsQuery(
+            Page: 1,
+            PageSize: 10,
+            Status: JobStatus.Published,
+            IsExpired: null,
+            SearchTerm: searchTerm);
+
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        result.Should().NotBeNull();
+        _jobRepository.Verify(
+            repository => repository.GetEmployerJobsPaginatedAsync(
+                currentEmployerUserId,
+                JobStatus.Published,
+                null,
+                1,
+                10,
+                searchTerm,
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }
