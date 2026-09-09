@@ -13,10 +13,6 @@ public class JobDetailsDto
     public IReadOnlyList<string> RequiredSkills { get; set; } = new List<string>();
     public int Vacancies { get; set; }
 
-    /// <summary>
-    /// When this job went live (first published, or most recently reopened).
-    /// See JobListItemDto.CreatedAt for why this isn't the raw creation time.
-    /// </summary>
     public DateTime CreatedAt { get; set; }
     public DateTime ExpireAt { get; set; }
     public string? City { get; set; }

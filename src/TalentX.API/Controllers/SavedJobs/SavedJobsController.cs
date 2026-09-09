@@ -40,7 +40,7 @@ public class SavedJobsController : BaseApiController
         return Ok(result);
     }
 
-    [HttpGet("ids")]
+    [HttpGet("job-ids")]
     public async Task<IActionResult> GetSavedJobIds(CancellationToken cancellationToken)
     {
         var result = await Sender.Send(new GetSavedJobIdsQuery(), cancellationToken);
