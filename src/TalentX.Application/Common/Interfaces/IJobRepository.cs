@@ -29,6 +29,13 @@ public interface IJobRepository
         string employerId,
         int count = EmployerDashboardConstants.RecentJobsLimit,
         CancellationToken cancellationToken = default);
-    Task<PaginatedList<EmployerJobListItemDto>> GetEmployerJobsPaginatedAsync(string employerId, JobStatus? status, bool? isExpired, int page, int pageSize, CancellationToken cancellationToken = default);
+    Task<PaginatedList<EmployerJobListItemDto>> GetEmployerJobsPaginatedAsync(
+        string employerId,
+        JobStatus? status,
+        bool? isExpired,
+        int page,
+        int pageSize,
+        string? searchTerm = null,
+        CancellationToken cancellationToken = default);
 }
 
