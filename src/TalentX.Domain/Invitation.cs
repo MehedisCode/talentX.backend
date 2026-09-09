@@ -11,10 +11,10 @@ public sealed class Invitation : BaseEntity
 
     private Invitation() { }
 
-    public Invitation(Guid jobId, string talentUserId)
+    public Invitation(Guid jobId, string talentAccountId)
     {
         JobId = jobId;
-        TalentUserId = talentUserId;
+        TalentUserId = talentAccountId;
         InvitedDate = DateTime.UtcNow;
         IsActive = true;
         CreatedAt = DateTime.UtcNow;

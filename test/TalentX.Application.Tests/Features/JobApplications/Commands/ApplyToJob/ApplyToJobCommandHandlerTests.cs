@@ -62,7 +62,7 @@ public class ApplyToJobCommandHandlerTests
             .Setup(r => r.GetPublishedJobByIdAsync(job.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(job);
         _jobApplicationRepository
-            .Setup(r => r.ExistsForJobAndTalentAsync(job.Id, "talent-1", It.IsAny<CancellationToken>()))
+            .Setup(r => r.ExistsByJobIdAndTalentUserIdAsync(job.Id, "talent-1", It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
 
         JobApplication? added = null;
@@ -101,7 +101,7 @@ public class ApplyToJobCommandHandlerTests
             .Setup(r => r.GetPublishedJobByIdAsync(job.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(job);
         _jobApplicationRepository
-            .Setup(r => r.ExistsForJobAndTalentAsync(job.Id, "talent-1", It.IsAny<CancellationToken>()))
+            .Setup(r => r.ExistsByJobIdAndTalentUserIdAsync(job.Id, "talent-1", It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
 
         JobApplication? added = null;
@@ -127,7 +127,7 @@ public class ApplyToJobCommandHandlerTests
             .Setup(r => r.GetPublishedJobByIdAsync(job.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(job);
         _jobApplicationRepository
-            .Setup(r => r.ExistsForJobAndTalentAsync(job.Id, "talent-from-token", It.IsAny<CancellationToken>()))
+            .Setup(r => r.ExistsByJobIdAndTalentUserIdAsync(job.Id, "talent-from-token", It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
 
         JobApplication? added = null;
@@ -152,7 +152,7 @@ public class ApplyToJobCommandHandlerTests
 
         await act.Should().ThrowAsync<NotFoundException>();
         _jobApplicationRepository.Verify(
-            r => r.ExistsForJobAndTalentAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            r => r.ExistsByJobIdAndTalentUserIdAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never);
         _jobApplicationRepository.Verify(
             r => r.AddAsync(It.IsAny<JobApplication>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -167,7 +167,7 @@ public class ApplyToJobCommandHandlerTests
             .Setup(r => r.GetPublishedJobByIdAsync(job.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(job);
         _jobApplicationRepository
-            .Setup(r => r.ExistsForJobAndTalentAsync(job.Id, "talent-1", It.IsAny<CancellationToken>()))
+            .Setup(r => r.ExistsByJobIdAndTalentUserIdAsync(job.Id, "talent-1", It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
         var act = () => _handler.Handle(ValidCommand(job.Id), CancellationToken.None);

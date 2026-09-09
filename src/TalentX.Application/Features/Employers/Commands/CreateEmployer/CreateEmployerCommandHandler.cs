@@ -2,6 +2,7 @@ using AutoMapper;
 using MediatR;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
+using TalentX.Application.DTOs.Auth;
 using TalentX.Application.DTOs.Employers;
 using TalentX.Application.Identity.Interfaces;
 using TalentX.Domain;
@@ -9,7 +10,7 @@ using TalentX.Domain.Enums;
 
 namespace TalentX.Application.Features.Employers.Commands.CreateEmployer;
 
-public sealed class CreateEmployerCommandHandler : IRequestHandler<CreateEmployerCommand, AuthEmployerDto>
+public sealed class CreateEmployerCommandHandler : IRequestHandler<CreateEmployerCommand, AuthResponseDto>
 {
     private readonly IIdentityService _identityService;
     private readonly ITokenService _tokenService;
@@ -31,7 +32,7 @@ public sealed class CreateEmployerCommandHandler : IRequestHandler<CreateEmploye
         _mapper = mapper;
     }
 
-    public async Task<AuthEmployerDto> Handle(CreateEmployerCommand request, CancellationToken cancellationToken)
+    public async Task<AuthResponseDto> Handle(CreateEmployerCommand request, CancellationToken cancellationToken)
     {
         var existingEmployer = await _unitOfWork.Employers.GetByEmailAsync(request.Email, cancellationToken);
         if (existingEmployer != null && existingEmployer.IsVerified)
@@ -50,7 +51,6 @@ public sealed class CreateEmployerCommandHandler : IRequestHandler<CreateEmploye
             existingEmployer.Update(request.Name);
             existingEmployer.UpdateCompany(request.CompanyName);
             existingEmployer.MarkAsVerified();
-            _unitOfWork.Employers.Update(existingEmployer);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             await _otpService.ConsumeEmailVerificationAsync(request.Email, cancellationToken);
@@ -61,7 +61,7 @@ public sealed class CreateEmployerCommandHandler : IRequestHandler<CreateEmploye
                 throw new ValidationException(string.Join("; ", existingTokenResult.Errors));
             }
 
-            return new AuthEmployerDto(
+            return new AuthResponseDto(
                 Employer: _mapper.Map<EmployerDto>(existingEmployer),
                 AccessToken: existingTokenResult.Data.AccessToken,
                 RefreshToken: existingTokenResult.Data.RefreshToken
@@ -98,7 +98,7 @@ public sealed class CreateEmployerCommandHandler : IRequestHandler<CreateEmploye
             throw new ValidationException(string.Join("; ", tokenResult.Errors));
         }
 
-        return new AuthEmployerDto(
+        return new AuthResponseDto(
             Employer: _mapper.Map<EmployerDto>(employer),
             AccessToken: tokenResult.Data.AccessToken,
             RefreshToken: tokenResult.Data.RefreshToken

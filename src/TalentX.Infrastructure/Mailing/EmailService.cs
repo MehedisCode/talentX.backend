@@ -32,7 +32,7 @@ public sealed class EmailService : IEmailService
         _smtpUser    = Env("SMTP_USER");
         _smtpPass    = Env("SMTP_PASS");
         _senderEmail = Env("SENDER_EMAIL");
-        _senderName  = Env("SENDER_NAME") is { Length: > 0 } n ? n : "TalentX Support";
+        _senderName  = Env("SENDER_NAME") is { Length: > 0 } n ? n : EmailConstants.Defaults.SenderName;
     }
 
     public async Task SendOtpEmailAsync(
@@ -41,13 +41,13 @@ public sealed class EmailService : IEmailService
         string otpCode,
         CancellationToken cancellationToken = default)
     {
-        LogDispatch("OTP", recipientName, toEmail, otpCode);
+        LogDispatch(EmailConstants.Kinds.Otp, recipientName, toEmail, otpCode);
 
         var html = await _razor.CompileRenderAsync(
-            "TalentX.Infrastructure.Mailing.Templates.Emails.Otp",
+            EmailConstants.Templates.Otp,
             new OtpEmailModel(recipientName, otpCode));
 
-        DispatchAfterLogging(toEmail, recipientName, "Your TalentX Verification Code", html);
+        DispatchAfterLogging(toEmail, recipientName, EmailConstants.Subjects.Otp, html);
     }
 
     public async Task SendCredentialsEmailAsync(
@@ -56,13 +56,111 @@ public sealed class EmailService : IEmailService
         string temporaryPassword,
         CancellationToken cancellationToken = default)
     {
-        LogDispatch("CREDENTIALS", recipientName, toEmail, temporaryPassword);
+        LogDispatch(EmailConstants.Kinds.Credentials, recipientName, toEmail, temporaryPassword);
 
         var html = await _razor.CompileRenderAsync(
-            "TalentX.Infrastructure.Mailing.Templates.Emails.Credentials",
+            EmailConstants.Templates.Credentials,
             new CredentialsEmailModel(recipientName, toEmail, temporaryPassword));
 
-        DispatchAfterLogging(toEmail, recipientName, "Your TalentX Login Credentials", html);
+        DispatchAfterLogging(toEmail, recipientName, EmailConstants.Subjects.Credentials, html);
+    }
+
+    public async Task SendVerificationLinkEmailAsync(
+        string toEmail,
+        string recipientName,
+        string verificationUrl,
+        CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation(
+            "[EMAIL] {Kind} dispatch to {RecipientName} <{ToEmail}>: {Url}",
+            EmailConstants.Kinds.VerificationLink, recipientName, toEmail, verificationUrl);
+
+        var html = await _razor.CompileRenderAsync(
+            EmailConstants.Templates.VerificationLink,
+            new VerificationLinkEmailModel(recipientName, verificationUrl));
+
+        DispatchAfterLogging(toEmail, recipientName, EmailConstants.Subjects.VerificationLink, html);
+    }
+
+    public Task<string> RenderInterviewInvitationEmailAsync(
+        string recipientName,
+        string jobTitle,
+        string companyName,
+        CancellationToken cancellationToken = default)
+    {
+        LogDispatch(EmailConstants.Kinds.InterviewInvitation, recipientName, jobTitle, companyName);
+
+        return _razor.CompileRenderAsync(
+            EmailConstants.Templates.InterviewInvitation,
+            new InterviewInvitationEmailModel(recipientName, jobTitle, companyName));
+    }
+
+    public Task<string> RenderInterviewConfirmationEmailAsync(
+        string recipientName,
+        string jobTitle,
+        string companyName,
+        string interviewType,
+        string locationOrLink,
+        string scheduledTimeOrDeadline,
+        string? instructions,
+        CancellationToken cancellationToken = default)
+    {
+        LogDispatch(EmailConstants.Kinds.InterviewConfirmation, recipientName, jobTitle, companyName);
+
+        return _razor.CompileRenderAsync(
+            EmailConstants.Templates.InterviewConfirmation,
+            new InterviewConfirmationEmailModel(
+                recipientName, jobTitle, companyName, interviewType, locationOrLink, scheduledTimeOrDeadline, instructions));
+    }
+
+    public async Task DispatchDirectAsync(
+        string toEmail,
+        string recipientName,
+        string subject,
+        string htmlBody,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(_smtpHost) || string.IsNullOrWhiteSpace(_smtpUser))
+        {
+            _logger.LogWarning("SMTP not configured, skipping direct dispatch for {ToEmail}.", toEmail);
+            throw new InvalidOperationException($"SMTP settings missing (host='{_smtpHost}', user='{_smtpUser}').");
+        }
+
+        await SendSmtpAsync(toEmail, recipientName, subject, htmlBody);
+    }
+
+    public async Task SendJobInvitationEmailAsync(
+        string toEmail,
+        string recipientName,
+        string jobTitle,
+        string companyName,
+        CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation(
+            "[EMAIL] JobInvitation dispatch to {RecipientName} <{ToEmail}> for role {JobTitle} at {CompanyName}",
+            recipientName, toEmail, jobTitle, companyName);
+
+        var subject = $"You've been invited to apply for {jobTitle} at {companyName}!";
+        var html = $"<p>Hi {recipientName},</p><p>Great news! <strong>{companyName}</strong> has invited you to view and apply for the <strong>{jobTitle}</strong> position on TalentX.</p>";
+
+        DispatchAfterLogging(toEmail, recipientName, subject, html);
+    }
+
+    public async Task SendPasswordResetEmailAsync(
+        string toEmail,
+        string recipientName,
+        string resetUrl,
+        CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation(
+            "[EMAIL] {Kind} dispatch to {RecipientName} <{ToEmail}>: {Url}",
+            EmailConstants.Kinds.PasswordReset, recipientName, toEmail, resetUrl);
+
+        var html = await _razor.CompileRenderAsync(
+            EmailConstants.Templates.PasswordReset,
+            new PasswordResetEmailModel(recipientName, resetUrl));
+
+        DispatchAfterLogging(toEmail, recipientName, EmailConstants.Subjects.PasswordReset, html);
     }
 
     private void LogDispatch(string kind, string recipientName, string toEmail, string? secret)
@@ -87,40 +185,51 @@ public sealed class EmailService : IEmailService
     {
         try
         {
-            var message = new MimeMessage();
-            message.From.Add(new MailboxAddress(_senderName, _senderEmail));
-            message.To.Add(new MailboxAddress(recipientName, toEmail));
-            message.Subject = subject;
-            message.Body = new BodyBuilder { HtmlBody = htmlBody }.ToMessageBody();
-
-            using var client = new SmtpClient();
-
-            client.ServerCertificateValidationCallback = (_, certificate, chain, errors) =>
-            {
-                if (errors == System.Net.Security.SslPolicyErrors.None)
-                    return true;
-
-                return chain?.ChainStatus.All(s =>
-                    s.Status is System.Security.Cryptography.X509Certificates.X509ChainStatusFlags.NoError
-                             or System.Security.Cryptography.X509Certificates.X509ChainStatusFlags.RevocationStatusUnknown
-                             or System.Security.Cryptography.X509Certificates.X509ChainStatusFlags.OfflineRevocation) ?? false;
-            };
-
-            var socketOptions = _smtpPort == 465
-                ? SecureSocketOptions.SslOnConnect
-                : SecureSocketOptions.StartTls;
-
-            await client.ConnectAsync(_smtpHost, _smtpPort, socketOptions);
-            await client.AuthenticateAsync(_smtpUser, _smtpPass);
-            await client.SendAsync(message);
-            await client.DisconnectAsync(quit: true);
-
-            _logger.LogInformation("[EMAIL] Dispatched successfully to {ToEmail} via {Host}:{Port}.", toEmail, _smtpHost, _smtpPort);
+            await SendSmtpAsync(toEmail, recipientName, subject, htmlBody);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "[EMAIL] Failed to dispatch to {ToEmail}.", toEmail);
         }
+    }
+
+    private async Task SendSmtpAsync(string toEmail, string recipientName, string subject, string htmlBody)
+    {
+        var message = new MimeMessage();
+        message.From.Add(new MailboxAddress(_senderName, _senderEmail));
+        message.To.Add(new MailboxAddress(recipientName, toEmail));
+        message.Subject = subject;
+        message.Body = new BodyBuilder { HtmlBody = htmlBody }.ToMessageBody();
+
+        using var client = new SmtpClient
+        {
+            Timeout = 15000 // 15s to allow DNS + TCP + TLS handshake over remote latency
+        };
+
+        client.ServerCertificateValidationCallback = (_, certificate, chain, errors) =>
+        {
+            if (errors == System.Net.Security.SslPolicyErrors.None)
+                return true;
+
+            return chain?.ChainStatus.All(s =>
+                s.Status is System.Security.Cryptography.X509Certificates.X509ChainStatusFlags.NoError
+                         or System.Security.Cryptography.X509Certificates.X509ChainStatusFlags.RevocationStatusUnknown
+                         or System.Security.Cryptography.X509Certificates.X509ChainStatusFlags.OfflineRevocation) ?? false;
+        };
+
+        var socketOptions = _smtpPort switch
+        {
+            465 => SecureSocketOptions.SslOnConnect,
+            587 or 2587 => SecureSocketOptions.StartTls,
+            _ => SecureSocketOptions.Auto
+        };
+
+        await client.ConnectAsync(_smtpHost, _smtpPort, socketOptions);
+        await client.AuthenticateAsync(_smtpUser, _smtpPass);
+        await client.SendAsync(message);
+        await client.DisconnectAsync(quit: true);
+
+        _logger.LogInformation("[EMAIL] Dispatched successfully to {ToEmail} via {Host}:{Port}.", toEmail, _smtpHost, _smtpPort);
     }
 
     private static string Env(string key) =>

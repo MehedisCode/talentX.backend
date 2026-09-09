@@ -49,7 +49,6 @@ public sealed class CompleteMediaMultipartUploadCommandHandler : IRequestHandler
         var previousStorageKey = talent.VideoIntroStorageKey;
 
         talent.UpdateVideoIntro(request.StorageKey);
-        _unitOfWork.Talents.Update(talent);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         if (!string.IsNullOrWhiteSpace(previousStorageKey) && previousStorageKey != request.StorageKey)

@@ -39,6 +39,11 @@ public static class IdentityStartup
             .AddEntityFrameworkStores<ApplicationDbContext>()
             .AddDefaultTokenProviders();
 
+        services.Configure<DataProtectionTokenProviderOptions>(options =>
+        {
+            options.TokenLifespan = TimeSpan.FromMinutes(15);
+        });
+
         var jwtSettings = GetJwtSettings(configuration);
 
         services.Configure<JwtSettings>(options =>
@@ -96,6 +101,9 @@ public static class IdentityStartup
         services.AddScoped<IGoogleAuthService, GoogleAuthService>();
         services.AddSingleton<IOtpService, OtpService>();
         services.AddSingleton<IEmailService, EmailService>();
+
+        services.AddHostedService<EmailDispatchBackgroundWorker>();
+        services.AddHostedService<GmailBounceListenerWorker>();
 
         return services;
     }

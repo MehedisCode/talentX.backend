@@ -9,31 +9,32 @@ public sealed class InvitationConfiguration : IEntityTypeConfiguration<Invitatio
     public void Configure(EntityTypeBuilder<Invitation> builder)
     {
         builder.ToTable("Invitations");
-        builder.HasKey(i => i.Id);
+        builder.HasKey(invitation => invitation.Id);
 
-        builder.Property(i => i.JobId)
+        builder.Property(invitation => invitation.JobId)
             .IsRequired();
 
-        builder.Property(i => i.TalentUserId)
+        builder.Property(invitation => invitation.TalentUserId)
             .HasMaxLength(200)
             .IsRequired();
 
-        builder.Property(i => i.InvitedDate)
+        builder.Property(invitation => invitation.InvitedDate)
             .IsRequired();
 
-        builder.Property(i => i.IsActive)
+        builder.Property(invitation => invitation.IsActive)
             .IsRequired();
 
-        builder.Property(i => i.CreatedAt)
+        builder.Property(invitation => invitation.CreatedAt)
             .IsRequired();
+
+        builder.Property(invitation => invitation.UpdatedAt);
+
+        builder.HasIndex(invitation => new { invitation.JobId, invitation.TalentUserId });
+        builder.HasIndex(invitation => invitation.IsActive);
 
         builder.HasOne<Job>()
             .WithMany()
-            .HasForeignKey(i => i.JobId)
+            .HasForeignKey(invitation => invitation.JobId)
             .OnDelete(DeleteBehavior.Cascade);
-
-        builder.HasIndex(i => i.JobId);
-        builder.HasIndex(i => i.TalentUserId);
-        builder.HasIndex(i => new { i.JobId, i.TalentUserId });
     }
 }

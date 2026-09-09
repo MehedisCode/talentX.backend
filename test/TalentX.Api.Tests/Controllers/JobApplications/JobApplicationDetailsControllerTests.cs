@@ -5,8 +5,12 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using TalentX.API.Controllers.JobApplications;
+using TalentX.Application.Features.JobApplications.Commands.UpdateApplicationStatus;
 using TalentX.Application.Features.JobApplications.DTOs;
 using TalentX.Application.Features.JobApplications.Queries.GetJobApplicationById;
+using TalentX.Application.Features.Talents.DTOs;
+using TalentX.Application.Features.Talents.Queries.GetTalentProfileForEmployer;
+using TalentX.Domain.Enums;
 using Xunit;
 
 namespace TalentX.Api.Tests.Controllers.JobApplications;
@@ -43,6 +47,7 @@ public class JobApplicationDetailsControllerTests
         5m,
         "Dhaka",
         "Applied",
+        85m,
         DateTime.UtcNow,
         null);
 
@@ -75,4 +80,67 @@ public class JobApplicationDetailsControllerTests
         var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
         okResult.Value.Should().Be(dto);
     }
+
+    [Fact]
+    public async Task UpdateStatus_SendsCommandToMediator_ReturnsOkWithResponse()
+    {
+        var id = Guid.NewGuid();
+        var requestDto = new UpdateStatusRequestDto(ApplicationStatus.Shortlisted);
+        var expectedResponse = new StatusUpdateResponseDto("Application status updated to Shortlisted.");
+
+        _sender
+            .Setup(s => s.Send(It.Is<UpdateApplicationStatusCommand>(c => c.ApplicationId == id && c.NewStatus == ApplicationStatus.Shortlisted), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expectedResponse);
+
+        var result = await _controller.UpdateStatus(id, requestDto, CancellationToken.None);
+
+        var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
+        okResult.Value.Should().Be(expectedResponse);
+        _sender.Verify(
+            s => s.Send(It.Is<UpdateApplicationStatusCommand>(c => c.ApplicationId == id && c.NewStatus == ApplicationStatus.Shortlisted), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task GetCandidateProfile_SendsQueryToMediator_ReturnsOkWithProfile()
+    {
+        var id = Guid.NewGuid();
+        var profileResponse = new TalentPublicProfileResponse(
+            ApplicationId: id,
+            JobId: Guid.NewGuid(),
+            TalentUserId: "talent-1",
+            Name: "Jane Candidate",
+            Email: "jane@example.com",
+            Tagline: "Dev",
+            ShortBio: "Bio",
+            Location: "Dhaka",
+            LinkedInUrl: null,
+            AdditionalUrls: new List<string>(),
+            TotalYearsExperience: 5m,
+            ExpectedSalary: 100000m,
+            SkillPropositions: new List<string>(),
+            TechnicalSkills: new List<string> { "C#" },
+            SoftSkills: new List<string>(),
+            ToolsAndPlatforms: new List<string>(),
+            ProfilePictureUrl: null,
+            VideoIntroUrl: null,
+            ResumeOriginalFileName: "Resume.pdf",
+            ResumeUrl: "https://storage.test/resume.pdf",
+            ApplicationStatus: "Applied",
+            CoverLetter: null,
+            AppliedAt: DateTime.UtcNow,
+            WorkExperiences: new List<WorkExperienceItemDto>(),
+            Educations: new List<EducationItemDto>()
+        );
+
+        _sender
+            .Setup(s => s.Send(It.Is<TalentX.Application.Features.Talents.Queries.GetTalentProfileForEmployer.GetTalentProfileForEmployerQuery>(q => q.ApplicationId == id), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(profileResponse);
+
+        var result = await _controller.GetCandidateProfile(id, CancellationToken.None);
+
+        var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
+        okResult.Value.Should().Be(profileResponse);
+    }
 }
+

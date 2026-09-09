@@ -19,7 +19,7 @@ public sealed class JobApplicationRepositoryTests
         return new ApplicationDbContext(options);
     }
 
-    private static JobApplication NewApplication(Guid? jobId = null, string talentUserId = "talent-1")
+    private static JobApplication NewApplication(Guid? jobId = null, string? talentUserId = "talent-1")
     {
         return new JobApplication(
             jobId ?? Guid.NewGuid(),
@@ -51,7 +51,7 @@ public sealed class JobApplicationRepositoryTests
     }
 
     [Fact]
-    public async Task ExistsForJobAndTalentAsync_ReturnsCorrectStatus()
+    public async Task ExistsByJobIdAndTalentUserIdAsync_ReturnsCorrectStatus()
     {
         await using var context = NewContext();
         var repository = new JobApplicationRepository(context);
@@ -61,13 +61,35 @@ public sealed class JobApplicationRepositoryTests
         await repository.AddAsync(application);
         await context.SaveChangesAsync();
 
-        var exists = await repository.ExistsForJobAndTalentAsync(targetJobId, "talent-specific");
-        var notExistsDifferentTalent = await repository.ExistsForJobAndTalentAsync(targetJobId, "talent-other");
-        var notExistsDifferentJob = await repository.ExistsForJobAndTalentAsync(Guid.NewGuid(), "talent-specific");
+        var exists = await repository.ExistsByJobIdAndTalentUserIdAsync(targetJobId, "talent-specific");
+        var notExistsDifferentTalent = await repository.ExistsByJobIdAndTalentUserIdAsync(targetJobId, "talent-other");
+        var notExistsDifferentJob = await repository.ExistsByJobIdAndTalentUserIdAsync(Guid.NewGuid(), "talent-specific");
 
         exists.Should().BeTrue();
         notExistsDifferentTalent.Should().BeFalse();
         notExistsDifferentJob.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task ExistsPendingByJobIdAndEmailAsync_And_GetPendingByJobIdAndEmailAsync_WorkCorrectly()
+    {
+        await using var context = NewContext();
+        var repository = new JobApplicationRepository(context);
+        var targetJobId = Guid.NewGuid();
+        var guestApp = JobApplication.CreateGuestApplication(
+            targetJobId, "Guest User", "guest@example.com", "resumes/guest.pdf");
+
+        await repository.AddAsync(guestApp);
+        await context.SaveChangesAsync();
+
+        var exists = await repository.ExistsPendingByJobIdAndEmailAsync(targetJobId, "guest@example.com");
+        var notExistsDifferentEmail = await repository.ExistsPendingByJobIdAndEmailAsync(targetJobId, "other@example.com");
+        var pending = await repository.GetPendingByJobIdAndEmailAsync(targetJobId, "guest@example.com");
+
+        exists.Should().BeTrue();
+        notExistsDifferentEmail.Should().BeFalse();
+        pending.Should().NotBeNull();
+        pending!.Id.Should().Be(guestApp.Id);
     }
 
     [Fact]
@@ -89,5 +111,70 @@ public sealed class JobApplicationRepositoryTests
 
         applications.Should().HaveCount(2);
         applications.Select(app => app.Id).Should().Contain(new[] { application1.Id, application2.Id });
+    }
+
+    [Fact]
+    public async Task CountHiredByEmployerIdAsync_WhenApplicationsExist_CountsHiredForEmployerIncludingSoftDeletedJobs()
+    {
+        await using var context = NewContext();
+        var repository = new JobApplicationRepository(context);
+
+        var employerOneJobOne = MakeJob("employer-1");
+        var employerOneJobTwo = MakeJob("employer-1");
+        var employerOneDeletedJob = MakeJob("employer-1");
+        employerOneDeletedJob.SoftDelete();
+
+        var employerTwoJob = MakeJob("employer-2");
+
+        context.Jobs.AddRange(employerOneJobOne, employerOneJobTwo, employerOneDeletedJob, employerTwoJob);
+
+        var hiredApplicationOne = NewApplication(jobId: employerOneJobOne.Id, talentUserId: "talent-1");
+        hiredApplicationOne.UpdateStatus(ApplicationStatus.Hired);
+
+        var appliedApplication = NewApplication(jobId: employerOneJobOne.Id, talentUserId: "talent-2");
+        appliedApplication.UpdateStatus(ApplicationStatus.Applied);
+
+        var hiredApplicationTwo = NewApplication(jobId: employerOneJobTwo.Id, talentUserId: "talent-3");
+        hiredApplicationTwo.UpdateStatus(ApplicationStatus.Hired);
+
+        var hiredApplicationOnDeletedJob = NewApplication(jobId: employerOneDeletedJob.Id, talentUserId: "talent-4");
+        hiredApplicationOnDeletedJob.UpdateStatus(ApplicationStatus.Hired);
+
+        var hiredApplicationEmployerTwo = NewApplication(jobId: employerTwoJob.Id, talentUserId: "talent-5");
+        hiredApplicationEmployerTwo.UpdateStatus(ApplicationStatus.Hired);
+
+        context.JobApplications.AddRange(
+            hiredApplicationOne,
+            appliedApplication,
+            hiredApplicationTwo,
+            hiredApplicationOnDeletedJob,
+            hiredApplicationEmployerTwo);
+        await context.SaveChangesAsync();
+
+        var employerOneCount = await repository.CountHiredByEmployerIdAsync("employer-1");
+        var employerTwoCount = await repository.CountHiredByEmployerIdAsync("employer-2");
+        var unknownEmployerCount = await repository.CountHiredByEmployerIdAsync("employer-unknown");
+
+        employerOneCount.Should().Be(3);
+        employerTwoCount.Should().Be(1);
+        unknownEmployerCount.Should().Be(0);
+    }
+
+    private static Job MakeJob(string employerId = "employer-1")
+    {
+        var job = Job.Create(
+            employerId,
+            "Software Engineer",
+            "Acme Corp",
+            "Job description",
+            EmploymentType.FullTime,
+            ExperienceLevel.MidLevel,
+            "Remote",
+            WorkArrangement.RemoteButAccessible,
+            ["C#"],
+            1,
+            DateTime.UtcNow.AddDays(30));
+        job.MarkAsPublished();
+        return job;
     }
 }

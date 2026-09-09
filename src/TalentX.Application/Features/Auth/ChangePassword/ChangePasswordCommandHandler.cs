@@ -62,6 +62,10 @@ public class ChangePasswordCommandHandler : IRequestHandler<ChangePasswordComman
             if (domainUser != null)
             {
                 domainUser.UpdateRole(UserRole.Talent);
+                if (!domainUser.IsVerified)
+                {
+                    domainUser.MarkAsVerified();
+                }
                 _unitOfWork.Users.Update(domainUser);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
             }

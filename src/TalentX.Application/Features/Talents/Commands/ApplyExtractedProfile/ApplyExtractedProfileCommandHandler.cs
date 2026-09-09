@@ -61,7 +61,6 @@ public sealed class ApplyExtractedProfileCommandHandler : IRequestHandler<ApplyE
             ?? throw new NotFoundException($"Talent profile for user '{userId}' was not found.");
 
         talent.UpdateSkills(request.TechnicalSkills, request.SoftSkills, request.ToolsAndPlatforms);
-        _unitOfWork.Talents.Update(talent);
 
         await _unitOfWork.WorkExperiences.DeleteByUserIdAsync(userId, cancellationToken);
         foreach (var workExperience in request.WorkExperiences)
@@ -111,7 +110,6 @@ public sealed class ApplyExtractedProfileCommandHandler : IRequestHandler<ApplyE
                 sanitizedResumeFileName,
                 request.ResumeFile.ContentType,
                 request.ResumeFile.Length);
-            _unitOfWork.Resumes.Update(existingResume);
         }
 
         try
