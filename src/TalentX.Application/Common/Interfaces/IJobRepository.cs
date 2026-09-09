@@ -39,5 +39,4 @@ public interface IJobRepository
         int pageSize,
         string? searchTerm = null,
         CancellationToken cancellationToken = default);
-    Task<PaginatedList<EmployerJobListItemDto>> GetEmployerJobsPaginatedAsync(string employerId, JobStatus? status, bool? isExpired, int page, int pageSize, CancellationToken cancellationToken = default);
 }
