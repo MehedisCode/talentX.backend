@@ -6,7 +6,6 @@ using TalentX.Application.Common.Interfaces.Repositories;
 using TalentX.Application.Features.Talents;
 using TalentX.Domain;
 using TalentX.Domain.Entities;
-using TalentX.Domain.Enums;
 
 namespace TalentX.Application.Features.JobApplications.Commands.Apply;
 
@@ -54,13 +53,7 @@ public class ApplyToJobCommandHandler : IRequestHandler<ApplyToJobCommand, Apply
         var existingUser = await _unitOfWork.Users.GetByEmailAsync(email);
         if (existingUser is not null)
         {
-            if (existingUser.Role is UserRole.Talent or UserRole.Guest)
-            {
-                return new ApplyToJobResponse(Guid.Empty, request.JobId, RequiresLogin: true);
-            }
-
-            throw new ConflictException(
-                $"An account with email '{email}' is already registered as {existingUser.Role}. Please sign in with a talent account or use a different email.");
+            return new ApplyToJobResponse(Guid.Empty, request.JobId, RequiresLogin: true);
         }
 
         var existingPending = await _jobApplicationRepository.GetPendingByJobIdAndEmailAsync(request.JobId, email, cancellationToken);
