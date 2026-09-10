@@ -14,5 +14,6 @@ public sealed class MatchedCandidateDto
     public string? Explanation { get; set; }
     public bool HasActiveInvitation { get; set; }
     public string? InvitationStatus { get; set; }
+    public Guid? InvitationId { get; set; }
     public DateTime MatchedAt { get; set; }
 }
