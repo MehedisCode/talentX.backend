@@ -24,6 +24,22 @@ public sealed class InvitationConfiguration : IEntityTypeConfiguration<Invitatio
         builder.Property(invitation => invitation.IsActive)
             .IsRequired();
 
+        builder.Property(invitation => invitation.Status)
+            .HasConversion<int>()
+            .IsRequired();
+
+        builder.Property(invitation => invitation.Token)
+            .HasMaxLength(128);
+
+        builder.Property(invitation => invitation.Message)
+            .HasMaxLength(2000);
+
+        builder.Property(invitation => invitation.ExpiresAt)
+            .IsRequired();
+
+        builder.Property(invitation => invitation.InvitationCount)
+            .IsRequired();
+
         builder.Property(invitation => invitation.CreatedAt)
             .IsRequired();
 

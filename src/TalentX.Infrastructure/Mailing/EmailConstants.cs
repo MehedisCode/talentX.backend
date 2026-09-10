@@ -12,6 +12,7 @@ public static class EmailConstants
         public const string Credentials = "TalentX.Infrastructure.Mailing.Templates.Emails.Credentials";
         public const string VerificationLink = "TalentX.Infrastructure.Mailing.Templates.Emails.VerificationLink";
         public const string InterviewInvitation = "TalentX.Infrastructure.Mailing.Templates.Emails.InterviewInvitation";
+        public const string JobInvitation = "TalentX.Infrastructure.Mailing.Templates.Emails.JobInvitation";
         public const string InterviewConfirmation = "TalentX.Infrastructure.Mailing.Templates.Emails.InterviewConfirmation";
         public const string PasswordReset = "TalentX.Infrastructure.Mailing.Templates.Emails.PasswordReset";
     }

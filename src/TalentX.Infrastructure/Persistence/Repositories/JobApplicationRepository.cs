@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using TalentX.Application.Common.Interfaces.Repositories;
+using TalentX.Application.Common.Models;
 using TalentX.Domain.Entities;
 using TalentX.Infrastructure.Persistence.Contexts;
 
@@ -121,6 +122,59 @@ public sealed class JobApplicationRepository : IJobApplicationRepository
         await _context.JobApplications.AddAsync(jobApplication, cancellationToken);
     }
 
+    public async Task<PaginatedList<TalentApplicationRecord>> GetApplicationsForTalentAsync(
+        string talentUserId,
+        ApplicationStatus? status,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _context.JobApplications
+                    .Join(
+                        _context.Jobs,
+                        application => application.JobId,
+                        job => job.Id,
+                        (application, job) => new
+                        {
+                            application,
+                            job
+                        })
+                    .Where(x => x.application.TalentUserId == talentUserId)
+                    .Select(x => new
+                    {
+                        x.application.Id,
+                        x.application.JobId,
+                        JobTitle = x.job.Title,
+                        Company = x.job.CompanyName,
+                        x.application.AppliedAt,
+                        x.application.Status
+                    });
+
+
+        if (status.HasValue)
+        {
+            query = query.Where(a => a.Status == status.Value);
+        }
+
+        query = query.OrderByDescending(a => a.AppliedAt);
+
+        var totalCount = await query.CountAsync(cancellationToken);
+        var pagedItems = await query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        var records = pagedItems.Select(item => new TalentApplicationRecord(
+            item.Id,
+            item.JobId,
+            item.JobTitle,
+            item.Company,
+            item.AppliedAt,
+            item.Status
+        )).ToList();
+
+        return new PaginatedList<TalentApplicationRecord>(records, page, pageSize, totalCount);
+    }
     public async Task<int> CountHiredByEmployerIdAsync(
         string employerId,
         CancellationToken cancellationToken = default)

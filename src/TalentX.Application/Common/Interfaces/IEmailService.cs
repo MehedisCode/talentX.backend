@@ -83,6 +83,7 @@ public interface IEmailService
         string recipientName,
         string jobTitle,
         string companyName,
+        string jobUrl,
         CancellationToken cancellationToken = default
     );
 

@@ -26,6 +26,8 @@ public interface IJobRepository
 
     Task<Job?> GetPublishedJobByIdAsync(Guid id, CancellationToken cancellationToken);
     Task<List<Job>> GetByEmployerIdAsync(string employerId, CancellationToken cancellationToken = default);
+    Task<IEnumerable<Job>> GetActivePublishedJobsAsync(CancellationToken cancellationToken);
+
     Task<EmployerJobStatsDto> GetEmployerStatsAsync(string employerId, CancellationToken cancellationToken = default);
     Task<List<EmployerRecentJobDto>> GetRecentJobsByEmployerIdAsync(
         string employerId,
@@ -40,4 +42,3 @@ public interface IJobRepository
         string? searchTerm = null,
         CancellationToken cancellationToken = default);
 }
-

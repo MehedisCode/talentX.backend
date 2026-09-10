@@ -22,6 +22,10 @@ public class GetJobDetailsQueryHandler : IRequestHandler<GetJobDetailsQuery, Job
         var job = await _unitOfWork.Jobs.GetPublishedJobByIdAsync(request.Id, cancellationToken)
             ?? throw new NotFoundException($"Job '{request.Id}' was not found.");
 
-        return _mapper.Map<JobDetailsDto>(job);
+        var dto = _mapper.Map<JobDetailsDto>(job);
+        dto.Status = job.Status == Domain.Enums.JobStatus.Published && job.ExpireAt.Date <= DateTime.UtcNow.Date
+            ? "Expired"
+            : job.Status.ToString();
+        return dto;
     }
 }
