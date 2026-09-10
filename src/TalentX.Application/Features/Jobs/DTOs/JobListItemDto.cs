@@ -12,6 +12,14 @@ public class JobListItemDto
     public string ExperienceLevel { get; set; } = string.Empty;
     public string WorkArrangement { get; set; } = string.Empty;
     public IReadOnlyList<string> RequiredSkills { get; set; } = new List<string>();
+
+    /// <summary>
+    /// When this job went live (first published, or most recently reopened).
+    /// Falls back to the record's creation time for jobs published before
+    /// PublishedAt existed. This DTO is only ever returned for published
+    /// jobs, so "created" and "went live" are effectively the same concept
+    /// here — this is intentionally not the Job's raw creation timestamp.
+    /// </summary>
     public DateTime CreatedAt { get; set; }
     public DateTime ExpireAt { get; set; }
 }

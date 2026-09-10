@@ -12,6 +12,7 @@ public class JobDetailsDto
     public string WorkArrangement { get; set; } = string.Empty;
     public IReadOnlyList<string> RequiredSkills { get; set; } = new List<string>();
     public int Vacancies { get; set; }
+
     public DateTime CreatedAt { get; set; }
     public DateTime ExpireAt { get; set; }
     public string? City { get; set; }

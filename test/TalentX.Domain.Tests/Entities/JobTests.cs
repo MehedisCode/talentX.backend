@@ -113,6 +113,14 @@ public class JobTests
     }
 
     [Fact]
+    public void Create_LeavesPublishedAtNull()
+    {
+        var job = CreateJob();
+
+        job.PublishedAt.Should().BeNull();
+    }
+
+    [Fact]
     public void SetDetails_ReplacesAllFields()
     {
         var job = CreateJob(title: "Old Title", vacancies: 1);
@@ -162,6 +170,19 @@ public class JobTests
         job.MarkAsPublished();
 
         job.Status.Should().Be(JobStatus.Published);
+    }
+
+    [Fact]
+    public void MarkAsPublished_SetsPublishedAtToUtcNow()
+    {
+        var job = CreateJob();
+        var before = DateTime.UtcNow;
+
+        job.MarkAsPublished();
+
+        var after = DateTime.UtcNow;
+        job.PublishedAt.Should().NotBeNull();
+        job.PublishedAt!.Value.Should().BeOnOrAfter(before).And.BeOnOrBefore(after);
     }
 
     [Fact]
@@ -245,6 +266,25 @@ public class JobTests
         job.Status.Should().Be(JobStatus.Published);
         job.UpdatedAt.Should().NotBeNull();
         job.UpdatedAt!.Value.Should().BeOnOrAfter(beforeReopen).And.BeOnOrBefore(afterReopen);
+    }
+
+    [Fact]
+    public void Reopen_BumpsPublishedAtToUtcNow()
+    {
+        // Reopening relists the job — it should read as freshly posted again,
+        // not still ranked by whenever it was first published.
+        var job = CreateJob();
+        job.MarkAsPublished();
+        var originalPublishedAt = job.PublishedAt;
+        job.MarkAsClosed();
+        var beforeReopen = DateTime.UtcNow;
+
+        job.Reopen();
+
+        var afterReopen = DateTime.UtcNow;
+        job.PublishedAt.Should().NotBeNull();
+        job.PublishedAt!.Value.Should().BeOnOrAfter(beforeReopen).And.BeOnOrBefore(afterReopen);
+        job.PublishedAt.Should().BeAfter(originalPublishedAt!.Value);
     }
 
     [Fact]
