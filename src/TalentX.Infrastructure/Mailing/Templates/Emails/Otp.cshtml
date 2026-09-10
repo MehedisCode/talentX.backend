@@ -1,22 +1,62 @@
 @model TalentX.Infrastructure.Mailing.Models.OtpEmailModel
 <!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"><title>Verify Your TalentX Account</title></head>
-<body style="font-family:Arial,sans-serif;background:#f4f6f8;margin:0;padding:20px;">
-  <div style="max-width:520px;margin:0 auto;background:#fff;border-radius:8px;padding:32px;box-shadow:0 2px 8px rgba(0,0,0,.05);">
-    <h2 style="color:#111827;margin-top:0;">Verify Your Email Address</h2>
-    <p style="color:#4b5563;font-size:15px;line-height:1.5;">
-      Hello @Model.RecipientName,<br><br>
-      Use the code below to complete your TalentX registration. It expires in <strong>10 minutes</strong>.
-    </p>
-    <div style="text-align:center;margin:28px 0;">
-      <span style="display:inline-block;font-size:32px;font-weight:700;letter-spacing:6px;color:#2563eb;background:#eff6ff;padding:12px 24px;border-radius:8px;border:1px dashed #93c5fd;">
-        @Model.OtpCode
-      </span>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Verify Your TalentX Account</title>
+  <style>
+    @@media only screen and (max-width:520px) {
+      .tx-card { border-radius:0 !important; }
+      .tx-pad  { padding-left:20px !important; padding-right:20px !important; }
+      .tx-code { font-size:27px !important; letter-spacing:7px !important; padding:14px 16px !important; }
+    }
+  </style>
+</head>
+<body style="margin:0;padding:0;background:#f4f6f8;font-family:Arial,Helvetica,sans-serif;-webkit-font-smoothing:antialiased;">
+
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;">
+    Your TalentX verification code is @Model.OtpCode. It expires in 10 minutes.
+  </div>
+
+  <div style="padding:24px 12px;">
+    <div class="tx-card" style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(16,24,40,.10),0 1px 2px rgba(16,24,40,.06);">
+
+      <div class="tx-pad" style="padding:26px 32px 0;">
+        <span style="font-size:18px;font-weight:700;letter-spacing:-.2px;color:#059669;">Talent<span style="color:#111827;">X</span></span>
+      </div>
+
+      <div class="tx-pad" style="padding:22px 32px 0;">
+        <span style="display:inline-block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:#059669;background:#ecfdf5;padding:5px 11px;border-radius:999px;">Email Verification</span>
+        <h1 style="margin:14px 0 0;font-size:22px;line-height:1.3;color:#111827;font-weight:700;">Verify your email address</h1>
+      </div>
+
+      <div class="tx-pad" style="padding:16px 32px 0;">
+        <p style="margin:0;color:#4b5563;font-size:15px;line-height:1.6;">Hi @Model.RecipientName,</p>
+        <p style="margin:12px 0 0;color:#4b5563;font-size:15px;line-height:1.6;">
+          Enter the code below to finish setting up your TalentX account. It expires in
+          <strong style="color:#111827;">10 minutes</strong>.
+        </p>
+
+        <div style="text-align:center;margin:26px 0 6px;">
+          <span class="tx-code" style="display:inline-block;font-size:33px;font-weight:700;letter-spacing:9px;color:#059669;background:#ecfdf5;border:1px dashed #6ee7b7;border-radius:10px;padding:16px 20px;">@Model.OtpCode</span>
+        </div>
+
+        <p style="margin:18px 0 0;color:#6b7280;font-size:13px;line-height:1.6;">
+          Didn't request this? You can safely ignore this email &mdash; someone may have entered
+          your address by mistake.
+        </p>
+      </div>
+
+      <div class="tx-pad" style="border-top:1px solid #eef0f3;margin-top:24px;padding:18px 32px 26px;">
+        <p style="margin:0;color:#9ca3af;font-size:12px;line-height:1.5;">
+          You're receiving this email because a TalentX account is being set up with this address.
+        </p>
+        <p style="margin:10px 0 0;color:#b6bcc6;font-size:12px;">&copy; @DateTime.UtcNow.Year TalentX Inc. All rights reserved.</p>
+      </div>
+
     </div>
-    <p style="color:#6b7280;font-size:13px;">If you did not request this, please ignore this email.</p>
-    <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;">
-    <p style="color:#9ca3af;font-size:12px;text-align:center;margin:0;">&copy; @DateTime.UtcNow.Year TalentX Inc.</p>
   </div>
 </body>
 </html>
