@@ -134,14 +134,17 @@ public sealed class EmailService : IEmailService
         string recipientName,
         string jobTitle,
         string companyName,
+        string jobUrl,
         CancellationToken cancellationToken = default)
     {
         _logger.LogInformation(
-            "[EMAIL] JobInvitation dispatch to {RecipientName} <{ToEmail}> for role {JobTitle} at {CompanyName}",
-            recipientName, toEmail, jobTitle, companyName);
+            "[EMAIL] JobInvitation dispatch to {RecipientName} <{ToEmail}> for role {JobTitle} at {CompanyName}: {JobUrl}",
+            recipientName, toEmail, jobTitle, companyName, jobUrl);
 
         var subject = $"You've been invited to apply for {jobTitle} at {companyName}!";
-        var html = $"<p>Hi {recipientName},</p><p>Great news! <strong>{companyName}</strong> has invited you to view and apply for the <strong>{jobTitle}</strong> position on TalentX.</p>";
+        var html = await _razor.CompileRenderAsync(
+            EmailConstants.Templates.JobInvitation,
+            new JobInvitationEmailModel(recipientName, jobTitle, companyName, jobUrl));
 
         DispatchAfterLogging(toEmail, recipientName, subject, html);
     }

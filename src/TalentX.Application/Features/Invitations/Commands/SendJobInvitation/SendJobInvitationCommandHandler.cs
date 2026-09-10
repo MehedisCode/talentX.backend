@@ -61,11 +61,15 @@ public sealed class SendJobInvitationCommandHandler
 
         if (!string.IsNullOrWhiteSpace(talent.Email))
         {
+            var baseUrl = GetFrontendBaseUrl();
+            var jobUrl = $"{baseUrl}/jobs/{job.Id}?invitation={invitation.Token}";
+
             await _emailService.SendJobInvitationEmailAsync(
                 talent.Email,
                 talent.Name ?? "Candidate",
                 job.Title,
                 job.CompanyName ?? "TalentX Employer",
+                jobUrl,
                 cancellationToken);
         }
 
@@ -75,5 +79,23 @@ public sealed class SendJobInvitationCommandHandler
             invitation.TalentUserId,
             invitation.InvitedDate,
             invitation.IsActive);
+    }
+
+    private static string GetFrontendBaseUrl()
+    {
+        var corsOrigins = Environment.GetEnvironmentVariable("CORS_ALLOWED_ORIGINS");
+        if (!string.IsNullOrWhiteSpace(corsOrigins))
+        {
+            var firstOrigin = corsOrigins
+                .Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .FirstOrDefault();
+
+            if (!string.IsNullOrWhiteSpace(firstOrigin))
+            {
+                return firstOrigin.TrimEnd('/');
+            }
+        }
+
+        return "http://localhost:3000";
     }
 }
