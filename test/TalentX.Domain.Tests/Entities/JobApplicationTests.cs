@@ -88,11 +88,11 @@ public sealed class JobApplicationTests
         var application = CreateJobApplication();
         var beforeUpdate = DateTime.UtcNow;
 
-        application.UpdateStatus(ApplicationStatus.Shortlisted);
+        application.UpdateStatus(ApplicationStatus.Interview);
 
         var afterUpdate = DateTime.UtcNow;
 
-        application.Status.Should().Be(ApplicationStatus.Shortlisted);
+        application.Status.Should().Be(ApplicationStatus.Interview);
         application.UpdatedAt.Should().NotBeNull();
         application.UpdatedAt!.Value.Should().BeOnOrAfter(beforeUpdate).And.BeOnOrBefore(afterUpdate);
     }

@@ -15,10 +15,10 @@ public interface IUnitOfWork
     IResumeRepository Resumes { get; }
     IWorkExperienceRepository WorkExperiences { get; }
     IEducationRepository Educations { get; }
+    IInvitationRepository Invitations { get; }
     ISavedJobRepository SavedJobs { get; }
     IInterviewInvitationRepository InterviewInvitations { get; }
     IEmailDispatchLogRepository EmailDispatchLogs { get; }
-    IInvitationRepository Invitations { get; }
     IJobTalentMatchRepository JobTalentMatches { get; }
 
     /// <summary>

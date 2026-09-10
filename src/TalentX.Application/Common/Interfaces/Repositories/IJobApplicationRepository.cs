@@ -4,6 +4,14 @@ using TalentX.Domain.Enums;
 
 namespace TalentX.Application.Common.Interfaces.Repositories;
 
+public sealed record TalentApplicationRecord(
+    Guid Id,
+    Guid JobId,
+    string JobTitle,
+    string Company,
+    DateTime AppliedDate,
+    ApplicationStatus Status);
+
 public interface IJobApplicationRepository
 {
     Task<bool> ExistsByJobIdAndTalentUserIdAsync(Guid jobId, string talentUserId, CancellationToken cancellationToken = default);
@@ -20,5 +28,11 @@ public interface IJobApplicationRepository
         CancellationToken cancellationToken = default);
     Task<JobApplication?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task AddAsync(JobApplication jobApplication, CancellationToken cancellationToken = default);
+    Task<PaginatedList<TalentApplicationRecord>> GetApplicationsForTalentAsync(
+        string talentUserId,
+        ApplicationStatus? status,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default);
     Task<int> CountHiredByEmployerIdAsync(string employerId, CancellationToken cancellationToken = default);
 }
