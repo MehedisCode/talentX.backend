@@ -35,9 +35,7 @@ public sealed class InvitationRepository : IInvitationRepository
                         })
                     .Where(x =>
                         x.invitation.TalentUserId == talentUserId &&
-                        x.invitation.IsActive &&
-                        x.job.Status == JobStatus.Published &&
-                        x.job.ExpireAt >= now)
+                        x.invitation.IsActive)
                     .OrderByDescending(x => x.invitation.InvitedDate)
                     .Select(x => new
                     {
