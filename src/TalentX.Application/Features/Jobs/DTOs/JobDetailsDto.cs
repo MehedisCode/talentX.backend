@@ -18,4 +18,5 @@ public class JobDetailsDto
     public string? City { get; set; }
     public string? Country { get; set; }
     public short? MinOverlapHours { get; set; }
+    public string Status { get; set; } = string.Empty;
 }
