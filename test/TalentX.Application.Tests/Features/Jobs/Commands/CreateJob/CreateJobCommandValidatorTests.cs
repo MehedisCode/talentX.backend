@@ -10,6 +10,10 @@ public class CreateJobCommandValidatorTests
 {
     private readonly CreateJobCommandValidator _validator = new();
 
+    // Publish: true — this fixture represents a fully-complete, ready-to-publish
+    // job. Content strictness (min-length, etc.) only applies when Publish is
+    // true, so every existing "invalid field -> has error" test below relies on
+    // that being the case; draft-specific relaxation is covered separately.
     private static CreateJobCommand ValidCommand() => new(
         "Backend Engineer",
         "Acme Corp",
@@ -21,7 +25,7 @@ public class CreateJobCommandValidatorTests
         new List<string> { "C#", "SQL" },
         2,
         DateTime.UtcNow.AddDays(30),
-        false,
+        true,
         City: "Dhaka",
         Country: "Bangladesh"
     );
@@ -531,5 +535,70 @@ public class CreateJobCommandValidatorTests
 
         result.ShouldNotHaveValidationErrorFor(c => c.City);
         result.ShouldNotHaveValidationErrorFor(c => c.Country);
+    }
+
+    // Draft saves (Publish: false) must succeed with blank content fields, from
+    // any wizard step — JobRules.EnsurePublishable is the real "ready to go
+    // live" gate, applied separately at actual publish time.
+    [Fact]
+    public void Validate_DraftWithBlankCompanyNameDescriptionAndLocation_HasNoErrors()
+    {
+        var command = ValidCommand() with
+        {
+            Publish = false,
+            Title = "Software Engineer",
+            CompanyName = "",
+            Description = "",
+            Location = ""
+        };
+
+        var result = _validator.TestValidate(command);
+
+        result.ShouldNotHaveValidationErrorFor(c => c.Title);
+        result.ShouldNotHaveValidationErrorFor(c => c.CompanyName);
+        result.ShouldNotHaveValidationErrorFor(c => c.Description);
+        result.ShouldNotHaveValidationErrorFor(c => c.Location);
+    }
+
+    [Fact]
+    public void Validate_DraftWithOnlyRequiredSkillsChanged_HasNoErrors()
+    {
+        // Mirrors a Step-1-only draft save from the wizard: everything else
+        // still blank, only the field the employer actually filled in matters.
+        var command = ValidCommand() with
+        {
+            Publish = false,
+            Title = "Software Engineer",
+            CompanyName = "",
+            Description = "",
+            Location = "",
+            RequiredSkills = new List<string> { "C#" }
+        };
+
+        var result = _validator.TestValidate(command);
+
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Fact]
+    public void Validate_PublishWithBlankTitleCompanyNameDescriptionAndLocation_StillHasErrors()
+    {
+        // The relaxation is specific to drafts — publishing with the same
+        // blank fields must still be rejected exactly as before.
+        var command = ValidCommand() with
+        {
+            Publish = true,
+            Title = "",
+            CompanyName = "",
+            Description = "",
+            Location = ""
+        };
+
+        var result = _validator.TestValidate(command);
+
+        result.ShouldHaveValidationErrorFor(c => c.Title);
+        result.ShouldHaveValidationErrorFor(c => c.CompanyName);
+        result.ShouldHaveValidationErrorFor(c => c.Description);
+        result.ShouldHaveValidationErrorFor(c => c.Location);
     }
 }

@@ -13,7 +13,10 @@ public class UpdateJobCommandValidatorTests
     private static UpdateJobCommand EmptyCommand(Guid? id = null) => new(
         id ?? Guid.NewGuid(),
         null, null, null, null, null, null, null, null, null, null
-    );
+    )
+    {
+        Title = "Software Engineer"
+    };
 
     [Fact]
     public void Validate_WithAllFieldsNull_HasNoErrors()
@@ -28,7 +31,7 @@ public class UpdateJobCommandValidatorTests
     [InlineData("")]
     public void Validate_WithTitleTooShort_HasError(string title)
     {
-        var command = EmptyCommand() with { Title = title };
+        var command = EmptyCommand() with { Title = title, Publish = true };
 
         var result = _validator.TestValidate(command);
 
@@ -38,7 +41,7 @@ public class UpdateJobCommandValidatorTests
     [Fact]
     public void Validate_WithTitleOver200Characters_HasError()
     {
-        var command = EmptyCommand() with { Title = new string('a', 201) };
+        var command = EmptyCommand() with { Title = new string('a', 201), Publish = true };
 
         var result = _validator.TestValidate(command);
 
@@ -48,7 +51,7 @@ public class UpdateJobCommandValidatorTests
     [Fact]
     public void Validate_WithTitleStartingWithADigit_HasError()
     {
-        var command = EmptyCommand() with { Title = "1 QA Engineer" };
+        var command = EmptyCommand() with { Title = "1 QA Engineer", Publish = true };
 
         var result = _validator.TestValidate(command);
 
@@ -59,7 +62,7 @@ public class UpdateJobCommandValidatorTests
     [Fact]
     public void Validate_WithTitleContainingNoLetters_HasError()
     {
-        var command = EmptyCommand() with { Title = "12345678" };
+        var command = EmptyCommand() with { Title = "12345678", Publish = true };
 
         var result = _validator.TestValidate(command);
 
@@ -70,7 +73,7 @@ public class UpdateJobCommandValidatorTests
     [Fact]
     public void Validate_WithValidTitle_HasNoError()
     {
-        var command = EmptyCommand() with { Title = "Staff Engineer" };
+        var command = EmptyCommand() with { Title = "Staff Engineer", Publish = true };
 
         var result = _validator.TestValidate(command);
 
@@ -80,7 +83,7 @@ public class UpdateJobCommandValidatorTests
     [Fact]
     public void Validate_WithCompanyNameTooShort_HasError()
     {
-        var command = EmptyCommand() with { CompanyName = "A" };
+        var command = EmptyCommand() with { CompanyName = "A", Publish = true };
 
         var result = _validator.TestValidate(command);
 
@@ -90,7 +93,7 @@ public class UpdateJobCommandValidatorTests
     [Fact]
     public void Validate_WithCompanyNameOver200Characters_HasError()
     {
-        var command = EmptyCommand() with { CompanyName = new string('a', 201) };
+        var command = EmptyCommand() with { CompanyName = new string('a', 201), Publish = true };
 
         var result = _validator.TestValidate(command);
 
@@ -100,7 +103,7 @@ public class UpdateJobCommandValidatorTests
     [Fact]
     public void Validate_WithCompanyNameContainingNoLetters_HasError()
     {
-        var command = EmptyCommand() with { CompanyName = "----" };
+        var command = EmptyCommand() with { CompanyName = "----", Publish = true };
 
         var result = _validator.TestValidate(command);
 
@@ -111,7 +114,7 @@ public class UpdateJobCommandValidatorTests
     [Fact]
     public void Validate_WithValidCompanyName_HasNoError()
     {
-        var command = EmptyCommand() with { CompanyName = "Globex" };
+        var command = EmptyCommand() with { CompanyName = "Globex", Publish = true };
 
         var result = _validator.TestValidate(command);
 
@@ -121,7 +124,7 @@ public class UpdateJobCommandValidatorTests
     [Fact]
     public void Validate_WithDescriptionTooShort_HasError()
     {
-        var command = EmptyCommand() with { Description = "Too short." };
+        var command = EmptyCommand() with { Description = "Too short.", Publish = true };
 
         var result = _validator.TestValidate(command);
 
@@ -131,7 +134,7 @@ public class UpdateJobCommandValidatorTests
     [Fact]
     public void Validate_WithDescriptionOver10000Characters_HasError()
     {
-        var command = EmptyCommand() with { Description = new string('a', 10001) };
+        var command = EmptyCommand() with { Description = new string('a', 10001), Publish = true };
 
         var result = _validator.TestValidate(command);
 
@@ -141,7 +144,7 @@ public class UpdateJobCommandValidatorTests
     [Fact]
     public void Validate_WithDescriptionThatIsAllWhitespace_HasError()
     {
-        var command = EmptyCommand() with { Description = new string(' ', 25) };
+        var command = EmptyCommand() with { Description = new string(' ', 25), Publish = true };
 
         var result = _validator.TestValidate(command);
 
@@ -152,7 +155,7 @@ public class UpdateJobCommandValidatorTests
     [Fact]
     public void Validate_WithDescriptionContainingNoLetters_HasError()
     {
-        var command = EmptyCommand() with { Description = "1234567890 1234567890" };
+        var command = EmptyCommand() with { Description = "1234567890 1234567890", Publish = true };
 
         var result = _validator.TestValidate(command);
 
@@ -163,7 +166,7 @@ public class UpdateJobCommandValidatorTests
     [Fact]
     public void Validate_WithValidDescription_HasNoError()
     {
-        var command = EmptyCommand() with { Description = "Updated description with enough length." };
+        var command = EmptyCommand() with { Description = "Updated description with enough length.", Publish = true };
 
         var result = _validator.TestValidate(command);
 
@@ -173,7 +176,7 @@ public class UpdateJobCommandValidatorTests
     [Fact]
     public void Validate_WithLocationTooShort_HasError()
     {
-        var command = EmptyCommand() with { Location = "N" };
+        var command = EmptyCommand() with { Location = "N", Publish = true };
 
         var result = _validator.TestValidate(command);
 
@@ -183,7 +186,7 @@ public class UpdateJobCommandValidatorTests
     [Fact]
     public void Validate_WithLocationOver200Characters_HasError()
     {
-        var command = EmptyCommand() with { Location = new string('a', 201) };
+        var command = EmptyCommand() with { Location = new string('a', 201), Publish = true };
 
         var result = _validator.TestValidate(command);
 
@@ -193,7 +196,7 @@ public class UpdateJobCommandValidatorTests
     [Fact]
     public void Validate_WithPurelyNumericLocation_HasError()
     {
-        var command = EmptyCommand() with { Location = "12345" };
+        var command = EmptyCommand() with { Location = "12345", Publish = true };
 
         var result = _validator.TestValidate(command);
 
@@ -204,7 +207,7 @@ public class UpdateJobCommandValidatorTests
     [Fact]
     public void Validate_WithValidLocation_HasNoError()
     {
-        var command = EmptyCommand() with { Location = "Chattogram" };
+        var command = EmptyCommand() with { Location = "Chattogram", Publish = true };
 
         var result = _validator.TestValidate(command);
 
@@ -349,7 +352,8 @@ public class UpdateJobCommandValidatorTests
         {
             WorkArrangement = WorkArrangement.OnSite,
             City = "Dhaka",
-            Country = "Bangladesh"
+            Country = "Bangladesh",
+            Publish = true
         };
 
         var result = _validator.TestValidate(command);
@@ -364,7 +368,8 @@ public class UpdateJobCommandValidatorTests
         {
             WorkArrangement = WorkArrangement.OnSite,
             City = null,
-            Country = "Bangladesh"
+            Country = "Bangladesh",
+            Publish = true
         };
 
         var result = _validator.TestValidate(command);
@@ -379,7 +384,8 @@ public class UpdateJobCommandValidatorTests
         {
             WorkArrangement = WorkArrangement.OnSite,
             City = "Dhaka",
-            Country = null
+            Country = null,
+            Publish = true
         };
 
         var result = _validator.TestValidate(command);
@@ -394,7 +400,8 @@ public class UpdateJobCommandValidatorTests
         {
             WorkArrangement = WorkArrangement.Hybrid,
             City = "   ",
-            Country = "Bangladesh"
+            Country = "Bangladesh",
+            Publish = true
         };
 
         var result = _validator.TestValidate(command);
@@ -409,7 +416,8 @@ public class UpdateJobCommandValidatorTests
         {
             WorkArrangement = WorkArrangement.Hybrid,
             City = "Dhaka",
-            Country = ""
+            Country = "",
+            Publish = true
         };
 
         var result = _validator.TestValidate(command);
@@ -424,7 +432,8 @@ public class UpdateJobCommandValidatorTests
         {
             WorkArrangement = WorkArrangement.FullRemote,
             City = null,
-            Country = null
+            Country = null,
+            Publish = true
         };
 
         var result = _validator.TestValidate(command);
@@ -441,7 +450,8 @@ public class UpdateJobCommandValidatorTests
             WorkArrangement = WorkArrangement.FullRemote,
             City = null,
             Country = null,
-            MinOverlapHours = null
+            MinOverlapHours = null,
+            Publish = true
         };
 
         var result = _validator.TestValidate(command);
@@ -457,7 +467,8 @@ public class UpdateJobCommandValidatorTests
             WorkArrangement = WorkArrangement.FullRemote,
             City = null,
             Country = null,
-            MinOverlapHours = 0
+            MinOverlapHours = 0,
+            Publish = true
         };
 
         var result = _validator.TestValidate(command);
@@ -473,7 +484,8 @@ public class UpdateJobCommandValidatorTests
             WorkArrangement = WorkArrangement.FullRemote,
             City = null,
             Country = null,
-            MinOverlapHours = 4
+            MinOverlapHours = 4,
+            Publish = true
         };
 
         var result = _validator.TestValidate(command);
@@ -488,7 +500,8 @@ public class UpdateJobCommandValidatorTests
         {
             WorkArrangement = WorkArrangement.OnSite,
             City = new string('a', 101),
-            Country = "Bangladesh"
+            Country = "Bangladesh",
+            Publish = true
         };
 
         var result = _validator.TestValidate(command);
@@ -504,7 +517,8 @@ public class UpdateJobCommandValidatorTests
         {
             WorkArrangement = WorkArrangement.OnSite,
             City = "Dhaka",
-            Country = new string('b', 101)
+            Country = new string('b', 101),
+            Publish = true
         };
 
         var result = _validator.TestValidate(command);
@@ -520,7 +534,8 @@ public class UpdateJobCommandValidatorTests
         {
             WorkArrangement = null,
             City = "Dhaka",
-            Country = "Bangladesh"
+            Country = "Bangladesh",
+            Publish = true
         };
 
         var result = _validator.TestValidate(command);
