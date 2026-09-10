@@ -67,8 +67,20 @@ public sealed class GetMatchedCandidatesQueryHandler
             .ToHashSet();
 
         var invitations = await _unitOfWork.Invitations.GetByJobIdAsync(jobId, cancellationToken);
+
+        var invitationStatusMap = new Dictionary<string, string>();
+        var invitationIdMap = new Dictionary<string, Guid>();
+        foreach (var inv in invitations)
+        {
+            if (!invitationStatusMap.ContainsKey(inv.TalentUserId))
+            {
+                invitationStatusMap[inv.TalentUserId] = inv.Status.ToString();
+                invitationIdMap[inv.TalentUserId] = inv.Id;
+            }
+        }
+
         var invitedUserIds = invitations
-            .Where(i => i.IsActive)
+            .Where(i => i.IsActive || i.Status == Domain.Enums.InvitationStatus.Accepted)
             .Select(i => i.TalentUserId)
             .ToHashSet();
 
@@ -94,6 +106,8 @@ public sealed class GetMatchedCandidatesQueryHandler
                     Score = m.Score,
                     Explanation = m.CriteriaSnapshot,
                     HasActiveInvitation = invitedUserIds.Contains(m.TalentUserId),
+                    InvitationStatus = invitationStatusMap.TryGetValue(m.TalentUserId, out var status) ? status : null,
+                    InvitationId = invitationIdMap.TryGetValue(m.TalentUserId, out var invId) ? invId : null,
                     MatchedAt = m.MatchedAt
                 };
             })

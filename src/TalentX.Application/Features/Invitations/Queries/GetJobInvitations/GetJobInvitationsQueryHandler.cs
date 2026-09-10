@@ -52,9 +52,14 @@ public sealed class GetJobInvitationsQueryHandler
                 {
                     Id = i.Id,
                     JobId = i.JobId,
+                    JobTitle = job.Title,
+                    CompanyName = job.CompanyName ?? "TalentX Employer",
                     TalentUserId = i.TalentUserId,
                     TalentName = talent?.Name ?? "Candidate",
+                    Message = i.Message,
                     InvitedDate = i.InvitedDate,
+                    ExpiresAt = i.ExpiresAt,
+                    Status = i.Status,
                     IsActive = i.IsActive
                 };
             })

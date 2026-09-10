@@ -63,6 +63,21 @@ public sealed class EmployerTalentMatchingController : BaseApiController
     }
 
     /// <summary>
+    /// Withdraws an active invitation sent for a job.
+    /// </summary>
+    [HttpPatch("jobs/{jobId:guid}/invitations/{invitationId:guid}/withdraw")]
+    public async Task<IActionResult> WithdrawInvitation(
+        Guid jobId,
+        Guid invitationId,
+        CancellationToken cancellationToken)
+    {
+        var result = await Sender.Send(
+            new TalentX.Application.Features.Invitations.Commands.WithdrawInvitation.WithdrawInvitationCommand(jobId, invitationId),
+            cancellationToken);
+        return Ok(result);
+    }
+
+    /// <summary>
     /// Gets a comprehensive profile summary of a candidate for employer review.
     /// </summary>
     [HttpGet("candidates/{id}/summary")]
