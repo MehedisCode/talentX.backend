@@ -83,6 +83,10 @@ public sealed class JobRepository : RepositoryBase<Job>, IJobRepository
             .OrderByDescending(j => j.CreatedAt)
             .ToListAsync(cancellationToken);
 
+    public async Task<IEnumerable<Job>> GetActivePublishedJobsAsync(CancellationToken cancellationToken = default) =>
+        await Context.Jobs
+            .Where(j => j.ExpireAt >= DateTime.UtcNow && j.Status == JobStatus.Published)
+            .ToListAsync(cancellationToken);
     public async Task<EmployerJobStatsDto> GetEmployerStatsAsync(
         string employerId,
         CancellationToken cancellationToken = default)

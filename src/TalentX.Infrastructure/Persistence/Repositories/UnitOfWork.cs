@@ -35,6 +35,7 @@ public sealed class UnitOfWork : IUnitOfWork
         Resumes = new ResumeRepository(_context);
         WorkExperiences = new WorkExperienceRepository(_context);
         Educations = new EducationRepository(_context);
+        Invitations = new InvitationRepository(_context);
         SavedJobs = new SavedJobRepository(_context);
         InterviewInvitations = new InterviewInvitationRepository(_context);
         EmailDispatchLogs = new EmailDispatchLogRepository(_context);
