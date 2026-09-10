@@ -65,14 +65,21 @@ public sealed class GetTalentMatchesQueryHandler
 
         foreach (var job in openJobs)
         {
-            if (job.RequiredSkills.Count == 0)
+            bool hasApplied = await _unitOfWork.JobApplications
+                .ExistsByJobIdAndTalentUserIdAsync(job.Id, talent.UserId, cancellationToken);
+
+            if (job.RequiredSkills.Count == 0 || hasApplied)
             {
                 continue; // can't meaningfully score a job with no required skills
             }
 
             var requiredSkillSet = job.RequiredSkills
-                .Select(s => s.Trim().ToLowerInvariant())
-                .ToHashSet();
+                .SelectMany(x => x.Split(',', StringSplitOptions.RemoveEmptyEntries))
+                .Select(x => x.Trim().ToLowerInvariant())
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Distinct()
+                .ToList();
+
 
             var matchedCount = requiredSkillSet.Count(skill => talentTechnicalSkillSet.Contains(skill));
             matchedCount += requiredSkillSet.Count(skill => talentSoftSkillSet.Contains(skill));
