@@ -64,6 +64,8 @@ public sealed class SendJobInvitationCommandHandler
             var baseUrl = GetFrontendBaseUrl();
             var jobUrl = $"{baseUrl}/jobs/{job.Id}?invitation={invitation.Token}";
 
+            Console.WriteLine($"[Invitation] Invite link for {talent.Email}: {jobUrl}");
+
             await _emailService.SendJobInvitationEmailAsync(
                 talent.Email,
                 talent.Name ?? "Candidate",
