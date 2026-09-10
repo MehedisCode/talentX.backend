@@ -23,21 +23,31 @@ public sealed class InvitationRepository : IInvitationRepository
     {
         var now = DateTime.UtcNow;
 
-        var query = from invitation in _context.Invitations
-                    join job in _context.Jobs on invitation.JobId equals job.Id
-                    where invitation.TalentUserId == talentUserId
-                          && invitation.IsActive
-                          && job.Status == JobStatus.Published
-                          && job.ExpireAt >= now
-                    orderby invitation.InvitedDate descending
-                    select new
+        var query = _context.Invitations
+                    .Join(
+                        _context.Jobs,
+                        invitation => invitation.JobId,
+                        job => job.Id,
+                        (invitation, job) => new
+                        {
+                            invitation,
+                            job
+                        })
+                    .Where(x =>
+                        x.invitation.TalentUserId == talentUserId &&
+                        x.invitation.IsActive &&
+                        x.job.Status == JobStatus.Published &&
+                        x.job.ExpireAt >= now)
+                    .OrderByDescending(x => x.invitation.InvitedDate)
+                    .Select(x => new
                     {
-                        invitation.Id,
-                        invitation.JobId,
-                        JobTitle = job.Title,
-                        Company = job.CompanyName,
-                        invitation.InvitedDate
-                    };
+                        x.invitation.Id,
+                        x.invitation.JobId,
+                        JobTitle = x.job.Title,
+                        Company = x.job.CompanyName,
+                        x.invitation.InvitedDate
+                    });
+
 
         var totalCount = await query.CountAsync(cancellationToken);
         var pagedItems = await query

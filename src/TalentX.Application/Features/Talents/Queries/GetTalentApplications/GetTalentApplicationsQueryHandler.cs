@@ -43,14 +43,14 @@ public sealed class GetTalentApplicationsQueryHandler
 
         var (page, pageSize) = PaginationRequest.Normalize(request.Page, request.PageSize);
 
-        var pagedRecords = await _unitOfWork.JobApplications.GetApplicationsForTalentAsync(
+        var pagedTalentApplications = await _unitOfWork.JobApplications.GetApplicationsForTalentAsync(
             currentUserId,
             filterStatus,
             page,
             pageSize,
             cancellationToken);
 
-        var dtoList = pagedRecords.Items.Select(r => new TalentApplicationDto(
+        var talentApplications = pagedTalentApplications.Items.Select(r => new TalentApplicationDto(
             r.Id,
             r.JobId,
             r.JobTitle,
@@ -59,6 +59,6 @@ public sealed class GetTalentApplicationsQueryHandler
             r.Status.ToString()
         )).ToList();
 
-        return new PaginatedList<TalentApplicationDto>(dtoList, pagedRecords.Page, pagedRecords.PageSize, pagedRecords.TotalCount);
+        return new PaginatedList<TalentApplicationDto>(talentApplications, pagedTalentApplications.Page, pagedTalentApplications.PageSize, pagedTalentApplications.TotalCount);
     }
 }

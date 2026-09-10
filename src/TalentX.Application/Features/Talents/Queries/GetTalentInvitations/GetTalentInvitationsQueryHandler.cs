@@ -30,13 +30,13 @@ public sealed class GetTalentInvitationsQueryHandler
 
         var (page, pageSize) = PaginationRequest.Normalize(request.Page, request.PageSize);
 
-        var pagedRecords = await _unitOfWork.Invitations.GetActiveInvitationsForTalentAsync(
+        var pagedTalentActiveInvitations = await _unitOfWork.Invitations.GetActiveInvitationsForTalentAsync(
             currentUserId,
             page,
             pageSize,
             cancellationToken);
 
-        var dtoList = pagedRecords.Items.Select(r => new TalentInvitationDto(
+        var talentInvitations = pagedTalentActiveInvitations.Items.Select(r => new TalentInvitationDto(
             r.Id,
             r.JobId,
             r.JobTitle,
@@ -44,6 +44,6 @@ public sealed class GetTalentInvitationsQueryHandler
             r.InvitedDate
         )).ToList();
 
-        return new PaginatedList<TalentInvitationDto>(dtoList, pagedRecords.Page, pagedRecords.PageSize, pagedRecords.TotalCount);
+        return new PaginatedList<TalentInvitationDto>(talentInvitations, pagedTalentActiveInvitations.Page, pagedTalentActiveInvitations.PageSize, pagedTalentActiveInvitations.TotalCount);
     }
 }

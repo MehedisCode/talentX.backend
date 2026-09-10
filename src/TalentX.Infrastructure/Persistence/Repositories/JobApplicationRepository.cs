@@ -129,18 +129,27 @@ public sealed class JobApplicationRepository : IJobApplicationRepository
         int pageSize,
         CancellationToken cancellationToken = default)
     {
-        var query = from application in _context.JobApplications
-                    join job in _context.Jobs on application.JobId equals job.Id
-                    where application.TalentUserId == talentUserId
-                    select new
+        var query = _context.JobApplications
+                    .Join(
+                        _context.Jobs,
+                        application => application.JobId,
+                        job => job.Id,
+                        (application, job) => new
+                        {
+                            application,
+                            job
+                        })
+                    .Where(x => x.application.TalentUserId == talentUserId)
+                    .Select(x => new
                     {
-                        application.Id,
-                        application.JobId,
-                        JobTitle = job.Title,
-                        Company = job.CompanyName,
-                        application.AppliedAt,
-                        application.Status
-                    };
+                        x.application.Id,
+                        x.application.JobId,
+                        JobTitle = x.job.Title,
+                        Company = x.job.CompanyName,
+                        x.application.AppliedAt,
+                        x.application.Status
+                    });
+
 
         if (status.HasValue)
         {
