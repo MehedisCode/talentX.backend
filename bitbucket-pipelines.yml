@@ -87,6 +87,10 @@ pipelines:
                 -e GEMINI_API_KEY="${GEMINI_API_KEY}" \
                 -e GEMINI_MODEL_NAME="${GEMINI_MODEL_NAME}" \
                 -e GEMINI_BASE_URL="${GEMINI_BASE_URL}" \
+                -e GEMINI_PROMPT_VERSION="${GEMINI_PROMPT_VERSION}" \
+                -e GEMINI_TEMPERATURE="${GEMINI_TEMPERATURE}" \
+                -e GEMINI_TOP_P="${GEMINI_TOP_P}" \
+                -e GEMINI_MAX_OUTPUT_TOKENS="${GEMINI_MAX_OUTPUT_TOKENS}" \
                 -e AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID}" \
                 -e AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY}" \
                 -e AWS_REGION="${AWS_REGION}" \
@@ -95,6 +99,7 @@ pipelines:
                 -e FILE_STORAGE_S3_BUCKET_NAME="${FILE_STORAGE_S3_BUCKET_NAME}" \
                 -e FILE_STORAGE_S3_REGION="${FILE_STORAGE_S3_REGION}" \
                 -e FILE_STORAGE_S3_FOLDER_PREFIX="${FILE_STORAGE_S3_FOLDER_PREFIX}" \
+                -e PRESIGNED_URL_EXPIRY_MINUTES="${PRESIGNED_URL_EXPIRY_MINUTES}" \
                 -e ASPNETCORE_ENVIRONMENT=Development \
                 "\$IMAGE"
 
