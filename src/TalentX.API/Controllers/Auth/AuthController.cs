@@ -80,8 +80,14 @@ public class AuthController : BaseApiController
     {
         var result = await Sender.Send(command);
 
-        if (!result.Success)
+        if (!result.Succeeded)
+        {
+            if (result.Errors.Contains("Incorrect password."))
+            {
+                return BadRequest(new { message = "Incorrect password." });
+            }
             return BadRequest(result.Errors);
+        }
 
         return Ok(new { message = "Password changed successfully." });
     }
