@@ -1,33 +1,81 @@
 @model TalentX.Infrastructure.Mailing.Models.InterviewConfirmationEmailModel
 <!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"><title>Interview Details Confirmed</title></head>
-<body style="font-family:Arial,sans-serif;background:#f4f6f8;margin:0;padding:20px;">
-  <div style="max-width:520px;margin:0 auto;background:#fff;border-radius:8px;padding:32px;box-shadow:0 2px 8px rgba(0,0,0,.05);">
-    <h2 style="color:#111827;margin-top:0;">Interview Details Confirmed</h2>
-    <p style="color:#4b5563;font-size:15px;line-height:1.5;">
-      Hi @Model.RecipientName,<br><br>
-      Your interview for <strong>@Model.JobTitle</strong> at <strong>@Model.CompanyName</strong> has been confirmed.
-    </p>
-    <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:20px;margin:24px 0;">
-      <p style="margin:0 0 8px;color:#6b7280;font-size:13px;">Interview Type</p>
-      <p style="margin:0 0 16px;font-size:15px;font-weight:600;color:#111827;">@Model.InterviewType</p>
-      <p style="margin:0 0 8px;color:#6b7280;font-size:13px;">Time / Deadline</p>
-      <p style="margin:0 0 16px;font-size:15px;font-weight:600;color:#111827;">@Model.ScheduledTimeOrDeadline</p>
-      <p style="margin:0 0 8px;color:#6b7280;font-size:13px;">Location / Link</p>
-      <p style="margin:0;font-size:15px;font-weight:600;color:#111827;">@Model.LocationOrLink</p>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Interview Details Confirmed — TalentX</title>
+</head>
+<body style="margin:0;padding:0;background:#f4f6f8;font-family:Arial,Helvetica,sans-serif;-webkit-font-smoothing:antialiased;">
+
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;">
+    Your interview for @Model.JobTitle at @Model.CompanyName is confirmed. Here are the details.
+  </div>
+
+  <div style="padding:24px 12px;">
+    <div style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(16,24,40,.10),0 1px 2px rgba(16,24,40,.06);">
+
+      <div style="padding:26px 32px 0;">
+        <span style="font-size:18px;font-weight:700;letter-spacing:-.2px;color:#059669;">Talent<span style="color:#111827;">X</span></span>
+      </div>
+
+      <div style="padding:22px 32px 0;">
+        <span style="display:inline-block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:#059669;background:#ecfdf5;padding:5px 11px;border-radius:999px;">Interview Confirmed</span>
+        <h1 style="margin:14px 0 0;font-size:22px;line-height:1.3;color:#111827;font-weight:700;">Your interview is confirmed</h1>
+      </div>
+
+      <div style="padding:16px 32px 0;">
+        <p style="margin:0;color:#4b5563;font-size:15px;line-height:1.6;">Hi @Model.RecipientName,</p>
+        <p style="margin:12px 0 0;color:#4b5563;font-size:15px;line-height:1.6;">
+          Your interview for <strong style="color:#111827;">@Model.JobTitle</strong> at
+          <strong style="color:#111827;">@Model.CompanyName</strong> has been confirmed. The details are below.
+        </p>
+
+        <div style="margin:22px 0 0;background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:6px 20px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+            <tr>
+              <td style="padding:12px 0;border-bottom:1px solid #eef0f3;color:#6b7280;font-size:13px;width:40%;vertical-align:top;">Interview type</td>
+              <td style="padding:12px 0;border-bottom:1px solid #eef0f3;color:#111827;font-size:14px;font-weight:600;vertical-align:top;">@Model.InterviewType</td>
+            </tr>
+            <tr>
+              <td style="padding:12px 0;border-bottom:1px solid #eef0f3;color:#6b7280;font-size:13px;vertical-align:top;">Time / deadline</td>
+              <td style="padding:12px 0;border-bottom:1px solid #eef0f3;color:#111827;font-size:14px;font-weight:600;vertical-align:top;">@Model.ScheduledTimeOrDeadline</td>
+            </tr>
+            <tr>
+              <td style="padding:12px 0;color:#6b7280;font-size:13px;vertical-align:top;">Location / link</td>
+              <td style="padding:12px 0;color:#111827;font-size:14px;font-weight:600;vertical-align:top;word-break:break-word;">@Model.LocationOrLink</td>
+            </tr>
+          </table>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(Model.Instructions))
+        {
+          <div style="margin:18px 0 0;border-left:3px solid #059669;background:#f0fdf4;border-radius:0 8px 8px 0;padding:14px 16px;">
+            <p style="margin:0;color:#065f46;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Message from the employer</p>
+            <p style="margin:7px 0 0;color:#374151;font-size:14px;line-height:1.6;">@Model.Instructions</p>
+          </div>
+        }
+
+        <div style="text-align:center;margin:28px 0 6px;">
+          <a href="https://talentx-stg-app.ait-us.co/dashboard"
+             style="display:inline-block;background:#059669;color:#ffffff;font-size:15px;font-weight:700;line-height:1;padding:14px 36px;border-radius:8px;text-decoration:none;">
+            View in Dashboard
+          </a>
+        </div>
+        <p style="margin:0;text-align:center;color:#9ca3af;font-size:12px;line-height:1.5;">
+          Add this to your calendar so you don't miss it.
+        </p>
+      </div>
+
+      <div style="border-top:1px solid #eef0f3;margin-top:24px;padding:18px 32px 26px;">
+        <p style="margin:0;color:#9ca3af;font-size:12px;line-height:1.5;">
+          You're receiving this email because you accepted an interview invitation on TalentX.
+        </p>
+        <p style="margin:10px 0 0;color:#b6bcc6;font-size:12px;">&copy; @DateTime.UtcNow.Year TalentX Inc. All rights reserved.</p>
+      </div>
+
     </div>
-    @if (!string.IsNullOrWhiteSpace(Model.Instructions))
-    {
-      <p style="color:#4b5563;font-size:15px;line-height:1.5;">
-        <strong>Instructions / Message from Employer:</strong><br>@Model.Instructions
-      </p>
-    }
-    <p style="color:#4b5563;font-size:15px;line-height:1.5;">
-      Log in to your <a href="https://talentx.com/dashboard" style="color:#2563eb;">TalentX Dashboard</a> anytime to view your scheduled interviews.
-    </p>
-    <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;">
-    <p style="color:#9ca3af;font-size:12px;text-align:center;margin:0;">&copy; @DateTime.UtcNow.Year TalentX Inc.</p>
   </div>
 </body>
 </html>
