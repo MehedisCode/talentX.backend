@@ -160,6 +160,13 @@ public class IdentityService : IIdentityService
         var result = await _userManager.ChangePasswordAsync(user, currentPassword, newPassword);
         if (!result.Succeeded)
         {
+            bool isPasswordMismatch = result.Errors.Any(e => e.Code == "PasswordMismatch");
+
+            if (isPasswordMismatch)
+            {
+                return IdentityResponse.Fail("Incorrect password.");
+            }
+
             return IdentityResponse.Fail(result.Errors.Select(error => error.Description));
         }
 
