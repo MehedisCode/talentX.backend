@@ -35,7 +35,11 @@ public sealed class InvitationRepository : IInvitationRepository
                         })
                     .Where(x =>
                         x.invitation.TalentUserId == talentUserId &&
-                        x.invitation.IsActive)
+                        x.invitation.IsActive &&
+                        x.invitation.ExpiresAt >= DateTime.UtcNow &&
+                        x.job.ExpireAt >= DateTime.UtcNow &&
+                        x.job.Status == JobStatus.Published &&
+                        x.job.IsDeleted == false)
                     .OrderByDescending(x => x.invitation.InvitedDate)
                     .Select(x => new
                     {
@@ -43,7 +47,11 @@ public sealed class InvitationRepository : IInvitationRepository
                         x.invitation.JobId,
                         JobTitle = x.job.Title,
                         Company = x.job.CompanyName,
-                        x.invitation.InvitedDate
+                        x.invitation.InvitedDate,
+                        x.invitation.ExpiresAt,
+                        x.invitation.Message,
+                        x.job.WorkArrangement,
+                        x.job.EmploymentType
                     });
 
 
@@ -58,7 +66,11 @@ public sealed class InvitationRepository : IInvitationRepository
             item.JobId,
             item.JobTitle,
             item.Company,
-            item.InvitedDate
+            item.InvitedDate,
+            item.ExpiresAt,
+            item.Message,
+            item.WorkArrangement,
+            item.EmploymentType
         )).ToList();
 
         return new PaginatedList<TalentInvitationRecord>(records, page, pageSize, totalCount);

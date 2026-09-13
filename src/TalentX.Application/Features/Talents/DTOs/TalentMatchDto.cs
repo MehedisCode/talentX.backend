@@ -4,4 +4,7 @@ public sealed record TalentMatchDto(
     Guid JobId,
     string JobTitle,
     string Company,
-    int MatchScore);
+    int MatchScore,
+    WorkArrangement WorkArrangement,
+    EmploymentType EmploymentType,
+    DateTime ExpireAt);

@@ -41,7 +41,11 @@ public sealed class GetTalentInvitationsQueryHandler
             r.JobId,
             r.JobTitle,
             r.Company,
-            r.InvitedDate
+            r.InvitedDate,
+            r.ExpiresAt,
+            r.Message,
+            r.WorkArrangement,
+            r.EmploymentType
         )).ToList();
 
         return new PaginatedList<TalentInvitationDto>(talentInvitations, pagedTalentActiveInvitations.Page, pagedTalentActiveInvitations.PageSize, pagedTalentActiveInvitations.TotalCount);
