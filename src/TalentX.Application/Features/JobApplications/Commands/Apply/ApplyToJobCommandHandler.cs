@@ -100,7 +100,7 @@ public class ApplyToJobCommandHandler : IRequestHandler<ApplyToJobCommand, Apply
             name,
             email,
             resumeStorageKey,
-            coverLetter: request.CoverLetter,
+            coverLetter: request.CoverLetter?.Replace("\r\n", "\n").Replace("\r", "\n"),
             expectedSalary: request.ExpectedSalary,
             totalYearsExperience: request.TotalYearsExperience,
             location: request.Location);
