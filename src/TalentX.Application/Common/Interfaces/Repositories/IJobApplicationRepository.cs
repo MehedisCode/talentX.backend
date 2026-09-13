@@ -23,9 +23,12 @@ public interface IJobApplicationRepository
         Guid jobId,
         string? search,
         ApplicationStatus? status,
+        string? sortBy,
+        string? sortOrder,
         int page,
         int pageSize,
         CancellationToken cancellationToken = default);
+    void Update(JobApplication jobApplication);
     Task<JobApplication?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task AddAsync(JobApplication jobApplication, CancellationToken cancellationToken = default);
     Task<PaginatedList<TalentApplicationRecord>> GetApplicationsForTalentAsync(
