@@ -27,10 +27,11 @@ public class ApplyToJobCommandValidator : AbstractValidator<ApplyToJobCommand>
 
         RuleFor(v => v.CoverLetter)
             .NotNull().WithMessage("Cover letter is required.")
-            .Must(coverLetter => coverLetter is null || coverLetter.Trim().Length >= 2)
+            .Must(coverLetter => coverLetter is null || NormalizeLine(coverLetter).Trim().Length >= 2)
                 .WithMessage("Cover letter must be at least 2 characters.")
-            .MaximumLength(4000).WithMessage("Cover letter must not exceed 4000 characters.")
-            .Must(coverLetter => coverLetter is null || coverLetter.Trim().Length == 0 || coverLetter.Trim().Any(char.IsLetter))
+            .Must(coverLetter => coverLetter is null || NormalizeLine(coverLetter).Trim().Length <= 4000)
+                .WithMessage("Cover letter must not exceed 4000 characters.")
+            .Must(coverLetter => coverLetter is null || NormalizeLine(coverLetter).Trim().Length == 0 || NormalizeLine(coverLetter).Trim().Any(char.IsLetter))
                 .WithMessage("Cover letter must contain at least one letter.");
 
         RuleFor(v => v.ExpectedSalary)
@@ -43,4 +44,7 @@ public class ApplyToJobCommandValidator : AbstractValidator<ApplyToJobCommand>
         RuleFor(v => v.Location)
             .MaximumLength(200).WithMessage("Location must not exceed 200 characters.");
     }
+
+    private static string NormalizeLine(string value) =>
+        value.Replace("\r\n", "\n").Replace("\r", "\n");
 }

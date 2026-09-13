@@ -21,7 +21,8 @@ public sealed class ApplyToJobCommandValidator : AbstractValidator<ApplyToJobCom
             .MaximumLength(500).WithMessage("Resume reference cannot exceed 500 characters.");
 
         RuleFor(x => x.CoverLetter)
-            .MaximumLength(4000).WithMessage("Cover letter cannot exceed 4000 characters.");
+            .Must(cl => cl is null || cl.Replace("\r\n", "\n").Replace("\r", "\n").Trim().Length <= 4000)
+            .WithMessage("Cover letter cannot exceed 4000 characters.");
 
         RuleFor(x => x.Location)
             .MaximumLength(200).WithMessage("Location cannot exceed 200 characters.");
