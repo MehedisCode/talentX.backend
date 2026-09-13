@@ -94,7 +94,10 @@ public sealed class GetTalentMatchesQueryHandler
                     job.Id,
                     job.Title,
                     job.CompanyName,
-                    score
+                    score,
+                    job.WorkArrangement,
+                    job.EmploymentType,
+                    job.ExpireAt
                 ));
             }
         }
