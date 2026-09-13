@@ -48,6 +48,8 @@ public sealed class GetJobApplicantsQueryHandler
             request.JobId,
             request.Search,
             request.Status,
+            request.SortBy,
+            request.SortOrder,
             page,
             pageSize,
             cancellationToken);

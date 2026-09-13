@@ -59,7 +59,7 @@ public class EmployerJobApplicationsControllerTests
 
         _sender
             .Setup(s => s.Send(
-                It.Is<GetJobApplicantsQuery>(q => q.JobId == jobId && q.Search == "Alice" && q.Status == ApplicationStatus.Applied && q.Page == 1 && q.PageSize == 10),
+                It.Is<GetJobApplicantsQuery>(q => q.JobId == jobId && q.Search == "Alice" && q.Status == ApplicationStatus.Applied && q.SortBy == null && q.SortOrder == null && q.Page == 1 && q.PageSize == 10),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(paginatedResult);
 
@@ -67,6 +67,8 @@ public class EmployerJobApplicationsControllerTests
             jobId,
             search: "Alice",
             status: ApplicationStatus.Applied,
+            sortBy: null,
+            sortOrder: null,
             page: 1,
             pageSize: 10,
             cancellationToken: CancellationToken.None);

@@ -9,6 +9,8 @@ public sealed record GetJobApplicantsQuery(
     Guid JobId,
     string? Search = null,
     ApplicationStatus? Status = null,
+    string? SortBy = null,
+    string? SortOrder = null,
     int Page = 1,
     int PageSize = 10
 ) : IRequest<PaginatedList<JobApplicantListItemDto>>;
