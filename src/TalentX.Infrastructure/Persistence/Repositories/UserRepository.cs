@@ -28,6 +28,11 @@ public class UserRepository : IUserRepository
             .FirstOrDefaultAsync(u => u.UserId == userId);
     }
 
+    public async Task AddAsync(User user, CancellationToken cancellationToken = default)
+    {
+        await _context.DomainUsers.AddAsync(user, cancellationToken);
+    }
+
     public void Update(User user)
     {
         _context.DomainUsers.Update(user);
