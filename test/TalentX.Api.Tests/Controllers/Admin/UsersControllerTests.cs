@@ -10,6 +10,8 @@ using Moq;
 using TalentX.API.Controllers;
 using TalentX.API.Controllers.Admin;
 using TalentX.Application.Common.Models;
+using TalentX.Application.Features.JobApplications.DTOs;
+using TalentX.Application.Features.Users.Commands.UpdateUserAccountStatus;
 using TalentX.Application.Features.Users.DTOs;
 using TalentX.Application.Features.Users.Queries.GetAdminUserStats;
 using TalentX.Application.Features.Users.Queries.GetUserDetails;
@@ -159,6 +161,31 @@ public sealed class UsersControllerTests
 
         _sender.Verify(
             sender => sender.Send(It.Is<GetUserDetailsQuery>(q => q.UserId == userId), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateUserAccountStatus_WithCommand_RebindsRouteIdAndReturnsOk()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var command = new UpdateUserAccountStatusCommand(Guid.Empty, AccountStatus.Deactivated);
+        var expectedResult = new StatusUpdateResponseDto("Account status updated to Deactivated.");
+
+        _sender
+            .Setup(sender => sender.Send(It.Is<UpdateUserAccountStatusCommand>(c => c.UserId == userId), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expectedResult);
+
+        // Act
+        var result = await _controller.UpdateUserAccountStatus(userId, command, CancellationToken.None);
+
+        // Assert
+        var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
+        okResult.StatusCode.Should().Be(StatusCodes.Status200OK);
+        okResult.Value.Should().BeEquivalentTo(expectedResult);
+
+        _sender.Verify(
+            sender => sender.Send(It.Is<UpdateUserAccountStatusCommand>(c => c.UserId == userId && c.NewStatus == AccountStatus.Deactivated), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 }
