@@ -44,6 +44,8 @@ public static class PersistenceStartup
         services.AddScoped<IEmailDispatchLogRepository, EmailDispatchLogRepository>();
         services.AddScoped<IJobTalentMatchRepository, JobTalentMatchRepository>();
         services.AddScoped<IAuditLogRepository, AuditLogRepository>();
+        services.AddScoped<IJobAlertRepository, JobAlertRepository>();
+        services.AddScoped<ITalentNotificationPreferenceRepository, TalentNotificationPreferenceRepository>();
 
         return services;
     }
