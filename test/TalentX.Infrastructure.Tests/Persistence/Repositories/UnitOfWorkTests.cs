@@ -38,6 +38,7 @@ public class UnitOfWorkTests
         unitOfWork.Resumes.Should().NotBeNull().And.BeAssignableTo<IResumeRepository>();
         unitOfWork.WorkExperiences.Should().NotBeNull().And.BeAssignableTo<IWorkExperienceRepository>();
         unitOfWork.Educations.Should().NotBeNull().And.BeAssignableTo<IEducationRepository>();
+        unitOfWork.AuditLogs.Should().NotBeNull().And.BeAssignableTo<IAuditLogRepository>();
     }
 
     [Fact]

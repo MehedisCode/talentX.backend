@@ -23,12 +23,14 @@ public class VerifyGuestEmailCommandHandlerTests
     private readonly Mock<ITokenService> _tokenService = new();
     private readonly Mock<IEmailService> _emailService = new();
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
+    private readonly Mock<IAuditLogRepository> _auditLogRepository = new();
     private readonly Mock<ILogger<VerifyGuestEmailCommandHandler>> _logger = new();
 
     private readonly VerifyGuestEmailCommandHandler _handler;
 
     public VerifyGuestEmailCommandHandlerTests()
     {
+        _unitOfWork.Setup(u => u.AuditLogs).Returns(_auditLogRepository.Object);
         _tokenService
             .Setup(t => t.CreateAsync(It.IsAny<string>()))
             .ReturnsAsync(IdentityResponse<TokenResponse>.Ok(new TokenResponse

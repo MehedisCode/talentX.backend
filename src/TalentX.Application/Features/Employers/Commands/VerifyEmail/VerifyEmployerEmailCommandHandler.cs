@@ -5,6 +5,7 @@ using TalentX.Application.Common.Interfaces;
 using TalentX.Application.DTOs.Auth;
 using TalentX.Application.DTOs.Employers;
 using TalentX.Application.Identity.Interfaces;
+using TalentX.Domain.Entities;
 
 namespace TalentX.Application.Features.Employers.Commands.VerifyEmail;
 
@@ -48,6 +49,8 @@ public sealed class VerifyEmployerEmailCommandHandler : IRequestHandler<VerifyEm
         }
 
         employer.MarkAsVerified();
+        var auditLog = new AuditLog(request.Email, "Login Success · OTP", isSystem: false);
+        await _unitOfWork.AuditLogs.AddAsync(auditLog, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         var tokenResult = await _tokenService.CreateAsync(employer.UserId);

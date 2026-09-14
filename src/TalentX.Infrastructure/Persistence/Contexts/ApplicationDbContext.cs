@@ -31,6 +31,7 @@ public class ApplicationDbContext
     public DbSet<JobTalentMatch> JobTalentMatches => Set<JobTalentMatch>();
     public DbSet<Invitation> Invitations => Set<Invitation>();
     public DbSet<EmailVerificationToken> EmailVerificationTokens => Set<EmailVerificationToken>();
+    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

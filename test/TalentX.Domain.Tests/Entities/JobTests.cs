@@ -276,6 +276,7 @@ public class JobTests
         var job = CreateJob();
         job.MarkAsPublished();
         var originalPublishedAt = job.PublishedAt;
+        Thread.Sleep(5);
         job.MarkAsClosed();
         var beforeReopen = DateTime.UtcNow;
 

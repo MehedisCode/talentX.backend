@@ -100,6 +100,8 @@ pipelines:
                 -e FILE_STORAGE_S3_REGION="${FILE_STORAGE_S3_REGION}" \
                 -e FILE_STORAGE_S3_FOLDER_PREFIX="${FILE_STORAGE_S3_FOLDER_PREFIX}" \
                 -e PRESIGNED_URL_EXPIRY_MINUTES="${PRESIGNED_URL_EXPIRY_MINUTES}" \
+                -e ADMIN_EMAIL="${ADMIN_EMAIL}" \
+                -e ADMIN_PASS="${ADMIN_PASS}" \
                 -e ASPNETCORE_ENVIRONMENT=Development \
                 "\$IMAGE"
 
