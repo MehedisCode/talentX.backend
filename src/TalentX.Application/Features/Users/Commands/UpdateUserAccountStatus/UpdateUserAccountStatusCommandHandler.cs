@@ -12,13 +12,16 @@ public sealed class UpdateUserAccountStatusCommandHandler : IRequestHandler<Upda
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUserService;
+    private readonly IEmailService _emailService;
 
     public UpdateUserAccountStatusCommandHandler(
         IUnitOfWork unitOfWork,
-        ICurrentUserService currentUserService)
+        ICurrentUserService currentUserService,
+        IEmailService emailService)
     {
         _unitOfWork = unitOfWork;
         _currentUserService = currentUserService;
+        _emailService = emailService;
     }
 
     public async Task<StatusUpdateResponseDto> Handle(UpdateUserAccountStatusCommand request, CancellationToken cancellationToken)
@@ -48,8 +51,24 @@ public sealed class UpdateUserAccountStatusCommandHandler : IRequestHandler<Upda
         var auditLog = new AuditLog(actorEmail, $"{verb} account {user.Email}");
         await _unitOfWork.AuditLogs.AddAsync(auditLog, cancellationToken);
 
+        await StageStatusChangedEmailAsync(user, request.NewStatus, verb, cancellationToken);
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return new StatusUpdateResponseDto($"Account status updated to {request.NewStatus}.");
+    }
+
+    private async Task StageStatusChangedEmailAsync(
+        Domain.User user,
+        AccountStatus newStatus,
+        string verb,
+        CancellationToken cancellationToken)
+    {
+        var subject = $"Your TalentX Account Has Been {verb}";
+        var htmlBody = await _emailService.RenderAccountStatusChangedEmailAsync(user.Name, newStatus, user.Role, cancellationToken);
+
+        await _unitOfWork.EmailDispatchLogs.AddAsync(
+            new EmailDispatchLog(user.Email, user.Name, subject, htmlBody, "AccountStatusChanged"),
+            cancellationToken);
     }
 }

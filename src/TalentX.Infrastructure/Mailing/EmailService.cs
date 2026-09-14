@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using MimeKit;
 using RazorLight;
 using TalentX.Application.Common.Interfaces;
+using TalentX.Domain.Enums;
 using TalentX.Infrastructure.Mailing.Models;
 
 namespace TalentX.Infrastructure.Mailing;
@@ -164,6 +165,21 @@ public sealed class EmailService : IEmailService
             new PasswordResetEmailModel(recipientName, resetUrl));
 
         DispatchAfterLogging(toEmail, recipientName, EmailConstants.Subjects.PasswordReset, html);
+    }
+
+    public Task<string> RenderAccountStatusChangedEmailAsync(
+        string recipientName,
+        AccountStatus newStatus,
+        UserRole role,
+        CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation(
+            "[EMAIL] {Kind} dispatch to {RecipientName}: {NewStatus} ({Role})",
+            EmailConstants.Kinds.AccountStatusChanged, recipientName, newStatus, role);
+
+        return _razor.CompileRenderAsync(
+            EmailConstants.Templates.AccountStatusChanged,
+            new AccountStatusChangedEmailModel(recipientName, newStatus, role));
     }
 
     private void LogDispatch(string kind, string recipientName, string toEmail, string? secret)

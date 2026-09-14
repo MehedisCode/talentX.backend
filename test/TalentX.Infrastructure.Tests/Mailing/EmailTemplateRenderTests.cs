@@ -1,5 +1,6 @@
 using FluentAssertions;
 using RazorLight;
+using TalentX.Domain.Enums;
 using TalentX.Infrastructure.Mailing;
 using TalentX.Infrastructure.Mailing.Models;
 using Xunit;
@@ -53,5 +54,42 @@ public class EmailTemplateRenderTests
                 "On-site", "Dhaka HQ", "Thu 18 Sep, 2:30 PM", null));
 
         withoutInstructions.Should().NotContain("Message from the employer");
+    }
+
+    [Fact]
+    public async Task AccountStatusChanged_renders_for_active_and_deactivated()
+    {
+        var activated = await Engine.CompileRenderAsync(
+            "TalentX.Infrastructure.Mailing.Templates.Emails.AccountStatusChanged",
+            new AccountStatusChangedEmailModel("Ayesha", AccountStatus.Active, UserRole.Talent));
+
+        activated.Should().Contain("Account Activated");
+        activated.Should().Contain("reactivated");
+
+        var deactivated = await Engine.CompileRenderAsync(
+            "TalentX.Infrastructure.Mailing.Templates.Emails.AccountStatusChanged",
+            new AccountStatusChangedEmailModel("Ayesha", AccountStatus.Deactivated, UserRole.Talent));
+
+        deactivated.Should().Contain("Account Deactivated");
+        deactivated.Should().Contain("contact TalentX support");
+    }
+
+    [Fact]
+    public async Task AccountStatusChanged_deactivation_copy_is_tailored_to_role()
+    {
+        var employer = await Engine.CompileRenderAsync(
+            "TalentX.Infrastructure.Mailing.Templates.Emails.AccountStatusChanged",
+            new AccountStatusChangedEmailModel("Ayesha", AccountStatus.Deactivated, UserRole.Employer));
+        employer.Should().Contain("You will not be able to post new jobs until it is reactivated.");
+
+        var talent = await Engine.CompileRenderAsync(
+            "TalentX.Infrastructure.Mailing.Templates.Emails.AccountStatusChanged",
+            new AccountStatusChangedEmailModel("Ayesha", AccountStatus.Deactivated, UserRole.Talent));
+        talent.Should().Contain("You will not be able to apply to jobs until it is reactivated.");
+
+        var guest = await Engine.CompileRenderAsync(
+            "TalentX.Infrastructure.Mailing.Templates.Emails.AccountStatusChanged",
+            new AccountStatusChangedEmailModel("Ayesha", AccountStatus.Deactivated, UserRole.Guest));
+        guest.Should().Contain("You will not be able to sign in until it is reactivated.");
     }
 }

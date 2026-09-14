@@ -17,16 +17,22 @@ public sealed class UpdateUserAccountStatusCommandHandlerTests
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
     private readonly Mock<IUserRepository> _userRepository = new();
     private readonly Mock<IAuditLogRepository> _auditLogRepository = new();
+    private readonly Mock<IEmailDispatchLogRepository> _emailDispatchLogRepository = new();
     private readonly Mock<ICurrentUserService> _currentUserService = new();
+    private readonly Mock<IEmailService> _emailService = new();
     private readonly UpdateUserAccountStatusCommandHandler _handler;
 
     public UpdateUserAccountStatusCommandHandlerTests()
     {
         _unitOfWork.SetupGet(u => u.Users).Returns(_userRepository.Object);
         _unitOfWork.SetupGet(u => u.AuditLogs).Returns(_auditLogRepository.Object);
+        _unitOfWork.SetupGet(u => u.EmailDispatchLogs).Returns(_emailDispatchLogRepository.Object);
         _currentUserService.SetupGet(s => s.Email).Returns("admin@talentx.com");
+        _emailService
+            .Setup(e => e.RenderAccountStatusChangedEmailAsync(It.IsAny<string>(), It.IsAny<AccountStatus>(), It.IsAny<UserRole>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync("<html>status changed</html>");
 
-        _handler = new UpdateUserAccountStatusCommandHandler(_unitOfWork.Object, _currentUserService.Object);
+        _handler = new UpdateUserAccountStatusCommandHandler(_unitOfWork.Object, _currentUserService.Object, _emailService.Object);
     }
 
     [Fact]
@@ -75,6 +81,18 @@ public sealed class UpdateUserAccountStatusCommandHandlerTests
                 It.Is<AuditLog>(log => log.Actor == "admin@talentx.com" && log.Action.Contains("Deactivated account jordan@talentx.com")),
                 It.IsAny<CancellationToken>()),
             Times.Once);
+        _emailService.Verify(
+            e => e.RenderAccountStatusChangedEmailAsync("Jordan Smith", AccountStatus.Deactivated, role, It.IsAny<CancellationToken>()),
+            Times.Once);
+        _emailDispatchLogRepository.Verify(
+            r => r.AddAsync(
+                It.Is<EmailDispatchLog>(e =>
+                    e.RecipientEmail == "jordan@talentx.com" &&
+                    e.RecipientName == "Jordan Smith" &&
+                    e.EmailType == "AccountStatusChanged" &&
+                    e.Subject.Contains("Deactivated")),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
         _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -107,6 +125,15 @@ public sealed class UpdateUserAccountStatusCommandHandlerTests
         _auditLogRepository.Verify(
             r => r.AddAsync(
                 It.Is<AuditLog>(log => log.Action.Contains("Activated account jordan@talentx.com")),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        _emailDispatchLogRepository.Verify(
+            r => r.AddAsync(
+                It.Is<EmailDispatchLog>(e =>
+                    e.RecipientEmail == "jordan@talentx.com" &&
+                    e.RecipientName == "Jordan Smith" &&
+                    e.EmailType == "AccountStatusChanged" &&
+                    e.Subject.Contains("Activated")),
                 It.IsAny<CancellationToken>()),
             Times.Once);
         _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
