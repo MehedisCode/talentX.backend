@@ -154,6 +154,64 @@ namespace TalentX.Migrations.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("TalentX.Domain.Company", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CompanySize")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
+
+                    b.Property<string>("EmployerId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("FacebookUrl")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Industry")
+                        .HasColumnType("text");
+
+                    b.Property<string>("LinkedInUrl")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Location")
+                        .HasColumnType("text");
+
+                    b.Property<string>("LogoStorageKey")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("TwitterUrl")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Website")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EmployerId")
+                        .IsUnique();
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("Companies", (string)null);
+                });
+
             modelBuilder.Entity("TalentX.Domain.EmailVerificationToken", b =>
                 {
                     b.Property<Guid>("Id")
@@ -437,6 +495,12 @@ namespace TalentX.Migrations.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("InvitationCount")
+                        .HasColumnType("integer");
+
                     b.Property<DateTime>("InvitedDate")
                         .HasColumnType("timestamp with time zone");
 
@@ -446,10 +510,21 @@ namespace TalentX.Migrations.Migrations
                     b.Property<Guid>("JobId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("Message")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
                     b.Property<string>("TalentUserId")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Token")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
