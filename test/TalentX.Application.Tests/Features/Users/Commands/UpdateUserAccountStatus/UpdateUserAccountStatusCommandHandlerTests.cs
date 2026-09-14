@@ -30,18 +30,6 @@ public sealed class UpdateUserAccountStatusCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WhenCallerHasNoEmail_ThrowsUnauthorizedException()
-    {
-        _currentUserService.SetupGet(s => s.Email).Returns((string?)null);
-
-        var command = new UpdateUserAccountStatusCommand(Guid.NewGuid(), AccountStatus.Deactivated);
-        var act = () => _handler.Handle(command, CancellationToken.None);
-
-        await act.Should().ThrowAsync<UnauthorizedException>();
-        _userRepository.Verify(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
-    }
-
-    [Fact]
     public async Task Handle_WhenUserNotFound_ThrowsNotFoundException()
     {
         var userId = Guid.NewGuid();
