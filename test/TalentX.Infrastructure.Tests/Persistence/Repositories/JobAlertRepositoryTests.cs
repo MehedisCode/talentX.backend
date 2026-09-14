@@ -105,4 +105,26 @@ public sealed class JobAlertRepositoryTests
         var retrieved = await repository.GetByIdAsync(alert.Id);
         retrieved.Should().BeNull();
     }
+
+    [Fact]
+    public async Task GetAllActiveAlertsAsync_ReturnsOnlyEnabledAlertsAcrossAllTalents()
+    {
+        await using var context = NewContext();
+        var repository = new JobAlertRepository(context);
+
+        var alert1 = JobAlert.Create("talent-1", "Alert 1", "Dev", null, null, null, null);
+        var alert2 = JobAlert.Create("talent-2", "Alert 2", "QA", null, null, null, null);
+        var alert3 = JobAlert.Create("talent-3", "Alert 3", "DevOps", null, null, null, null);
+        alert3.Toggle(false);
+
+        await repository.AddAsync(alert1);
+        await repository.AddAsync(alert2);
+        await repository.AddAsync(alert3);
+        await context.SaveChangesAsync();
+
+        var activeAlerts = await repository.GetAllActiveAlertsAsync();
+
+        activeAlerts.Should().HaveCount(2);
+        activeAlerts.Select(a => a.Name).Should().Contain(["Alert 1", "Alert 2"]);
+    }
 }

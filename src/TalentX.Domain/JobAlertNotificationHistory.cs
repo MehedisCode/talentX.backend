@@ -13,14 +13,16 @@ public sealed class JobAlertNotificationHistory : BaseEntity
     {
     }
 
+    public JobAlertNotificationHistory(string talentId, Guid jobId, Guid jobAlertId)
+    {
+        TalentId = talentId;
+        JobId = jobId;
+        JobAlertId = jobAlertId;
+        SentAt = DateTime.UtcNow;
+    }
+
     public static JobAlertNotificationHistory Create(string talentId, Guid jobId, Guid jobAlertId)
     {
-        return new JobAlertNotificationHistory
-        {
-            TalentId = talentId,
-            JobId = jobId,
-            JobAlertId = jobAlertId,
-            SentAt = DateTime.UtcNow
-        };
+        return new JobAlertNotificationHistory(talentId, jobId, jobAlertId);
     }
 }

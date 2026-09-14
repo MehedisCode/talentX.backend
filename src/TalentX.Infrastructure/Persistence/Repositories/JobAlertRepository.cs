@@ -51,4 +51,11 @@ public sealed class JobAlertRepository : IJobAlertRepository
             .OrderByDescending(alert => alert.CreatedAt)
             .ToListAsync(cancellationToken);
     }
+
+    public async Task<List<JobAlert>> GetAllActiveAlertsAsync(CancellationToken cancellationToken = default)
+    {
+        return await _context.JobAlerts
+            .Where(alert => alert.IsEnabled)
+            .ToListAsync(cancellationToken);
+    }
 }
