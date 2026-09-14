@@ -23,7 +23,7 @@ public class GetJobDetailsQueryHandler : IRequestHandler<GetJobDetailsQuery, Job
             ?? throw new NotFoundException($"Job '{request.Id}' was not found.");
 
         var dto = _mapper.Map<JobDetailsDto>(job);
-        dto.Status = job.Status == Domain.Enums.JobStatus.Published && job.ExpireAt.Date <= DateTime.UtcNow.Date
+        dto.Status = job.Status == Domain.Enums.JobStatus.Published && job.ExpireAt.Date < DateTime.UtcNow.Date
             ? "Expired"
             : job.Status.ToString();
         return dto;
