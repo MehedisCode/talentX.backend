@@ -18,11 +18,13 @@ public sealed class VerifyEmployerEmailCommandHandlerTests
     private readonly Mock<ITokenService> _tokenServiceMock = new();
     private readonly Mock<IUnitOfWork> _unitOfWorkMock = new();
     private readonly Mock<IEmployerRepository> _employerRepositoryMock = new();
+    private readonly Mock<IAuditLogRepository> _auditLogRepositoryMock = new();
     private readonly Mock<IMapper> _mapperMock = new();
 
     public VerifyEmployerEmailCommandHandlerTests()
     {
         _unitOfWorkMock.Setup(u => u.Employers).Returns(_employerRepositoryMock.Object);
+        _unitOfWorkMock.Setup(u => u.AuditLogs).Returns(_auditLogRepositoryMock.Object);
 
         _mapperMock
             .Setup(m => m.Map<EmployerDto>(It.IsAny<Employer>()))

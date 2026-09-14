@@ -54,6 +54,8 @@ public sealed class VerifyGuestEmailCommandHandler : IRequestHandler<VerifyGuest
         await LinkApplicationsToTalentAsync(email, talentUserId, application, cancellationToken);
 
         tokenEntity.MarkConsumed();
+        var auditLog = new AuditLog(email, "Login Success · Email Verification", isSystem: false);
+        await _unitOfWork.AuditLogs.AddAsync(auditLog, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         if (isNewTalent && temporaryPassword is not null)
