@@ -32,8 +32,7 @@ public sealed class GetAdminUserStatsQueryHandlerTests
         };
         var statusCounts = new Dictionary<AccountStatus, int>
         {
-            [AccountStatus.Active] = 12,
-            [AccountStatus.Pending] = 1,
+            [AccountStatus.Active] = 13,
             [AccountStatus.Deactivated] = 1
         };
 
@@ -49,7 +48,6 @@ public sealed class GetAdminUserStatsQueryHandlerTests
         result.EmployersCount.Should().Be(4);
         result.GuestsCount.Should().Be(0);
         result.TotalUsers.Should().Be(14);
-        result.PendingCount.Should().Be(1);
         result.DeactivatedCount.Should().Be(1);
     }
 
@@ -69,7 +67,6 @@ public sealed class GetAdminUserStatsQueryHandlerTests
         result.TalentsCount.Should().Be(0);
         result.EmployersCount.Should().Be(0);
         result.GuestsCount.Should().Be(0);
-        result.PendingCount.Should().Be(0);
         result.DeactivatedCount.Should().Be(0);
     }
 }

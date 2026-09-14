@@ -100,7 +100,7 @@ public sealed class GetUserDetailsQueryHandlerTests
         result.Role.Should().Be(UserRole.Employer);
         result.EmployerDetails.Should().NotBeNull();
         result.EmployerDetails!.CompanyName.Should().Be("Acme Inc");
-        result.Status.Should().Be(AccountStatus.Pending);
+        result.Status.Should().Be(AccountStatus.Active);
         result.TalentDetails.Should().BeNull();
     }
 

@@ -69,7 +69,7 @@ public sealed class GetUsersQueryHandlerTests
         {
             SearchQuery = searchQuery,
             Role = UserRole.Employer,
-            Status = AccountStatus.Pending,
+            Status = AccountStatus.Deactivated,
             Page = 2,
             PageSize = 10
         };
@@ -82,7 +82,7 @@ public sealed class GetUsersQueryHandlerTests
         {
             SearchQuery = searchQuery,
             Role = UserRole.Employer,
-            Status = AccountStatus.Pending,
+            Status = AccountStatus.Deactivated,
             Page = 2,
             PageSize = 10
         };

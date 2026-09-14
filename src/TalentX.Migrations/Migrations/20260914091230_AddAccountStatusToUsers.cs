@@ -10,9 +10,9 @@ namespace TalentX.Migrations.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            // Existing rows (including Employers, whose in-code default is now "Pending") are
-            // backfilled to "Active" — enforcement of Pending/Deactivated access restrictions is
-            // out of scope for this ticket, so no currently-working account should be disrupted.
+            // Every account (Talent/Employer/Guest/Admin) defaults to "Active"; only an explicit
+            // Admin deactivation moves it to "Deactivated". Existing rows are backfilled to
+            // "Active" via this column default so no currently-working account is disrupted.
             migrationBuilder.AddColumn<string>(
                 name: "Status",
                 table: "DomainUsers",

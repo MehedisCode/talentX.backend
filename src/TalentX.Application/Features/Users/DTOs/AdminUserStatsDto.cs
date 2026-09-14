@@ -6,6 +6,5 @@ public sealed record AdminUserStatsDto
     public int TalentsCount { get; init; }
     public int EmployersCount { get; init; }
     public int GuestsCount { get; init; }
-    public int PendingCount { get; init; }
     public int DeactivatedCount { get; init; }
 }

@@ -19,8 +19,7 @@ public class User : BaseEntity
         string name,
         string email,
         UserRole role,
-        bool isVerified = false,
-        AccountStatus status = AccountStatus.Active
+        bool isVerified = false
     )
     {
         UserId = userId;
@@ -28,7 +27,7 @@ public class User : BaseEntity
         Email = email;
         Role = role;
         IsVerified = isVerified;
-        Status = status;
+        Status = AccountStatus.Active;
     }
 
     public void Update(string name)

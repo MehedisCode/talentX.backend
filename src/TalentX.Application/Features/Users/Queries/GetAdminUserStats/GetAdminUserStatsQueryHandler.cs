@@ -28,7 +28,6 @@ public sealed class GetAdminUserStatsQueryHandler : IRequestHandler<GetAdminUser
             TalentsCount = talentsCount,
             EmployersCount = employersCount,
             GuestsCount = guestsCount,
-            PendingCount = statusCounts.GetValueOrDefault(AccountStatus.Pending),
             DeactivatedCount = statusCounts.GetValueOrDefault(AccountStatus.Deactivated)
         };
     }

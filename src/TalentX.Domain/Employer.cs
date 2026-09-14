@@ -13,7 +13,7 @@ public sealed class Employer : User
         string name,
         string email,
         string companyName
-    ) : base(userId, name, email, UserRole.Employer, status: AccountStatus.Pending)
+    ) : base(userId, name, email, UserRole.Employer)
     {
         CompanyName = companyName;
     }

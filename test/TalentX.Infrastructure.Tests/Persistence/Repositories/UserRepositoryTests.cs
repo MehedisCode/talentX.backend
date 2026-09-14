@@ -119,18 +119,19 @@ public sealed class UserRepositoryTests
         await using var context = CreateInMemoryContext();
         var repository = new UserRepository(context);
 
-        var pendingEmployer = new Employer("employer-1", "Employer One", "employer1@ait.com", "Acme Inc");
-        var activeTalent = new Talent("talent-2", "Talent Two", "talent2@ait.com");
+        var employer = new Employer("employer-1", "Employer One", "employer1@ait.com", "Acme Inc");
+        var deactivatedTalent = new Talent("talent-2", "Talent Two", "talent2@ait.com");
+        deactivatedTalent.Deactivate();
 
-        await repository.AddAsync(pendingEmployer);
-        await repository.AddAsync(activeTalent);
+        await repository.AddAsync(employer);
+        await repository.AddAsync(deactivatedTalent);
         await context.SaveChangesAsync();
 
         var (employerOnly, _) = await repository.GetPagedAsync(new UserQueryParams { Role = UserRole.Employer });
-        var (pendingOnly, _) = await repository.GetPagedAsync(new UserQueryParams { Status = AccountStatus.Pending });
+        var (deactivatedOnly, _) = await repository.GetPagedAsync(new UserQueryParams { Status = AccountStatus.Deactivated });
 
         employerOnly.Should().ContainSingle().Which.Email.Should().Be("employer1@ait.com");
-        pendingOnly.Should().ContainSingle().Which.Email.Should().Be("employer1@ait.com");
+        deactivatedOnly.Should().ContainSingle().Which.Email.Should().Be("talent2@ait.com");
     }
 
     [Fact]
@@ -177,8 +178,11 @@ public sealed class UserRepositoryTests
         await using var context = CreateInMemoryContext();
         var repository = new UserRepository(context);
 
+        var deactivatedTalent = new Talent("talent-counts-1", "Talent One", "talent-counts-1@ait.com");
+        deactivatedTalent.Deactivate();
+
         await repository.AddAsync(new User("admin-counts", "Admin", "admin-counts@ait.com", UserRole.Admin, isVerified: true));
-        await repository.AddAsync(new Talent("talent-counts-1", "Talent One", "talent-counts-1@ait.com"));
+        await repository.AddAsync(deactivatedTalent);
         await repository.AddAsync(new Talent("talent-counts-2", "Talent Two", "talent-counts-2@ait.com"));
         await repository.AddAsync(new Employer("employer-counts-1", "Employer One", "employer-counts-1@ait.com", "Acme Inc"));
         await context.SaveChangesAsync();
@@ -189,6 +193,6 @@ public sealed class UserRepositoryTests
         roleCounts[UserRole.Talent].Should().Be(2);
         roleCounts[UserRole.Employer].Should().Be(1);
         statusCounts[AccountStatus.Active].Should().Be(2);
-        statusCounts[AccountStatus.Pending].Should().Be(1);
+        statusCounts[AccountStatus.Deactivated].Should().Be(1);
     }
 }
