@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using MimeKit;
 using RazorLight;
 using TalentX.Application.Common.Interfaces;
+using TalentX.Application.Common.Models;
 using TalentX.Domain.Enums;
 using TalentX.Infrastructure.Mailing.Models;
 
@@ -180,6 +181,23 @@ public sealed class EmailService : IEmailService
         return _razor.CompileRenderAsync(
             EmailConstants.Templates.AccountStatusChanged,
             new AccountStatusChangedEmailModel(recipientName, newStatus, role));
+    }
+
+    public Task<string> RenderJobAlertEmailAsync(
+        RenderJobAlertEmailParameters parameters,
+        CancellationToken cancellationToken = default)
+    {
+        LogDispatch(EmailConstants.Kinds.JobAlert, parameters.RecipientName, parameters.JobTitle, parameters.CompanyName);
+
+        return _razor.CompileRenderAsync(
+            EmailConstants.Templates.JobAlert,
+            new JobAlertEmailModel(
+                parameters.RecipientName,
+                parameters.JobTitle,
+                parameters.CompanyName,
+                parameters.Location,
+                parameters.JobUrl,
+                parameters.AlertName));
     }
 
     private void LogDispatch(string kind, string recipientName, string toEmail, string? secret)

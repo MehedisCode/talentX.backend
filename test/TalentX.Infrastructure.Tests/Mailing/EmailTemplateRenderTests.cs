@@ -92,4 +92,19 @@ public class EmailTemplateRenderTests
             new AccountStatusChangedEmailModel("Ayesha", AccountStatus.Deactivated, UserRole.Guest));
         guest.Should().Contain("You will not be able to sign in until it is reactivated.");
     }
+
+    [Fact]
+    public async Task JobAlert_renders()
+    {
+        var html = await Engine.CompileRenderAsync(
+            EmailConstants.Templates.JobAlert,
+            new JobAlertEmailModel("Ayesha", "Senior C# Engineer", "Acme Corp", "Dhaka", "http://localhost:3000/jobs/123", "C# Remote Alerts"));
+
+        html.Should().Contain("Ayesha");
+        html.Should().Contain("Senior C# Engineer");
+        html.Should().Contain("Acme Corp");
+        html.Should().Contain("Dhaka");
+        html.Should().Contain("http://localhost:3000/jobs/123");
+        html.Should().Contain("C# Remote Alerts");
+    }
 }

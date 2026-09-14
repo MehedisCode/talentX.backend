@@ -1,3 +1,4 @@
+using TalentX.Application.Common.Models;
 using TalentX.Domain.Enums;
 
 namespace TalentX.Application.Common.Interfaces;
@@ -108,6 +109,14 @@ public interface IEmailService
         string recipientName,
         AccountStatus newStatus,
         UserRole role,
+        CancellationToken cancellationToken = default
+    );
+
+    /// <summary>
+    /// Renders the HTML body for a job alert notification email.
+    /// </summary>
+    Task<string> RenderJobAlertEmailAsync(
+        RenderJobAlertEmailParameters parameters,
         CancellationToken cancellationToken = default
     );
 }

@@ -14,6 +14,7 @@ using TalentX.Infrastructure.Identity.Services;
 using TalentX.Infrastructure.Mailing;
 using TalentX.Infrastructure.Mappings;
 using TalentX.Infrastructure.Persistence.Contexts;
+using TalentX.Infrastructure.Services;
 
 namespace TalentX.Infrastructure.Identity;
 
@@ -101,9 +102,12 @@ public static class IdentityStartup
         services.AddScoped<IGoogleAuthService, GoogleAuthService>();
         services.AddSingleton<IOtpService, OtpService>();
         services.AddSingleton<IEmailService, EmailService>();
+        services.AddSingleton<IJobAlertQueue, JobAlertQueue>();
+        services.AddScoped<IJobAlertMatchingService, JobAlertMatchingService>();
 
         services.AddHostedService<EmailDispatchBackgroundWorker>();
         services.AddHostedService<GmailBounceListenerWorker>();
+        services.AddHostedService<JobAlertProcessingWorker>();
 
         return services;
     }

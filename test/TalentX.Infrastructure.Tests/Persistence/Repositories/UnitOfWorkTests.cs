@@ -39,6 +39,7 @@ public class UnitOfWorkTests
         unitOfWork.WorkExperiences.Should().NotBeNull().And.BeAssignableTo<IWorkExperienceRepository>();
         unitOfWork.Educations.Should().NotBeNull().And.BeAssignableTo<IEducationRepository>();
         unitOfWork.AuditLogs.Should().NotBeNull().And.BeAssignableTo<IAuditLogRepository>();
+        unitOfWork.JobAlertNotificationHistories.Should().NotBeNull().And.BeAssignableTo<IJobAlertNotificationHistoryRepository>();
     }
 
     [Fact]

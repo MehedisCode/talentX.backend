@@ -21,6 +21,9 @@ public interface IUnitOfWork
     IEmailDispatchLogRepository EmailDispatchLogs { get; }
     IJobTalentMatchRepository JobTalentMatches { get; }
     IAuditLogRepository AuditLogs { get; }
+    IJobAlertRepository JobAlerts { get; }
+    ITalentNotificationPreferenceRepository TalentNotificationPreferences { get; }
+    IJobAlertNotificationHistoryRepository JobAlertNotificationHistories { get; }
 
     /// <summary>
     /// Asynchronously persists all changes made in the context to the database.

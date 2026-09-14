@@ -1,0 +1,31 @@
+@model TalentX.Infrastructure.Mailing.Models.JobAlertEmailModel
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>New Matching Job — TalentX</title></head>
+<body style="font-family:Arial,sans-serif;background:#f4f6f8;margin:0;padding:20px;">
+  <div style="max-width:520px;margin:0 auto;background:#fff;border-radius:8px;padding:32px;box-shadow:0 2px 8px rgba(0,0,0,.05);">
+    <h2 style="color:#111827;margin-top:0;">New Job Match Found!</h2>
+    <p style="color:#4b5563;font-size:15px;line-height:1.5;">
+      Hi @Model.RecipientName,<br><br>
+      A new job matching your alert <strong>@Model.AlertName</strong> has just been posted on TalentX.
+    </p>
+    <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:16px;margin:20px 0;">
+      <h3 style="color:#111827;margin:0 0 8px 0;font-size:16px;">@Model.JobTitle</h3>
+      <p style="color:#4b5563;font-size:14px;margin:0 0 4px 0;"><strong>Company:</strong> @Model.CompanyName</p>
+      <p style="color:#4b5563;font-size:14px;margin:0;"><strong>Location:</strong> @Model.Location</p>
+    </div>
+    <div style="text-align:center;margin:28px 0;">
+      <a href="@Model.JobUrl"
+         style="display:inline-block;background:#059669;color:#fff;font-size:15px;font-weight:700;padding:12px 32px;border-radius:8px;text-decoration:none;">
+        View Job Details
+      </a>
+    </div>
+    <p style="color:#6b7280;font-size:13px;line-height:1.4;">
+      If the button above doesn't work, copy and paste this link into your browser:<br>
+      <a href="@Model.JobUrl" style="color:#059669;word-break:break-all;">@Model.JobUrl</a>
+    </p>
+    <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;">
+    <p style="color:#9ca3af;font-size:12px;text-align:center;margin:0;">&copy; @DateTime.UtcNow.Year TalentX Inc.</p>
+  </div>
+</body>
+</html>
