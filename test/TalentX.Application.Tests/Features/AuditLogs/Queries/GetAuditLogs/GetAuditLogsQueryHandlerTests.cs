@@ -28,7 +28,7 @@ public sealed class GetAuditLogsQueryHandlerTests
         var auditLog = new AuditLog("admin@talentx.com", "Insert · Job", isSystem: false);
         var items = new List<AuditLog> { auditLog };
         const int totalCount = 1;
-        var expectedParams = new AuditLogQueryParams(null, null, null, 1, 20);
+        var expectedParams = new AuditLogQueryParams { Page = 1, PageSize = 20 };
 
         _auditLogRepository
             .Setup(r => r.GetPagedAuditLogsAsync(
@@ -67,7 +67,16 @@ public sealed class GetAuditLogsQueryHandlerTests
         var startDate = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
         var endDate = new DateTime(2026, 1, 31, 23, 59, 59, DateTimeKind.Utc);
         const string searchQuery = "system";
-        var expectedParams = new AuditLogQueryParams(searchQuery, startDate, endDate, 2, 10);
+        const string actionType = "Insert";
+        var expectedParams = new AuditLogQueryParams
+        {
+            SearchQuery = searchQuery,
+            ActionType = actionType,
+            StartDate = startDate,
+            EndDate = endDate,
+            Page = 2,
+            PageSize = 10
+        };
 
         _auditLogRepository
             .Setup(r => r.GetPagedAuditLogsAsync(
@@ -75,12 +84,15 @@ public sealed class GetAuditLogsQueryHandlerTests
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync((new List<AuditLog>(), 0));
 
-        var query = new GetAuditLogsQuery(
-            SearchQuery: searchQuery,
-            StartDate: startDate,
-            EndDate: endDate,
-            Page: 2,
-            PageSize: 10);
+        var query = new GetAuditLogsQuery
+        {
+            SearchQuery = searchQuery,
+            ActionType = actionType,
+            StartDate = startDate,
+            EndDate = endDate,
+            Page = 2,
+            PageSize = 10
+        };
 
         // Act
         var result = await _handler.Handle(query, CancellationToken.None);
@@ -98,10 +110,16 @@ public sealed class GetAuditLogsQueryHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WithInvalidPagination_NormalizesPageAndPageSize()
+    public async Task Handle_WithActionTypeFilter_PassesActionTypeToRepository()
     {
         // Arrange
-        var expectedParams = new AuditLogQueryParams(null, null, null, 1, 20);
+        const string actionType = "Login";
+        var expectedParams = new AuditLogQueryParams
+        {
+            ActionType = actionType,
+            Page = 1,
+            PageSize = 20
+        };
 
         _auditLogRepository
             .Setup(r => r.GetPagedAuditLogsAsync(
@@ -109,7 +127,31 @@ public sealed class GetAuditLogsQueryHandlerTests
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync((new List<AuditLog>(), 0));
 
-        var query = new GetAuditLogsQuery(Page: -3, PageSize: -10);
+        var query = new GetAuditLogsQuery { ActionType = actionType };
+
+        // Act
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        // Assert
+        result.Should().NotBeNull();
+        _auditLogRepository.Verify(
+            r => r.GetPagedAuditLogsAsync(expectedParams, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_WithInvalidPagination_NormalizesPageAndPageSize()
+    {
+        // Arrange
+        var expectedParams = new AuditLogQueryParams { Page = 1, PageSize = 20 };
+
+        _auditLogRepository
+            .Setup(r => r.GetPagedAuditLogsAsync(
+                expectedParams,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((new List<AuditLog>(), 0));
+
+        var query = new GetAuditLogsQuery { Page = -3, PageSize = -10 };
 
         // Act
         var result = await _handler.Handle(query, CancellationToken.None);

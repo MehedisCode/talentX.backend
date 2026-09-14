@@ -77,12 +77,14 @@ public sealed class AuditLogsControllerTests
     public async Task GetAuditLogs_WithQuery_DispatchesToSenderAndReturnsOk()
     {
         // Arrange
-        var query = new GetAuditLogsQuery(
-            SearchQuery: "login",
-            StartDate: DateTime.UtcNow.AddDays(-1),
-            EndDate: DateTime.UtcNow,
-            Page: 1,
-            PageSize: 20);
+        var query = new GetAuditLogsQuery
+        {
+            SearchQuery = "login",
+            StartDate = DateTime.UtcNow.AddDays(-1),
+            EndDate = DateTime.UtcNow,
+            Page = 1,
+            PageSize = 20
+        };
 
         var expectedResult = new PaginatedList<AuditLogDto>(
             new List<AuditLogDto>

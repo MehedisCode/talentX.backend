@@ -125,21 +125,21 @@ public sealed class AuditLogRepositoryTests
 
         // Act - Search by actor
         var (actorItems, actorCount) = await repository.GetPagedAuditLogsAsync(
-            new AuditLogQueryParams(
-                SearchQuery: "ADMIN",
-                StartDate: null,
-                EndDate: null,
-                Page: 1,
-                PageSize: 10));
+            new AuditLogQueryParams
+            {
+                SearchQuery = "ADMIN",
+                Page = 1,
+                PageSize = 10
+            });
 
         // Act - Search by action
         var (actionItems, actionCount) = await repository.GetPagedAuditLogsAsync(
-            new AuditLogQueryParams(
-                SearchQuery: "job",
-                StartDate: null,
-                EndDate: null,
-                Page: 1,
-                PageSize: 10));
+            new AuditLogQueryParams
+            {
+                SearchQuery = "job",
+                Page = 1,
+                PageSize = 10
+            });
 
         // Assert
         actorCount.Should().Be(1);
@@ -147,6 +147,77 @@ public sealed class AuditLogRepositoryTests
 
         actionCount.Should().Be(2);
         actionItems.Select(x => x.Action).Should().BeEquivalentTo(new[] { "Insert · Job", "Delete · Job" });
+    }
+
+    [Fact]
+    public async Task GetPagedAuditLogsAsync_WithActionType_FiltersByActionPrefixCaseInsensitive()
+    {
+        // Arrange
+        await using var context = CreateInMemoryContext();
+        var repository = new AuditLogRepository(context);
+
+        var log1 = new AuditLog("admin@talentx.com", "Insert · Job", isSystem: false);
+        var log2 = new AuditLog("system", "Update · ApplicationUser", isSystem: true);
+        var log3 = new AuditLog("user@talentx.com", "Delete · Job", isSystem: false);
+        var log4 = new AuditLog("user@talentx.com", "Login Success", isSystem: false);
+        var log5 = new AuditLog("user@talentx.com", "Login Failed", isSystem: false);
+
+        await context.AuditLogs.AddRangeAsync(log1, log2, log3, log4, log5);
+        await context.SaveChangesAsync();
+
+        // Act - Filter by Login (case-insensitive prefix)
+        var (loginItems, loginCount) = await repository.GetPagedAuditLogsAsync(
+            new AuditLogQueryParams
+            {
+                ActionType = "login",
+                Page = 1,
+                PageSize = 10
+            });
+
+        // Act - Filter by Insert
+        var (insertItems, insertCount) = await repository.GetPagedAuditLogsAsync(
+            new AuditLogQueryParams
+            {
+                ActionType = "INSERT",
+                Page = 1,
+                PageSize = 10
+            });
+
+        // Assert
+        loginCount.Should().Be(2);
+        loginItems.Select(x => x.Action).Should().BeEquivalentTo(new[] { "Login Success", "Login Failed" });
+
+        insertCount.Should().Be(1);
+        insertItems.Should().ContainSingle(x => x.Action == "Insert · Job");
+    }
+
+    [Fact]
+    public async Task GetPagedAuditLogsAsync_WithActionTypeAndSearchQuery_AppliesBothFilters()
+    {
+        // Arrange
+        await using var context = CreateInMemoryContext();
+        var repository = new AuditLogRepository(context);
+
+        var log1 = new AuditLog("admin@talentx.com", "Insert · Job", isSystem: false);
+        var log2 = new AuditLog("user@talentx.com", "Insert · Candidate", isSystem: false);
+        var log3 = new AuditLog("admin@talentx.com", "Delete · Job", isSystem: false);
+
+        await context.AuditLogs.AddRangeAsync(log1, log2, log3);
+        await context.SaveChangesAsync();
+
+        // Act - Filter by ActionType "Insert" AND SearchQuery "admin"
+        var (items, totalCount) = await repository.GetPagedAuditLogsAsync(
+            new AuditLogQueryParams
+            {
+                ActionType = "Insert",
+                SearchQuery = "admin",
+                Page = 1,
+                PageSize = 10
+            });
+
+        // Assert
+        totalCount.Should().Be(1);
+        items.Should().ContainSingle(x => x.Actor == "admin@talentx.com" && x.Action == "Insert · Job");
     }
 
     [Fact]
@@ -171,30 +242,31 @@ public sealed class AuditLogRepositoryTests
 
         // Act - Between StartDate and EndDate
         var (midItems, midCount) = await repository.GetPagedAuditLogsAsync(
-            new AuditLogQueryParams(
-                SearchQuery: null,
-                StartDate: baseTime.AddDays(-1),
-                EndDate: baseTime.AddDays(1),
-                Page: 1,
-                PageSize: 10));
+            new AuditLogQueryParams
+            {
+                StartDate = baseTime.AddDays(-1),
+                EndDate = baseTime.AddDays(1),
+                Page = 1,
+                PageSize = 10
+            });
 
         // Act - StartDate only
         var (sinceMidItems, sinceMidCount) = await repository.GetPagedAuditLogsAsync(
-            new AuditLogQueryParams(
-                SearchQuery: null,
-                StartDate: baseTime,
-                EndDate: null,
-                Page: 1,
-                PageSize: 10));
+            new AuditLogQueryParams
+            {
+                StartDate = baseTime,
+                Page = 1,
+                PageSize = 10
+            });
 
         // Act - EndDate only
         var (untilMidItems, untilMidCount) = await repository.GetPagedAuditLogsAsync(
-            new AuditLogQueryParams(
-                SearchQuery: null,
-                StartDate: null,
-                EndDate: baseTime,
-                Page: 1,
-                PageSize: 10));
+            new AuditLogQueryParams
+            {
+                EndDate = baseTime,
+                Page = 1,
+                PageSize = 10
+            });
 
         // Assert
         midCount.Should().Be(1);
@@ -232,30 +304,27 @@ public sealed class AuditLogRepositoryTests
 
         // Act - Page 1 with pageSize 2
         var (page1Items, page1Total) = await repository.GetPagedAuditLogsAsync(
-            new AuditLogQueryParams(
-                SearchQuery: null,
-                StartDate: null,
-                EndDate: null,
-                Page: 1,
-                PageSize: 2));
+            new AuditLogQueryParams
+            {
+                Page = 1,
+                PageSize = 2
+            });
 
         // Act - Page 2 with pageSize 2
         var (page2Items, page2Total) = await repository.GetPagedAuditLogsAsync(
-            new AuditLogQueryParams(
-                SearchQuery: null,
-                StartDate: null,
-                EndDate: null,
-                Page: 2,
-                PageSize: 2));
+            new AuditLogQueryParams
+            {
+                Page = 2,
+                PageSize = 2
+            });
 
         // Act - Page 3 with pageSize 2
         var (page3Items, page3Total) = await repository.GetPagedAuditLogsAsync(
-            new AuditLogQueryParams(
-                SearchQuery: null,
-                StartDate: null,
-                EndDate: null,
-                Page: 3,
-                PageSize: 2));
+            new AuditLogQueryParams
+            {
+                Page = 3,
+                PageSize = 2
+            });
 
         // Assert
         page1Total.Should().Be(5);
@@ -285,12 +354,11 @@ public sealed class AuditLogRepositoryTests
 
         // Act
         var act = async () => await repository.GetPagedAuditLogsAsync(
-            new AuditLogQueryParams(
-                SearchQuery: null,
-                StartDate: null,
-                EndDate: null,
-                Page: 1,
-                PageSize: 10),
+            new AuditLogQueryParams
+            {
+                Page = 1,
+                PageSize = 10
+            },
             cancellationToken: cancellationTokenSource.Token);
 
         // Assert
@@ -317,12 +385,13 @@ public sealed class AuditLogRepositoryTests
 
         // Act
         var (items, totalCount) = await repository.GetPagedAuditLogsAsync(
-            new AuditLogQueryParams(
-                SearchQuery: null,
-                StartDate: unspecifiedStart,
-                EndDate: unspecifiedEnd,
-                Page: 1,
-                PageSize: 10));
+            new AuditLogQueryParams
+            {
+                StartDate = unspecifiedStart,
+                EndDate = unspecifiedEnd,
+                Page = 1,
+                PageSize = 10
+            });
 
         // Assert
         totalCount.Should().Be(1);

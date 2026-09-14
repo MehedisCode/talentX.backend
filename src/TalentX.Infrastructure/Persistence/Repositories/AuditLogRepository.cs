@@ -41,6 +41,12 @@ public sealed class AuditLogRepository : IAuditLogRepository
             query = query.Where(auditLog => auditLog.Actor.ToLower().Contains(normalizedSearchQuery) || auditLog.Action.ToLower().Contains(normalizedSearchQuery));
         }
 
+        if (!string.IsNullOrWhiteSpace(queryParams.ActionType))
+        {
+            var normalizedActionType = queryParams.ActionType.Trim().ToLower();
+            query = query.Where(auditLog => auditLog.Action.ToLower().StartsWith(normalizedActionType));
+        }
+
         if (queryParams.StartDate.HasValue)
         {
             var utcStart = queryParams.StartDate.Value.Kind == DateTimeKind.Unspecified
