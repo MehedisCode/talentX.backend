@@ -6,6 +6,7 @@ using TalentX.Application.DTOs.Auth;
 using TalentX.Application.DTOs.Employers;
 using TalentX.Application.Identity.Interfaces;
 using TalentX.Domain;
+using TalentX.Domain.Entities;
 using TalentX.Domain.Enums;
 
 namespace TalentX.Application.Features.Employers.Commands.GoogleSignIn;
@@ -59,6 +60,10 @@ public sealed class GoogleSignInEmployerCommandHandler : IRequestHandler<GoogleS
                 throw new ValidationException(string.Join("; ", talentTokenResult.Errors));
             }
 
+            var auditLog = new AuditLog(googleUser.Email, "Login Success · Google", isSystem: false);
+            await _unitOfWork.AuditLogs.AddAsync(auditLog, cancellationToken);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
             return new AuthResponseDto(
                 Employer: null,
                 AccessToken: talentTokenResult.Data.AccessToken,
@@ -80,6 +85,10 @@ public sealed class GoogleSignInEmployerCommandHandler : IRequestHandler<GoogleS
             {
                 throw new ValidationException(string.Join("; ", existingTokenResult.Errors));
             }
+
+            var auditLog = new AuditLog(googleUser.Email, "Login Success · Google", isSystem: false);
+            await _unitOfWork.AuditLogs.AddAsync(auditLog, cancellationToken);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             return new AuthResponseDto(
                 Employer: _mapper.Map<EmployerDto>(existingEmployer),
@@ -108,6 +117,10 @@ public sealed class GoogleSignInEmployerCommandHandler : IRequestHandler<GoogleS
         {
             throw new ValidationException(string.Join("; ", tokenResult.Errors));
         }
+
+        var newAuditLog = new AuditLog(googleUser.Email, "Login Success · Google", isSystem: false);
+        await _unitOfWork.AuditLogs.AddAsync(newAuditLog, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return new AuthResponseDto(
             Employer: _mapper.Map<EmployerDto>(employer),

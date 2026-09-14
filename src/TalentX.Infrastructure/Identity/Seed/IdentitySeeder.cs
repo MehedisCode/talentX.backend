@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using TalentX.Application.Common.Interfaces;
+using TalentX.Domain;
 using TalentX.Domain.Entities;
 using TalentX.Domain.Enums;
 using TalentX.Infrastructure.Identity.Models;
@@ -12,6 +14,8 @@ public static class IdentitySeeder
     public static async Task SeedAsync(IServiceProvider serviceProvider)
     {
         using var scope = serviceProvider.CreateScope();
+
+        var configuration = scope.ServiceProvider.GetService<IConfiguration>();
 
         var roleManager = scope.ServiceProvider
             .GetRequiredService<RoleManager<IdentityRole>>();
@@ -27,7 +31,8 @@ public static class IdentitySeeder
         {
             UserRole.Employer,
             UserRole.Talent,
-            UserRole.Guest
+            UserRole.Guest,
+            UserRole.Admin
         };
 
         foreach (var role in roles)
@@ -35,6 +40,45 @@ public static class IdentitySeeder
             if (!await roleManager.RoleExistsAsync(role.ToString()))
             {
                 await roleManager.CreateAsync(new IdentityRole(role.ToString()));
+            }
+        }
+
+        // 2. Seed Super Admin User from Configuration / Environment
+        var adminEmail = configuration?["ADMIN_EMAIL"]
+            ?? Environment.GetEnvironmentVariable("ADMIN_EMAIL");
+        var adminPassword = configuration?["ADMIN_PASS"]
+            ?? Environment.GetEnvironmentVariable("ADMIN_PASS");
+
+        if (!string.IsNullOrWhiteSpace(adminEmail) && !string.IsNullOrWhiteSpace(adminPassword))
+        {
+            var adminUser = await userManager.FindByEmailAsync(adminEmail);
+
+            if (adminUser == null)
+            {
+                adminUser = new ApplicationUser
+                {
+                    UserName = adminEmail,
+                    Email = adminEmail,
+                    EmailConfirmed = true
+                };
+
+                var createAdminResult = await userManager.CreateAsync(adminUser, adminPassword);
+                if (createAdminResult.Succeeded)
+                {
+                    await userManager.AddToRoleAsync(adminUser, UserRole.Admin.ToString());
+                }
+            }
+            else if (!await userManager.IsInRoleAsync(adminUser, UserRole.Admin.ToString()))
+            {
+                await userManager.AddToRoleAsync(adminUser, UserRole.Admin.ToString());
+            }
+
+            var domainAdmin = await unitOfWork.Users.GetByEmailAsync(adminEmail);
+            if (domainAdmin == null)
+            {
+                domainAdmin = new User(adminUser.Id, "Super Admin", adminEmail, UserRole.Admin, isVerified: true);
+                await unitOfWork.Users.AddAsync(domainAdmin);
+                await unitOfWork.SaveChangesAsync();
             }
         }
 
