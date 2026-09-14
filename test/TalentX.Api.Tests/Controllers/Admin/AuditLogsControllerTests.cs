@@ -12,6 +12,7 @@ using TalentX.API.Controllers.Admin;
 using TalentX.Application.Common.Models;
 using TalentX.Application.Features.AuditLogs.DTOs;
 using TalentX.Application.Features.AuditLogs.Queries.GetAuditLogs;
+using TalentX.Domain.Enums;
 using Xunit;
 
 namespace TalentX.Api.Tests.Controllers.Admin;
@@ -48,17 +49,16 @@ public sealed class AuditLogsControllerTests
         var authorizeAttribute = typeof(AuditLogsController).GetCustomAttribute<AuthorizeAttribute>();
 
         authorizeAttribute.Should().NotBeNull();
-        authorizeAttribute!.Roles.Should().Be("Admin");
+        authorizeAttribute!.Roles.Should().Be(nameof(UserRole.Admin));
     }
 
     [Fact]
     public void Controller_HasRouteAttributeWithExpectedTemplate()
     {
-        var routeAttributes = typeof(AuditLogsController).GetCustomAttributes<RouteAttribute>().ToList();
+        var routeAttribute = typeof(AuditLogsController).GetCustomAttribute<RouteAttribute>();
 
-        routeAttributes.Should().NotBeEmpty();
-        routeAttributes.Select(r => r.Template).Should().Contain("api/admin/audit-logs");
-        routeAttributes.Select(r => r.Template).Should().Contain("api/v1/admin/audit-logs");
+        routeAttribute.Should().NotBeNull();
+        routeAttribute!.Template.Should().Be("api/v1/admin/audit-logs");
     }
 
     [Fact]

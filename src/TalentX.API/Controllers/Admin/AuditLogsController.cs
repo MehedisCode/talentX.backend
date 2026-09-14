@@ -1,11 +1,11 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TalentX.Application.Features.AuditLogs.Queries.GetAuditLogs;
+using TalentX.Domain.Enums;
 
 namespace TalentX.API.Controllers.Admin;
 
-[Authorize(Roles = "Admin")]
-[Route("api/admin/audit-logs")]
+[Authorize(Roles = nameof(UserRole.Admin))]
 [Route("api/v1/admin/audit-logs")]
 public class AuditLogsController : BaseApiController
 {
