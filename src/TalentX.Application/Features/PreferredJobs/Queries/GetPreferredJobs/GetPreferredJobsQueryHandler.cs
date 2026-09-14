@@ -65,7 +65,7 @@ public sealed class GetPreferredJobsQueryHandler : IRequestHandler<GetPreferredJ
         var openJobs = (await _unitOfWork.Jobs.GetActivePublishedJobsAsync(cancellationToken)).ToList();
 
         var matchedJobs = alertsToMatch
-            .SelectMany(alert => openJobs.AsQueryable().ApplyAlertCriteria(alert))
+            .SelectMany(alert => openJobs.ApplyAlertCriteria(alert))
             .GroupBy(job => job.Id)
             .Select(group => group.First())
             .OrderByDescending(job => job.PublishedAt ?? job.CreatedAt)
