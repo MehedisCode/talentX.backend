@@ -47,4 +47,9 @@ public static class JobAlertFilterExtensions
     {
         return jobs.AsQueryable().ApplyAlertCriteria(alert).AsEnumerable();
     }
+
+    public static bool MatchesJob(this JobAlert alert, Job job)
+    {
+        return new[] { job }.ApplyAlertCriteria(alert).Any();
+    }
 }
