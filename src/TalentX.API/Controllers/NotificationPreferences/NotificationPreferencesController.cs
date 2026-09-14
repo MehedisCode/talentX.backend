@@ -10,7 +10,7 @@ namespace TalentX.API.Controllers.NotificationPreferences;
 [ApiController]
 [Route("api/v1/notification-preferences")]
 [Authorize(Roles = nameof(UserRole.Talent))]
-public class NotificationPreferencesController : BaseApiController
+public sealed class NotificationPreferencesController : BaseApiController
 {
     [HttpGet]
     [Authorize(Roles = nameof(UserRole.Talent))]
