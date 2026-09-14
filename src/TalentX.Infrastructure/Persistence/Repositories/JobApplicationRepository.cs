@@ -202,4 +202,16 @@ public sealed class JobApplicationRepository : IJobApplicationRepository
     {
         _context.JobApplications.Update(jobApplication);
     }
+
+    public async Task DeleteByTalentUserIdAsync(string talentUserId, CancellationToken cancellationToken = default)
+    {
+        var applications = await _context.JobApplications
+            .Where(application => application.TalentUserId == talentUserId)
+            .ToListAsync(cancellationToken);
+
+        if (applications.Count > 0)
+        {
+            _context.JobApplications.RemoveRange(applications);
+        }
+    }
 }

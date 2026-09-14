@@ -20,4 +20,5 @@ public interface IInterviewInvitationRepository
     Task<InterviewInvitation?> GetByApplicationIdAsync(Guid applicationId, CancellationToken cancellationToken = default);
     Task AddAsync(InterviewInvitation invitation, CancellationToken cancellationToken = default);
     void Update(InterviewInvitation invitation);
+    Task DeleteByTalentUserIdAsync(string talentUserId, CancellationToken cancellationToken = default);
 }

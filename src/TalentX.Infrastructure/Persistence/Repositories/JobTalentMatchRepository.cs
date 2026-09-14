@@ -55,4 +55,16 @@ public sealed class JobTalentMatchRepository : IJobTalentMatchRepository
             _context.JobTalentMatches.RemoveRange(existingMatches);
         }
     }
+
+    public async Task DeleteByTalentUserIdAsync(string talentUserId, CancellationToken cancellationToken = default)
+    {
+        var existingMatches = await _context.JobTalentMatches
+            .Where(x => x.TalentUserId == talentUserId)
+            .ToListAsync(cancellationToken);
+
+        if (existingMatches.Count > 0)
+        {
+            _context.JobTalentMatches.RemoveRange(existingMatches);
+        }
+    }
 }

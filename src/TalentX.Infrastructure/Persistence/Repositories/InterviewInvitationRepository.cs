@@ -87,4 +87,17 @@ public sealed class InterviewInvitationRepository : IInterviewInvitationReposito
     {
         _context.InterviewInvitations.Update(invitation);
     }
+
+    public async Task DeleteByTalentUserIdAsync(string talentUserId, CancellationToken cancellationToken = default)
+    {
+        var invitations = await _context.InterviewInvitations
+            .Include(x => x.Timeslots)
+            .Where(x => x.TalentUserId == talentUserId)
+            .ToListAsync(cancellationToken);
+
+        if (invitations.Count > 0)
+        {
+            _context.InterviewInvitations.RemoveRange(invitations);
+        }
+    }
 }

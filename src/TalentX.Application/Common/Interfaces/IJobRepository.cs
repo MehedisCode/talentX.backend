@@ -13,6 +13,7 @@ public interface IJobRepository
     Task<List<Job>> GetByIdsAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken = default);
     Task AddAsync(Job job, CancellationToken cancellationToken = default);
     void Update(Job job);
+    void RemoveRange(IEnumerable<Job> jobs);
 
     Task<PaginatedList<Job>> GetPublishedJobsAsync(
         int page,

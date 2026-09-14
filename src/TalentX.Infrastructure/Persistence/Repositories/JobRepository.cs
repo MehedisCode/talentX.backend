@@ -252,4 +252,9 @@ public sealed class JobRepository : RepositoryBase<Job>, IJobRepository
             .AsNoTracking()
             .Where(j => ids.Contains(j.Id))
             .ToListAsync(cancellationToken);
+
+    public void RemoveRange(IEnumerable<Job> jobs)
+    {
+        Context.Jobs.RemoveRange(jobs);
+    }
 }

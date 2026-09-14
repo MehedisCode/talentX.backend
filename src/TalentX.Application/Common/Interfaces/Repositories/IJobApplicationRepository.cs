@@ -31,6 +31,7 @@ public interface IJobApplicationRepository
     void Update(JobApplication jobApplication);
     Task<JobApplication?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task AddAsync(JobApplication jobApplication, CancellationToken cancellationToken = default);
+    Task DeleteByTalentUserIdAsync(string talentUserId, CancellationToken cancellationToken = default);
     Task<PaginatedList<TalentApplicationRecord>> GetApplicationsForTalentAsync(
         string talentUserId,
         ApplicationStatus? status,

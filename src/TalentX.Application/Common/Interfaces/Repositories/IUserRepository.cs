@@ -7,4 +7,5 @@ public interface IUserRepository
     Task<User?> GetByUserIdAsync(string userId);
     Task AddAsync(User user, CancellationToken cancellationToken = default);
     void Update(User user);
+    void Delete(User user);
 }

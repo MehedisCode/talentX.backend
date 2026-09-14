@@ -34,4 +34,16 @@ public sealed class ResumeRepository : IResumeRepository
     {
         _context.Resumes.Remove(resume);
     }
+
+    public async Task DeleteByUserIdAsync(string userId, CancellationToken cancellationToken = default)
+    {
+        var resumes = await _context.Resumes
+            .Where(resume => resume.UserId == userId)
+            .ToListAsync(cancellationToken);
+
+        if (resumes.Count > 0)
+        {
+            _context.Resumes.RemoveRange(resumes);
+        }
+    }
 }

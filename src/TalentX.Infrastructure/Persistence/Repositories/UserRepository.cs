@@ -37,5 +37,10 @@ public class UserRepository : IUserRepository
     {
         _context.DomainUsers.Update(user);
     }
+
+    public void Delete(User user)
+    {
+        _context.DomainUsers.Remove(user);
+    }
 }
 

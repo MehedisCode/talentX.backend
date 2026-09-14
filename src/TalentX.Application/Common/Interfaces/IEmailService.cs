@@ -96,4 +96,13 @@ public interface IEmailService
         string resetUrl,
         CancellationToken cancellationToken = default
     );
+
+    /// <summary>
+    /// Sends a confirmation email after the recipient's account has been permanently deleted.
+    /// </summary>
+    Task SendAccountDeletedEmailAsync(
+        string toEmail,
+        string recipientName,
+        CancellationToken cancellationToken = default
+    );
 }

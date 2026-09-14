@@ -166,6 +166,22 @@ public sealed class EmailService : IEmailService
         DispatchAfterLogging(toEmail, recipientName, EmailConstants.Subjects.PasswordReset, html);
     }
 
+    public async Task SendAccountDeletedEmailAsync(
+        string toEmail,
+        string recipientName,
+        CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation(
+            "[EMAIL] {Kind} dispatch to {RecipientName} <{ToEmail}>",
+            EmailConstants.Kinds.AccountDeleted, recipientName, toEmail);
+
+        var html = await _razor.CompileRenderAsync(
+            EmailConstants.Templates.AccountDeleted,
+            new AccountDeletedEmailModel(recipientName));
+
+        DispatchAfterLogging(toEmail, recipientName, EmailConstants.Subjects.AccountDeleted, html);
+    }
+
     private void LogDispatch(string kind, string recipientName, string toEmail, string? secret)
     {
         _logger.LogInformation(
