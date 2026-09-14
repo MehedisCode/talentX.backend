@@ -16,15 +16,16 @@ public sealed class GetAuditLogsQueryHandler : IRequestHandler<GetAuditLogsQuery
 
     public async Task<PaginatedList<AuditLogDto>> Handle(GetAuditLogsQuery request, CancellationToken cancellationToken)
     {
-        var (page, pageSize) = PaginationRequest.Normalize(request.Page, request.PageSize);
+        var (normalizedPage, normalizedPageSize) = PaginationRequest.Normalize(request.Page, request.PageSize);
 
-        var (items, totalCount) = await _unitOfWork.AuditLogs.GetPagedAuditLogsAsync(
+        var queryParams = new AuditLogQueryParams(
             request.SearchQuery,
             request.StartDate,
             request.EndDate,
-            page,
-            pageSize,
-            cancellationToken);
+            normalizedPage,
+            normalizedPageSize);
+
+        var (items, totalCount) = await _unitOfWork.AuditLogs.GetPagedAuditLogsAsync(queryParams, cancellationToken);
 
         var auditLogDtos = items.Select(auditLog => new AuditLogDto
         {
@@ -35,6 +36,6 @@ public sealed class GetAuditLogsQueryHandler : IRequestHandler<GetAuditLogsQuery
             Action = auditLog.Action
         }).ToList();
 
-        return new PaginatedList<AuditLogDto>(auditLogDtos, page, pageSize, totalCount);
+        return new PaginatedList<AuditLogDto>(auditLogDtos, normalizedPage, normalizedPageSize, totalCount);
     }
 }

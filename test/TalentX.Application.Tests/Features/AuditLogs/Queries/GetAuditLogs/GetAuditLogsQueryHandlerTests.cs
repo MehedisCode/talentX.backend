@@ -2,6 +2,7 @@ using FluentAssertions;
 using Moq;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Common.Interfaces.Repositories;
+using TalentX.Application.Common.Models;
 using TalentX.Application.Features.AuditLogs.Queries.GetAuditLogs;
 using TalentX.Domain.Entities;
 using Xunit;
@@ -27,14 +28,11 @@ public sealed class GetAuditLogsQueryHandlerTests
         var auditLog = new AuditLog("admin@talentx.com", "Insert · Job", isSystem: false);
         var items = new List<AuditLog> { auditLog };
         const int totalCount = 1;
+        var expectedParams = new AuditLogQueryParams(null, null, null, 1, 20);
 
         _auditLogRepository
             .Setup(r => r.GetPagedAuditLogsAsync(
-                null,
-                null,
-                null,
-                1,
-                20,
+                expectedParams,
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync((items, totalCount));
 
@@ -58,7 +56,7 @@ public sealed class GetAuditLogsQueryHandlerTests
         dto.Timestamp.Should().Be(auditLog.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss"));
 
         _auditLogRepository.Verify(
-            r => r.GetPagedAuditLogsAsync(null, null, null, 1, 20, It.IsAny<CancellationToken>()),
+            r => r.GetPagedAuditLogsAsync(expectedParams, It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -69,14 +67,11 @@ public sealed class GetAuditLogsQueryHandlerTests
         var startDate = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
         var endDate = new DateTime(2026, 1, 31, 23, 59, 59, DateTimeKind.Utc);
         const string searchQuery = "system";
+        var expectedParams = new AuditLogQueryParams(searchQuery, startDate, endDate, 2, 10);
 
         _auditLogRepository
             .Setup(r => r.GetPagedAuditLogsAsync(
-                searchQuery,
-                startDate,
-                endDate,
-                2,
-                10,
+                expectedParams,
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync((new List<AuditLog>(), 0));
 
@@ -98,7 +93,7 @@ public sealed class GetAuditLogsQueryHandlerTests
         result.Items.Should().BeEmpty();
 
         _auditLogRepository.Verify(
-            r => r.GetPagedAuditLogsAsync(searchQuery, startDate, endDate, 2, 10, It.IsAny<CancellationToken>()),
+            r => r.GetPagedAuditLogsAsync(expectedParams, It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -106,13 +101,11 @@ public sealed class GetAuditLogsQueryHandlerTests
     public async Task Handle_WithInvalidPagination_NormalizesPageAndPageSize()
     {
         // Arrange
+        var expectedParams = new AuditLogQueryParams(null, null, null, 1, 20);
+
         _auditLogRepository
             .Setup(r => r.GetPagedAuditLogsAsync(
-                null,
-                null,
-                null,
-                1,
-                20,
+                expectedParams,
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync((new List<AuditLog>(), 0));
 
@@ -127,7 +120,7 @@ public sealed class GetAuditLogsQueryHandlerTests
         result.PageSize.Should().Be(20);
 
         _auditLogRepository.Verify(
-            r => r.GetPagedAuditLogsAsync(null, null, null, 1, 20, It.IsAny<CancellationToken>()),
+            r => r.GetPagedAuditLogsAsync(expectedParams, It.IsAny<CancellationToken>()),
             Times.Once);
     }
 }
