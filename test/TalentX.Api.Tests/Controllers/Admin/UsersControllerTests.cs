@@ -47,10 +47,16 @@ public sealed class UsersControllerTests
         typeof(UsersController).BaseType.Should().Be(typeof(BaseApiController));
     }
 
-    [Fact]
-    public void Controller_HasAuthorizeAttributeWithAdminRole()
+    [Theory]
+    [InlineData(nameof(UsersController.GetUsers))]
+    [InlineData(nameof(UsersController.GetUserStats))]
+    [InlineData(nameof(UsersController.GetUserDetails))]
+    [InlineData(nameof(UsersController.UpdateUserAccountStatus))]
+    public void Action_HasAuthorizeAttributeWithAdminRole(string actionName)
     {
-        var authorizeAttribute = typeof(UsersController).GetCustomAttribute<AuthorizeAttribute>();
+        var authorizeAttribute = typeof(UsersController)
+            .GetMethod(actionName)!
+            .GetCustomAttribute<AuthorizeAttribute>();
 
         authorizeAttribute.Should().NotBeNull();
         authorizeAttribute!.Roles.Should().Be(nameof(UserRole.Admin));
