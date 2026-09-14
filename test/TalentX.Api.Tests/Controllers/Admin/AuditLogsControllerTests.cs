@@ -54,10 +54,11 @@ public sealed class AuditLogsControllerTests
     [Fact]
     public void Controller_HasRouteAttributeWithExpectedTemplate()
     {
-        var routeAttribute = typeof(AuditLogsController).GetCustomAttribute<RouteAttribute>();
+        var routeAttributes = typeof(AuditLogsController).GetCustomAttributes<RouteAttribute>().ToList();
 
-        routeAttribute.Should().NotBeNull();
-        routeAttribute!.Template.Should().Be("api/admin/audit-logs");
+        routeAttributes.Should().NotBeEmpty();
+        routeAttributes.Select(r => r.Template).Should().Contain("api/admin/audit-logs");
+        routeAttributes.Select(r => r.Template).Should().Contain("api/v1/admin/audit-logs");
     }
 
     [Fact]

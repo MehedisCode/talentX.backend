@@ -6,6 +6,7 @@ namespace TalentX.API.Controllers.Admin;
 
 [Authorize(Roles = "Admin")]
 [Route("api/admin/audit-logs")]
+[Route("api/v1/admin/audit-logs")]
 public class AuditLogsController : BaseApiController
 {
     [HttpGet]
