@@ -3,11 +3,12 @@ using Microsoft.Extensions.Logging;
 using TalentX.Application.Common.Constants;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
+using TalentX.Application.Features.Auth.DeleteAccount.DTOs;
 using TalentX.Application.Identity.Interfaces;
 using TalentX.Application.Identity.Services;
 using TalentX.Domain.Enums;
 
-namespace TalentX.Application.Features.Auth.DeleteAccount;
+namespace TalentX.Application.Features.Auth.DeleteAccount.Commands.DeleteAccount;
 
 public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountCommand, DeleteAccountResult>
 {
@@ -44,9 +45,6 @@ public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountC
         var identityUserId = _currentUserService.UserId
             ?? throw new UnauthorizedException("You must be signed in to delete your account.");
 
-        // 1. Verify the OTP first — no mutation on failure.
-        //    A blocked key (too many failed attempts) refuses verification until a new
-        //    code is requested; requesting one resets the attempt counter.
         var otpKey = OtpKeys.DeleteAccount(email);
 
         if (DeleteAccountOtpAttemptGuard.IsBlocked(otpKey))
@@ -63,10 +61,6 @@ public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountC
 
         DeleteAccountOtpAttemptGuard.Reset(otpKey);
 
-        // 2. Load the domain user — source of role and name; also the idempotency gate.
-        //    Convergence: if the domain rows are already gone (a prior attempt died between
-        //    step 7 and step 8) but the identity row remains, finish the identity delete
-        //    instead of stranding a sign-in-able account with no profile.
         var user = await _unitOfWork.Users.GetByUserIdAsync(identityUserId);
         if (user is null)
         {
@@ -81,41 +75,26 @@ public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountC
             return new DeleteAccountResult(email);
         }
 
-        // 3. Employer branch — remove ALL their jobs (any status). The Job FK cascades
-        //    (applications, saved jobs, invitations, interview invitations + timeslots,
-        //    talent matches) are emitted by SaveChanges for the removed jobs.
         if (user.Role == UserRole.Employer)
         {
             var jobs = await _unitOfWork.Jobs.GetByEmployerIdAsync(identityUserId, cancellationToken);
             _unitOfWork.Jobs.RemoveRange(jobs);
         }
 
-        // 4. Talent-side referencing rows. These string columns have no FK constraints,
-        //    so they must be removed explicitly or they would orphan permanently.
         await _unitOfWork.JobApplications.DeleteByTalentUserIdAsync(identityUserId, cancellationToken);
         await _unitOfWork.InterviewInvitations.DeleteByTalentUserIdAsync(identityUserId, cancellationToken);
         await _unitOfWork.Invitations.DeleteByTalentUserIdAsync(identityUserId, cancellationToken);
         await _unitOfWork.JobTalentMatches.DeleteByTalentUserIdAsync(identityUserId, cancellationToken);
         await _unitOfWork.SavedJobs.DeleteByTalentIdAsync(identityUserId, cancellationToken);
 
-        // 5. Directly-owned profile rows (both roles).
         await _unitOfWork.Resumes.DeleteByUserIdAsync(identityUserId, cancellationToken);
         await _unitOfWork.WorkExperiences.DeleteByUserIdAsync(identityUserId, cancellationToken);
         await _unitOfWork.Educations.DeleteByUserIdAsync(identityUserId, cancellationToken);
 
-        // 6. Domain user — TPT cascades the Talent/Employer child row. Tracked delete so
-        //    the audit interceptor records "Delete · User" (the admin-visible marker).
         _unitOfWork.Users.Delete(user);
 
-        // 7. Persist the domain side. The audit interceptor writes the Delete · {Entity}
-        //    trail (actor = the user's email) that serves the admin-reflection requirement.
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        // 8. Identity hard delete. UserManager shares this request's scoped ApplicationDbContext,
-        //    so the pending ApplicationUser (and cascaded RefreshTokens / AspNet* rows) delete
-        //    is committed here, completing the same logical operation. If this fails, the
-        //    identity row survives: the user can still sign in, the delete endpoints 404 on the
-        //    missing domain user (step 2), and a retried delete converges via step 2.5 below.
         var identityDelete = await _identityService.DeleteApplicationUserAsync(identityUserId);
         if (!identityDelete.Succeeded)
         {
@@ -126,10 +105,8 @@ public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountC
                 "Your account data was deleted but sign-in cleanup failed. Please try deleting again to finish.");
         }
 
-        // 9. Belt-and-braces token revoke (refresh rows are already cascaded away).
         await _tokenService.RevokeAllForUserAsync(identityUserId);
 
-        // 10. Confirmation email (D5) — non-fatal; the account is already gone.
         try
         {
             await _emailService.SendAccountDeletedEmailAsync(email, user.Name, cancellationToken);

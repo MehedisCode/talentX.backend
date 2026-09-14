@@ -5,7 +5,7 @@ using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Common.Interfaces.Repositories;
 using TalentX.Application.Identity.Services;
 
-namespace TalentX.Application.Features.Auth.DeleteAccount;
+namespace TalentX.Application.Features.Auth.DeleteAccount.Commands.SendDeleteAccountOtp;
 
 public sealed class SendDeleteAccountOtpCommandHandler : IRequestHandler<SendDeleteAccountOtpCommand, bool>
 {

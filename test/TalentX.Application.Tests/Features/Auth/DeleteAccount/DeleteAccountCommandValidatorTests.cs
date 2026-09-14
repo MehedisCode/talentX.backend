@@ -1,12 +1,9 @@
 using FluentValidation.TestHelper;
-using TalentX.Application.Features.Auth.DeleteAccount;
+using TalentX.Application.Features.Auth.DeleteAccount.Commands.DeleteAccount;
 using Xunit;
 
 namespace TalentX.Application.Tests.Features.Auth.DeleteAccount;
 
-/// <summary>
-/// Unit tests for DeleteAccountCommandValidator.
-/// </summary>
 public class DeleteAccountCommandValidatorTests
 {
     private readonly DeleteAccountCommandValidator _validator = new();

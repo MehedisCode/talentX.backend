@@ -7,7 +7,7 @@ using TalentX.Application.Common.Constants;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Common.Interfaces.Repositories;
-using TalentX.Application.Features.Auth.DeleteAccount;
+using TalentX.Application.Features.Auth.DeleteAccount.Commands.DeleteAccount;
 using TalentX.Application.Identity.Interfaces;
 using TalentX.Application.Identity.Models;
 using TalentX.Application.Identity.Services;
@@ -19,11 +19,6 @@ using ValidationException = TalentX.Application.Common.Exceptions.ValidationExce
 
 namespace TalentX.Application.Tests.Features.Auth.DeleteAccount;
 
-/// <summary>
-/// Unit tests for DeleteAccountCommandHandler.
-/// Covers OTP verification (success, invalid, blocked), the delete sequence for both
-/// roles, the domain-missing convergence path, and identity-cleanup failure handling.
-/// </summary>
 public class DeleteAccountCommandHandlerTests
 {
     private const string Email = "user@example.com";
@@ -141,7 +136,6 @@ public class DeleteAccountCommandHandlerTests
         await blocked.Should().ThrowAsync<ValidationException>()
             .WithMessage("Too many incorrect verification attempts. Request a new code and try again.");
 
-        // Even a now-valid code must not proceed while blocked.
         _otpServiceMock.Verify(
             o => o.VerifyOtpAsync(OtpKeys.DeleteAccount(Email), ValidOtp, It.IsAny<CancellationToken>()),
             Times.Never);
@@ -219,8 +213,6 @@ public class DeleteAccountCommandHandlerTests
 
         await _handler.Handle(new DeleteAccountCommand(ValidOtp), CancellationToken.None);
 
-        // Talent-scoped cleanups still run for employers — they are no-ops (no matching
-        // rows) and guard against stray cross-role data, so no exception should surface.
         _unitOfWorkMock.Verify(u => u.JobApplications.DeleteByTalentUserIdAsync(IdentityUserId, It.IsAny<CancellationToken>()), Times.Once);
         _unitOfWorkMock.Verify(u => u.Resumes.DeleteByUserIdAsync(IdentityUserId, It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -254,7 +246,6 @@ public class DeleteAccountCommandHandlerTests
 
         await act.Should().ThrowAsync<ValidationException>()
             .WithMessage("*sign-in cleanup failed*");
-        // Domain side must already be persisted before identity cleanup runs.
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
