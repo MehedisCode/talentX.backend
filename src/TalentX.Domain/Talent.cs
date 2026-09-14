@@ -22,7 +22,7 @@ public sealed class Talent : User
     private Talent() : base() { }
 
     public Talent(string userId, string name, string email)
-        : base(userId, name, email, UserRole.Talent)
+        : base(userId, name, email, UserRole.Talent, status: AccountStatus.Active)
     {
     }
 
