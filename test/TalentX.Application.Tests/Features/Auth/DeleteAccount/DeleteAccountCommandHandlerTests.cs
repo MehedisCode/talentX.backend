@@ -7,7 +7,7 @@ using TalentX.Application.Common.Constants;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Common.Interfaces.Repositories;
-using TalentX.Application.Features.Auth.DeleteAccount.Commands.DeleteAccount;
+using TalentX.Application.Features.Auth.DeleteAccount;
 using TalentX.Application.Identity.Interfaces;
 using TalentX.Application.Identity.Models;
 using TalentX.Application.Identity.Services;

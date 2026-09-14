@@ -1,5 +1,5 @@
 using FluentValidation.TestHelper;
-using TalentX.Application.Features.Auth.DeleteAccount.Commands.DeleteAccount;
+using TalentX.Application.Features.Auth.DeleteAccount;
 using Xunit;
 
 namespace TalentX.Application.Tests.Features.Auth.DeleteAccount;

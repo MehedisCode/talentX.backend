@@ -3,12 +3,11 @@ using Microsoft.Extensions.Logging;
 using TalentX.Application.Common.Constants;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
-using TalentX.Application.Features.Auth.DeleteAccount.DTOs;
 using TalentX.Application.Identity.Interfaces;
 using TalentX.Application.Identity.Services;
 using TalentX.Domain.Enums;
 
-namespace TalentX.Application.Features.Auth.DeleteAccount.Commands.DeleteAccount;
+namespace TalentX.Application.Features.Auth.DeleteAccount;
 
 public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountCommand, DeleteAccountResult>
 {

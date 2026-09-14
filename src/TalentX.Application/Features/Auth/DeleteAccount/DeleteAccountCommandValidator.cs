@@ -1,6 +1,6 @@
 using FluentValidation;
 
-namespace TalentX.Application.Features.Auth.DeleteAccount.Commands.DeleteAccount;
+namespace TalentX.Application.Features.Auth.DeleteAccount;
 
 public class DeleteAccountCommandValidator : AbstractValidator<DeleteAccountCommand>
 {

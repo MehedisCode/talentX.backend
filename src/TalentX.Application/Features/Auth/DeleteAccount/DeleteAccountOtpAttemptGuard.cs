@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
 
-namespace TalentX.Application.Features.Auth.DeleteAccount.Commands.DeleteAccount;
+namespace TalentX.Application.Features.Auth.DeleteAccount;
 
 public static class DeleteAccountOtpAttemptGuard
 {
