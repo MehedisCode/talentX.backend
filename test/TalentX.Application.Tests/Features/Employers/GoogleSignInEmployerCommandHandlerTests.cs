@@ -8,6 +8,7 @@ using TalentX.Application.Features.Employers.Commands.GoogleSignIn;
 using TalentX.Application.Identity.Interfaces;
 using TalentX.Application.Identity.Models;
 using TalentX.Domain;
+using TalentX.Domain.Entities;
 using Xunit;
 
 namespace TalentX.Application.Tests.Features.Employers;
@@ -20,12 +21,14 @@ public sealed class GoogleSignInEmployerCommandHandlerTests
     private readonly Mock<IUnitOfWork> _unitOfWorkMock = new();
     private readonly Mock<IEmployerRepository> _employerRepositoryMock = new();
     private readonly Mock<ITalentRepository> _talentRepositoryMock = new();
+    private readonly Mock<IAuditLogRepository> _auditLogRepositoryMock = new();
     private readonly Mock<IMapper> _mapperMock = new();
 
     public GoogleSignInEmployerCommandHandlerTests()
     {
         _unitOfWorkMock.Setup(u => u.Employers).Returns(_employerRepositoryMock.Object);
         _unitOfWorkMock.Setup(u => u.Talents).Returns(_talentRepositoryMock.Object);
+        _unitOfWorkMock.Setup(u => u.AuditLogs).Returns(_auditLogRepositoryMock.Object);
 
         _mapperMock
             .Setup(m => m.Map<EmployerDto>(It.IsAny<Employer>()))
@@ -97,7 +100,8 @@ public sealed class GoogleSignInEmployerCommandHandlerTests
         Assert.Equal("mock-refresh-token", result.RefreshToken);
 
         _employerRepositoryMock.Verify(r => r.AddAsync(It.Is<Employer>(e => e.Email == googleUser.Email && e.IsVerified), It.IsAny<CancellationToken>()), Times.Once);
-        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _auditLogRepositoryMock.Verify(a => a.AddAsync(It.Is<AuditLog>(l => l.Actor == googleUser.Email && l.Action == "Login Success · Google"), It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Exactly(2));
         _tokenServiceMock.Verify(t => t.CreateAsync("identity-user-123"), Times.Once);
     }
 
@@ -148,7 +152,8 @@ public sealed class GoogleSignInEmployerCommandHandlerTests
         Assert.Equal("mock-access-token", result.AccessToken);
         Assert.Equal("mock-refresh-token", result.RefreshToken);
         _externalIdentityServiceMock.Verify(e => e.FindOrCreateExternalUserAsync(googleUser.Email, "Employer", It.IsAny<CancellationToken>()), Times.Once);
-        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _auditLogRepositoryMock.Verify(a => a.AddAsync(It.Is<AuditLog>(l => l.Actor == googleUser.Email && l.Action == "Login Success · Google"), It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Exactly(2));
         _tokenServiceMock.Verify(t => t.CreateAsync("existing-user-id"), Times.Once);
     }
 
@@ -191,7 +196,8 @@ public sealed class GoogleSignInEmployerCommandHandlerTests
         Assert.Equal("mock-refresh-token", result.RefreshToken);
 
         _employerRepositoryMock.Verify(r => r.AddAsync(It.IsAny<Employer>(), It.IsAny<CancellationToken>()), Times.Never);
-        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _auditLogRepositoryMock.Verify(a => a.AddAsync(It.Is<AuditLog>(l => l.Actor == googleUser.Email && l.Action == "Login Success · Google"), It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Exactly(2));
         _tokenServiceMock.Verify(t => t.CreateAsync("talent-user-id"), Times.Once);
     }
 }

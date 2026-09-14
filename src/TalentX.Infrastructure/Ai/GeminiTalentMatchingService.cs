@@ -55,7 +55,7 @@ public sealed class GeminiTalentMatchingService : ITalentMatchingService
             ?? "v1";
 
         var tempStr = configuration["GEMINI_TEMPERATURE"] ?? configuration["Gemini:Temperature"];
-        _temperature = double.TryParse(tempStr, out var tempVal) ? tempVal : 0.1;
+        _temperature = double.TryParse(tempStr, out var tempVal) ? tempVal : 0.0;
 
         var topPStr = configuration["GEMINI_TOP_P"] ?? configuration["Gemini:TopP"];
         _topP = double.TryParse(topPStr, out var topPVal) ? topPVal : 0.95;

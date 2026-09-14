@@ -8,7 +8,11 @@ public sealed record TalentInvitationRecord(
     Guid JobId,
     string JobTitle,
     string Company,
-    DateTime InvitedDate);
+    DateTime InvitedDate,
+    DateTime ExpiresAt,
+    string? Message,
+    WorkArrangement WorkArrangement,
+    EmploymentType EmploymentType);
 
 public interface IInvitationRepository
 {

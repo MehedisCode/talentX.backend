@@ -197,6 +197,40 @@ namespace TalentX.Migrations.Migrations
                     b.ToTable("EmailVerificationTokens", (string)null);
                 });
 
+            modelBuilder.Entity("TalentX.Domain.Entities.AuditLog", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<string>("Actor")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsSystem")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Actor");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.ToTable("AuditLogs", (string)null);
+                });
+
             modelBuilder.Entity("TalentX.Domain.Entities.Education", b =>
                 {
                     b.Property<Guid>("Id")
@@ -437,6 +471,12 @@ namespace TalentX.Migrations.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("InvitationCount")
+                        .HasColumnType("integer");
+
                     b.Property<DateTime>("InvitedDate")
                         .HasColumnType("timestamp with time zone");
 
@@ -446,10 +486,21 @@ namespace TalentX.Migrations.Migrations
                     b.Property<Guid>("JobId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("Message")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
                     b.Property<string>("TalentUserId")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Token")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -581,6 +632,101 @@ namespace TalentX.Migrations.Migrations
                     b.HasIndex("Status", "PublishedAt");
 
                     b.ToTable("Jobs", (string)null);
+                });
+
+            modelBuilder.Entity("TalentX.Domain.Entities.JobAlert", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("EmploymentType")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("ExperienceLevel")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Location")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("TalentId")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("WorkArrangement")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TalentId");
+
+                    b.HasIndex("EmploymentType", "ExperienceLevel", "WorkArrangement")
+                        .HasDatabaseName("IX_JobAlerts_Active_Matching")
+                        .HasFilter("\"IsEnabled\" = true");
+
+                    b.ToTable("JobAlerts", (string)null);
+                });
+
+            modelBuilder.Entity("TalentX.Domain.Entities.JobAlertNotificationHistory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("JobAlertId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("JobId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("SentAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("TalentId")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("JobAlertId");
+
+                    b.HasIndex("JobId");
+
+                    b.HasIndex("TalentId", "JobId")
+                        .IsUnique();
+
+                    b.ToTable("JobAlertNotificationHistories", (string)null);
                 });
 
             modelBuilder.Entity("TalentX.Domain.Entities.JobApplication", b =>
@@ -771,6 +917,34 @@ namespace TalentX.Migrations.Migrations
                         .IsUnique();
 
                     b.ToTable("SavedJobs", (string)null);
+                });
+
+            modelBuilder.Entity("TalentX.Domain.Entities.TalentNotificationPreference", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("JobAlertsEmailEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("TalentId")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TalentId")
+                        .IsUnique();
+
+                    b.ToTable("TalentNotificationPreferences", (string)null);
                 });
 
             modelBuilder.Entity("TalentX.Domain.Entities.WorkExperience", b =>
@@ -1128,6 +1302,21 @@ namespace TalentX.Migrations.Migrations
 
             modelBuilder.Entity("TalentX.Domain.Entities.Invitation", b =>
                 {
+                    b.HasOne("TalentX.Domain.Entities.Job", null)
+                        .WithMany()
+                        .HasForeignKey("JobId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("TalentX.Domain.Entities.JobAlertNotificationHistory", b =>
+                {
+                    b.HasOne("TalentX.Domain.Entities.JobAlert", null)
+                        .WithMany()
+                        .HasForeignKey("JobAlertId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("TalentX.Domain.Entities.Job", null)
                         .WithMany()
                         .HasForeignKey("JobId")

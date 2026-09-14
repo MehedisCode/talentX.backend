@@ -75,6 +75,8 @@ public sealed class JobApplicationRepository : IJobApplicationRepository
         Guid jobId,
         string? search,
         TalentX.Domain.Enums.ApplicationStatus? status,
+        string? sortBy,
+        string? sortOrder,
         int page,
         int pageSize,
         CancellationToken cancellationToken = default)
@@ -96,10 +98,21 @@ public sealed class JobApplicationRepository : IJobApplicationRepository
                 application.ApplicantEmail.ToLower().Contains(searchLower));
         }
 
+        query = sortBy?.ToLowerInvariant() switch
+        {
+            "appliedat" => sortOrder?.ToLowerInvariant() == "asc"
+                ? query.OrderBy(application => application.AppliedAt)
+                : query.OrderByDescending(application => application.AppliedAt),
+            "status" => sortOrder?.ToLowerInvariant() == "asc"
+                ? query.OrderBy(application => application.Status)
+                : query.OrderByDescending(application => application.Status),
+            _ => query.OrderByDescending(application => application.AiMatchScore ?? 0)
+                .ThenByDescending(application => application.AppliedAt)
+        };
+
         var totalCount = await query.CountAsync(cancellationToken);
 
         var items = await query
-            .OrderByDescending(application => application.AppliedAt)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync(cancellationToken);
@@ -183,5 +196,10 @@ public sealed class JobApplicationRepository : IJobApplicationRepository
             .Where(application => application.Status == ApplicationStatus.Hired &&
                                   _context.Jobs.IgnoreQueryFilters().Any(job => job.Id == application.JobId && job.EmployerId == employerId))
             .CountAsync(cancellationToken);
+    }
+
+    public void Update(JobApplication jobApplication)
+    {
+        _context.JobApplications.Update(jobApplication);
     }
 }

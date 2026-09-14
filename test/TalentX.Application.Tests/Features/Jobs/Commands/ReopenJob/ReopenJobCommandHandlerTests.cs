@@ -1,5 +1,6 @@
 using FluentAssertions;
 using MediatR;
+using Microsoft.Extensions.Logging;
 using Moq;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
@@ -16,6 +17,8 @@ public sealed class ReopenJobCommandHandlerTests
     private readonly Mock<IJobRepository> _jobRepository = new();
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
     private readonly Mock<ICurrentUserService> _currentUserService = new();
+    private readonly Mock<IJobAlertQueue> _jobAlertQueue = new();
+    private readonly Mock<ILogger<ReopenJobCommandHandler>> _logger = new();
     private readonly ReopenJobCommandHandler _handler;
 
     public ReopenJobCommandHandlerTests()
@@ -24,7 +27,9 @@ public sealed class ReopenJobCommandHandlerTests
         _handler = new ReopenJobCommandHandler(
             _jobRepository.Object,
             _unitOfWork.Object,
-            _currentUserService.Object);
+            _currentUserService.Object,
+            _jobAlertQueue.Object,
+            _logger.Object);
     }
 
     private static Job CreateSampleJob(string employerId = "employer-123", DateTime? expireAt = null)
@@ -58,6 +63,7 @@ public sealed class ReopenJobCommandHandlerTests
         sampleJob.Status.Should().Be(JobStatus.Published);
         sampleJob.UpdatedAt.Should().NotBeNull();
         _unitOfWork.Verify(unit => unit.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _jobAlertQueue.Verify(queue => queue.EnqueuePublishedJobAsync(sampleJob.Id, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]

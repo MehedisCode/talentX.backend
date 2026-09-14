@@ -1,9 +1,12 @@
 using FluentAssertions;
 using Moq;
+using TalentX.Application.Common.Interfaces;
+using TalentX.Application.Common.Interfaces.Repositories;
 using TalentX.Application.Features.Auth.Login;
-using Xunit;
-using TalentX.Application.Identity.Models;
 using TalentX.Application.Identity.Interfaces;
+using TalentX.Application.Identity.Models;
+using TalentX.Domain.Entities;
+using Xunit;
 
 namespace TalentX.Application.Tests.Features.Auth.Login;
 
@@ -11,13 +14,23 @@ public class LoginCommandHandlerTests
 {
     private readonly Mock<IIdentityService> _identityServiceMock;
     private readonly Mock<ITokenService> _tokenServiceMock;
+    private readonly Mock<IUnitOfWork> _unitOfWorkMock;
+    private readonly Mock<IAuditLogRepository> _auditLogRepositoryMock;
     private readonly LoginCommandHandler _handler;
 
     public LoginCommandHandlerTests()
     {
         _identityServiceMock = new Mock<IIdentityService>();
         _tokenServiceMock = new Mock<ITokenService>();
-        _handler = new LoginCommandHandler(_identityServiceMock.Object, _tokenServiceMock.Object);
+        _unitOfWorkMock = new Mock<IUnitOfWork>();
+        _auditLogRepositoryMock = new Mock<IAuditLogRepository>();
+
+        _unitOfWorkMock.Setup(x => x.AuditLogs).Returns(_auditLogRepositoryMock.Object);
+
+        _handler = new LoginCommandHandler(
+            _identityServiceMock.Object,
+            _tokenServiceMock.Object,
+            _unitOfWorkMock.Object);
     }
 
     #region Happy Path Tests
@@ -70,6 +83,12 @@ public class LoginCommandHandlerTests
 
         _identityServiceMock.Verify(x => x.ValidatePasswordAsync(email, password), Times.Once);
         _tokenServiceMock.Verify(x => x.CreateAsync(userId), Times.Once);
+        _auditLogRepositoryMock.Verify(
+            x => x.AddAsync(
+                It.Is<AuditLog>(log => log.Actor == email && log.Action == "Login Success" && !log.IsSystem),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -136,6 +155,12 @@ public class LoginCommandHandlerTests
         result.Data.Should().BeNull();
 
         _tokenServiceMock.Verify(x => x.CreateAsync(It.IsAny<string>()), Times.Never);
+        _auditLogRepositoryMock.Verify(
+            x => x.AddAsync(
+                It.Is<AuditLog>(log => log.Actor == email && log.Action == "Login Failed" && !log.IsSystem),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -213,6 +238,13 @@ public class LoginCommandHandlerTests
         result.Success.Should().BeFalse();
         result.Errors.Should().Contain(tokenErrorMessage);
         result.Data.Should().BeNull();
+
+        _auditLogRepositoryMock.Verify(
+            x => x.AddAsync(
+                It.Is<AuditLog>(log => log.Actor == email && log.Action == "Login Failed" && !log.IsSystem),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -403,6 +435,109 @@ public class LoginCommandHandlerTests
 
         // Assert
         result.Success.Should().BeTrue();
+    }
+
+    #endregion
+
+    #region Audit Logging Tests
+
+    [Fact]
+    public async Task Handle_OnSuccessfulLogin_RecordsLoginSuccessAuditLogWithCorrectActor()
+    {
+        // Arrange
+        var command = new LoginCommand("admin@example.com", "AdminPassword123!");
+        var passwordValidationResult = new PasswordValidationResult
+        {
+            UserId = "admin-1",
+            Email = "admin@example.com",
+            Roles = new[] { "Admin" }
+        };
+
+        _identityServiceMock
+            .Setup(x => x.ValidatePasswordAsync(command.Email, command.Password))
+            .ReturnsAsync(IdentityResponse<PasswordValidationResult>.Ok(passwordValidationResult));
+
+        _tokenServiceMock
+            .Setup(x => x.CreateAsync("admin-1"))
+            .ReturnsAsync(IdentityResponse<TokenResponse>.Ok(new TokenResponse
+            {
+                AccessToken = "access-token",
+                RefreshToken = "refresh-token"
+            }));
+
+        // Act
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.Success.Should().BeTrue();
+        _auditLogRepositoryMock.Verify(
+            x => x.AddAsync(
+                It.Is<AuditLog>(log => log.Actor == "admin@example.com"
+                                      && log.Action == "Login Success"
+                                      && !log.IsSystem),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_OnPasswordValidationFailure_RecordsLoginFailedAuditLog()
+    {
+        // Arrange
+        var command = new LoginCommand("failed@example.com", "WrongPassword!");
+
+        _identityServiceMock
+            .Setup(x => x.ValidatePasswordAsync(command.Email, command.Password))
+            .ReturnsAsync(IdentityResponse<PasswordValidationResult>.Fail("Invalid credentials."));
+
+        // Act
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.Success.Should().BeFalse();
+        _auditLogRepositoryMock.Verify(
+            x => x.AddAsync(
+                It.Is<AuditLog>(log => log.Actor == "failed@example.com"
+                                      && log.Action == "Login Failed"
+                                      && !log.IsSystem),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_OnTokenCreationFailure_RecordsLoginFailedAuditLog()
+    {
+        // Arrange
+        var command = new LoginCommand("valid@example.com", "CorrectPassword!");
+        var passwordValidationResult = new PasswordValidationResult
+        {
+            UserId = "user-999",
+            Email = "valid@example.com",
+            Roles = new[] { "User" }
+        };
+
+        _identityServiceMock
+            .Setup(x => x.ValidatePasswordAsync(command.Email, command.Password))
+            .ReturnsAsync(IdentityResponse<PasswordValidationResult>.Ok(passwordValidationResult));
+
+        _tokenServiceMock
+            .Setup(x => x.CreateAsync("user-999"))
+            .ReturnsAsync(IdentityResponse<TokenResponse>.Fail("Token generation failure."));
+
+        // Act
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.Success.Should().BeFalse();
+        _auditLogRepositoryMock.Verify(
+            x => x.AddAsync(
+                It.Is<AuditLog>(log => log.Actor == "valid@example.com"
+                                      && log.Action == "Login Failed"
+                                      && !log.IsSystem),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     #endregion

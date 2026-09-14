@@ -1,8 +1,10 @@
 using FluentValidation;
 using MediatR;
+using Microsoft.Extensions.Logging;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Identity.Services;
+using TalentX.Domain.Enums;
 
 namespace TalentX.Application.Features.Jobs.Commands.UpdateJob;
 
@@ -11,15 +13,21 @@ public class UpdateJobCommandHandler : IRequestHandler<UpdateJobCommand>
     private readonly IJobRepository _jobRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUserService;
+    private readonly IJobAlertQueue _jobAlertQueue;
+    private readonly ILogger<UpdateJobCommandHandler> _logger;
 
     public UpdateJobCommandHandler(
         IJobRepository jobRepository,
         IUnitOfWork unitOfWork,
-        ICurrentUserService currentUserService)
+        ICurrentUserService currentUserService,
+        IJobAlertQueue jobAlertQueue,
+        ILogger<UpdateJobCommandHandler> logger)
     {
         _jobRepository = jobRepository;
         _unitOfWork = unitOfWork;
         _currentUserService = currentUserService;
+        _jobAlertQueue = jobAlertQueue;
+        _logger = logger;
     }
 
     
@@ -84,5 +92,17 @@ public class UpdateJobCommandHandler : IRequestHandler<UpdateJobCommand>
         }
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        if (request.Publish && job.Status == JobStatus.Published)
+        {
+            try
+            {
+                await _jobAlertQueue.EnqueuePublishedJobAsync(job.Id, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to enqueue published job {JobId} for job alerts", job.Id);
+            }
+        }
     }
 }

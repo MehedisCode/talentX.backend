@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Common.Interfaces.Repositories;
 using TalentX.Infrastructure.Persistence.Contexts;
+using TalentX.Infrastructure.Persistence.Interceptors;
 using TalentX.Infrastructure.Persistence.Repositories;
 
 namespace TalentX.Infrastructure.Persistence;
@@ -17,12 +18,15 @@ public static class PersistenceStartup
     {
         var connectionString = GetDatabaseConnectionString(configuration);
 
-        services.AddDbContext<ApplicationDbContext>(options =>
+        services.AddScoped<AuditLogSaveChangesInterceptor>();
+
+        services.AddDbContext<ApplicationDbContext>((serviceProvider, options) =>
             options.UseNpgsql(
                 connectionString,
                 npgsqlOptions =>
                     npgsqlOptions.MigrationsAssembly("TalentX.Migrations"))
-                   .ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning)));
+                   .ConfigureWarnings(warningConfiguration => warningConfiguration.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning))
+                   .AddInterceptors(serviceProvider.GetRequiredService<AuditLogSaveChangesInterceptor>()));
 
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<IJobRepository, JobRepository>();
@@ -38,8 +42,11 @@ public static class PersistenceStartup
         services.AddScoped<ISavedJobRepository, SavedJobRepository>();
         services.AddScoped<IInterviewInvitationRepository, InterviewInvitationRepository>();
         services.AddScoped<IEmailDispatchLogRepository, EmailDispatchLogRepository>();
-        services.AddScoped<IInvitationRepository, InvitationRepository>();
-        services.AddScoped<IEmailVerificationTokenRepository, EmailVerificationTokenRepository>();
+        services.AddScoped<IJobTalentMatchRepository, JobTalentMatchRepository>();
+        services.AddScoped<IAuditLogRepository, AuditLogRepository>();
+        services.AddScoped<IJobAlertRepository, JobAlertRepository>();
+        services.AddScoped<ITalentNotificationPreferenceRepository, TalentNotificationPreferenceRepository>();
+        services.AddScoped<IJobAlertNotificationHistoryRepository, JobAlertNotificationHistoryRepository>();
 
         return services;
     }
