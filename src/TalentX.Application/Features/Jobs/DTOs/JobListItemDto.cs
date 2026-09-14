@@ -1,3 +1,5 @@
+using TalentX.Domain.Enums;
+
 namespace TalentX.Application.Features.Jobs.DTOs;
 
 public class JobListItemDto
@@ -22,4 +24,9 @@ public class JobListItemDto
     /// </summary>
     public DateTime CreatedAt { get; set; }
     public DateTime ExpireAt { get; set; }
+    public SalaryType? SalaryType { get; set; }
+    public decimal? SalaryMin { get; set; }
+    public decimal? SalaryMax { get; set; }
+    public Currency? SalaryCurrency { get; set; }
+    public SalaryPeriod? SalaryPeriod { get; set; }
 }
