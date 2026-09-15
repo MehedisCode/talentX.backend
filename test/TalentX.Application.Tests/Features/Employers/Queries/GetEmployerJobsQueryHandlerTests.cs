@@ -66,7 +66,12 @@ public sealed class GetEmployerJobsQueryHandlerTests
                 Vacancies: 1,
                 ExpireAt: DateTime.UtcNow.AddDays(15),
                 CreatedAt: DateTime.UtcNow.AddDays(-5),
-                ApplicantCount: 12)
+                ApplicantCount: 12,
+                SalaryType: null,
+                SalaryMin: null,
+                SalaryMax: null,
+                SalaryCurrency: null,
+                SalaryPeriod: null)
         };
 
         var expectedPaginatedList = new PaginatedList<EmployerJobListItemDto>(jobListItems, 1, 20, 1);
