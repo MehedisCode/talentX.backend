@@ -100,6 +100,7 @@ public static class IdentityStartup
         services.AddScoped<IExternalIdentityService, ExternalIdentityService>();
         services.AddScoped<IGoogleAuthService, GoogleAuthService>();
         services.AddSingleton<IOtpService, OtpService>();
+        services.AddSingleton<IOtpAttemptTracker, InMemoryOtpAttemptTracker>();
         services.AddSingleton<IEmailService, EmailService>();
 
         services.AddHostedService<EmailDispatchBackgroundWorker>();

@@ -206,6 +206,7 @@ public sealed class JobApplicationRepository : IJobApplicationRepository
     public async Task DeleteByTalentUserIdAsync(string talentUserId, CancellationToken cancellationToken = default)
     {
         var applications = await _context.JobApplications
+            .IgnoreQueryFilters()
             .Where(application => application.TalentUserId == talentUserId)
             .ToListAsync(cancellationToken);
 

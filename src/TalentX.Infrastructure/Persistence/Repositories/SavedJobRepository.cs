@@ -71,6 +71,7 @@ public sealed class SavedJobRepository : ISavedJobRepository
     public async Task DeleteByTalentIdAsync(string talentId, CancellationToken cancellationToken = default)
     {
         var savedJobs = await _context.SavedJobs
+            .IgnoreQueryFilters()
             .Where(savedJob => savedJob.TalentId == talentId)
             .ToListAsync(cancellationToken);
 

@@ -747,6 +747,39 @@ public class JobRepositoryTests
         nonMatchingSearchResult.Items.Should().BeEmpty();
     }
 
+    [Fact]
+    public async Task GetByEmployerIdAsync_WhenEmployerHasSoftDeletedJob_ExcludesIt()
+    {
+        await using var context = NewContext();
+        var repository = new JobRepository(context);
+        var activeJob = MakeEmployerJob("employer-1", "Active Role", "Acme Corp");
+        var deletedJob = MakeEmployerJob("employer-1", "Deleted Role", "Acme Corp");
+        deletedJob.SoftDelete();
+        context.Jobs.AddRange(activeJob, deletedJob);
+        await context.SaveChangesAsync();
+
+        var result = await repository.GetByEmployerIdAsync("employer-1");
+
+        result.Should().ContainSingle().Which.Id.Should().Be(activeJob.Id);
+    }
+
+    [Fact]
+    public async Task GetByEmployerIdIncludingDeletedAsync_WhenEmployerHasSoftDeletedJob_ReturnsIt()
+    {
+        await using var context = NewContext();
+        var repository = new JobRepository(context);
+        var activeJob = MakeEmployerJob("employer-1", "Active Role", "Acme Corp");
+        var deletedJob = MakeEmployerJob("employer-1", "Deleted Role", "Acme Corp");
+        deletedJob.SoftDelete();
+        context.Jobs.AddRange(activeJob, deletedJob);
+        await context.SaveChangesAsync();
+
+        var result = await repository.GetByEmployerIdIncludingDeletedAsync("employer-1");
+
+        result.Should().HaveCount(2);
+        result.Select(j => j.Id).Should().Contain(deletedJob.Id);
+    }
+
     private static Job MakeEmployerJob(
         string employerId,
         string title,

@@ -27,12 +27,12 @@ public sealed class EmailService : IEmailService
             .SetOperatingAssembly(typeof(EmailService).Assembly)
             .Build();
 
-        _smtpHost    = Env("SMTP_HOST");
-        _smtpPort    = int.TryParse(Env("SMTP_PORT"), out var p) ? p : 587;
-        _smtpUser    = Env("SMTP_USER");
-        _smtpPass    = Env("SMTP_PASS");
+        _smtpHost = Env("SMTP_HOST");
+        _smtpPort = int.TryParse(Env("SMTP_PORT"), out var p) ? p : 587;
+        _smtpUser = Env("SMTP_USER");
+        _smtpPass = Env("SMTP_PASS");
         _senderEmail = Env("SENDER_EMAIL");
-        _senderName  = Env("SENDER_NAME") is { Length: > 0 } n ? n : EmailConstants.Defaults.SenderName;
+        _senderName = Env("SENDER_NAME") is { Length: > 0 } n ? n : EmailConstants.Defaults.SenderName;
     }
 
     public async Task SendOtpEmailAsync(

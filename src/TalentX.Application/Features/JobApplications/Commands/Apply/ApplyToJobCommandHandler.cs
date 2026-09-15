@@ -50,7 +50,7 @@ public class ApplyToJobCommandHandler : IRequestHandler<ApplyToJobCommand, Apply
         var name = request.ApplicantName.Trim();
         var email = request.ApplicantEmail.Trim().ToLowerInvariant();
 
-        var existingUser = await _unitOfWork.Users.GetByEmailAsync(email);
+        var existingUser = await _unitOfWork.Users.GetByEmailAsync(email, cancellationToken);
         if (existingUser is not null)
         {
             return new ApplyToJobResponse(Guid.Empty, request.JobId, RequiresLogin: true);

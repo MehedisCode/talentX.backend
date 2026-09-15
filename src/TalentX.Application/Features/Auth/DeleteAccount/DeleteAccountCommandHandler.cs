@@ -5,6 +5,7 @@ using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Identity.Interfaces;
 using TalentX.Application.Identity.Services;
+using TalentX.Domain;
 using TalentX.Domain.Enums;
 
 namespace TalentX.Application.Features.Auth.DeleteAccount;
@@ -16,6 +17,7 @@ public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountC
     private readonly IIdentityService _identityService;
     private readonly ITokenService _tokenService;
     private readonly IOtpService _otpService;
+    private readonly IOtpAttemptTracker _attemptTracker;
     private readonly IEmailService _emailService;
     private readonly ILogger<DeleteAccountCommandHandler> _logger;
 
@@ -25,6 +27,7 @@ public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountC
         IIdentityService identityService,
         ITokenService tokenService,
         IOtpService otpService,
+        IOtpAttemptTracker attemptTracker,
         IEmailService emailService,
         ILogger<DeleteAccountCommandHandler> logger)
     {
@@ -33,6 +36,7 @@ public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountC
         _identityService = identityService;
         _tokenService = tokenService;
         _otpService = otpService;
+        _attemptTracker = attemptTracker;
         _emailService = emailService;
         _logger = logger;
     }
@@ -46,7 +50,7 @@ public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountC
 
         var otpKey = OtpKeys.DeleteAccount(email);
 
-        if (DeleteAccountOtpAttemptGuard.IsBlocked(otpKey))
+        if (await _attemptTracker.IsBlockedAsync(otpKey, cancellationToken))
         {
             throw new ValidationException(
                 "Too many incorrect verification attempts. Request a new code and try again.");
@@ -54,29 +58,57 @@ public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountC
 
         if (!await _otpService.VerifyOtpAsync(otpKey, request.Otp, cancellationToken))
         {
-            DeleteAccountOtpAttemptGuard.RecordFailure(otpKey);
+            await _attemptTracker.RecordFailureAsync(otpKey, cancellationToken);
             throw new ValidationException("Invalid or expired verification code.");
         }
 
-        DeleteAccountOtpAttemptGuard.Reset(otpKey);
+        await _attemptTracker.ResetAsync(otpKey, cancellationToken);
 
-        var user = await _unitOfWork.Users.GetByUserIdAsync(identityUserId);
-        if (user is null)
+        // A null user means a prior attempt deleted the domain data but not the
+        // identity row; skip straight to identity cleanup so retries converge.
+        var user = await _unitOfWork.Users.GetByUserIdAsync(identityUserId, cancellationToken);
+        var recipientName = string.IsNullOrWhiteSpace(user?.Name) ? email : user!.Name;
+
+        if (user is not null)
         {
-            var cleanup = await _identityService.DeleteApplicationUserAsync(identityUserId);
-            if (!cleanup.Succeeded)
-            {
-                _logger.LogError(
-                    "Account deletion retry for {Email}: domain rows already gone and identity cleanup failed: {Errors}",
-                    email, string.Join("; ", cleanup.Errors));
-            }
-
-            return new DeleteAccountResult(email);
+            await DeleteOwnedDomainDataAsync(user, identityUserId, cancellationToken);
         }
 
+        var identityDelete = await _identityService.DeleteApplicationUserAsync(identityUserId);
+        if (!identityDelete.Succeeded)
+        {
+            _logger.LogError(
+                "Account deletion for {Email}: domain rows deleted but identity delete failed: {Errors}",
+                email, string.Join("; ", identityDelete.Errors));
+            throw new BadGatewayException(
+                "Your account data was deleted but sign-in cleanup failed. Request a new code and try again to finish.");
+        }
+
+        await _tokenService.RevokeAllForUserAsync(identityUserId);
+
+        // Policy: the account is already gone, so a confirmation-email failure is logged, never thrown.
+        try
+        {
+            await _emailService.SendAccountDeletedEmailAsync(email, recipientName, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Account deleted for {Email} but the confirmation email failed.", email);
+        }
+
+        _logger.LogInformation(
+            "Account for {Email} permanently deleted. Audit trail recorded via interceptor.",
+            email);
+
+        return new DeleteAccountResult(email);
+    }
+
+    private async Task DeleteOwnedDomainDataAsync(User user, string identityUserId, CancellationToken cancellationToken)
+    {
         if (user.Role == UserRole.Employer)
         {
-            var jobs = await _unitOfWork.Jobs.GetByEmployerIdAsync(identityUserId, cancellationToken);
+            // Must include soft-deleted jobs: hard delete removes every row the employer owns.
+            var jobs = await _unitOfWork.Jobs.GetByEmployerIdIncludingDeletedAsync(identityUserId, cancellationToken);
             _unitOfWork.Jobs.RemoveRange(jobs);
         }
 
@@ -93,33 +125,5 @@ public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountC
         _unitOfWork.Users.Delete(user);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-        var identityDelete = await _identityService.DeleteApplicationUserAsync(identityUserId);
-        if (!identityDelete.Succeeded)
-        {
-            _logger.LogError(
-                "Account deletion for {Email}: domain rows deleted but identity delete failed: {Errors}",
-                email, string.Join("; ", identityDelete.Errors));
-            // The OTP is single-use and already consumed, so "try again" means a new code.
-            throw new ValidationException(
-                "Your account data was deleted but sign-in cleanup failed. Request a new code and try deleting again to finish.");
-        }
-
-        await _tokenService.RevokeAllForUserAsync(identityUserId);
-
-        try
-        {
-            await _emailService.SendAccountDeletedEmailAsync(email, user.Name, cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Account deleted for {Email} but the confirmation email failed.", email);
-        }
-
-        _logger.LogInformation(
-            "Account for {Email} ({Role}) permanently deleted. Audit trail recorded via interceptor.",
-            email, user.Role);
-
-        return new DeleteAccountResult(email);
     }
 }

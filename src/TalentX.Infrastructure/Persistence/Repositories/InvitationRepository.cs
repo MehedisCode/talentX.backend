@@ -140,6 +140,7 @@ public sealed class InvitationRepository : IInvitationRepository
     public async Task DeleteByTalentUserIdAsync(string talentUserId, CancellationToken cancellationToken = default)
     {
         var invitations = await _context.Invitations
+            .IgnoreQueryFilters()
             .Where(x => x.TalentUserId == talentUserId)
             .ToListAsync(cancellationToken);
 

@@ -91,6 +91,7 @@ public sealed class InterviewInvitationRepository : IInterviewInvitationReposito
     public async Task DeleteByTalentUserIdAsync(string talentUserId, CancellationToken cancellationToken = default)
     {
         var invitations = await _context.InterviewInvitations
+            .IgnoreQueryFilters()
             .Include(x => x.Timeslots)
             .Where(x => x.TalentUserId == talentUserId)
             .ToListAsync(cancellationToken);

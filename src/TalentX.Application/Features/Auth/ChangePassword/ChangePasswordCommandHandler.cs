@@ -58,7 +58,7 @@ public class ChangePasswordCommandHandler : IRequestHandler<ChangePasswordComman
                 return IdentityResponse.Fail(changeRoleResult.Errors);
             }
 
-            var domainUser = await _unitOfWork.Users.GetByUserIdAsync(userId);
+            var domainUser = await _unitOfWork.Users.GetByUserIdAsync(userId, cancellationToken);
             if (domainUser != null)
             {
                 domainUser.UpdateRole(UserRole.Talent);
