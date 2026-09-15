@@ -32,6 +32,9 @@ public class ApplicationDbContext
     public DbSet<Invitation> Invitations => Set<Invitation>();
     public DbSet<EmailVerificationToken> EmailVerificationTokens => Set<EmailVerificationToken>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<JobAlert> JobAlerts => Set<JobAlert>();
+    public DbSet<TalentNotificationPreference> TalentNotificationPreferences => Set<TalentNotificationPreference>();
+    public DbSet<JobAlertNotificationHistory> JobAlertNotificationHistories => Set<JobAlertNotificationHistory>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

@@ -17,6 +17,7 @@ public static class EmailConstants
         public const string PasswordReset = "TalentX.Infrastructure.Mailing.Templates.Emails.PasswordReset";
         public const string EmployerApproved = "TalentX.Infrastructure.Mailing.Templates.Emails.EmployerApproved";
         public const string EmployerRejected = "TalentX.Infrastructure.Mailing.Templates.Emails.EmployerRejected";
+        public const string JobAlert = "TalentX.Infrastructure.Mailing.Templates.Emails.JobAlert";
     }
 
     public static class Subjects
@@ -27,6 +28,7 @@ public static class EmailConstants
         public const string PasswordReset = "Reset Your TalentX Password";
         public const string EmployerApproved = "Your TalentX Employer Account Has Been Approved";
         public const string EmployerRejected = "Your TalentX Employer Account Verification Update";
+        public const string JobAlert = "New Matching Job: {0} at {1} — TalentX";
     }
 
     public static class Defaults
@@ -44,5 +46,6 @@ public static class EmailConstants
         public const string PasswordReset = "PASSWORD_RESET";
         public const string EmployerApproved = "EMPLOYER_APPROVED";
         public const string EmployerRejected = "EMPLOYER_REJECTED";
+        public const string JobAlert = "JobAlert";
     }
 }

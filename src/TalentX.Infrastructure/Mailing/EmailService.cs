@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using MimeKit;
 using RazorLight;
 using TalentX.Application.Common.Interfaces;
+using TalentX.Application.Common.Models;
 using TalentX.Infrastructure.Mailing.Models;
 
 namespace TalentX.Infrastructure.Mailing;
@@ -197,6 +198,23 @@ public sealed class EmailService : IEmailService
             new EmployerRejectedEmailModel(recipientName, rejectionReason));
 
         DispatchAfterLogging(toEmail, recipientName, EmailConstants.Subjects.EmployerRejected, html);
+    }
+
+    public Task<string> RenderJobAlertEmailAsync(
+        RenderJobAlertEmailParameters parameters,
+        CancellationToken cancellationToken = default)
+    {
+        LogDispatch(EmailConstants.Kinds.JobAlert, parameters.RecipientName, parameters.JobTitle, parameters.CompanyName);
+
+        return _razor.CompileRenderAsync(
+            EmailConstants.Templates.JobAlert,
+            new JobAlertEmailModel(
+                parameters.RecipientName,
+                parameters.JobTitle,
+                parameters.CompanyName,
+                parameters.Location,
+                parameters.JobUrl,
+                parameters.AlertName));
     }
 
     private void LogDispatch(string kind, string recipientName, string toEmail, string? secret)
