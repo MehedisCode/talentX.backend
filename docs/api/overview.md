@@ -24,7 +24,6 @@ The TalentX REST API is built on **ASP.NET Core (.NET 10)** following RESTful de
 | `GET` | `/api/v1/employers/me` | Retrieve authenticated employer profile details | **Yes (`Bearer`)** |
 | `GET` | `/api/v1/employers/dashboard` | Employer dashboard metrics and recent jobs | **Yes (`Bearer`, Employer)** |
 | `GET` | `/api/v1/employers/jobs` | Paginated listing of owned jobs | **Yes (`Bearer`, Employer)** |
-
 ### 2. Authentication API (`/api/v1/auth`)
 | Method | Endpoint | Description | Auth Required |
 | :--- | :--- | :--- | :--- |
