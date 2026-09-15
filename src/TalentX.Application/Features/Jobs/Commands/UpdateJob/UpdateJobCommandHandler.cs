@@ -3,6 +3,8 @@ using MediatR;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Identity.Services;
+using TalentX.Domain;
+using TalentX.Domain.Enums;
 
 namespace TalentX.Application.Features.Jobs.Commands.UpdateJob;
 
@@ -56,6 +58,12 @@ public class UpdateJobCommandHandler : IRequestHandler<UpdateJobCommand>
 
         if (request.Publish)
         {
+            var employer = await _unitOfWork.Employers.GetByUserIdAsync(employerId, cancellationToken)
+                ?? throw new NotFoundException(nameof(Employer), employerId);
+
+            if (employer.VerificationStatus != EmployerVerificationStatus.Verified)
+                throw new ForbiddenException("Only verified employers can publish jobs. Your account is pending verification.");
+
             try
             {
                 JobRules.EnsurePublishable(job);

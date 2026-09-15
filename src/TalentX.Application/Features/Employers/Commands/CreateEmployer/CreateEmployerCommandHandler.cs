@@ -50,7 +50,7 @@ public sealed class CreateEmployerCommandHandler : IRequestHandler<CreateEmploye
         {
             existingEmployer.Update(request.Name);
             existingEmployer.UpdateCompany(request.CompanyName);
-            existingEmployer.MarkAsVerified();
+            existingEmployer.MarkEmailVerified();
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             await _otpService.ConsumeEmailVerificationAsync(request.Email, cancellationToken);
@@ -86,7 +86,7 @@ public sealed class CreateEmployerCommandHandler : IRequestHandler<CreateEmploye
             request.CompanyName
         );
 
-        employer.MarkAsVerified();
+        employer.MarkEmailVerified();
         await _unitOfWork.Employers.AddAsync(employer, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 

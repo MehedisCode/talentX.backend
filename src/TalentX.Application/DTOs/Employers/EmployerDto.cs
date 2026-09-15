@@ -12,6 +12,7 @@ namespace TalentX.Application.DTOs.Employers;
 /// <param name="CompanyName">Company or organization name.</param>
 /// <param name="Role">User domain role.</param>
 /// <param name="IsVerified">Whether the employer's email is verified.</param>
+/// <param name="VerificationStatus">Employer verification status for admin approval.</param>
 /// <param name="CreatedAt">Entity creation timestamp in UTC.</param>
 /// <param name="UpdatedAt">Entity last update timestamp in UTC.</param>
 public sealed record EmployerDto(
@@ -22,6 +23,7 @@ public sealed record EmployerDto(
     string CompanyName,
     UserRole Role,
     bool IsVerified,
+    EmployerVerificationStatus VerificationStatus,
     DateTime CreatedAt,
     DateTime? UpdatedAt
 );
