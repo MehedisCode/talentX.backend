@@ -14,4 +14,9 @@ public sealed record EmployerJobListItemDto(
     int Vacancies,
     DateTime ExpireAt,
     DateTime CreatedAt,
-    int ApplicantCount);
+    int ApplicantCount,
+    SalaryType? SalaryType,
+    decimal? SalaryMin,
+    decimal? SalaryMax,
+    Currency? SalaryCurrency,
+    SalaryPeriod? SalaryPeriod);
