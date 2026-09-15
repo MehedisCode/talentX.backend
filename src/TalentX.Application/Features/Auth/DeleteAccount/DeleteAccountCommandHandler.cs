@@ -107,7 +107,6 @@ public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountC
     {
         if (user.Role == UserRole.Employer)
         {
-            // Must include soft-deleted jobs: hard delete removes every row the employer owns.
             var jobs = await _unitOfWork.Jobs.GetByEmployerIdIncludingDeletedAsync(identityUserId, cancellationToken);
             _unitOfWork.Jobs.RemoveRange(jobs);
         }

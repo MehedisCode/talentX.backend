@@ -4,10 +4,6 @@ using TalentX.Application.Common.Interfaces;
 
 namespace TalentX.Infrastructure.Common;
 
-/// <summary>
-/// Process-local attempt tracker. Suitable for single-instance deployments;
-/// swap for a distributed store when running multiple instances.
-/// </summary>
 public sealed class InMemoryOtpAttemptTracker : IOtpAttemptTracker
 {
     private sealed record Attempt(int Count, DateTime LastFailureUtc);
