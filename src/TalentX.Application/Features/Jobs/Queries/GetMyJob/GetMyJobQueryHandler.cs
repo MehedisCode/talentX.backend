@@ -47,7 +47,13 @@ public class GetMyJobQueryHandler : IRequestHandler<GetMyJobQuery, MyJobDto>
             UpdatedAt = job.UpdatedAt,
             City = job.City,
             Country = job.Country,
-            MinOverlapHours = job.MinOverlapHours
+            MinOverlapHours = job.MinOverlapHours,
+            SalaryType = job.SalaryType,
+            SalaryMin = job.SalaryMin,
+            SalaryMax = job.SalaryMax,
+            SalaryCurrency = job.SalaryCurrency,
+            SalaryPeriod = job.SalaryPeriod,
+            Requirements = job.Requirements
         };
     }
 }

@@ -92,6 +92,71 @@ public class UpdateJobCommandValidator : AbstractValidator<UpdateJobCommand>
                 || (hours.HasValue && hours.Value > 0))
             .WithMessage("Minimum overlap hours is required for Remote roles.")
             .When(v => v.Publish && v.WorkArrangement is WorkArrangement.FullRemote);
+
+        // Salary is optional in a draft but mandatory to publish (see
+        // CreateJobCommandValidator for the full reasoning). The Publish-gated
+        // rules below assume a publish request carries the job's full intended
+        // salary state (true for the wizard, the only caller that sets salary
+        // today) rather than a partial diff — see the partial-PATCH note further
+        // down for why no such assumption is made for the always-on checks.
+        RuleFor(v => v.SalaryType)
+            .IsInEnum().WithMessage("Invalid SalaryType.")
+            .When(v => v.SalaryType.HasValue);
+
+        RuleFor(v => v.SalaryCurrency)
+            .IsInEnum().WithMessage("Invalid SalaryCurrency.")
+            .When(v => v.SalaryCurrency.HasValue);
+
+        RuleFor(v => v.SalaryPeriod)
+            .IsInEnum().WithMessage("Invalid SalaryPeriod.")
+            .When(v => v.SalaryPeriod.HasValue);
+
+        RuleFor(v => v.SalaryMax)
+            .GreaterThanOrEqualTo(v => v.SalaryMin!.Value)
+                .WithMessage("Maximum salary must be greater than or equal to minimum salary.")
+            .When(v => v.SalaryMin.HasValue && v.SalaryMax.HasValue);
+
+        RuleFor(v => v.SalaryType)
+            .NotNull().WithMessage("Salary is required.")
+            .When(v => v.Publish);
+
+        RuleFor(v => v.SalaryCurrency)
+            .NotNull().WithMessage("Salary currency is required.")
+            .When(v => v.Publish && v.SalaryType is SalaryType.Fixed or SalaryType.Range);
+
+        RuleFor(v => v.SalaryPeriod)
+            .NotNull().WithMessage("Salary period is required.")
+            .When(v => v.Publish && v.SalaryType is SalaryType.Fixed or SalaryType.Range);
+
+        RuleFor(v => v.SalaryMin)
+            .NotNull().WithMessage("Salary amount is required.")
+            .When(v => v.Publish && v.SalaryType is SalaryType.Fixed or SalaryType.Range);
+
+        RuleFor(v => v.SalaryMax)
+            .NotNull().WithMessage("Maximum salary is required.")
+            .When(v => v.Publish && v.SalaryType == SalaryType.Range);
+
+        // Unlike the rules above, there is deliberately no "currency and period
+        // must be set together with min/max" cross-field rule that runs
+        // unconditionally (draft or publish). UpdateJobCommand is used by a
+        // genuine partial-PATCH flow (see get-changed-fields.ts) that only
+        // sends fields that actually changed — e.g. editing just the amount
+        // while currency/period stay as previously saved would omit them from
+        // this specific request. Checking "all four together" against the
+        // request alone (with no access to the job's already-persisted values)
+        // would wrongly reject that legitimate partial update outside of
+        // publish, where completeness genuinely doesn't matter yet.
+
+        // Requirements — optional in a draft, mandatory to publish, same as
+        // SalaryType above (and same partial-PATCH caveat: the Publish-gated
+        // rule assumes a publish request carries the job's full intended state).
+        RuleFor(v => v.Requirements)
+            .MaximumLength(5000).WithMessage("Requirements must not exceed 5000 characters.");
+
+        RuleFor(v => v.Requirements)
+            .Must(requirements => !string.IsNullOrWhiteSpace(requirements))
+                .WithMessage("Requirements is required.")
+            .When(v => v.Publish);
     }
 
     private static bool IsLocationRequired(WorkArrangement? a) =>
