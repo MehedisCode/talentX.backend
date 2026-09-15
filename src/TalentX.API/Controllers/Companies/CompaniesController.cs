@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using TalentX.Application.Features.Companies.Queries.GetCompanyPublishedJobs;
 using TalentX.Application.Features.Companies.Queries.GetPublicCompanyProfile;
 
 namespace TalentX.API.Controllers.Companies;
@@ -21,16 +20,5 @@ public sealed class CompaniesController : BaseApiController
     {
         var profile = await Sender.Send(new GetPublicCompanyProfileQuery(id), cancellationToken);
         return Ok(profile);
-    }
-
-    /// <summary>
-    /// Gets active, published vacancies for a company by company ID.
-    /// </summary>
-    [HttpGet("{id:guid}/jobs")]
-    [AllowAnonymous]
-    public async Task<IActionResult> GetCompanyPublishedJobs(Guid id, CancellationToken cancellationToken)
-    {
-        var jobs = await Sender.Send(new GetCompanyPublishedJobsQuery(id), cancellationToken);
-        return Ok(jobs);
     }
 }
