@@ -8,7 +8,10 @@ public sealed class GetPreferredJobsQueryValidator : AbstractValidator<GetPrefer
     public GetPreferredJobsQueryValidator()
     {
         RuleFor(x => x.Parameters).NotNull();
-        RuleFor(x => x.Parameters.Page).GreaterThanOrEqualTo(1);
-        RuleFor(x => x.Parameters.PageSize).GreaterThan(0).LessThanOrEqualTo(PaginationRequest.MaxPageSize);
+        When(x => x.Parameters != null, () =>
+        {
+            RuleFor(x => x.Parameters.Page).GreaterThanOrEqualTo(1);
+            RuleFor(x => x.Parameters.PageSize).GreaterThan(0).LessThanOrEqualTo(PaginationRequest.MaxPageSize);
+        });
     }
 }

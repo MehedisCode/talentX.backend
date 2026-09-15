@@ -56,9 +56,9 @@ public sealed class ReopenJobCommandHandler : IRequestHandler<ReopenJobCommand, 
         {
             await _jobAlertQueue.EnqueuePublishedJobAsync(job.Id, cancellationToken);
         }
-        catch (Exception ex)
+        catch (Exception alertException)
         {
-            _logger.LogError(ex, "Failed to enqueue reopened job {JobId} for job alerts", job.Id);
+            _logger.LogError(alertException, "Failed to enqueue reopened job {JobId} for job alerts", job.Id);
         }
 
         return Unit.Value;
