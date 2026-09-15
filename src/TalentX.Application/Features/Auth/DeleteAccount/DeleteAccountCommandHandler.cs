@@ -100,8 +100,9 @@ public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountC
             _logger.LogError(
                 "Account deletion for {Email}: domain rows deleted but identity delete failed: {Errors}",
                 email, string.Join("; ", identityDelete.Errors));
+            // The OTP is single-use and already consumed, so "try again" means a new code.
             throw new ValidationException(
-                "Your account data was deleted but sign-in cleanup failed. Please try deleting again to finish.");
+                "Your account data was deleted but sign-in cleanup failed. Request a new code and try deleting again to finish.");
         }
 
         await _tokenService.RevokeAllForUserAsync(identityUserId);

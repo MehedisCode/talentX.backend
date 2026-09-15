@@ -30,14 +30,19 @@ public sealed class SendDeleteAccountOtpCommandHandler : IRequestHandler<SendDel
     {
         var email = _currentUserService.Email
             ?? throw new UnauthorizedException("You must be signed in to request a verification code.");
+        var identityUserId = _currentUserService.UserId
+            ?? throw new UnauthorizedException("You must be signed in to request a verification code.");
 
-        var user = await _userRepository.GetByUserIdAsync(_currentUserService.UserId!)
+        var user = await _userRepository.GetByUserIdAsync(identityUserId)
             ?? throw new NotFoundException("User not found.");
 
-        await _otpService.ConsumeEmailVerificationAsync(email, cancellationToken);
+        var otpKey = OtpKeys.DeleteAccount(email);
 
-        var otp = await _otpService.GenerateOtpAsync(
-            OtpKeys.DeleteAccount(email), cancellationToken: cancellationToken);
+        var otp = await _otpService.GenerateOtpAsync(otpKey, cancellationToken: cancellationToken);
+
+        // Must clear the lockout: the lockout message tells the user to request a
+        // new code, and that path is blocked while the counter is still at the max.
+        DeleteAccountOtpAttemptGuard.Reset(otpKey);
 
         await _emailService.SendOtpEmailAsync(email, user.Name, otp, cancellationToken);
 
