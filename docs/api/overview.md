@@ -22,18 +22,8 @@ The TalentX REST API is built on **ASP.NET Core (.NET 10)** following RESTful de
 | `POST` | `/api/v1/employers/send-otp` | Send fresh 6-digit OTP verification code | No |
 | `POST` | `/api/v1/employers/google` | Google OAuth sign-in / registration with ID token | No |
 | `GET` | `/api/v1/employers/me` | Retrieve authenticated employer profile details | **Yes (`Bearer`)** |
-| `GET` | `/api/v1/employers/company` | Retrieve authenticated employer's company profile | **Yes (`Bearer`, Employer)** |
-| `PUT` | `/api/v1/employers/company` | Update authenticated employer's company profile | **Yes (`Bearer`, Employer)** |
-| `POST` | `/api/v1/employers/company/logo` | Upload/update employer's company logo | **Yes (`Bearer`, Employer)** |
 | `GET` | `/api/v1/employers/dashboard` | Employer dashboard metrics and recent jobs | **Yes (`Bearer`, Employer)** |
 | `GET` | `/api/v1/employers/jobs` | Paginated listing of owned jobs | **Yes (`Bearer`, Employer)** |
-
-### 1.1. Companies API (`/api/v1/companies`)
-| Method | Endpoint | Description | Auth Required |
-| :--- | :--- | :--- | :--- |
-| `GET` | `/api/v1/companies/{id}` | Public company profile & active vacancies count | No |
-| `GET` | `/api/v1/companies/{id}/jobs` | Public active published vacancies for company | No |
-
 ### 2. Authentication API (`/api/v1/auth`)
 | Method | Endpoint | Description | Auth Required |
 | :--- | :--- | :--- | :--- |

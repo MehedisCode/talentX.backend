@@ -95,27 +95,6 @@ erDiagram
 
 ---
 
-### 2.1. `Companies`
-| Column | Type | Constraints | Description |
-| :--- | :--- | :--- | :--- |
-| `Id` | `uuid` | `PRIMARY KEY` | Company unique identifier |
-| `EmployerId` | `varchar(200)` | `NOT NULL, UNIQUE INDEXED` | Owning employer user ID (1-to-1) |
-| `Name` | `varchar(200)` | `NOT NULL` | Company or organization name |
-| `LogoStorageKey` | `varchar(500)` | `NULL` | Storage key for company logo image |
-| `Description` | `varchar(10000)` | `NULL` | Detailed company overview / about |
-| `Industry` | `varchar(100)` | `NULL` | Business industry |
-| `CompanySize` | `varchar(50)` | `NULL` | Company size bracket |
-| `Website` | `varchar(500)` | `NULL` | Company website URL |
-| `Location` | `varchar(200)` | `NULL` | Headquarters / office location |
-| `LinkedInUrl` | `varchar(500)` | `NULL` | LinkedIn profile link |
-| `TwitterUrl` | `varchar(500)` | `NULL` | Twitter/X profile link |
-| `FacebookUrl` | `varchar(500)` | `NULL` | Facebook page link |
-| `GitHubUrl` | `varchar(500)` | `NULL` | GitHub organization link |
-| `CreatedAt` | `timestamptz` | `NOT NULL` | Record creation timestamp |
-| `UpdatedAt` | `timestamptz` | `NULL` | Last modification timestamp |
-
----
-
 ### 3. `Jobs`
 | Column | Type | Constraints | Description |
 | :--- | :--- | :--- | :--- |
