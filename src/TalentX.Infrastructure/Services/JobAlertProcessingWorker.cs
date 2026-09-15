@@ -36,9 +36,9 @@ public sealed class JobAlertProcessingWorker : BackgroundService
                 {
                     await matchingService.ProcessAlertsForJobAsync(jobId, stoppingToken);
                 }
-                catch (Exception ex)
+                catch (Exception exception)
                 {
-                    _logger.LogError(ex, "Error processing job alerts for job {JobId}", jobId);
+                    _logger.LogError(exception, "Error processing job alerts for job {JobId}", jobId);
                 }
             }
         }

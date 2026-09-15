@@ -83,9 +83,9 @@ public class UpdateJobCommandHandler : IRequestHandler<UpdateJobCommand>
             {
                 await _jobAlertQueue.EnqueuePublishedJobAsync(job.Id, cancellationToken);
             }
-            catch (Exception ex)
+            catch (Exception exception)
             {
-                _logger.LogError(ex, "Failed to enqueue published job {JobId} for job alerts", job.Id);
+                _logger.LogError(exception, "Failed to enqueue published job {JobId} for job alerts", job.Id);
             }
         }
     }
