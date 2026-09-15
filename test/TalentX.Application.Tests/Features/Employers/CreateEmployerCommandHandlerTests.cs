@@ -36,6 +36,7 @@ public sealed class CreateEmployerCommandHandlerTests
                 employer.CompanyName,
                 employer.Role,
                 employer.IsVerified,
+                employer.VerificationStatus,
                 employer.CreatedAt,
                 employer.UpdatedAt
             ));
@@ -112,7 +113,7 @@ public sealed class CreateEmployerCommandHandlerTests
         );
 
         var existingEmployer = new Employer("user-123", "Jane Doe", "verified@acme.com", "Acme Corp");
-        existingEmployer.MarkAsVerified();
+        existingEmployer.MarkEmailVerified();
 
         _employerRepositoryMock
             .Setup(r => r.GetByEmailAsync(command.Email, It.IsAny<CancellationToken>()))
