@@ -46,6 +46,12 @@ public class User : BaseEntity
         UpdatedAt = DateTime.UtcNow;
     }
 
+    public void MarkEmailVerified()
+    {
+        IsVerified = true;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
     public void UpdateRole(UserRole role)
     {
         Role = role;
