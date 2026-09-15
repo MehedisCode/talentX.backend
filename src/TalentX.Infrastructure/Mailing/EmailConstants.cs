@@ -15,6 +15,7 @@ public static class EmailConstants
         public const string JobInvitation = "TalentX.Infrastructure.Mailing.Templates.Emails.JobInvitation";
         public const string InterviewConfirmation = "TalentX.Infrastructure.Mailing.Templates.Emails.InterviewConfirmation";
         public const string PasswordReset = "TalentX.Infrastructure.Mailing.Templates.Emails.PasswordReset";
+        public const string AccountStatusChanged = "TalentX.Infrastructure.Mailing.Templates.Emails.AccountStatusChanged";
         public const string JobAlert = "TalentX.Infrastructure.Mailing.Templates.Emails.JobAlert";
     }
 
@@ -40,6 +41,7 @@ public static class EmailConstants
         public const string InterviewInvitation = "INTERVIEW_INVITATION";
         public const string InterviewConfirmation = "INTERVIEW_CONFIRMATION";
         public const string PasswordReset = "PASSWORD_RESET";
+        public const string AccountStatusChanged = "ACCOUNT_STATUS_CHANGED";
         public const string JobAlert = "JobAlert";
     }
 }
