@@ -24,6 +24,9 @@ public sealed class UnitOfWork : IUnitOfWork
     public IInvitationRepository Invitations { get; }
     public IJobTalentMatchRepository JobTalentMatches { get; }
     public IAuditLogRepository AuditLogs { get; }
+    public IJobAlertRepository JobAlerts { get; }
+    public ITalentNotificationPreferenceRepository TalentNotificationPreferences { get; }
+    public IJobAlertNotificationHistoryRepository JobAlertNotificationHistories { get; }
 
     public UnitOfWork(ApplicationDbContext context)
     {
@@ -42,6 +45,9 @@ public sealed class UnitOfWork : IUnitOfWork
         EmailDispatchLogs = new EmailDispatchLogRepository(_context);
         JobTalentMatches = new JobTalentMatchRepository(_context);
         AuditLogs = new AuditLogRepository(_context);
+        JobAlerts = new JobAlertRepository(_context);
+        TalentNotificationPreferences = new TalentNotificationPreferenceRepository(_context);
+        JobAlertNotificationHistories = new JobAlertNotificationHistoryRepository(_context);
     }
 
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

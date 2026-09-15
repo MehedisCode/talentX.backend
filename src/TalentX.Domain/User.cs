@@ -10,6 +10,7 @@ public class User : BaseEntity
     public string Email { get; private set; } = string.Empty;
     public UserRole Role { get; private set; }
     public bool IsVerified { get; private set; }
+    public AccountStatus Status { get; private set; }
 
     protected User() { }
 
@@ -26,6 +27,7 @@ public class User : BaseEntity
         Email = email;
         Role = role;
         IsVerified = isVerified;
+        Status = AccountStatus.Active;
     }
 
     public void Update(string name)
@@ -49,6 +51,18 @@ public class User : BaseEntity
     public void UpdateRole(UserRole role)
     {
         Role = role;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void Activate()
+    {
+        Status = AccountStatus.Active;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void Deactivate()
+    {
+        Status = AccountStatus.Deactivated;
         UpdatedAt = DateTime.UtcNow;
     }
 }

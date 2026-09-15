@@ -1,8 +1,10 @@
 using FluentValidation;
 using MediatR;
+using Microsoft.Extensions.Logging;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Identity.Services;
+using TalentX.Domain.Enums;
 
 namespace TalentX.Application.Features.Jobs.Commands.UpdateJob;
 
@@ -11,15 +13,21 @@ public class UpdateJobCommandHandler : IRequestHandler<UpdateJobCommand>
     private readonly IJobRepository _jobRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUserService;
+    private readonly IJobAlertQueue _jobAlertQueue;
+    private readonly ILogger<UpdateJobCommandHandler> _logger;
 
     public UpdateJobCommandHandler(
         IJobRepository jobRepository,
         IUnitOfWork unitOfWork,
-        ICurrentUserService currentUserService)
+        ICurrentUserService currentUserService,
+        IJobAlertQueue jobAlertQueue,
+        ILogger<UpdateJobCommandHandler> logger)
     {
         _jobRepository = jobRepository;
         _unitOfWork = unitOfWork;
         _currentUserService = currentUserService;
+        _jobAlertQueue = jobAlertQueue;
+        _logger = logger;
     }
 
     
@@ -47,11 +55,27 @@ public class UpdateJobCommandHandler : IRequestHandler<UpdateJobCommand>
             request.ExpireAt ?? job.ExpireAt
         );
 
+        // A Fixed salary is stored as SalaryMin == SalaryMax (see SalaryType) —
+        // the client only ever sends one amount for Fixed, in SalaryMin. Merge
+        // against the job's existing salary state first (partial-PATCH safe),
+        // then derive Max from the merged type/min, not just this request's.
+        var effectiveSalaryType = request.SalaryType ?? job.SalaryType;
+        var effectiveSalaryMin = request.SalaryMin ?? job.SalaryMin;
+        var effectiveSalaryMax = effectiveSalaryType == Domain.Enums.SalaryType.Fixed
+            ? effectiveSalaryMin
+            : (request.SalaryMax ?? job.SalaryMax);
+
         job.UpdateWizardDetails(
             request.City != null ? JobRules.NormalizeText(request.City) : job.City,
             request.Country != null ? JobRules.NormalizeText(request.Country) : job.Country,
             request.MinOverlapHours ?? job.MinOverlapHours,
-            job.Responsibilities
+            job.Responsibilities,
+            effectiveSalaryType,
+            effectiveSalaryMin,
+            effectiveSalaryMax,
+            request.SalaryCurrency ?? job.SalaryCurrency,
+            request.SalaryPeriod ?? job.SalaryPeriod,
+            request.Requirements != null ? JobRules.NormalizeText(request.Requirements) : job.Requirements
         );
 
         if (request.Publish)
@@ -68,5 +92,17 @@ public class UpdateJobCommandHandler : IRequestHandler<UpdateJobCommand>
         }
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        if (request.Publish && job.Status == JobStatus.Published)
+        {
+            try
+            {
+                await _jobAlertQueue.EnqueuePublishedJobAsync(job.Id, cancellationToken);
+            }
+            catch (Exception exception)
+            {
+                _logger.LogError(exception, "Failed to enqueue published job {JobId} for job alerts", job.Id);
+            }
+        }
     }
 }

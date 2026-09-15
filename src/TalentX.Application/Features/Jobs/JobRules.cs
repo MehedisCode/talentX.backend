@@ -1,5 +1,5 @@
 using TalentX.Domain.Entities;
-//using TalentX.Domain.Enums;
+using TalentX.Domain.Enums;
 
 namespace TalentX.Application.Features.Jobs;
 
@@ -68,6 +68,16 @@ public static class JobRules
             if (!job.MinOverlapHours.HasValue || job.MinOverlapHours.Value <= 0)
                 missing.Add(nameof(job.MinOverlapHours));
         }
+
+        // Salary must be an explicit choice to publish — Negotiable counts as
+        // a complete, deliberate answer; only Fixed/Range need the amount
+        // fields, which CreateJob/UpdateJobCommandValidator already enforce
+        // at request-validation time for the fields they can see.
+        if (job.SalaryType is null)
+            missing.Add(nameof(job.SalaryType));
+
+        if (string.IsNullOrWhiteSpace(job.Requirements))
+            missing.Add(nameof(job.Requirements));
 
         if (missing.Count > 0)
         {

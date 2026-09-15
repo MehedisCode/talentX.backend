@@ -1,5 +1,6 @@
 using FluentAssertions;
 using FluentValidation;
+using Microsoft.Extensions.Logging;
 using Moq;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
@@ -16,12 +17,19 @@ public class CreateJobCommandHandlerTests
     private readonly Mock<IJobRepository> _jobRepository = new();
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
     private readonly Mock<ICurrentUserService> _currentUserService = new();
+    private readonly Mock<IJobAlertQueue> _jobAlertQueue = new();
+    private readonly Mock<ILogger<CreateJobCommandHandler>> _logger = new();
     private readonly CreateJobCommandHandler _handler;
 
     public CreateJobCommandHandlerTests()
     {
         _currentUserService.SetupGet(u => u.UserId).Returns("employer-1");
-        _handler = new CreateJobCommandHandler(_jobRepository.Object, _unitOfWork.Object, _currentUserService.Object);
+        _handler = new CreateJobCommandHandler(
+            _jobRepository.Object,
+            _unitOfWork.Object,
+            _currentUserService.Object,
+            _jobAlertQueue.Object,
+            _logger.Object);
     }
 
     private static CreateJobCommand ValidCommand(bool publish = false) => new(
@@ -38,7 +46,9 @@ public class CreateJobCommandHandlerTests
         publish,
         City: null,
         Country: null,
-        MinOverlapHours: 4
+        MinOverlapHours: 4,
+        SalaryType: SalaryType.Negotiable,
+        Requirements: "- 3-5 years of relevant experience\n- Bachelor's degree or equivalent"
     );
 
     [Fact]
@@ -289,5 +299,25 @@ public class CreateJobCommandHandlerTests
 
         addedJob!.City.Should().Be("Dhaka");
         addedJob.Country.Should().Be("Bangladesh");
+    }
+
+    [Fact]
+    public async Task Handle_WhenPublishIsTrue_EnqueuesJobForJobAlerts()
+    {
+        var command = ValidCommand(publish: true);
+
+        var jobId = await _handler.Handle(command, CancellationToken.None);
+
+        _jobAlertQueue.Verify(q => q.EnqueuePublishedJobAsync(jobId, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_WhenPublishIsFalse_DoesNotEnqueueJobForJobAlerts()
+    {
+        var command = ValidCommand(publish: false);
+
+        await _handler.Handle(command, CancellationToken.None);
+
+        _jobAlertQueue.Verify(q => q.EnqueuePublishedJobAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 }

@@ -1,4 +1,5 @@
 using MediatR;
+using Microsoft.Extensions.Logging;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Identity.Services;
@@ -10,15 +11,21 @@ public sealed class ReopenJobCommandHandler : IRequestHandler<ReopenJobCommand, 
     private readonly IJobRepository _jobRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUserService;
+    private readonly IJobAlertQueue _jobAlertQueue;
+    private readonly ILogger<ReopenJobCommandHandler> _logger;
 
     public ReopenJobCommandHandler(
         IJobRepository jobRepository,
         IUnitOfWork unitOfWork,
-        ICurrentUserService currentUserService)
+        ICurrentUserService currentUserService,
+        IJobAlertQueue jobAlertQueue,
+        ILogger<ReopenJobCommandHandler> logger)
     {
         _jobRepository = jobRepository;
         _unitOfWork = unitOfWork;
         _currentUserService = currentUserService;
+        _jobAlertQueue = jobAlertQueue;
+        _logger = logger;
     }
 
     public async Task<Unit> Handle(ReopenJobCommand request, CancellationToken cancellationToken)
@@ -44,6 +51,15 @@ public sealed class ReopenJobCommandHandler : IRequestHandler<ReopenJobCommand, 
         }
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        try
+        {
+            await _jobAlertQueue.EnqueuePublishedJobAsync(job.Id, cancellationToken);
+        }
+        catch (Exception alertException)
+        {
+            _logger.LogError(alertException, "Failed to enqueue reopened job {JobId} for job alerts", job.Id);
+        }
 
         return Unit.Value;
     }

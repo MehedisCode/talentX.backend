@@ -27,7 +27,9 @@ public class CreateJobCommandValidatorTests
         DateTime.UtcNow.AddDays(30),
         true,
         City: "Dhaka",
-        Country: "Bangladesh"
+        Country: "Bangladesh",
+        SalaryType: SalaryType.Negotiable,
+        Requirements: "- 3-5 years of relevant experience\n- Bachelor's degree or equivalent"
     );
 
     [Fact]
