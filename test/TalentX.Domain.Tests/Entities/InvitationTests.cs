@@ -11,9 +11,10 @@ public class InvitationTests
     {
         var jobId = Guid.NewGuid();
         var talentUserId = "talent-usr-123";
+        var jobExpireAt = DateTime.UtcNow.AddDays(30);
         var before = DateTime.UtcNow;
 
-        var invitation = new Invitation(jobId, talentUserId);
+        var invitation = new Invitation(jobId, talentUserId, jobExpireAt);
         var after = DateTime.UtcNow;
 
         invitation.Id.Should().NotBeEmpty();
@@ -23,13 +24,14 @@ public class InvitationTests
         invitation.InvitedDate.Should().BeOnOrAfter(before).And.BeOnOrBefore(after);
         invitation.CreatedAt.Should().BeOnOrAfter(before).And.BeOnOrBefore(after);
         invitation.UpdatedAt.Should().BeNull();
+        invitation.ExpiresAt.Should().Be(jobExpireAt);
     }
 
     [Fact]
     public void Deactivate_SetsIsActiveToFalseAndUpdatesTimestamp()
     {
         var jobId = Guid.NewGuid();
-        var invitation = new Invitation(jobId, "talent-456");
+        var invitation = new Invitation(jobId, "talent-456", DateTime.UtcNow.AddDays(30));
 
         var before = DateTime.UtcNow;
         invitation.Deactivate();

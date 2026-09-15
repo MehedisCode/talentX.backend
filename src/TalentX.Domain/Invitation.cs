@@ -8,58 +8,73 @@ public sealed class Invitation : BaseEntity
     public Guid JobId { get; private set; }
     public string TalentUserId { get; private set; } = string.Empty;
     public DateTime InvitedDate { get; private set; }
-    public bool IsActive { get; private set; }
-    public InvitationStatus Status { get; private set; } = InvitationStatus.Pending;
-    public string? Token { get; private set; }
+    public InvitationStatus Status { get; private set; }
     public string? Message { get; private set; }
+    public string? Token { get; private set; }
     public DateTime ExpiresAt { get; private set; }
-    public int InvitationCount { get; private set; } = 1;
+    public int InvitationCount { get; private set; }
+
+    public bool IsActive { get; private set; } = true;
+
+    private void SyncIsActive()
+    {
+        IsActive = Status == InvitationStatus.Pending || Status == InvitationStatus.Accepted;
+    }
 
     private Invitation() { }
 
-    public Invitation(Guid jobId, string talentAccountId, string? message = null, TimeSpan? lifetime = null)
+    public Invitation(Guid jobId, string talentUserId, DateTime jobExpireAt)
     {
         JobId = jobId;
-        TalentUserId = talentAccountId;
+        TalentUserId = talentUserId;
         InvitedDate = DateTime.UtcNow;
-        IsActive = true;
         Status = InvitationStatus.Pending;
-        Token = GenerateToken();
-        Message = message;
-        ExpiresAt = DateTime.UtcNow.Add(lifetime ?? TimeSpan.FromDays(14));
+        Message = null;
+        Token = Guid.NewGuid().ToString("N");
+        ExpiresAt = jobExpireAt;
         InvitationCount = 1;
         CreatedAt = DateTime.UtcNow;
+        SyncIsActive();
     }
 
     public void Accept()
     {
         Status = InvitationStatus.Accepted;
-        IsActive = false;
+        SyncIsActive();
         UpdatedAt = DateTime.UtcNow;
     }
 
     public void Decline()
     {
         Status = InvitationStatus.Declined;
-        IsActive = false;
+        SyncIsActive();
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void Expire()
+    {
+        Status = InvitationStatus.Expired;
+        SyncIsActive();
         UpdatedAt = DateTime.UtcNow;
     }
 
     public void Withdraw()
     {
         Status = InvitationStatus.Withdrawn;
-        IsActive = false;
+        SyncIsActive();
         UpdatedAt = DateTime.UtcNow;
     }
 
     public void Deactivate()
     {
-        IsActive = false;
+        Status = InvitationStatus.Withdrawn;
+        SyncIsActive();
         UpdatedAt = DateTime.UtcNow;
     }
 
-    private static string GenerateToken()
+    public void AddAttempt()
     {
-        return Guid.NewGuid().ToString("N");
+        InvitationCount++;
+        UpdatedAt = DateTime.UtcNow;
     }
 }

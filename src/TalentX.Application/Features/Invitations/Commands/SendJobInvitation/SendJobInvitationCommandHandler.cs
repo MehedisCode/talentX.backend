@@ -55,7 +55,7 @@ public sealed class SendJobInvitationCommandHandler
             throw new ConflictException("An active invitation has already been sent to this candidate for this job.");
         }
 
-        var invitation = new Invitation(job.Id, request.TalentUserId);
+        var invitation = new Invitation(job.Id, request.TalentUserId, job.ExpireAt);
         await _unitOfWork.Invitations.AddAsync(invitation, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 

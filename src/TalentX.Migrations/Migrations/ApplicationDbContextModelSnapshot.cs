@@ -487,8 +487,7 @@ namespace TalentX.Migrations.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<string>("Message")
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)");
+                        .HasColumnType("text");
 
                     b.Property<int>("Status")
                         .HasColumnType("integer");
@@ -499,8 +498,7 @@ namespace TalentX.Migrations.Migrations
                         .HasColumnType("character varying(200)");
 
                     b.Property<string>("Token")
-                        .HasMaxLength(128)
-                        .HasColumnType("character varying(128)");
+                        .HasColumnType("text");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -816,12 +814,21 @@ namespace TalentX.Migrations.Migrations
                     b.Property<Guid>("JobId")
                         .HasColumnType("uuid");
 
+                    b.Property<DateTime?>("LastUpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<DateTime>("MatchedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<decimal>("Score")
                         .HasPrecision(5, 2)
                         .HasColumnType("numeric(5,2)");
+
+                    b.Property<string>("SkillBreakdown")
+                        .HasColumnType("text");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
 
                     b.Property<string>("TalentUserId")
                         .IsRequired()
