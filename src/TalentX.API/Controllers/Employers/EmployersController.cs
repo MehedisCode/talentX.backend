@@ -8,6 +8,7 @@ using TalentX.Application.Features.Employers.Commands.CreateEmployer;
 using TalentX.Application.Features.Employers.Commands.GoogleSignIn;
 using TalentX.Application.Features.Employers.Commands.SendOtp;
 using TalentX.Application.Features.Employers.Commands.VerifyEmail;
+using TalentX.Application.Features.EmployerVerification.Commands.ReApply;
 using TalentX.Application.Features.Employers.Constants;
 using TalentX.Application.Features.Employers.DTOs;
 using TalentX.Application.Features.Employers.Queries.GetEmployerDashboard;
@@ -99,8 +100,21 @@ public sealed class EmployersController : BaseApiController
         return Ok(new CurrentEmployerResult
         {
             Id = employer.Id.ToString(),
-            CompanyName = employer.CompanyName
+            CompanyName = employer.CompanyName,
+            VerificationStatus = employer.VerificationStatus,
+            RejectionReason = employer.RejectionReason
         });
+    }
+
+    /// <summary>
+    /// Re-applies for employer verification after a rejection. Resets status to PendingVerification.
+    /// </summary>
+    [HttpPost("me/re-apply")]
+    [Authorize]
+    public async Task<IActionResult> ReApply(CancellationToken cancellationToken)
+    {
+        await Sender.Send(new ReApplyCommand(), cancellationToken);
+        return Ok(new { message = "Re-application submitted. Your account is now pending verification." });
     }
 
     [HttpGet("dashboard")]
