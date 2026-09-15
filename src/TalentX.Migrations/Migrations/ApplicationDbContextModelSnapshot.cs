@@ -576,7 +576,27 @@ namespace TalentX.Migrations.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("Requirements")
+                        .HasColumnType("text");
+
                     b.Property<string>("Responsibilities")
+                        .HasColumnType("text");
+
+                    b.Property<string>("SalaryCurrency")
+                        .HasColumnType("text");
+
+                    b.Property<decimal?>("SalaryMax")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)");
+
+                    b.Property<decimal?>("SalaryMin")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)");
+
+                    b.Property<string>("SalaryPeriod")
+                        .HasColumnType("text");
+
+                    b.Property<string>("SalaryType")
                         .HasColumnType("text");
 
                     b.Property<string>("Status")
@@ -997,6 +1017,11 @@ namespace TalentX.Migrations.Migrations
                         .HasColumnType("character varying(120)");
 
                     b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");

@@ -18,5 +18,11 @@ public record UpdateJobCommand(
     bool Publish = false,
     string? City = null,
     string? Country = null,
-    short? MinOverlapHours = null
+    short? MinOverlapHours = null,
+    SalaryType? SalaryType = null,
+    decimal? SalaryMin = null,
+    decimal? SalaryMax = null,
+    Currency? SalaryCurrency = null,
+    SalaryPeriod? SalaryPeriod = null,
+    string? Requirements = null
 ) : IRequest;

@@ -353,7 +353,9 @@ public class UpdateJobCommandValidatorTests
             WorkArrangement = WorkArrangement.OnSite,
             City = "Dhaka",
             Country = "Bangladesh",
-            Publish = true
+            Publish = true,
+            SalaryType = SalaryType.Negotiable,
+            Requirements = "- 3-5 years of relevant experience\n- Bachelor's degree or equivalent"
         };
 
         var result = _validator.TestValidate(command);

@@ -145,6 +145,23 @@ public class JobRepositoryTests
     }
 
     [Fact]
+    public async Task GetActivePublishedJobsAsync_IncludesAJobThatExpiresToday()
+    {
+        // A job expiring today should stay active through the entire day —
+        // it must not disappear the instant the expiry date begins.
+        await using var context = NewContext();
+        var repo = new JobRepository(context);
+
+        var expiresToday = MakePublishedJob("Expires Today", daysUntilExpiry: 0);
+        context.Jobs.Add(expiresToday);
+        await context.SaveChangesAsync();
+
+        var result = await repo.GetActivePublishedJobsAsync(CancellationToken.None);
+
+        result.Should().ContainSingle(j => j.Title == "Expires Today");
+    }
+
+    [Fact]
     public async Task GetPublishedJobsAsync_ExcludesDraftJobs()
     {
         await using var context = NewContext();

@@ -1,6 +1,6 @@
 // using System.Linq;
 using FluentValidation;
-// using TalentX.Domain.Enums;
+using TalentX.Domain.Enums;
 
 namespace TalentX.Application.Features.Jobs.Commands.CreateJob;
 
@@ -97,6 +97,59 @@ public class CreateJobCommandValidator : AbstractValidator<CreateJobCommand>
                 || (hours.HasValue && hours.Value > 0))
             .WithMessage("Minimum overlap hours is required for Remote roles.")
             .When(v => v.Publish && v.WorkArrangement is WorkArrangement.FullRemote);
+
+        // Salary is optional in a draft (SalaryType can be left unset entirely)
+        // but mandatory to publish — JobRules.EnsurePublishable enforces the
+        // "must be set" half; these rules enforce "must be internally
+        // consistent" (always) and "must be complete for its type" (publish
+        // only), mirroring how Title/CompanyName content-strictness is
+        // publish-gated while their base NotNull checks are not.
+        RuleFor(v => v.SalaryType)
+            .IsInEnum().WithMessage("Invalid SalaryType.")
+            .When(v => v.SalaryType.HasValue);
+
+        RuleFor(v => v.SalaryCurrency)
+            .IsInEnum().WithMessage("Invalid SalaryCurrency.")
+            .When(v => v.SalaryCurrency.HasValue);
+
+        RuleFor(v => v.SalaryPeriod)
+            .IsInEnum().WithMessage("Invalid SalaryPeriod.")
+            .When(v => v.SalaryPeriod.HasValue);
+
+        RuleFor(v => v.SalaryMax)
+            .GreaterThanOrEqualTo(v => v.SalaryMin!.Value)
+                .WithMessage("Maximum salary must be greater than or equal to minimum salary.")
+            .When(v => v.SalaryMin.HasValue && v.SalaryMax.HasValue);
+
+        RuleFor(v => v.SalaryType)
+            .NotNull().WithMessage("Salary is required.")
+            .When(v => v.Publish);
+
+        RuleFor(v => v.SalaryCurrency)
+            .NotNull().WithMessage("Salary currency is required.")
+            .When(v => v.Publish && v.SalaryType is SalaryType.Fixed or SalaryType.Range);
+
+        RuleFor(v => v.SalaryPeriod)
+            .NotNull().WithMessage("Salary period is required.")
+            .When(v => v.Publish && v.SalaryType is SalaryType.Fixed or SalaryType.Range);
+
+        RuleFor(v => v.SalaryMin)
+            .NotNull().WithMessage("Salary amount is required.")
+            .When(v => v.Publish && v.SalaryType is SalaryType.Fixed or SalaryType.Range);
+
+        RuleFor(v => v.SalaryMax)
+            .NotNull().WithMessage("Maximum salary is required.")
+            .When(v => v.Publish && v.SalaryType == SalaryType.Range);
+
+        // Requirements — optional in a draft, mandatory to publish. Same
+        // content-strictness-is-publish-gated pattern as Description.
+        RuleFor(v => v.Requirements)
+            .MaximumLength(5000).WithMessage("Requirements must not exceed 5000 characters.");
+
+        RuleFor(v => v.Requirements)
+            .Must(requirements => !string.IsNullOrWhiteSpace(requirements))
+                .WithMessage("Requirements is required.")
+            .When(v => v.Publish);
     }
 
     private static bool IsLocationRequired(WorkArrangement a) =>

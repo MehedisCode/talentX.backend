@@ -88,6 +88,24 @@ public sealed class GeminiJobGenerationService : IJobGenerationService
         return new JobSkillsResult { Skills = skills };
     }
 
+    /// <inheritdoc />
+    public async Task<JobRequirementsResult> GenerateRequirementsAsync(
+        string title,
+        string companyName,
+        string employmentType,
+        string experienceLevel,
+        string workArrangement,
+        List<string>? requiredSkills = null,
+        CancellationToken cancellationToken = default)
+    {
+        var prompt = BuildRequirementsPrompt(title, companyName, employmentType,
+            experienceLevel, workArrangement, requiredSkills);
+
+        var response = await CallGeminiAsync(prompt, cancellationToken);
+
+        return new JobRequirementsResult { Requirements = response };
+    }
+
     /// <summary>
     /// Calls the Gemini API with the given prompt and returns the text response.
     /// </summary>
@@ -208,6 +226,48 @@ public sealed class GeminiJobGenerationService : IJobGenerationService
         sb.AppendLine("- Skills should match the job title and experience level");
         sb.AppendLine("- Include both technical skills (e.g., C#, React) and soft skills (e.g., Communication)");
         sb.AppendLine("- Use industry-standard skill names");
+
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// Builds the prompt for generating a job's requirements section
+    /// (experience range, education, language proficiency) as bullet points.
+    /// </summary>
+    private static string BuildRequirementsPrompt(
+        string title,
+        string companyName,
+        string employmentType,
+        string experienceLevel,
+        string workArrangement,
+        List<string>? requiredSkills)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine("You are a tech hiring expert. Generate a requirements section for this job posting.");
+        sb.AppendLine("Return ONLY a bullet-point list — each bullet on its own line, starting with \"- \".");
+        sb.AppendLine("Do not include any headers, labels, explanations, or JSON — just the bullet lines.");
+        sb.AppendLine();
+        sb.AppendLine("JOB DETAILS:");
+        sb.AppendLine($"- Job Title: {title}");
+        sb.AppendLine($"- Company: {companyName}");
+        sb.AppendLine($"- Employment Type: {employmentType}");
+        sb.AppendLine($"- Experience Level: {experienceLevel}");
+        sb.AppendLine($"- Work Arrangement: {workArrangement}");
+
+        if (requiredSkills?.Any() == true)
+        {
+            sb.AppendLine($"- Required Skills: {string.Join(", ", requiredSkills)}");
+        }
+
+        sb.AppendLine();
+        sb.AppendLine("The bullet list must cover exactly these three points, in this order:");
+        sb.AppendLine("1. Years of professional experience required, expressed as a range appropriate");
+        sb.AppendLine("   to the given Experience Level (e.g. \"3-5 years of relevant experience\").");
+        sb.AppendLine("2. The education level or field required (e.g. \"Bachelor's degree in Computer");
+        sb.AppendLine("   Science or a related field, or equivalent practical experience\").");
+        sb.AppendLine("3. A language proficiency requirement appropriate to the role (e.g. \"Fluent");
+        sb.AppendLine("   written and spoken English\").");
+        sb.AppendLine("Keep each bullet to a single concise sentence.");
 
         return sb.ToString();
     }

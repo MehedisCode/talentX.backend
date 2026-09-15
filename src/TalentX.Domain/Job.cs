@@ -21,6 +21,12 @@ public class Job : BaseEntity
     public string? Country { get; private set; }
     public short? MinOverlapHours { get; private set; }
     public string? Responsibilities { get; private set; }
+    public string? Requirements { get; private set; }
+    public SalaryType? SalaryType { get; private set; }
+    public decimal? SalaryMin { get; private set; }
+    public decimal? SalaryMax { get; private set; }
+    public Currency? SalaryCurrency { get; private set; }
+    public SalaryPeriod? SalaryPeriod { get; private set; }
     public bool IsDeleted { get; private set; }
     public DateTime? DeletedAt { get; private set; }
     public DateTime? PublishedAt { get; private set; }
@@ -89,12 +95,24 @@ public class Job : BaseEntity
         string? city,
         string? country,
         short? minOverlapHours,
-        string? responsibilities)
+        string? responsibilities,
+        SalaryType? salaryType = null,
+        decimal? salaryMin = null,
+        decimal? salaryMax = null,
+        Currency? salaryCurrency = null,
+        SalaryPeriod? salaryPeriod = null,
+        string? requirements = null)
     {
         City = city;
         Country = country;
         MinOverlapHours = minOverlapHours;
         Responsibilities = responsibilities;
+        Requirements = requirements;
+        SalaryType = salaryType;
+        SalaryMin = salaryMin;
+        SalaryMax = salaryMax;
+        SalaryCurrency = salaryCurrency;
+        SalaryPeriod = salaryPeriod;
         UpdatedAt = DateTime.UtcNow;
     }
 

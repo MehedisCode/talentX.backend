@@ -1,4 +1,5 @@
 using TalentX.Application.Common.Models;
+using TalentX.Domain.Enums;
 
 namespace TalentX.Application.Common.Interfaces;
 
@@ -115,6 +116,18 @@ public interface IEmailService
         string toEmail,
         string recipientName,
         string rejectionReason,
+        CancellationToken cancellationToken = default
+    );
+
+    /// <summary>
+    /// Renders the HTML body for an account activated/deactivated notification email. The
+    /// deactivation copy is tailored to the recipient's role (e.g. an Employer is told they can't
+    /// post jobs, a Talent that they can't apply to jobs).
+    /// </summary>
+    Task<string> RenderAccountStatusChangedEmailAsync(
+        string recipientName,
+        AccountStatus newStatus,
+        UserRole role,
         CancellationToken cancellationToken = default
     );
 

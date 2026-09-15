@@ -28,6 +28,19 @@ public interface IJobGenerationService
         string experienceLevel,
         string workArrangement,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Generates a bullet-point requirements list (experience range, education,
+    /// language proficiency) for a job based on its details.
+    /// </summary>
+    Task<JobRequirementsResult> GenerateRequirementsAsync(
+        string title,
+        string companyName,
+        string employmentType,
+        string experienceLevel,
+        string workArrangement,
+        List<string>? requiredSkills = null,
+        CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -44,4 +57,12 @@ public sealed class JobGenerationResult
 public sealed class JobSkillsResult
 {
     public List<string> Skills { get; init; } = new();
+}
+
+/// <summary>
+/// Result of AI-generated job requirements (bullet-point text).
+/// </summary>
+public sealed class JobRequirementsResult
+{
+    public string Requirements { get; init; } = string.Empty;
 }
