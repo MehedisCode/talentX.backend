@@ -9,7 +9,7 @@ namespace TalentX.API.Controllers.PreferredJobs;
 [ApiController]
 [Route("api/v1/preferred-jobs")]
 [Authorize(Roles = nameof(UserRole.Talent))]
-public class PreferredJobsController : BaseApiController
+public sealed class PreferredJobsController : BaseApiController
 {
     [HttpGet]
     [Authorize(Roles = nameof(UserRole.Talent))]
