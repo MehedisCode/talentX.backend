@@ -8,7 +8,7 @@ namespace TalentX.Infrastructure.Common;
 
 public sealed class OtpService : IOtpService
 {
-    private static readonly TimeSpan DefaultExpiry = TimeSpan.FromMinutes(10);
+    private static readonly TimeSpan DefaultExpiry = TimeSpan.FromMinutes(2);
     private static readonly TimeSpan DefaultVerifiedEmailExpiry = TimeSpan.FromMinutes(15);
     private readonly ConcurrentDictionary<string, (string Code, DateTime ExpiresAtUtc)> _otpStore = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, DateTime> _verifiedEmailStore = new(StringComparer.OrdinalIgnoreCase);
