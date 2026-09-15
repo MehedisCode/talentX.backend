@@ -24,6 +24,41 @@ public class GetJobDetailsQueryTests
     }
 
     [Fact]
+    public async Task Handle_WhenJobExpiresToday_StatusIsNotExpired()
+    {
+        // A job expiring today should still read as active through the entire
+        // day, not flip to "Expired" the instant the expiry date begins.
+        var job = Job.Create(
+            "employer-1",
+            "Test Role",
+            "Test Co",
+            "Test description for the role.",
+            EmploymentType.FullTime,
+            ExperienceLevel.MidLevel,
+            "Dhaka",
+            WorkArrangement.Hybrid,
+            new List<string> { "C#" },
+            1,
+            DateTime.UtcNow.Date
+        );
+        job.MarkAsPublished();
+
+        var jobRepo = new Mock<IJobRepository>();
+        jobRepo.Setup(r => r.GetPublishedJobByIdAsync(job.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(job);
+
+        var unitOfWork = new Mock<IUnitOfWork>();
+        unitOfWork.Setup(u => u.Jobs).Returns(jobRepo.Object);
+
+        var handler = new GetJobDetailsQueryHandler(unitOfWork.Object, _mapper);
+        var query = new GetJobDetailsQuery(job.Id);
+
+        var result = await handler.Handle(query, CancellationToken.None);
+
+        result.Status.Should().Be("Published");
+    }
+
+    [Fact]
     public async Task Handle_ThrowsNotFoundException_WhenRepositoryReturnsNull()
     {
         var jobRepo = new Mock<IJobRepository>();

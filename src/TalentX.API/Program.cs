@@ -113,6 +113,7 @@ if (!app.Environment.IsDevelopment())
 app.UseInfrastructureMiddlewares();
 app.UseCors(CorsPolicyName);
 app.UseAuthentication();
+app.UseMiddleware<AccountStatusMiddleware>();
 app.UseAuthorization();
 app.MapControllers();
 

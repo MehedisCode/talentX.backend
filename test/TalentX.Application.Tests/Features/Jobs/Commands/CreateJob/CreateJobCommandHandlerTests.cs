@@ -46,7 +46,9 @@ public class CreateJobCommandHandlerTests
         publish,
         City: null,
         Country: null,
-        MinOverlapHours: 4
+        MinOverlapHours: 4,
+        SalaryType: SalaryType.Negotiable,
+        Requirements: "- 3-5 years of relevant experience\n- Bachelor's degree or equivalent"
     );
 
     [Fact]

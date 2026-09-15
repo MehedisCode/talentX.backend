@@ -55,11 +55,27 @@ public class UpdateJobCommandHandler : IRequestHandler<UpdateJobCommand>
             request.ExpireAt ?? job.ExpireAt
         );
 
+        // A Fixed salary is stored as SalaryMin == SalaryMax (see SalaryType) —
+        // the client only ever sends one amount for Fixed, in SalaryMin. Merge
+        // against the job's existing salary state first (partial-PATCH safe),
+        // then derive Max from the merged type/min, not just this request's.
+        var effectiveSalaryType = request.SalaryType ?? job.SalaryType;
+        var effectiveSalaryMin = request.SalaryMin ?? job.SalaryMin;
+        var effectiveSalaryMax = effectiveSalaryType == Domain.Enums.SalaryType.Fixed
+            ? effectiveSalaryMin
+            : (request.SalaryMax ?? job.SalaryMax);
+
         job.UpdateWizardDetails(
             request.City != null ? JobRules.NormalizeText(request.City) : job.City,
             request.Country != null ? JobRules.NormalizeText(request.Country) : job.Country,
             request.MinOverlapHours ?? job.MinOverlapHours,
-            job.Responsibilities
+            job.Responsibilities,
+            effectiveSalaryType,
+            effectiveSalaryMin,
+            effectiveSalaryMax,
+            request.SalaryCurrency ?? job.SalaryCurrency,
+            request.SalaryPeriod ?? job.SalaryPeriod,
+            request.Requirements != null ? JobRules.NormalizeText(request.Requirements) : job.Requirements
         );
 
         if (request.Publish)
@@ -83,9 +99,9 @@ public class UpdateJobCommandHandler : IRequestHandler<UpdateJobCommand>
             {
                 await _jobAlertQueue.EnqueuePublishedJobAsync(job.Id, cancellationToken);
             }
-            catch (Exception ex)
+            catch (Exception exception)
             {
-                _logger.LogError(ex, "Failed to enqueue published job {JobId} for job alerts", job.Id);
+                _logger.LogError(exception, "Failed to enqueue published job {JobId} for job alerts", job.Id);
             }
         }
     }

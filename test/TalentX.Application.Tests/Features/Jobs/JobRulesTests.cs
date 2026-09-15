@@ -33,14 +33,18 @@ public class JobRulesTests
             expireAt ?? DateTime.UtcNow.AddDays(30)
         );
 
-        // Set wizard fields based on work arrangement
+        // Set wizard fields based on work arrangement. SalaryType.Negotiable is
+        // a complete, publishable answer on its own (no amount fields needed).
+        // Requirements is likewise mandatory to publish.
         if (workArrangement is WorkArrangement.FullRemote)
         {
             job.UpdateWizardDetails(
                 null,
                 null,
                 4,
-                null
+                null,
+                SalaryType.Negotiable,
+                requirements: "- 3-5 years of relevant experience\n- Bachelor's degree or equivalent\n- Fluent written and spoken English"
             );
         }
         else if (workArrangement is WorkArrangement.OnSite or WorkArrangement.Hybrid)
@@ -49,7 +53,9 @@ public class JobRulesTests
                 "Dhaka",
                 "Bangladesh",
                 null,
-                null
+                null,
+                SalaryType.Negotiable,
+                requirements: "- 3-5 years of relevant experience\n- Bachelor's degree or equivalent\n- Fluent written and spoken English"
             );
         }
 

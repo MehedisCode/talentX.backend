@@ -6,6 +6,7 @@ using TalentX.Application.Features.Jobs.Commands.CloseJob;
 using TalentX.Application.Features.Jobs.Commands.CreateJob;
 using TalentX.Application.Features.Jobs.Commands.DeleteJob;
 using TalentX.Application.Features.Jobs.Commands.GenerateJobDescription;
+using TalentX.Application.Features.Jobs.Commands.GenerateJobRequirements;
 using TalentX.Application.Features.Jobs.Commands.GenerateSkills;
 using TalentX.Application.Features.Jobs.Commands.ReopenJob;
 using TalentX.Application.Features.Jobs.Commands.UpdateJob;
@@ -108,6 +109,21 @@ public class JobsController : BaseApiController
     [Authorize(Roles = $"{nameof(UserRole.Employer)}")]
     public async Task<IActionResult> GenerateSkills(
         [FromBody] GenerateSkillsCommand command,
+        CancellationToken cancellationToken)
+    {
+        var result = await Sender.Send(command, cancellationToken);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Generates a job's requirements section (bullet points covering
+    /// experience range, education, and language proficiency) using AI.
+    /// Used in the multi-step wizard to assist employers.
+    /// </summary>
+    [HttpPost("generate-requirements")]
+    [Authorize(Roles = $"{nameof(UserRole.Employer)}")]
+    public async Task<IActionResult> GenerateRequirements(
+        [FromBody] GenerateJobRequirementsCommand command,
         CancellationToken cancellationToken)
     {
         var result = await Sender.Send(command, cancellationToken);

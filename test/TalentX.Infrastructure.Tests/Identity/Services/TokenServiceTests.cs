@@ -5,7 +5,10 @@ using Microsoft.Extensions.Options;
 using Moq;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using TalentX.Application.Features.Users.Constants;
 using TalentX.Application.Identity.Models;
+using TalentX.Domain;
+using TalentX.Domain.Enums;
 using TalentX.Infrastructure.Identity.Models;
 using TalentX.Infrastructure.Identity.Services;
 using TalentX.Infrastructure.Persistence.Contexts;
@@ -275,6 +278,62 @@ public class TokenServiceTests : IAsyncLifetime
 
     #endregion
 
+    #region CreateAsync - Deactivated Account
+
+    [Fact]
+    public async Task CreateAsync_WithDeactivatedDomainUser_ShouldReturnFailureAndNotIssueTokens()
+    {
+        // Arrange
+        var userId = "user-123";
+        var identityUser = new ApplicationUser { Id = userId, Email = "user@example.com", UserName = "testuser" };
+        var domainUser = new User(userId, "Jordan Smith", "user@example.com", UserRole.Talent, isVerified: true);
+        domainUser.Deactivate();
+        _context.DomainUsers.Add(domainUser);
+        await _context.SaveChangesAsync();
+
+        _userManagerMock
+            .Setup(x => x.FindByIdAsync(userId))
+            .ReturnsAsync(identityUser);
+
+        // Act
+        var result = await _tokenService.CreateAsync(userId);
+
+        // Assert
+        result.Success.Should().BeFalse();
+        result.Errors.Should().Contain(AccountStatusMessages.Deactivated);
+        result.Data.Should().BeNull();
+
+        var storedTokens = await _context.RefreshTokens.ToListAsync();
+        storedTokens.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task CreateAsync_WithActiveDomainUser_ShouldStillIssueTokens()
+    {
+        // Arrange
+        var userId = "user-123";
+        var identityUser = new ApplicationUser { Id = userId, Email = "user@example.com", UserName = "testuser" };
+        var domainUser = new User(userId, "Jordan Smith", "user@example.com", UserRole.Talent, isVerified: true);
+        _context.DomainUsers.Add(domainUser);
+        await _context.SaveChangesAsync();
+
+        _userManagerMock
+            .Setup(x => x.FindByIdAsync(userId))
+            .ReturnsAsync(identityUser);
+        _userManagerMock
+            .Setup(x => x.GetRolesAsync(identityUser))
+            .ReturnsAsync(new List<string> { "Talent" });
+
+        // Act
+        var result = await _tokenService.CreateAsync(userId);
+
+        // Assert
+        result.Success.Should().BeTrue();
+        result.Data.Should().NotBeNull();
+    }
+
+    #endregion
+
     #region ValidateAndRotateAsync - Happy Path Tests
 
     [Fact]
@@ -352,6 +411,64 @@ public class TokenServiceTests : IAsyncLifetime
         var token = handler.ReadJwtToken(result.Data!.AccessToken);
 
         token.Claims.Should().Contain(c => c.Type == ClaimTypes.NameIdentifier && c.Value == userId);
+    }
+
+    #endregion
+
+    #region ValidateAndRotateAsync - Deactivated Account
+
+    [Fact]
+    public async Task ValidateAndRotateAsync_WithDeactivatedDomainUser_ShouldReturnFailureAndRevokeToken()
+    {
+        // Arrange
+        var userId = "user-123";
+        var user = new ApplicationUser { Id = userId, Email = "user@example.com", UserName = "testuser" };
+
+        var createResult = await CreateInitialToken(userId, user);
+        var refreshToken = createResult.RefreshToken;
+
+        var domainUser = new User(userId, "Jordan Smith", "user@example.com", UserRole.Talent, isVerified: true);
+        domainUser.Deactivate();
+        _context.DomainUsers.Add(domainUser);
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _tokenService.ValidateAndRotateAsync(refreshToken);
+
+        // Assert
+        result.Success.Should().BeFalse();
+        result.Errors.Should().Contain(AccountStatusMessages.Deactivated);
+        result.Data.Should().BeNull();
+
+        var storedToken = await _context.RefreshTokens.FirstAsync(t => t.ApplicationUserId == userId);
+        storedToken.IsActive.Should().BeFalse();
+        storedToken.RevokedAt.Should().NotBeNull();
+
+        var allTokens = await _context.RefreshTokens.Where(t => t.ApplicationUserId == userId).ToListAsync();
+        allTokens.Should().HaveCount(1); // no new token was issued
+    }
+
+    [Fact]
+    public async Task ValidateAndRotateAsync_WithActiveDomainUser_ShouldStillRotate()
+    {
+        // Arrange
+        var userId = "user-123";
+        var user = new ApplicationUser { Id = userId, Email = "user@example.com", UserName = "testuser" };
+
+        var createResult = await CreateInitialToken(userId, user);
+        var refreshToken = createResult.RefreshToken;
+
+        var domainUser = new User(userId, "Jordan Smith", "user@example.com", UserRole.Talent, isVerified: true);
+        _context.DomainUsers.Add(domainUser);
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _tokenService.ValidateAndRotateAsync(refreshToken);
+
+        // Assert
+        result.Success.Should().BeTrue();
+        result.Data.Should().NotBeNull();
+        result.Data!.RefreshToken.Should().NotBe(refreshToken);
     }
 
     #endregion

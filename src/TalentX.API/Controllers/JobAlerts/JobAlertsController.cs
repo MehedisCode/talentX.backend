@@ -14,7 +14,7 @@ namespace TalentX.API.Controllers.JobAlerts;
 [ApiController]
 [Route("api/v1/job-alerts")]
 [Authorize(Roles = nameof(UserRole.Talent))]
-public class JobAlertsController : BaseApiController
+public sealed class JobAlertsController : BaseApiController
 {
     [HttpPost]
     [Authorize(Roles = nameof(UserRole.Talent))]

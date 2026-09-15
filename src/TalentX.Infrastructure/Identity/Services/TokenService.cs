@@ -6,8 +6,10 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using TalentX.Application.Features.Users.Constants;
 using TalentX.Application.Identity.Interfaces;
 using TalentX.Application.Identity.Models;
+using TalentX.Domain.Enums;
 using TalentX.Infrastructure.Identity.Models;
 using TalentX.Infrastructure.Persistence.Contexts;
 
@@ -37,6 +39,13 @@ public class TokenService : ITokenService
         {
             return IdentityResponse<TokenResponse>.Fail("User not found.");
         }
+
+        var domainUser = await _context.DomainUsers.AsNoTracking().FirstOrDefaultAsync(u => u.UserId == userId);
+        if (domainUser is not null && domainUser.Status == AccountStatus.Deactivated)
+        {
+            return IdentityResponse<TokenResponse>.Fail(AccountStatusMessages.Deactivated);
+        }
+
         var roles = await _userManager.GetRolesAsync(user);
         var accessToken = GenerateAccessToken(user, roles);
         var rawRefreshToken = GenerateRawToken();
@@ -73,6 +82,15 @@ public class TokenService : ITokenService
         var user = await _userManager.FindByIdAsync(stored.ApplicationUserId);
         if (user is null)
             return IdentityResponse<TokenResponse>.Fail("User not found.");
+
+        var domainUser = await _context.DomainUsers.AsNoTracking()
+            .FirstOrDefaultAsync(u => u.UserId == stored.ApplicationUserId);
+        if (domainUser is not null && domainUser.Status == AccountStatus.Deactivated)
+        {
+            stored.RevokedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+            return IdentityResponse<TokenResponse>.Fail(AccountStatusMessages.Deactivated);
+        }
 
         var roles = await _userManager.GetRolesAsync(user);
         var newAccessToken = GenerateAccessToken(user, roles);
