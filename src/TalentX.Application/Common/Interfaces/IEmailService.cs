@@ -96,4 +96,23 @@ public interface IEmailService
         string resetUrl,
         CancellationToken cancellationToken = default
     );
+
+    /// <summary>
+    /// Sends an email notifying the employer that their account has been approved.
+    /// </summary>
+    Task SendEmployerApprovedEmailAsync(
+        string toEmail,
+        string recipientName,
+        CancellationToken cancellationToken = default
+    );
+
+    /// <summary>
+    /// Sends an email notifying the employer that their account has been rejected, including the reason.
+    /// </summary>
+    Task SendEmployerRejectedEmailAsync(
+        string toEmail,
+        string recipientName,
+        string rejectionReason,
+        CancellationToken cancellationToken = default
+    );
 }

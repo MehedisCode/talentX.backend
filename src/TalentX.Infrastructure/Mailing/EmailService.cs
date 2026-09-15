@@ -166,6 +166,39 @@ public sealed class EmailService : IEmailService
         DispatchAfterLogging(toEmail, recipientName, EmailConstants.Subjects.PasswordReset, html);
     }
 
+    public async Task SendEmployerApprovedEmailAsync(
+        string toEmail,
+        string recipientName,
+        CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation(
+            "[EMAIL] {Kind} dispatch to {RecipientName} <{ToEmail}>",
+            EmailConstants.Kinds.EmployerApproved, recipientName, toEmail);
+
+        var html = await _razor.CompileRenderAsync(
+            EmailConstants.Templates.EmployerApproved,
+            new EmployerApprovedEmailModel(recipientName));
+
+        DispatchAfterLogging(toEmail, recipientName, EmailConstants.Subjects.EmployerApproved, html);
+    }
+
+    public async Task SendEmployerRejectedEmailAsync(
+        string toEmail,
+        string recipientName,
+        string rejectionReason,
+        CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation(
+            "[EMAIL] {Kind} dispatch to {RecipientName} <{ToEmail}>",
+            EmailConstants.Kinds.EmployerRejected, recipientName, toEmail);
+
+        var html = await _razor.CompileRenderAsync(
+            EmailConstants.Templates.EmployerRejected,
+            new EmployerRejectedEmailModel(recipientName, rejectionReason));
+
+        DispatchAfterLogging(toEmail, recipientName, EmailConstants.Subjects.EmployerRejected, html);
+    }
+
     private void LogDispatch(string kind, string recipientName, string toEmail, string? secret)
     {
         _logger.LogInformation(
