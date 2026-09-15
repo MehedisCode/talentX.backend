@@ -48,12 +48,16 @@ public class UpdateJobCommandHandlerTests
             DateTime.UtcNow.AddDays(30)
         );
 
-        // Set wizard fields for AnywhereFullRemote
+        // Set wizard fields for AnywhereFullRemote. SalaryType.Negotiable and
+        // Requirements make this job already publish-ready without the update
+        // itself resending them.
         job.UpdateWizardDetails(
             null,
             null,
             4,
-            null
+            null,
+            SalaryType.Negotiable,
+            requirements: "- 3-5 years of relevant experience\n- Bachelor's degree or equivalent"
         );
 
         return job;

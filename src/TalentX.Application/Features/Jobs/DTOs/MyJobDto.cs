@@ -1,3 +1,5 @@
+using TalentX.Domain.Enums;
+
 namespace TalentX.Application.Features.Jobs.DTOs;
 
 public class MyJobDto
@@ -20,4 +22,10 @@ public class MyJobDto
     public string? City { get; set; }
     public string? Country { get; set; }
     public short? MinOverlapHours { get; set; }
+    public SalaryType? SalaryType { get; set; }
+    public decimal? SalaryMin { get; set; }
+    public decimal? SalaryMax { get; set; }
+    public Currency? SalaryCurrency { get; set; }
+    public SalaryPeriod? SalaryPeriod { get; set; }
+    public string? Requirements { get; set; }
 }

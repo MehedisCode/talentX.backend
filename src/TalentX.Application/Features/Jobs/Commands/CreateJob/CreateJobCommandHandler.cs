@@ -49,11 +49,23 @@ public class CreateJobCommandHandler : IRequestHandler<CreateJobCommand, Guid>
             request.ExpireAt
         );
 
+        // A Fixed salary is stored as SalaryMin == SalaryMax (see SalaryType) —
+        // the client only ever sends one amount for Fixed, in SalaryMin.
+        var effectiveSalaryMax = request.SalaryType == Domain.Enums.SalaryType.Fixed
+            ? request.SalaryMin
+            : request.SalaryMax;
+
         job.UpdateWizardDetails(
             request.City != null ? JobRules.NormalizeText(request.City) : null,
             request.Country != null ? JobRules.NormalizeText(request.Country) : null,
             request.MinOverlapHours,
-            null
+            null,
+            request.SalaryType,
+            request.SalaryMin,
+            effectiveSalaryMax,
+            request.SalaryCurrency,
+            request.SalaryPeriod,
+            request.Requirements != null ? JobRules.NormalizeText(request.Requirements) : null
         );
 
         if (request.Publish)
