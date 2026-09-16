@@ -55,7 +55,8 @@ public sealed class GetUserDetailsQueryHandler : IRequestHandler<GetUserDetailsQ
             {
                 employerDetails = new AdminEmployerDetailsSectionDto
                 {
-                    CompanyName = employer.CompanyName
+                    CompanyName = employer.CompanyName,
+                    VerificationStatus = employer.VerificationStatus
                 };
             }
         }

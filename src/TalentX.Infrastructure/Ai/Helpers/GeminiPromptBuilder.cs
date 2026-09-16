@@ -8,7 +8,8 @@ public static class GeminiPromptBuilder
         string plainText,
         IReadOnlyList<string> links,
         string? deterministicEmail = null,
-        string? deterministicPhone = null)
+        string? deterministicPhone = null,
+        int maxOutputTokens = 8192)
     {
         var promptPayload = FormatPromptPayload(plainText, links, deterministicEmail, deterministicPhone);
 
@@ -24,7 +25,7 @@ public static class GeminiPromptBuilder
                     }
                 }
             },
-            generationConfig = BuildGenerationConfig()
+            generationConfig = BuildGenerationConfig(maxOutputTokens)
         };
     }
 
@@ -69,24 +70,29 @@ public static class GeminiPromptBuilder
         "EXTRACTION & CLASSIFICATION GUIDELINES:\n" +
         "- fullName: Candidate's full name (usually located at the top/header of the resume).\n" +
         "- location: Candidate's current residence/location (city, state/province, country). Do NOT use company locations as candidate location.\n" +
+        "- workExperience: Extract EVERY work experience entry in the resume — full-time, part-time, internship, contract, and freelance roles. Do not merge or skip roles, and do not omit a role just because its dates are missing (leave the date fields empty instead). For the candidate's CURRENT role, set 'endDate' to 'Present' and 'isCurrent' to true. For past roles, set 'isCurrent' to false and fill 'startDate' and 'endDate' from the resume.\n" +
+        "- education: Extract all degrees, universities, and colleges. When the resume shows a date range (e.g. '2016 - 2020'), put the first year in 'startDate' and the second year in 'endDate'. For ongoing studies, set 'endDate' to 'Expected <Year>' or 'Present'. If the resume lists only a SINGLE year for a degree, treat that year as the completion/graduation year and put it in 'endDate' (leave 'startDate' empty). Do not invent dates that are not present.\n" +
         "- technicalSkills: Programming languages, frameworks, libraries, databases, and core technical proficiencies (e.g. C#, .NET, Python, React, PostgreSQL, REST APIs, GraphQL).\n" +
         "- toolsAndPlatforms: Developer tools, cloud providers, DevOps tools, version control, and infrastructure (e.g. Git, Docker, Kubernetes, AWS, Azure, GCP, Linux, Jira, Postman, CI/CD).\n" +
-        "- softSkills: Interpersonal, leadership, communication, management, and agile/scrum methodologies (e.g. Problem Solving, Team Leadership, Agile/Scrum, Collaboration).\n" +
-        "- workExperience: Extract all work history items. For current/ongoing roles, set 'endDate' to 'Present' or 'Current'. If only one date is given, populate 'startDate' and set 'endDate' to 'Present' or empty.\n" +
-        "- education: Extract all degrees, universities, and colleges. For ongoing studies, set 'endDate' to 'Expected <Year>' or 'Present'.\n\n" +
+        "- softSkills: Interpersonal, leadership, communication, management, and agile/scrum methodologies (e.g. Problem Solving, Team Leadership, Agile/Scrum, Collaboration).\n\n" +
         "IMPORTANT RULES FOR CONTACT & HYPERLINKS:\n" +
         "- Do NOT guess or invent email addresses or phone numbers if none are found.\n" +
         "- The 'ACTUAL DOCUMENT HYPERLINKS' section contains authoritative URLs extracted directly from the document's link annotations and structure.\n" +
-        "- Use these extracted URLs when populating 'linkedInUrl' and 'portfolioUrls'.\n" +
-        "- Preserve the URLs EXACTLY as provided (do not alter, truncate, or rewrite them).\n" +
+        "- Preserve the URLs EXACTLY as provided (do not alter, truncate, or rewrite them) — the only exception is adding an 'https://' prefix when a URL is written without a scheme.\n" +
+        "- Candidate URLs may appear either in the 'ACTUAL DOCUMENT HYPERLINKS' list or as plain text in the resume (e.g. a personal portfolio domain such as 'aparnakhatri.com'). If a link is written without a scheme, output it with an 'https://' prefix; do not invent or change the host name.\n" +
         "- NEVER invent, reconstruct, guess, or fabricate any URL.\n" +
         "- NEVER replace an extracted URL with a guessed URL.\n" +
+        "- linkedInUrl: ONLY the candidate's LinkedIn profile URL (e.g. linkedin.com/in/username). Leave it empty if the resume has no LinkedIn URL.\n" +
+        "- portfolioUrls: ONLY the candidate's OWN portfolio, personal website, personal blog, or design portfolio (e.g. Behance, Dribbble, a *.github.io site, a personal domain, or a GitHub/GitLab profile).\n" +
+        "- Do NOT add any of the following to portfolioUrls: LinkedIn, social media (Facebook, X/Twitter, Instagram, TikTok, YouTube), job boards or freelance marketplaces, company or university websites, link shorteners, or email/messaging links.\n" +
+        "- Do NOT treat every URL as a portfolio. When you are unsure whether a URL is the candidate's personal portfolio, OMIT it — an empty list is better than an unrelated link.\n" +
         "- Your job is strictly to extract semantic information and classify the extracted URLs into the appropriate fields.";
 
-    private static object BuildGenerationConfig() => new
+    private static object BuildGenerationConfig(int maxOutputTokens) => new
     {
         temperature = 0.0,
         top_p = 0.95,
+        max_output_tokens = maxOutputTokens,
         response_mime_type = "application/json",
         response_schema = new
         {
@@ -94,11 +100,11 @@ public static class GeminiPromptBuilder
             required = new[]
             {
                 "fullName",
+                "workExperience",
+                "education",
                 "technicalSkills",
                 "softSkills",
-                "toolsAndPlatforms",
-                "workExperience",
-                "education"
+                "toolsAndPlatforms"
             },
             properties = new
             {
@@ -108,9 +114,6 @@ public static class GeminiPromptBuilder
                 location = new { type = "STRING" },
                 linkedInUrl = new { type = "STRING" },
                 portfolioUrls = new { type = "ARRAY", items = new { type = "STRING" } },
-                technicalSkills = new { type = "ARRAY", items = new { type = "STRING" } },
-                softSkills = new { type = "ARRAY", items = new { type = "STRING" } },
-                toolsAndPlatforms = new { type = "ARRAY", items = new { type = "STRING" } },
                 workExperience = new
                 {
                     type = "ARRAY",
@@ -123,7 +126,8 @@ public static class GeminiPromptBuilder
                             companyName = new { type = "STRING" },
                             jobTitle = new { type = "STRING" },
                             startDate = new { type = "STRING" },
-                            endDate = new { type = "STRING" }
+                            endDate = new { type = "STRING" },
+                            isCurrent = new { type = "BOOLEAN" }
                         }
                     }
                 },
@@ -142,7 +146,10 @@ public static class GeminiPromptBuilder
                             endDate = new { type = "STRING" }
                         }
                     }
-                }
+                },
+                technicalSkills = new { type = "ARRAY", items = new { type = "STRING" } },
+                softSkills = new { type = "ARRAY", items = new { type = "STRING" } },
+                toolsAndPlatforms = new { type = "ARRAY", items = new { type = "STRING" } }
             }
         }
     };

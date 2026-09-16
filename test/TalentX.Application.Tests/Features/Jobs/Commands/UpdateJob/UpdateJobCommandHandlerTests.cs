@@ -4,8 +4,10 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
+using TalentX.Application.Common.Interfaces.Repositories;
 using TalentX.Application.Features.Jobs.Commands.UpdateJob;
 using TalentX.Application.Identity.Services;
+using TalentX.Domain;
 using TalentX.Domain.Entities;
 using TalentX.Domain.Enums;
 using Xunit;
@@ -17,12 +19,14 @@ public class UpdateJobCommandHandlerTests
     private readonly Mock<IJobRepository> _jobRepository = new();
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
     private readonly Mock<ICurrentUserService> _currentUserService = new();
+    private readonly Mock<IEmployerRepository> _employerRepository = new();
     private readonly Mock<IJobAlertQueue> _jobAlertQueue = new();
     private readonly Mock<ILogger<UpdateJobCommandHandler>> _logger = new();
     private readonly UpdateJobCommandHandler _handler;
 
     public UpdateJobCommandHandlerTests()
     {
+        _unitOfWork.Setup(u => u.Employers).Returns(_employerRepository.Object);
         _currentUserService.SetupGet(u => u.UserId).Returns("employer-1");
         _handler = new UpdateJobCommandHandler(
             _jobRepository.Object,
@@ -30,6 +34,17 @@ public class UpdateJobCommandHandlerTests
             _currentUserService.Object,
             _jobAlertQueue.Object,
             _logger.Object);
+    }
+
+    private Employer SetupVerifiedEmployer(string userId = "employer-1")
+    {
+        var employer = new Employer(userId, "Test Employer", "employer@test.com", "Test Corp");
+        employer.MarkEmailVerified();
+        employer.MarkAsVerified();
+        _employerRepository
+            .Setup(r => r.GetByUserIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(employer);
+        return employer;
     }
 
     private static Job ExistingDraftJob()
@@ -150,6 +165,7 @@ public class UpdateJobCommandHandlerTests
         var job = ExistingDraftJob();
         _jobRepository.Setup(r => r.GetByIdAsync(job.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(job);
+        SetupVerifiedEmployer();
 
         await _handler.Handle(CommandFor(job.Id, publish: true), CancellationToken.None);
 
@@ -162,6 +178,7 @@ public class UpdateJobCommandHandlerTests
         var job = ExistingDraftJob();
         _jobRepository.Setup(r => r.GetByIdAsync(job.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(job);
+        SetupVerifiedEmployer();
 
         // Force the existing job into an unpublishable state via the update itself.
         var invalidCommand = new UpdateJobCommand(
@@ -179,6 +196,7 @@ public class UpdateJobCommandHandlerTests
         var job = ExistingDraftJob();
         _jobRepository.Setup(r => r.GetByIdAsync(job.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(job);
+        SetupVerifiedEmployer();
 
         var invalidCommand = new UpdateJobCommand(
             job.Id, null, null, null, null, null, null, null, null, 0, null, true
@@ -330,6 +348,7 @@ public class UpdateJobCommandHandlerTests
         var job = ExistingDraftJob();
         _jobRepository.Setup(r => r.GetByIdAsync(job.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(job);
+        SetupVerifiedEmployer();
 
         var command = CommandFor(job.Id, publish: true);
 

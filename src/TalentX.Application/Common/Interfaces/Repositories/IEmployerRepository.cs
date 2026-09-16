@@ -1,4 +1,5 @@
 using TalentX.Domain;
+using TalentX.Domain.Enums;
 
 namespace TalentX.Application.Common.Interfaces.Repositories;
 
@@ -47,4 +48,14 @@ public interface IEmployerRepository
     /// <param name="email">The email address to check.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     Task<bool> ExistsByEmailAsync(string email, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets a paginated list of employers with optional search and status filter.
+    /// </summary>
+    Task<(IReadOnlyList<Employer> Items, int TotalCount)> GetPagedAsync(
+        string? search,
+        EmployerVerificationStatus? status,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default);
 }
