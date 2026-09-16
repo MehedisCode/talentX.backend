@@ -88,4 +88,51 @@ public class GeminiResponseMapperTests
         result.Email.Should().Be("alice.deterministic@example.com");
         result.Phone.Should().Be("+1-555-000-1111");
     }
+
+    [Fact]
+    public void MapToResult_MovesLoneEducationYear_ToEndDate()
+    {
+        var json = """
+        {
+          "fullName": "Alice Smith",
+          "education": [
+            {
+              "institution": "MIT",
+              "degree": "B.S. Computer Science",
+              "startDate": "2019",
+              "endDate": null
+            }
+          ]
+        }
+        """;
+
+        var result = GeminiResponseMapper.MapToResult(json, null, null, NullLogger.Instance);
+
+        result.Education.Should().ContainSingle();
+        result.Education[0].StartDate.Should().BeNull();
+        result.Education[0].EndDate.Should().Be("2019");
+    }
+
+    [Fact]
+    public void MapToResult_KeepsEducationRange_WhenTwoYearsProvided()
+    {
+        var json = """
+        {
+          "fullName": "Alice Smith",
+          "education": [
+            {
+              "institution": "MIT",
+              "degree": "B.S. Computer Science",
+              "startDate": "2017",
+              "endDate": "2021"
+            }
+          ]
+        }
+        """;
+
+        var result = GeminiResponseMapper.MapToResult(json, null, null, NullLogger.Instance);
+
+        result.Education[0].StartDate.Should().Be("2017");
+        result.Education[0].EndDate.Should().Be("2021");
+    }
 }

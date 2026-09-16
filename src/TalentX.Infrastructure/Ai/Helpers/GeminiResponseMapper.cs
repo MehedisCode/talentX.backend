@@ -52,12 +52,17 @@ public static class GeminiResponseMapper
                         EndDate = w.EndDate
                     }).ToList(),
                 Education = (result.Education ?? [])
-                    .Select(e => new EducationDto
+                    .Select(e =>
                     {
-                        Institution = e.Institution,
-                        Degree = e.Degree,
-                        StartDate = e.StartDate,
-                        EndDate = e.EndDate
+                        var (startDate, endDate) = EducationDateNormalizer.Normalize(e.StartDate, e.EndDate);
+
+                        return new EducationDto
+                        {
+                            Institution = e.Institution,
+                            Degree = e.Degree,
+                            StartDate = startDate,
+                            EndDate = endDate
+                        };
                     }).ToList()
             };
         }
