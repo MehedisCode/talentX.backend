@@ -227,6 +227,11 @@ public sealed class JobRepository : RepositoryBase<Job>, IJobRepository
                 job.Vacancies,
                 job.ExpireAt,
                 job.CreatedAt,
+                job.SalaryType,
+                job.SalaryMin,
+                job.SalaryMax,
+                job.SalaryCurrency,
+                job.SalaryPeriod,
                 ApplicantCount = Context.JobApplications.Count(application => application.JobId == job.Id)
             })
             .ToListAsync(cancellationToken);
@@ -245,7 +250,12 @@ public sealed class JobRepository : RepositoryBase<Job>, IJobRepository
             job.Vacancies,
             job.ExpireAt,
             job.CreatedAt,
-            job.ApplicantCount)).ToList();
+            job.ApplicantCount,
+            job.SalaryType,
+            job.SalaryMin,
+            job.SalaryMax,
+            job.SalaryCurrency,
+            job.SalaryPeriod)).ToList();
 
         return new PaginatedList<EmployerJobListItemDto>(items, page, pageSize, totalCount);
     }
