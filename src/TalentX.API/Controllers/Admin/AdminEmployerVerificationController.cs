@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using TalentX.API.Controllers.Admin.Requests;
 using TalentX.Application.Features.AdminEmployerVerification.Commands.ApproveEmployer;
 using TalentX.Application.Features.AdminEmployerVerification.Commands.RejectEmployer;
 using TalentX.Application.Features.AdminEmployerVerification.Queries.GetEmployerDetails;
@@ -39,15 +40,13 @@ public class AdminEmployerVerificationController : BaseApiController
         return Ok(new { message = "Employer account approved successfully." });
     }
 
-    public sealed record RejectEmployerRequestBody(string Reason);
-
     [HttpPost("{id:guid}/reject")]
     public async Task<IActionResult> RejectEmployer(
         Guid id,
-        [FromBody] RejectEmployerRequestBody body,
+        [FromBody] RejectEmployerRequest request,
         CancellationToken cancellationToken = default)
     {
-        await Sender.Send(new RejectEmployerCommand { EmployerId = id, Reason = body.Reason }, cancellationToken);
+        await Sender.Send(new RejectEmployerCommand { EmployerId = id, Reason = request.Reason }, cancellationToken);
         return Ok(new { message = "Employer account rejected successfully." });
     }
 }

@@ -19,8 +19,7 @@ public sealed class ReApplyCommandHandler : IRequestHandler<ReApplyCommand>
 
     public async Task Handle(ReApplyCommand request, CancellationToken cancellationToken)
     {
-        var userId = _currentUserService.UserId
-            ?? throw new UnauthorizedException("User is not authenticated.");
+        var userId = _currentUserService.UserId!;
 
         var employer = await _unitOfWork.Employers.GetByUserIdAsync(userId, cancellationToken)
             ?? throw new NotFoundException(nameof(Domain.Employer), userId);
