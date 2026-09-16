@@ -158,4 +158,73 @@ public class GeminiResponseMapperTests
         result.Education[0].StartDate.Should().Be("2016");
         result.Education[0].EndDate.Should().Be("2020");
     }
+
+    [Fact]
+    public void MapToResult_MarksCurrentRole_WhenEndDateIsPresent()
+    {
+        var json = """
+        {
+          "fullName": "Alice Smith",
+          "workExperience": [
+            {
+              "companyName": "Acme",
+              "jobTitle": "Engineer",
+              "startDate": "Jan 2020",
+              "endDate": "Present"
+            }
+          ]
+        }
+        """;
+
+        var result = GeminiResponseMapper.MapToResult(json, null, null, NullLogger.Instance);
+
+        result.WorkExperience[0].IsCurrent.Should().BeTrue();
+        result.WorkExperience[0].EndDate.Should().Be("Present");
+    }
+
+    [Fact]
+    public void MapToResult_MarksPastRole_AsNotCurrent()
+    {
+        var json = """
+        {
+          "fullName": "Alice Smith",
+          "workExperience": [
+            {
+              "companyName": "Acme",
+              "jobTitle": "Engineer",
+              "startDate": "2017",
+              "endDate": "2019"
+            }
+          ]
+        }
+        """;
+
+        var result = GeminiResponseMapper.MapToResult(json, null, null, NullLogger.Instance);
+
+        result.WorkExperience[0].IsCurrent.Should().BeFalse();
+        result.WorkExperience[0].EndDate.Should().Be("2019");
+    }
+
+    [Fact]
+    public void MapToResult_KeepsDatelessWorkEntry()
+    {
+        var json = """
+        {
+          "fullName": "Alice Smith",
+          "workExperience": [
+            {
+              "companyName": "Acme",
+              "jobTitle": "Engineer",
+              "startDate": ""
+            }
+          ]
+        }
+        """;
+
+        var result = GeminiResponseMapper.MapToResult(json, null, null, NullLogger.Instance);
+
+        result.WorkExperience.Should().ContainSingle();
+        result.WorkExperience[0].CompanyName.Should().Be("Acme");
+        result.WorkExperience[0].IsCurrent.Should().BeFalse();
+    }
 }

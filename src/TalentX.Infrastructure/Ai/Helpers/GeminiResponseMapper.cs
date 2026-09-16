@@ -44,12 +44,18 @@ public static class GeminiResponseMapper
                 SoftSkills = result.SoftSkills ?? [],
                 ToolsAndPlatforms = result.ToolsAndPlatforms ?? [],
                 WorkExperience = (result.WorkExperience ?? [])
-                    .Select(w => new WorkExperienceDto
+                    .Select(w =>
                     {
-                        CompanyName = w.CompanyName,
-                        JobTitle = w.JobTitle,
-                        StartDate = w.StartDate,
-                        EndDate = w.EndDate
+                        var isCurrent = WorkExperienceNormalizer.IsCurrent(w.IsCurrent, w.EndDate);
+
+                        return new WorkExperienceDto
+                        {
+                            CompanyName = w.CompanyName,
+                            JobTitle = w.JobTitle,
+                            StartDate = w.StartDate,
+                            EndDate = WorkExperienceNormalizer.NormalizeEndDate(w.EndDate, isCurrent),
+                            IsCurrent = isCurrent
+                        };
                     }).ToList(),
                 Education = (result.Education ?? [])
                     .Select(e =>
