@@ -109,6 +109,7 @@ public sealed class GeminiExtractionService : IResumeExtractionService
             jsonText,
             deterministicEmail,
             deterministicPhone,
-            _logger);
+            _logger,
+            plainText);
     }
 }

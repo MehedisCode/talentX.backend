@@ -77,10 +77,13 @@ public static class GeminiPromptBuilder
         "IMPORTANT RULES FOR CONTACT & HYPERLINKS:\n" +
         "- Do NOT guess or invent email addresses or phone numbers if none are found.\n" +
         "- The 'ACTUAL DOCUMENT HYPERLINKS' section contains authoritative URLs extracted directly from the document's link annotations and structure.\n" +
-        "- Use these extracted URLs when populating 'linkedInUrl' and 'portfolioUrls'.\n" +
         "- Preserve the URLs EXACTLY as provided (do not alter, truncate, or rewrite them).\n" +
         "- NEVER invent, reconstruct, guess, or fabricate any URL.\n" +
         "- NEVER replace an extracted URL with a guessed URL.\n" +
+        "- linkedInUrl: ONLY the candidate's LinkedIn profile URL (e.g. linkedin.com/in/username). Leave it empty if the resume has no LinkedIn URL.\n" +
+        "- portfolioUrls: ONLY the candidate's OWN portfolio, personal website, personal blog, or design portfolio (e.g. Behance, Dribbble, a *.github.io site, a personal domain, or a GitHub/GitLab profile).\n" +
+        "- Do NOT add any of the following to portfolioUrls: LinkedIn, social media (Facebook, X/Twitter, Instagram, TikTok, YouTube), job boards or freelance marketplaces, company or university websites, link shorteners, or email/messaging links.\n" +
+        "- Do NOT treat every URL as a portfolio. When you are unsure whether a URL is the candidate's personal portfolio, OMIT it — an empty list is better than an unrelated link.\n" +
         "- Your job is strictly to extract semantic information and classify the extracted URLs into the appropriate fields.";
 
     private static object BuildGenerationConfig() => new

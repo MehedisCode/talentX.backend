@@ -14,7 +14,8 @@ public static class GeminiResponseMapper
         string jsonText,
         string? deterministicEmail,
         string? deterministicPhone,
-        ILogger logger)
+        ILogger logger,
+        string? resumeText = null)
     {
         try
         {
@@ -38,7 +39,7 @@ public static class GeminiResponseMapper
                 Phone = finalPhone,
                 Location = result.Location,
                 LinkedInUrl = result.LinkedInUrl,
-                PortfolioUrls = result.PortfolioUrls ?? [],
+                PortfolioUrls = PortfolioUrlClassifier.Filter(result.PortfolioUrls, resumeText),
                 TechnicalSkills = result.TechnicalSkills ?? [],
                 SoftSkills = result.SoftSkills ?? [],
                 ToolsAndPlatforms = result.ToolsAndPlatforms ?? [],
