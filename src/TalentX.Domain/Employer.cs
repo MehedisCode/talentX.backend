@@ -37,11 +37,11 @@ public sealed class Employer : User
 
     public new void MarkAsVerified()
     {
+        base.MarkAsVerified();
         VerificationStatus = EmployerVerificationStatus.Verified;
         VerifiedAt = DateTime.UtcNow;
         RejectionReason = null;
         RejectedAt = null;
-        UpdatedAt = DateTime.UtcNow;
     }
 
     public void MarkAsRejected(string reason)
