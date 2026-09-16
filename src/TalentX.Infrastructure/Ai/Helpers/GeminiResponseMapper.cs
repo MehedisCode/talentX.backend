@@ -14,7 +14,8 @@ public static class GeminiResponseMapper
         string jsonText,
         string? deterministicEmail,
         string? deterministicPhone,
-        ILogger logger)
+        ILogger logger,
+        string? resumeText = null)
     {
         try
         {
@@ -31,6 +32,37 @@ public static class GeminiResponseMapper
                 ? deterministicPhone
                 : result.Phone;
 
+            var workExperience = (result.WorkExperience ?? [])
+                .Select(w =>
+                {
+                    var isCurrent = WorkExperienceNormalizer.IsCurrent(w.IsCurrent, w.EndDate);
+
+                    return new WorkExperienceDto
+                    {
+                        CompanyName = w.CompanyName,
+                        JobTitle = w.JobTitle,
+                        StartDate = w.StartDate,
+                        EndDate = WorkExperienceNormalizer.NormalizeEndDate(w.EndDate, isCurrent),
+                        IsCurrent = isCurrent
+                    };
+                })
+                .ToList();
+
+            var education = (result.Education ?? [])
+                .Select(e =>
+                {
+                    var (startDate, endDate) = EducationDateNormalizer.Normalize(e.StartDate, e.EndDate);
+
+                    return new EducationDto
+                    {
+                        Institution = e.Institution,
+                        Degree = e.Degree,
+                        StartDate = startDate,
+                        EndDate = endDate
+                    };
+                })
+                .ToList();
+
             return new ResumeExtractionResult
             {
                 FullName = result.FullName,
@@ -38,26 +70,19 @@ public static class GeminiResponseMapper
                 Phone = finalPhone,
                 Location = result.Location,
                 LinkedInUrl = result.LinkedInUrl,
-                PortfolioUrls = result.PortfolioUrls ?? [],
+                PortfolioUrls = PortfolioUrlClassifier.Filter(
+                    result.PortfolioUrls,
+                    resumeText,
+                    new PortfolioIdentity(result.FullName, finalEmail, result.LinkedInUrl)),
                 TechnicalSkills = result.TechnicalSkills ?? [],
                 SoftSkills = result.SoftSkills ?? [],
                 ToolsAndPlatforms = result.ToolsAndPlatforms ?? [],
-                WorkExperience = (result.WorkExperience ?? [])
-                    .Select(w => new WorkExperienceDto
-                    {
-                        CompanyName = w.CompanyName,
-                        JobTitle = w.JobTitle,
-                        StartDate = w.StartDate,
-                        EndDate = w.EndDate
-                    }).ToList(),
-                Education = (result.Education ?? [])
-                    .Select(e => new EducationDto
-                    {
-                        Institution = e.Institution,
-                        Degree = e.Degree,
-                        StartDate = e.StartDate,
-                        EndDate = e.EndDate
-                    }).ToList()
+                WorkExperience = ResumeChronology.SortNewestFirst(
+                    workExperience,
+                    w => w.IsCurrent ? ResumeChronology.CurrentKey : ResumeChronology.ToSortKey(w.StartDate)),
+                Education = ResumeChronology.SortNewestFirst(
+                    education,
+                    e => ResumeChronology.ToSortKey(e.EndDate) ?? ResumeChronology.ToSortKey(e.StartDate))
             };
         }
         catch (JsonException ex)

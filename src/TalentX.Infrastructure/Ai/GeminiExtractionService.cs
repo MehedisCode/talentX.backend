@@ -17,6 +17,7 @@ public sealed class GeminiExtractionService : IResumeExtractionService
     private readonly ILogger<GeminiExtractionService> _logger;
     private readonly string _apiKey;
     private readonly string _modelName;
+    private readonly int _maxOutputTokens;
 
     private static readonly JsonSerializerOptions CaseInsensitive =
         new() { PropertyNameCaseInsensitive = true };
@@ -44,6 +45,11 @@ public sealed class GeminiExtractionService : IResumeExtractionService
             ?? configuration["GEMINI_MODEL_NAME"]
             ?? configuration["Gemini:ModelName"]
             ?? "gemini-3.7-flash";
+
+        var maxTokensValue = Environment.GetEnvironmentVariable("GEMINI_MAX_OUTPUT_TOKENS");
+        _maxOutputTokens = int.TryParse(maxTokensValue, out var maxTokens) && maxTokens > 0
+            ? maxTokens
+            : 8192;
     }
 
     public async Task<ResumeExtractionResult> ExtractAsync(
@@ -78,7 +84,8 @@ public sealed class GeminiExtractionService : IResumeExtractionService
             plainText,
             combinedLinks,
             deterministicEmail,
-            deterministicPhone);
+            deterministicPhone,
+            _maxOutputTokens);
 
         var response = await _httpClient.PostAsJsonAsync(
             $"/v1beta/models/{_modelName}:generateContent?key={_apiKey}",
@@ -109,6 +116,7 @@ public sealed class GeminiExtractionService : IResumeExtractionService
             jsonText,
             deterministicEmail,
             deterministicPhone,
-            _logger);
+            _logger,
+            plainText);
     }
 }
