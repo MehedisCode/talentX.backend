@@ -4,6 +4,8 @@ using TalentX.Application.Common.Interfaces.Repositories;
 using TalentX.Application.Common.Models;
 using TalentX.Application.Features.Employers.Constants;
 using TalentX.Application.Features.Employers.DTOs;
+using TalentX.Application.Features.Jobs.DTOs;
+using TalentX.Application.Features.Jobs.Moderation;
 using TalentX.Domain.Entities;
 using TalentX.Domain.Enums;
 using TalentX.Infrastructure.Persistence.Contexts;
@@ -258,6 +260,87 @@ public sealed class JobRepository : RepositoryBase<Job>, IJobRepository
             job.SalaryPeriod)).ToList();
 
         return new PaginatedList<EmployerJobListItemDto>(items, page, pageSize, totalCount);
+    }
+
+    public async Task<PaginatedList<AdminJobListItemDto>> GetAdminJobsPagedAsync(
+        AdminJobQueryParams queryParams,
+        CancellationToken cancellationToken = default)
+    {
+        var currentDate = DateTime.UtcNow.Date;
+        var moderationStatuses = ModerationStatuses.All;
+
+        // Left join to users: employer name and email are what "search by employer" matches
+        // on, and a job must still be listed even if its user record is missing.
+        // Soft-deleted jobs are already excluded by Job's global query filter.
+        var query =
+            from job in Context.Jobs.AsNoTracking()
+            join user in Context.DomainUsers.AsNoTracking() on job.EmployerId equals user.UserId into employerMatches
+            from employer in employerMatches.DefaultIfEmpty()
+            where moderationStatuses.Contains(job.Status)
+            select new { Job = job, Employer = employer };
+
+        if (queryParams.Status.HasValue)
+        {
+            query = query.Where(row => row.Job.Status == queryParams.Status.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(queryParams.SearchQuery))
+        {
+            var normalizedSearchQuery = queryParams.SearchQuery.Trim().ToLower();
+            query = query.Where(row =>
+                row.Job.Title.ToLower().Contains(normalizedSearchQuery) ||
+                row.Job.CompanyName.ToLower().Contains(normalizedSearchQuery) ||
+                row.Job.Location.ToLower().Contains(normalizedSearchQuery) ||
+                (row.Employer != null && row.Employer.Name.ToLower().Contains(normalizedSearchQuery)) ||
+                (row.Employer != null && row.Employer.Email.ToLower().Contains(normalizedSearchQuery)));
+        }
+
+        var totalCount = await query.CountAsync(cancellationToken);
+
+        var pagedRows = await query
+            // Jobs waiting on the admin are the work queue, so they come first.
+            .OrderBy(row => row.Job.Status == JobStatus.PendingReview ? 0 : 1)
+            .ThenByDescending(row => row.Job.UpdatedAt ?? row.Job.CreatedAt)
+            .ThenByDescending(row => row.Job.Id)
+            .Skip((queryParams.Page - 1) * queryParams.PageSize)
+            .Take(queryParams.PageSize)
+            .Select(row => new
+            {
+                row.Job.Id,
+                row.Job.Title,
+                row.Job.CompanyName,
+                EmployerName = row.Employer != null ? row.Employer.Name : string.Empty,
+                EmployerEmail = row.Employer != null ? row.Employer.Email : string.Empty,
+                row.Job.Status,
+                row.Job.Location,
+                row.Job.EmploymentType,
+                row.Job.WorkArrangement,
+                row.Job.PublishedAt,
+                row.Job.ExpireAt,
+                row.Job.DeactivatedAt,
+                ApplicantCount = Context.JobApplications.Count(application => application.JobId == row.Job.Id)
+            })
+            .ToListAsync(cancellationToken);
+
+        var items = pagedRows.Select(row => new AdminJobListItemDto
+        {
+            Id = row.Id,
+            Title = row.Title,
+            CompanyName = row.CompanyName,
+            EmployerName = row.EmployerName,
+            EmployerEmail = row.EmployerEmail,
+            Status = row.Status,
+            IsExpired = row.Status == JobStatus.Published && row.ExpireAt.Date < currentDate,
+            Location = row.Location,
+            EmploymentType = row.EmploymentType,
+            WorkArrangement = row.WorkArrangement,
+            ApplicantCount = row.ApplicantCount,
+            PublishedAt = row.PublishedAt,
+            ExpireAt = row.ExpireAt,
+            DeactivatedAt = row.DeactivatedAt
+        }).ToList();
+
+        return new PaginatedList<AdminJobListItemDto>(items, queryParams.Page, queryParams.PageSize, totalCount);
     }
 
     public async Task<Job?> GetByIdIncludingDeletedAsync(Guid id, CancellationToken cancellationToken = default) =>
