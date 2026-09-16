@@ -76,6 +76,7 @@ public sealed class JobAlertMatchingService : IJobAlertMatchingService
         var frontendUrl = Environment.GetEnvironmentVariable("FRONTEND_URL")?.TrimEnd('/')
             ?? JobAlertConstants.DefaultFrontendBaseUrl;
         var jobUrl = $"{frontendUrl}/jobs/{job.Id}";
+        var pendingNotifications = new List<(string TalentId, string Title, string Body, string MetadataJson)>();
 
         foreach (var candidateGroup in alertsByTalent)
         {
@@ -149,14 +150,29 @@ public sealed class JobAlertMatchingService : IJobAlertMatchingService
                 },
                 NotificationMetadataSerializerOptions);
 
+            pendingNotifications.Add((
+                talentId,
+                $"New job matches your alert: {job.Title}",
+                $"{job.Title} at {job.CompanyName} ({job.Location}) matches your alert \"{matchedAlert.Name}\".",
+                metadataJson));
+        }
+
+        if (emailsQueuedCount > 0)
+        {
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            _logger.LogInformation("Successfully queued {Count} job alert email(s) for job {JobId}", emailsQueuedCount, job.Id);
+        }
+
+        foreach (var pendingNotification in pendingNotifications)
+        {
             try
             {
                 await _notificationService.PublishAsync(
-                    talentId,
+                    pendingNotification.TalentId,
                     NotificationType.JobAlertMatch,
-                    $"New job matches your alert: {job.Title}",
-                    $"{job.Title} at {job.CompanyName} ({job.Location}) matches your alert \"{matchedAlert.Name}\".",
-                    metadataJson,
+                    pendingNotification.Title,
+                    pendingNotification.Body,
+                    pendingNotification.MetadataJson,
                     cancellationToken);
             }
             catch (Exception exception)
@@ -164,15 +180,9 @@ public sealed class JobAlertMatchingService : IJobAlertMatchingService
                 _logger.LogError(
                     exception,
                     "Failed to publish job alert notification for talent {TalentId} and job {JobId}",
-                    talentId,
+                    pendingNotification.TalentId,
                     job.Id);
             }
-        }
-
-        if (emailsQueuedCount > 0)
-        {
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
-            _logger.LogInformation("Successfully queued {Count} job alert email(s) for job {JobId}", emailsQueuedCount, job.Id);
         }
     }
 }
