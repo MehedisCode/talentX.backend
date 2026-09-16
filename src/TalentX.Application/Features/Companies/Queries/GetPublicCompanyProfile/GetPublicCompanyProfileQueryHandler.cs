@@ -23,8 +23,13 @@ public sealed class GetPublicCompanyProfileQueryHandler : IRequestHandler<GetPub
 
     public async Task<PublicCompanyProfileDto> Handle(GetPublicCompanyProfileQuery request, CancellationToken cancellationToken)
     {
-        var company = await _unitOfWork.Companies.GetByIdAsync(request.Id, cancellationToken)
-            ?? throw new NotFoundException($"Company with ID '{request.Id}' was not found.");
+        var company = await _unitOfWork.Companies.GetByIdAsync(request.Id, cancellationToken);
+
+        if(company is null)
+        {
+            company = await _unitOfWork.Companies.GetByEmployerIdAsync(request.Id.ToString(), cancellationToken)
+            ?? throw new NotFoundException($"Company was not found.");
+        }
 
         var activeJobs = await _unitOfWork.Jobs.GetActivePublishedJobsByEmployerIdAsync(company.EmployerId, cancellationToken);
 
