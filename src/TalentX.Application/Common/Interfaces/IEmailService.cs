@@ -119,4 +119,24 @@ public interface IEmailService
         RenderJobAlertEmailParameters parameters,
         CancellationToken cancellationToken = default
     );
+
+    /// <summary>
+    /// Renders the HTML body telling an employer that an admin deactivated their job, including
+    /// the reason, the admin's explanation, and a link to edit the job so it can be resubmitted.
+    /// </summary>
+    Task<string> RenderJobDeactivatedEmailAsync(
+        RenderJobDeactivatedEmailParameters parameters,
+        CancellationToken cancellationToken = default
+    );
+
+    /// <summary>
+    /// Renders the HTML body telling an employer that their job is published again after an
+    /// admin reactivated it.
+    /// </summary>
+    Task<string> RenderJobReactivatedEmailAsync(
+        string recipientName,
+        string jobTitle,
+        string jobUrl,
+        CancellationToken cancellationToken = default
+    );
 }

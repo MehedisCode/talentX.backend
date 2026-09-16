@@ -17,6 +17,8 @@ public static class EmailConstants
         public const string PasswordReset = "TalentX.Infrastructure.Mailing.Templates.Emails.PasswordReset";
         public const string AccountStatusChanged = "TalentX.Infrastructure.Mailing.Templates.Emails.AccountStatusChanged";
         public const string JobAlert = "TalentX.Infrastructure.Mailing.Templates.Emails.JobAlert";
+        public const string JobDeactivated = "TalentX.Infrastructure.Mailing.Templates.Emails.JobDeactivated";
+        public const string JobReactivated = "TalentX.Infrastructure.Mailing.Templates.Emails.JobReactivated";
     }
 
     public static class Subjects
@@ -26,6 +28,8 @@ public static class EmailConstants
         public const string VerificationLink = "Verify Your Email — TalentX";
         public const string PasswordReset = "Reset Your TalentX Password";
         public const string JobAlert = "New Matching Job: {0} at {1} — TalentX";
+        public const string JobDeactivated = "Your job \"{0}\" has been deactivated — TalentX";
+        public const string JobReactivated = "Your job \"{0}\" is live again — TalentX";
     }
 
     public static class Defaults
@@ -43,5 +47,7 @@ public static class EmailConstants
         public const string PasswordReset = "PASSWORD_RESET";
         public const string AccountStatusChanged = "ACCOUNT_STATUS_CHANGED";
         public const string JobAlert = "JobAlert";
+        public const string JobDeactivated = "JOB_DEACTIVATED";
+        public const string JobReactivated = "JOB_REACTIVATED";
     }
 }
