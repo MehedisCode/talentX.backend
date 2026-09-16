@@ -1,4 +1,12 @@
+using System.Text.RegularExpressions;
+
 namespace TalentX.Infrastructure.Ai.Helpers;
+
+/// <summary>
+/// Identity of the candidate, used to recognize a personal domain
+/// (e.g. "aparnakhatri.com" for "Aparna Khatri") as their portfolio.
+/// </summary>
+public sealed record PortfolioIdentity(string? FullName, string? Email, string? LinkedInUrl);
 
 /// <summary>
 /// Deterministic post-filter for candidate portfolio links.
@@ -58,10 +66,26 @@ public static class PortfolioUrlClassifier
         "home page",
     ];
 
-    public static bool IsPortfolioUrl(string? url, string? context = null)
+    // Public suffixes made of two labels (so the registrable label is the third from the end).
+    private static readonly string[] TwoPartSuffixes =
+    [
+        "co.uk", "org.uk", "ac.uk", "gov.uk", "com.au", "net.au", "org.au", "co.nz",
+        "co.jp", "com.br", "com.bd", "com.pk", "co.in", "co.za", "com.mx", "com.ar",
+        "com.sg", "com.my", "com.ph", "co.id", "com.tr",
+    ];
+
+    private static readonly Regex ExplicitSchemeRegex =
+        new(@"^[a-z][a-z0-9+.\-]*:", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+    private static readonly Regex LinkedInVanityRegex =
+        new(@"linkedin\.com/in/([^/?#]+)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+    public static bool IsPortfolioUrl(string? url, string? context = null, PortfolioIdentity? identity = null)
     {
         if (string.IsNullOrWhiteSpace(url)) return false;
-        if (!Uri.TryCreate(url.Trim(), UriKind.Absolute, out var uri)) return false;
+
+        var normalized = NormalizeUrl(url);
+        if (!Uri.TryCreate(normalized, UriKind.Absolute, out var uri)) return false;
         if (!IsHttpScheme(uri)) return false;
 
         var host = uri.Host.ToLowerInvariant();
@@ -101,14 +125,18 @@ public static class PortfolioUrlClassifier
             return true;
         }
 
-        return false;
+        return MatchesIdentity(host, identity);
     }
 
     /// <summary>
     /// Filters a set of URLs down to those that look like genuine portfolio
-    /// links, preserving order and removing duplicates/blank entries.
+    /// links, preserving order and removing duplicates/blank entries. Returned
+    /// URLs are normalized to include an http(s) scheme.
     /// </summary>
-    public static List<string> Filter(IEnumerable<string>? urls, string? resumeText = null)
+    public static List<string> Filter(
+        IEnumerable<string>? urls,
+        string? resumeText = null,
+        PortfolioIdentity? identity = null)
     {
         var result = new List<string>();
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -119,16 +147,96 @@ public static class PortfolioUrlClassifier
         {
             if (string.IsNullOrWhiteSpace(url)) continue;
 
-            var trimmed = url.Trim();
-            if (!seen.Add(trimmed)) continue;
+            var normalized = NormalizeUrl(url);
+            if (!seen.Add(normalized)) continue;
 
-            if (IsPortfolioUrl(trimmed, ExtractContext(resumeText, trimmed)))
+            if (IsPortfolioUrl(normalized, ExtractContext(resumeText, normalized), identity))
             {
-                result.Add(trimmed);
+                result.Add(normalized);
             }
         }
 
         return result;
+    }
+
+    private static string NormalizeUrl(string url)
+    {
+        var trimmed = url.Trim();
+
+        if (ExplicitSchemeRegex.IsMatch(trimmed))
+        {
+            return trimmed;
+        }
+
+        return $"https://{trimmed}";
+    }
+
+    private static bool MatchesIdentity(string host, PortfolioIdentity? identity)
+    {
+        if (identity is null) return false;
+
+        var label = RegistrableLabel(host);
+        if (label.Length < 4) return false;
+
+        foreach (var token in BuildIdentityTokens(identity))
+        {
+            if (token.Length < 4) continue;
+
+            if (label.Equals(token, StringComparison.Ordinal) ||
+                label.Contains(token, StringComparison.Ordinal) ||
+                token.Contains(label, StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static IEnumerable<string> BuildIdentityTokens(PortfolioIdentity identity)
+    {
+        yield return NormalizeToken(identity.FullName);
+        yield return NormalizeToken(EmailLocalPart(identity.Email));
+        yield return NormalizeToken(LinkedInVanity(identity.LinkedInUrl));
+    }
+
+    private static string NormalizeToken(string? value) =>
+        string.IsNullOrWhiteSpace(value)
+            ? string.Empty
+            : new string(value.ToLowerInvariant().Where(char.IsLetterOrDigit).ToArray());
+
+    private static string? EmailLocalPart(string? email)
+    {
+        if (string.IsNullOrWhiteSpace(email)) return null;
+
+        var atIndex = email.IndexOf('@');
+        return atIndex > 0 ? email[..atIndex] : null;
+    }
+
+    private static string? LinkedInVanity(string? linkedInUrl)
+    {
+        if (string.IsNullOrWhiteSpace(linkedInUrl)) return null;
+
+        var match = LinkedInVanityRegex.Match(linkedInUrl);
+        return match.Success ? match.Groups[1].Value : null;
+    }
+
+    private static string RegistrableLabel(string host)
+    {
+        var labels = host.Split('.', StringSplitOptions.RemoveEmptyEntries);
+        if (labels.Length < 2) return NormalizeToken(host);
+
+        var suffixStart = labels.Length - 1;
+        if (labels.Length >= 3)
+        {
+            var twoPart = $"{labels[^2]}.{labels[^1]}";
+            if (TwoPartSuffixes.Contains(twoPart, StringComparer.OrdinalIgnoreCase))
+            {
+                suffixStart = labels.Length - 2;
+            }
+        }
+
+        return NormalizeToken(labels[suffixStart - 1]);
     }
 
     private static bool IsHttpScheme(Uri uri) =>

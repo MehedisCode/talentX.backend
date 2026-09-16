@@ -88,4 +88,44 @@ public class PortfolioUrlClassifierTests
         PortfolioUrlClassifier.Filter(null).Should().BeEmpty();
         PortfolioUrlClassifier.Filter([]).Should().BeEmpty();
     }
+
+    [Theory]
+    [InlineData("behance.net/aparna")]
+    [InlineData("github.com/aparna")]
+    [InlineData("alice.github.io/portfolio")]
+    [InlineData("janedoe.dev", "Portfolio: janedoe.dev")]
+    public void IsPortfolioUrl_AcceptsSchemeLessPortfolioUrls(string url, string? context = null)
+    {
+        PortfolioUrlClassifier.IsPortfolioUrl(url, context).Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData("aparnakhatri.com")]
+    [InlineData("www.aparnakhatri.dev")]
+    [InlineData("aparna-khatri.com")]
+    [InlineData("aparnakhatri.com/portfolio")]
+    public void IsPortfolioUrl_AcceptsCandidatePersonalDomain_ByIdentityMatch(string url)
+    {
+        PortfolioUrlClassifier.IsPortfolioUrl(url, null, CandidateIdentity).Should().BeTrue();
+    }
+
+    [Fact]
+    public void IsPortfolioUrl_RejectsUnrelatedDomain_EvenWithIdentity()
+    {
+        PortfolioUrlClassifier.IsPortfolioUrl("acme.com", null, CandidateIdentity).Should().BeFalse();
+        PortfolioUrlClassifier.IsPortfolioUrl("stanford.edu", null, CandidateIdentity).Should().BeFalse();
+    }
+
+    [Fact]
+    public void Filter_NormalizesSchemeLessUrls_AndUsesIdentity()
+    {
+        var urls = new[] { "aparnakhatri.com", "linkedin.com/in/aparnakhatri", "somecompany.com" };
+
+        var result = PortfolioUrlClassifier.Filter(urls, "Aparna Khatri\naparnakhatri.com", CandidateIdentity);
+
+        result.Should().Equal("https://aparnakhatri.com");
+    }
+
+    private static PortfolioIdentity CandidateIdentity =>
+        new("Aparna Khatri", "aparna@example.com", "https://www.linkedin.com/in/aparnakhatri");
 }

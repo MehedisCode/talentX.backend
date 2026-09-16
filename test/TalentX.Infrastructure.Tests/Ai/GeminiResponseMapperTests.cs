@@ -282,4 +282,24 @@ public class GeminiResponseMapperTests
 
         result.Education.Select(e => e.Institution).Should().Equal("New University", "Old University");
     }
+
+    [Fact]
+    public void MapToResult_DetectsPersonalDomainPortfolio_ByIdentity()
+    {
+        var json = """
+        {
+          "fullName": "Aparna Khatri",
+          "portfolioUrls": ["aparnakhatri.com"]
+        }
+        """;
+
+        var result = GeminiResponseMapper.MapToResult(
+            json,
+            "aparna@example.com",
+            null,
+            NullLogger.Instance,
+            "Aparna Khatri\naparnakhatri.com");
+
+        result.PortfolioUrls.Should().Equal("https://aparnakhatri.com");
+    }
 }

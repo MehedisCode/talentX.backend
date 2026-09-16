@@ -70,7 +70,10 @@ public static class GeminiResponseMapper
                 Phone = finalPhone,
                 Location = result.Location,
                 LinkedInUrl = result.LinkedInUrl,
-                PortfolioUrls = PortfolioUrlClassifier.Filter(result.PortfolioUrls, resumeText),
+                PortfolioUrls = PortfolioUrlClassifier.Filter(
+                    result.PortfolioUrls,
+                    resumeText,
+                    new PortfolioIdentity(result.FullName, finalEmail, result.LinkedInUrl)),
                 TechnicalSkills = result.TechnicalSkills ?? [],
                 SoftSkills = result.SoftSkills ?? [],
                 ToolsAndPlatforms = result.ToolsAndPlatforms ?? [],

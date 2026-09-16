@@ -78,7 +78,8 @@ public static class GeminiPromptBuilder
         "IMPORTANT RULES FOR CONTACT & HYPERLINKS:\n" +
         "- Do NOT guess or invent email addresses or phone numbers if none are found.\n" +
         "- The 'ACTUAL DOCUMENT HYPERLINKS' section contains authoritative URLs extracted directly from the document's link annotations and structure.\n" +
-        "- Preserve the URLs EXACTLY as provided (do not alter, truncate, or rewrite them).\n" +
+        "- Preserve the URLs EXACTLY as provided (do not alter, truncate, or rewrite them) — the only exception is adding an 'https://' prefix when a URL is written without a scheme.\n" +
+        "- Candidate URLs may appear either in the 'ACTUAL DOCUMENT HYPERLINKS' list or as plain text in the resume (e.g. a personal portfolio domain such as 'aparnakhatri.com'). If a link is written without a scheme, output it with an 'https://' prefix; do not invent or change the host name.\n" +
         "- NEVER invent, reconstruct, guess, or fabricate any URL.\n" +
         "- NEVER replace an extracted URL with a guessed URL.\n" +
         "- linkedInUrl: ONLY the candidate's LinkedIn profile URL (e.g. linkedin.com/in/username). Leave it empty if the resume has no LinkedIn URL.\n" +
