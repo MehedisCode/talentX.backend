@@ -1,3 +1,5 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Common.Models;
@@ -11,17 +13,26 @@ namespace TalentX.Infrastructure.Services;
 
 public sealed class JobAlertMatchingService : IJobAlertMatchingService
 {
+    private static readonly JsonSerializerOptions NotificationMetadataSerializerOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        Converters = { new JsonStringEnumConverter() }
+    };
+
     private readonly IUnitOfWork _unitOfWork;
     private readonly IEmailService _emailService;
+    private readonly INotificationService _notificationService;
     private readonly ILogger<JobAlertMatchingService> _logger;
 
     public JobAlertMatchingService(
         IUnitOfWork unitOfWork,
         IEmailService emailService,
+        INotificationService notificationService,
         ILogger<JobAlertMatchingService> logger)
     {
         _unitOfWork = unitOfWork;
         _emailService = emailService;
+        _notificationService = notificationService;
         _logger = logger;
     }
 
@@ -125,6 +136,37 @@ public sealed class JobAlertMatchingService : IJobAlertMatchingService
 
             await _unitOfWork.EmailDispatchLogs.AddAsync(emailDispatchLog, cancellationToken);
             emailsQueuedCount++;
+
+            var metadataJson = JsonSerializer.Serialize(
+                new
+                {
+                    jobId = job.Id,
+                    keyword = matchedAlert.Title,
+                    location = matchedAlert.Location,
+                    employmentType = matchedAlert.EmploymentType,
+                    experienceLevel = matchedAlert.ExperienceLevel,
+                    workArrangement = matchedAlert.WorkArrangement
+                },
+                NotificationMetadataSerializerOptions);
+
+            try
+            {
+                await _notificationService.PublishAsync(
+                    talentId,
+                    NotificationType.JobAlertMatch,
+                    $"New job matches your alert: {job.Title}",
+                    $"{job.Title} at {job.CompanyName} ({job.Location}) matches your alert \"{matchedAlert.Name}\".",
+                    metadataJson,
+                    cancellationToken);
+            }
+            catch (Exception exception)
+            {
+                _logger.LogError(
+                    exception,
+                    "Failed to publish job alert notification for talent {TalentId} and job {JobId}",
+                    talentId,
+                    job.Id);
+            }
         }
 
         if (emailsQueuedCount > 0)
