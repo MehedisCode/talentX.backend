@@ -20,11 +20,13 @@ public sealed class CreateEmployerCommandHandlerTests
     private readonly Mock<IOtpService> _otpServiceMock = new();
     private readonly Mock<IUnitOfWork> _unitOfWorkMock = new();
     private readonly Mock<IEmployerRepository> _employerRepositoryMock = new();
+    private readonly Mock<ICompanyRepository> _companyRepositoryMock = new();
     private readonly Mock<IMapper> _mapperMock = new();
 
     public CreateEmployerCommandHandlerTests()
     {
         _unitOfWorkMock.Setup(u => u.Employers).Returns(_employerRepositoryMock.Object);
+        _unitOfWorkMock.Setup(u => u.Companies).Returns(_companyRepositoryMock.Object);
 
         _mapperMock
             .Setup(m => m.Map<EmployerDto>(It.IsAny<Employer>()))

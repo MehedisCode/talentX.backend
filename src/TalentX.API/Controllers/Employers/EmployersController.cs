@@ -13,8 +13,12 @@ using TalentX.Application.Features.Employers.Constants;
 using TalentX.Application.Features.Employers.DTOs;
 using TalentX.Application.Features.Employers.Queries.GetEmployerDashboard;
 using TalentX.Application.Features.Employers.Queries.GetEmployerJobs;
+using TalentX.Application.Features.Companies.Commands.UpdateCompanyProfile;
+using TalentX.Application.Features.Companies.Commands.UploadCompanyLogo;
+using TalentX.Application.Features.Companies.Queries.GetMyCompanyProfile;
 using TalentX.Application.Identity.Services;
 using TalentX.Domain.Enums;
+using TalentX.Infrastructure.FileStorage;
 
 namespace TalentX.API.Controllers.Employers;
 
@@ -140,5 +144,45 @@ public sealed class EmployersController : BaseApiController
             parameters.SearchTerm);
         var jobs = await Sender.Send(query, cancellationToken);
         return Ok(jobs);
+    }
+
+    /// <summary>
+    /// Gets the company profile of the authenticated employer.
+    /// </summary>
+    [HttpGet("company")]
+    [Authorize(Roles = $"{nameof(UserRole.Employer)}")]
+    public async Task<IActionResult> GetCompanyProfile(CancellationToken cancellationToken)
+    {
+        var profile = await Sender.Send(new GetMyCompanyProfileQuery(), cancellationToken);
+        return Ok(profile);
+    }
+
+    /// <summary>
+    /// Updates the company profile of the authenticated employer.
+    /// </summary>
+    [HttpPut("company")]
+    [Authorize(Roles = $"{nameof(UserRole.Employer)}")]
+    public async Task<IActionResult> UpdateCompanyProfile(
+        [FromBody] UpdateCompanyProfileCommand command,
+        CancellationToken cancellationToken)
+    {
+        var result = await Sender.Send(command, cancellationToken);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Uploads or updates the company logo for the authenticated employer.
+    /// </summary>
+    [HttpPost("company/logo")]
+    [Authorize(Roles = $"{nameof(UserRole.Employer)}")]
+    [Consumes("multipart/form-data")]
+    [RequestSizeLimit(5 * 1024 * 1024)]
+    public async Task<IActionResult> UploadCompanyLogo(
+        IFormFile file,
+        CancellationToken cancellationToken)
+    {
+        var command = new UploadCompanyLogoCommand(new FormFileUploadedFile(file));
+        var result = await Sender.Send(command, cancellationToken);
+        return Ok(result);
     }
 }
