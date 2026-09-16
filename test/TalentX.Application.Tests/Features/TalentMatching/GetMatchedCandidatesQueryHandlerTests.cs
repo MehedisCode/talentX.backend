@@ -61,8 +61,7 @@ public class GetMatchedCandidatesQueryHandlerTests
         _talentRepo.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Talent> { talent1, talent2 });
 
-        var jobExpireAt = DateTime.UtcNow.AddDays(30);
-        var activeInvitation = new Invitation(job.Id, "talent-1", jobExpireAt);
+        var activeInvitation = new Invitation(job.Id, "talent-1");
         _invitationRepo.Setup(r => r.GetByJobIdAsync(job.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Invitation> { activeInvitation });
 
