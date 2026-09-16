@@ -1,6 +1,7 @@
 using MediatR;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
+using TalentX.Domain.Entities;
 using TalentX.Domain.Enums;
 
 namespace TalentX.Application.Features.AdminEmployerVerification.Commands.RejectEmployer;
@@ -25,12 +26,17 @@ public sealed class RejectEmployerCommandHandler : IRequestHandler<RejectEmploye
             throw new ValidationException("Only employers with Pending Verification status can be rejected.");
 
         employer.MarkAsRejected(request.Reason);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        _ = Task.Run(() => _emailService.SendEmployerRejectedEmailAsync(
-            employer.Email,
+        var subject = "Your TalentX Employer Account Verification Update";
+        var htmlBody = await _emailService.RenderEmployerRejectedEmailAsync(
             employer.Name,
             request.Reason,
-            cancellationToken), CancellationToken.None);
+            cancellationToken);
+
+        await _unitOfWork.EmailDispatchLogs.AddAsync(
+            new EmailDispatchLog(employer.Email, employer.Name, subject, htmlBody, "EmployerRejected"),
+            cancellationToken);
+
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 }

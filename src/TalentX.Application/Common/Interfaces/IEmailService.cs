@@ -101,19 +101,17 @@ public interface IEmailService
     );
 
     /// <summary>
-    /// Sends an email notifying the employer that their account has been approved.
+    /// Renders the HTML body for an employer-approved notification email.
     /// </summary>
-    Task SendEmployerApprovedEmailAsync(
-        string toEmail,
+    Task<string> RenderEmployerApprovedEmailAsync(
         string recipientName,
         CancellationToken cancellationToken = default
     );
 
     /// <summary>
-    /// Sends an email notifying the employer that their account has been rejected, including the reason.
+    /// Renders the HTML body for an employer-rejected notification email, including the reason.
     /// </summary>
-    Task SendEmployerRejectedEmailAsync(
-        string toEmail,
+    Task<string> RenderEmployerRejectedEmailAsync(
         string recipientName,
         string rejectionReason,
         CancellationToken cancellationToken = default

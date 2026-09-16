@@ -1,6 +1,7 @@
 using MediatR;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
+using TalentX.Domain.Entities;
 using TalentX.Domain.Enums;
 
 namespace TalentX.Application.Features.AdminEmployerVerification.Commands.ApproveEmployer;
@@ -25,11 +26,16 @@ public sealed class ApproveEmployerCommandHandler : IRequestHandler<ApproveEmplo
             throw new ValidationException("Only employers with Pending Verification status can be approved.");
 
         employer.MarkAsVerified();
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        _ = Task.Run(() => _emailService.SendEmployerApprovedEmailAsync(
-            employer.Email,
+        var subject = "Your TalentX Employer Account Has Been Approved";
+        var htmlBody = await _emailService.RenderEmployerApprovedEmailAsync(
             employer.Name,
-            cancellationToken), CancellationToken.None);
+            cancellationToken);
+
+        await _unitOfWork.EmailDispatchLogs.AddAsync(
+            new EmailDispatchLog(employer.Email, employer.Name, subject, htmlBody, "EmployerApproved"),
+            cancellationToken);
+
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 }

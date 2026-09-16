@@ -168,37 +168,31 @@ public sealed class EmailService : IEmailService
         DispatchAfterLogging(toEmail, recipientName, EmailConstants.Subjects.PasswordReset, html);
     }
 
-    public async Task SendEmployerApprovedEmailAsync(
-        string toEmail,
+    public Task<string> RenderEmployerApprovedEmailAsync(
         string recipientName,
         CancellationToken cancellationToken = default)
     {
         _logger.LogInformation(
-            "[EMAIL] {Kind} dispatch to {RecipientName} <{ToEmail}>",
-            EmailConstants.Kinds.EmployerApproved, recipientName, toEmail);
+            "[EMAIL] Rendering {Kind} for {RecipientName}",
+            EmailConstants.Kinds.EmployerApproved, recipientName);
 
-        var html = await _razor.CompileRenderAsync(
+        return _razor.CompileRenderAsync(
             EmailConstants.Templates.EmployerApproved,
             new EmployerApprovedEmailModel(recipientName));
-
-        DispatchAfterLogging(toEmail, recipientName, EmailConstants.Subjects.EmployerApproved, html);
     }
 
-    public async Task SendEmployerRejectedEmailAsync(
-        string toEmail,
+    public Task<string> RenderEmployerRejectedEmailAsync(
         string recipientName,
         string rejectionReason,
         CancellationToken cancellationToken = default)
     {
         _logger.LogInformation(
-            "[EMAIL] {Kind} dispatch to {RecipientName} <{ToEmail}>",
-            EmailConstants.Kinds.EmployerRejected, recipientName, toEmail);
+            "[EMAIL] Rendering {Kind} for {RecipientName}",
+            EmailConstants.Kinds.EmployerRejected, recipientName);
 
-        var html = await _razor.CompileRenderAsync(
+        return _razor.CompileRenderAsync(
             EmailConstants.Templates.EmployerRejected,
             new EmployerRejectedEmailModel(recipientName, rejectionReason));
-
-        DispatchAfterLogging(toEmail, recipientName, EmailConstants.Subjects.EmployerRejected, html);
     }
 
     public Task<string> RenderAccountStatusChangedEmailAsync(
@@ -248,19 +242,7 @@ public sealed class EmailService : IEmailService
             return;
         }
 
-        _ = Task.Run(() => DispatchAsync(toEmail, recipientName, subject, htmlBody), CancellationToken.None);
-    }
-
-    private async Task DispatchAsync(string toEmail, string recipientName, string subject, string htmlBody)
-    {
-        try
-        {
-            await SendSmtpAsync(toEmail, recipientName, subject, htmlBody);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "[EMAIL] Failed to dispatch to {ToEmail}.", toEmail);
-        }
+        _ = Task.Run(() => SendSmtpAsync(toEmail, recipientName, subject, htmlBody), CancellationToken.None);
     }
 
     private async Task SendSmtpAsync(string toEmail, string recipientName, string subject, string htmlBody)
