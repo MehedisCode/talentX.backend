@@ -132,3 +132,4 @@ Authenticates an employer via a Google OAuth ID token. If the account does not e
   "createdAt": "2026-08-19T10:00:00Z"
 }
 ```
+

@@ -11,6 +11,7 @@ public interface IUnitOfWork
     IJobApplicationRepository JobApplications { get; }
     IUserRepository Users { get; }
     IEmployerRepository Employers { get; }
+    ICompanyRepository Companies { get; }
     ITalentRepository Talents { get; }
     IResumeRepository Resumes { get; }
     IWorkExperienceRepository WorkExperiences { get; }

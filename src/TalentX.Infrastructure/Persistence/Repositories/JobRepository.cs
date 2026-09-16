@@ -83,6 +83,16 @@ public sealed class JobRepository : RepositoryBase<Job>, IJobRepository
             .OrderByDescending(j => j.CreatedAt)
             .ToListAsync(cancellationToken);
 
+    public async Task<List<Job>> GetActivePublishedJobsByEmployerIdAsync(string employerId, CancellationToken cancellationToken = default) =>
+        await Context.Jobs
+            .AsNoTracking()
+            .Where(j => j.EmployerId == employerId && 
+            j.Status == JobStatus.Published && 
+            j.IsDeleted == false &&
+            j.ExpireAt.Date >= DateTime.UtcNow.Date)
+            .OrderByDescending(j => j.PublishedAt ?? j.CreatedAt)
+            .ToListAsync(cancellationToken);
+
     public async Task<IEnumerable<Job>> GetActivePublishedJobsAsync(CancellationToken cancellationToken = default) =>
         await Context.Jobs
             .Where(j => j.ExpireAt.Date >= DateTime.UtcNow.Date && j.Status == JobStatus.Published)
@@ -217,6 +227,11 @@ public sealed class JobRepository : RepositoryBase<Job>, IJobRepository
                 job.Vacancies,
                 job.ExpireAt,
                 job.CreatedAt,
+                job.SalaryType,
+                job.SalaryMin,
+                job.SalaryMax,
+                job.SalaryCurrency,
+                job.SalaryPeriod,
                 ApplicantCount = Context.JobApplications.Count(application => application.JobId == job.Id)
             })
             .ToListAsync(cancellationToken);
@@ -235,7 +250,12 @@ public sealed class JobRepository : RepositoryBase<Job>, IJobRepository
             job.Vacancies,
             job.ExpireAt,
             job.CreatedAt,
-            job.ApplicantCount)).ToList();
+            job.ApplicantCount,
+            job.SalaryType,
+            job.SalaryMin,
+            job.SalaryMax,
+            job.SalaryCurrency,
+            job.SalaryPeriod)).ToList();
 
         return new PaginatedList<EmployerJobListItemDto>(items, page, pageSize, totalCount);
     }

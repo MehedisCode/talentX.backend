@@ -49,8 +49,20 @@ public sealed class CreateEmployerCommandHandler : IRequestHandler<CreateEmploye
         if (existingEmployer != null)
         {
             existingEmployer.Update(request.Name);
-            existingEmployer.UpdateCompany(request.CompanyName);
+            existingEmployer.UpdateCompany(request.CompanyName.Trim());
             existingEmployer.MarkAsVerified();
+
+            var existingCompany = await _unitOfWork.Companies.GetByEmployerIdAsync(existingEmployer.UserId, cancellationToken);
+            if (existingCompany is null)
+            {
+                var newCompany = new Company(existingEmployer.UserId, request.CompanyName.Trim());
+                await _unitOfWork.Companies.AddAsync(newCompany, cancellationToken);
+            }
+            else
+            {
+                existingCompany.UpdateName(request.CompanyName.Trim());
+            }
+
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             await _otpService.ConsumeEmailVerificationAsync(request.Email, cancellationToken);
@@ -88,6 +100,10 @@ public sealed class CreateEmployerCommandHandler : IRequestHandler<CreateEmploye
 
         employer.MarkAsVerified();
         await _unitOfWork.Employers.AddAsync(employer, cancellationToken);
+
+        var company = new Company(employer.UserId, request.CompanyName.Trim());
+        await _unitOfWork.Companies.AddAsync(company, cancellationToken);
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         await _otpService.ConsumeEmailVerificationAsync(request.Email, cancellationToken);
