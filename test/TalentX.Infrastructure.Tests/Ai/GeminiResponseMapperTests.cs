@@ -227,4 +227,59 @@ public class GeminiResponseMapperTests
         result.WorkExperience[0].CompanyName.Should().Be("Acme");
         result.WorkExperience[0].IsCurrent.Should().BeFalse();
     }
+
+    [Fact]
+    public void MapToResult_OrdersWorkExperience_NewestFirst_WithCurrentFirst()
+    {
+        var json = """
+        {
+          "fullName": "Alice Smith",
+          "workExperience": [
+            { "companyName": "Old Co", "jobTitle": "Developer", "startDate": "2016", "endDate": "2018" },
+            { "companyName": "Present Co", "jobTitle": "Lead", "startDate": "Jan 2021", "endDate": "Present" },
+            { "companyName": "Mid Co", "jobTitle": "Engineer", "startDate": "2019", "endDate": "2020" }
+          ]
+        }
+        """;
+
+        var result = GeminiResponseMapper.MapToResult(json, null, null, NullLogger.Instance);
+
+        result.WorkExperience.Select(w => w.CompanyName).Should().Equal("Present Co", "Mid Co", "Old Co");
+    }
+
+    [Fact]
+    public void MapToResult_PutsUndatedWorkEntryLast()
+    {
+        var json = """
+        {
+          "fullName": "Alice Smith",
+          "workExperience": [
+            { "companyName": "No Dates", "jobTitle": "Intern", "startDate": "" },
+            { "companyName": "Dated", "jobTitle": "Engineer", "startDate": "2020", "endDate": "2021" }
+          ]
+        }
+        """;
+
+        var result = GeminiResponseMapper.MapToResult(json, null, null, NullLogger.Instance);
+
+        result.WorkExperience.Select(w => w.CompanyName).Should().Equal("Dated", "No Dates");
+    }
+
+    [Fact]
+    public void MapToResult_OrdersEducation_NewestGraduationFirst()
+    {
+        var json = """
+        {
+          "fullName": "Alice Smith",
+          "education": [
+            { "institution": "Old University", "degree": "B.Sc" , "startDate": "2012", "endDate": "2016" },
+            { "institution": "New University", "degree": "M.Sc", "startDate": "2019", "endDate": "2021" }
+          ]
+        }
+        """;
+
+        var result = GeminiResponseMapper.MapToResult(json, null, null, NullLogger.Instance);
+
+        result.Education.Select(e => e.Institution).Should().Equal("New University", "Old University");
+    }
 }

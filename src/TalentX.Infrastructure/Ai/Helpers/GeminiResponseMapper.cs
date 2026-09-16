@@ -32,6 +32,37 @@ public static class GeminiResponseMapper
                 ? deterministicPhone
                 : result.Phone;
 
+            var workExperience = (result.WorkExperience ?? [])
+                .Select(w =>
+                {
+                    var isCurrent = WorkExperienceNormalizer.IsCurrent(w.IsCurrent, w.EndDate);
+
+                    return new WorkExperienceDto
+                    {
+                        CompanyName = w.CompanyName,
+                        JobTitle = w.JobTitle,
+                        StartDate = w.StartDate,
+                        EndDate = WorkExperienceNormalizer.NormalizeEndDate(w.EndDate, isCurrent),
+                        IsCurrent = isCurrent
+                    };
+                })
+                .ToList();
+
+            var education = (result.Education ?? [])
+                .Select(e =>
+                {
+                    var (startDate, endDate) = EducationDateNormalizer.Normalize(e.StartDate, e.EndDate);
+
+                    return new EducationDto
+                    {
+                        Institution = e.Institution,
+                        Degree = e.Degree,
+                        StartDate = startDate,
+                        EndDate = endDate
+                    };
+                })
+                .ToList();
+
             return new ResumeExtractionResult
             {
                 FullName = result.FullName,
@@ -43,33 +74,12 @@ public static class GeminiResponseMapper
                 TechnicalSkills = result.TechnicalSkills ?? [],
                 SoftSkills = result.SoftSkills ?? [],
                 ToolsAndPlatforms = result.ToolsAndPlatforms ?? [],
-                WorkExperience = (result.WorkExperience ?? [])
-                    .Select(w =>
-                    {
-                        var isCurrent = WorkExperienceNormalizer.IsCurrent(w.IsCurrent, w.EndDate);
-
-                        return new WorkExperienceDto
-                        {
-                            CompanyName = w.CompanyName,
-                            JobTitle = w.JobTitle,
-                            StartDate = w.StartDate,
-                            EndDate = WorkExperienceNormalizer.NormalizeEndDate(w.EndDate, isCurrent),
-                            IsCurrent = isCurrent
-                        };
-                    }).ToList(),
-                Education = (result.Education ?? [])
-                    .Select(e =>
-                    {
-                        var (startDate, endDate) = EducationDateNormalizer.Normalize(e.StartDate, e.EndDate);
-
-                        return new EducationDto
-                        {
-                            Institution = e.Institution,
-                            Degree = e.Degree,
-                            StartDate = startDate,
-                            EndDate = endDate
-                        };
-                    }).ToList()
+                WorkExperience = ResumeChronology.SortNewestFirst(
+                    workExperience,
+                    w => w.IsCurrent ? ResumeChronology.CurrentKey : ResumeChronology.ToSortKey(w.StartDate)),
+                Education = ResumeChronology.SortNewestFirst(
+                    education,
+                    e => ResumeChronology.ToSortKey(e.EndDate) ?? ResumeChronology.ToSortKey(e.StartDate))
             };
         }
         catch (JsonException ex)
