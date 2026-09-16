@@ -42,6 +42,7 @@ public sealed class GoogleSignInEmployerCommandHandlerTests
                 e.CompanyName,
                 e.Role,
                 e.IsVerified,
+                e.VerificationStatus,
                 e.CreatedAt,
                 e.UpdatedAt
             ));
