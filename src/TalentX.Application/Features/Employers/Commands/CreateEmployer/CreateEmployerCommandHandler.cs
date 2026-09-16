@@ -98,7 +98,7 @@ public sealed class CreateEmployerCommandHandler : IRequestHandler<CreateEmploye
             request.CompanyName
         );
 
-        employer.MarkAsVerified();
+        employer.MarkEmailVerified();
         await _unitOfWork.Employers.AddAsync(employer, cancellationToken);
 
         var company = new Company(employer.UserId, request.CompanyName.Trim());
