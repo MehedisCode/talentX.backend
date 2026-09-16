@@ -4,6 +4,7 @@ using TalentX.Infrastructure.Ai;
 using TalentX.Infrastructure.FileStorage;
 using TalentX.Infrastructure.Identity;
 using TalentX.Infrastructure.Persistence;
+using TalentX.Infrastructure.Realtime;
 
 namespace TalentX.Infrastructure;
 
@@ -18,6 +19,7 @@ public static class InfrastructureStartup
         services.AddIdentityServices(configuration);
         services.AddFileStorage(configuration);
         services.AddExtractionServices(configuration);
+        services.AddRealtime();
 
         return services;
     }
