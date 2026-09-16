@@ -97,7 +97,12 @@ public sealed class EmployersControllerTests
                 2,
                 DateTime.UtcNow.AddDays(30),
                 DateTime.UtcNow,
-                5)
+                5,
+                SalaryType: null,
+                SalaryMin: null,
+                SalaryMax: null,
+                SalaryCurrency: null,
+                SalaryPeriod: null)
         };
         var expectedPaginatedList = new PaginatedList<EmployerJobListItemDto>(jobItems, 1, 10, 1);
 
