@@ -48,7 +48,7 @@ public sealed class VerifyEmployerEmailCommandHandler : IRequestHandler<VerifyEm
             );
         }
 
-        employer.MarkAsVerified();
+        employer.MarkEmailVerified();
         var auditLog = new AuditLog(request.Email, "Login Success · OTP", isSystem: false);
         await _unitOfWork.AuditLogs.AddAsync(auditLog, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);

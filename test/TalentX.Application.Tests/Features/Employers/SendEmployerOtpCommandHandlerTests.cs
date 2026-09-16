@@ -80,7 +80,7 @@ public sealed class SendEmployerOtpCommandHandlerTests
     {
         var command = new SendEmployerOtpCommand("verified@acme.com");
         var employer = new Employer("user-1", "Jane Doe", "verified@acme.com", "Acme Corp");
-        employer.MarkAsVerified();
+        employer.MarkEmailVerified();
 
         _employerRepositoryMock
             .Setup(r => r.GetByEmailAsync(command.Email, It.IsAny<CancellationToken>()))

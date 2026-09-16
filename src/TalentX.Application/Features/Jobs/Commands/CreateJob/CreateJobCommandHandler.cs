@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Identity.Services;
+using TalentX.Domain;
 using TalentX.Domain.Entities;
 using TalentX.Domain.Enums;
 
@@ -70,6 +71,12 @@ public class CreateJobCommandHandler : IRequestHandler<CreateJobCommand, Guid>
 
         if (request.Publish)
         {
+            var employer = await _unitOfWork.Employers.GetByUserIdAsync(employerId, cancellationToken)
+                ?? throw new NotFoundException(nameof(Employer), employerId);
+
+            if (employer.VerificationStatus != EmployerVerificationStatus.Verified)
+                throw new ForbiddenException("Only verified employers can publish jobs. Your account is pending verification.");
+
             try
             {
                 JobRules.EnsurePublishable(job);
