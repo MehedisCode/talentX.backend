@@ -73,7 +73,7 @@ public static class GeminiPromptBuilder
         "- toolsAndPlatforms: Developer tools, cloud providers, DevOps tools, version control, and infrastructure (e.g. Git, Docker, Kubernetes, AWS, Azure, GCP, Linux, Jira, Postman, CI/CD).\n" +
         "- softSkills: Interpersonal, leadership, communication, management, and agile/scrum methodologies (e.g. Problem Solving, Team Leadership, Agile/Scrum, Collaboration).\n" +
         "- workExperience: Extract all work history items. For current/ongoing roles, set 'endDate' to 'Present' or 'Current'. If only one date is given, populate 'startDate' and set 'endDate' to 'Present' or empty.\n" +
-        "- education: Extract all degrees, universities, and colleges. For ongoing studies, set 'endDate' to 'Expected <Year>' or 'Present'. If the resume lists only a SINGLE year for a degree, treat that year as the completion/graduation year and put it in 'endDate' (leave 'startDate' empty).\n\n" +
+        "- education: Extract all degrees, universities, and colleges. When the resume shows a date range (e.g. '2016 - 2020'), put the first year in 'startDate' and the second year in 'endDate'. For ongoing studies, set 'endDate' to 'Expected <Year>' or 'Present'. If the resume lists only a SINGLE year for a degree, treat that year as the completion/graduation year and put it in 'endDate' (leave 'startDate' empty). Do not invent dates that are not present.\n\n" +
         "IMPORTANT RULES FOR CONTACT & HYPERLINKS:\n" +
         "- Do NOT guess or invent email addresses or phone numbers if none are found.\n" +
         "- The 'ACTUAL DOCUMENT HYPERLINKS' section contains authoritative URLs extracted directly from the document's link annotations and structure.\n" +
@@ -136,7 +136,7 @@ public static class GeminiPromptBuilder
                     items = new
                     {
                         type = "OBJECT",
-                        required = new[] { "institution", "degree" },
+                        required = new[] { "institution", "degree", "startDate" },
                         properties = new
                         {
                             institution = new { type = "STRING" },

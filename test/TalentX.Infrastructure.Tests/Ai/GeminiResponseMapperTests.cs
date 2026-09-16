@@ -135,4 +135,27 @@ public class GeminiResponseMapperTests
         result.Education[0].StartDate.Should().Be("2017");
         result.Education[0].EndDate.Should().Be("2021");
     }
+
+    [Fact]
+    public void MapToResult_SplitsEducationRangeReturnedInOneField()
+    {
+        var json = """
+        {
+          "fullName": "Alice Smith",
+          "education": [
+            {
+              "institution": "MIT",
+              "degree": "B.S. Computer Science",
+              "startDate": "2016 - 2020",
+              "endDate": ""
+            }
+          ]
+        }
+        """;
+
+        var result = GeminiResponseMapper.MapToResult(json, null, null, NullLogger.Instance);
+
+        result.Education[0].StartDate.Should().Be("2016");
+        result.Education[0].EndDate.Should().Be("2020");
+    }
 }

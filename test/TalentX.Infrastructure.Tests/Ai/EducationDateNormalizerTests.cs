@@ -43,4 +43,32 @@ public class EducationDateNormalizerTests
         start.Should().Be(expectedStart);
         end.Should().Be(expectedEnd);
     }
+
+    [Theory]
+    [InlineData("2016 - 2020", null, "2016", "2020")]
+    [InlineData("2016-2020", null, "2016", "2020")]
+    [InlineData("2016 to 2020", null, "2016", "2020")]
+    [InlineData("Sep 2016 - Jun 2020", null, "Sep 2016", "Jun 2020")]
+    [InlineData(null, "2016 - 2020", "2016", "2020")]
+    [InlineData("2016-05", null, "2016-05", null)]
+    public void Normalize_SplitsRangeReturnedInASingleField(
+        string? startDate,
+        string? endDate,
+        string? expectedStart,
+        string? expectedEnd)
+    {
+        var (start, end) = EducationDateNormalizer.Normalize(startDate, endDate);
+
+        start.Should().Be(expectedStart);
+        end.Should().Be(expectedEnd);
+    }
+
+    [Fact]
+    public void Normalize_CollapsesDuplicateLoneYear_ToEndDate()
+    {
+        var (start, end) = EducationDateNormalizer.Normalize("2019", "2019");
+
+        start.Should().BeNull();
+        end.Should().Be("2019");
+    }
 }

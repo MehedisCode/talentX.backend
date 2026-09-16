@@ -5,16 +5,25 @@ namespace TalentX.Infrastructure.Ai.Helpers;
 /// <summary>
 /// Normalizes the dates extracted for an education entry.
 ///
-/// Resumes often list a single year for a degree (e.g. "2019"). The AI used to
-/// always write that lone year into <c>startDate</c>, which is wrong: a single
-/// year on an education entry is the completion/graduation year, so it belongs
-/// in <c>endDate</c>. This normalizer moves a lone year (or an explicit
-/// completion cue such as "Expected 2024") to <c>endDate</c>.
+/// Two things happen here:
+/// <list type="bullet">
+///   <item>A single year is the completion/graduation year, so it is moved to
+///   <c>endDate</c> (the AI used to always write it into <c>startDate</c>).</item>
+///   <item>If the model returns a whole range in one field (e.g. "2016 - 2020"),
+///   it is split across <c>startDate</c> and <c>endDate</c>.</item>
+/// </list>
 /// </summary>
 public static class EducationDateNormalizer
 {
     private static readonly Regex LoneYearRegex =
         new(@"^\d{4}\.?$", RegexOptions.Compiled);
+
+    private static readonly Regex IsoDateRegex =
+        new(@"^\d{4}-\d{1,2}(?:-\d{1,2})?$", RegexOptions.Compiled);
+
+    private static readonly Regex RangeRegex =
+        new(@"^(?<first>.+?)\s*(?:-|–|—|\bto\b)\s*(?<second>.+)$",
+            RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
     private static readonly string[] CompletionCues =
     [
@@ -26,24 +35,69 @@ public static class EducationDateNormalizer
         var start = NormalizeValue(startDate);
         var end = NormalizeValue(endDate);
 
+        // The model may return a full range in just one of the fields.
+        if (!string.IsNullOrWhiteSpace(start) && string.IsNullOrWhiteSpace(end))
+        {
+            var (first, second) = TrySplitRange(start);
+            if (second is not null)
+            {
+                start = first;
+                end = second;
+            }
+        }
+        else if (string.IsNullOrWhiteSpace(start) && !string.IsNullOrWhiteSpace(end))
+        {
+            var (first, second) = TrySplitRange(end);
+            if (second is not null)
+            {
+                start = first;
+                end = second;
+            }
+        }
+
         if (string.IsNullOrWhiteSpace(start))
         {
             return (null, end);
         }
 
-        if (!string.IsNullOrWhiteSpace(end))
-        {
-            return (start, end);
-        }
-
-        // Only one date was provided. A single year (or a completion cue) is the
+        // Only one date was provided: a lone year (or completion cue) is the
         // graduation year, not the start year.
-        if (LooksLikeCompletion(start))
+        if (string.IsNullOrWhiteSpace(end))
         {
-            return (null, start);
+            return LooksLikeCompletion(start) ? (null, start) : (start, null);
         }
 
-        return (start, null);
+        // Both present but identical lone year -> treat it as completion only.
+        if (LoneYearRegex.IsMatch(start) && string.Equals(start, end, StringComparison.OrdinalIgnoreCase))
+        {
+            return (null, end);
+        }
+
+        return (start, end);
+    }
+
+    private static (string? First, string? Second) TrySplitRange(string value)
+    {
+        if (IsoDateRegex.IsMatch(value))
+        {
+            return (value, null);
+        }
+
+        var match = RangeRegex.Match(value);
+        if (!match.Success)
+        {
+            return (value, null);
+        }
+
+        var first = match.Groups["first"].Value.Trim();
+        var second = match.Groups["second"].Value.Trim();
+
+        if (first.Length == 0 || second.Length == 0)
+        {
+            return (value, null);
+        }
+
+        return (first, second);
     }
 
     private static string? NormalizeValue(string? value) =>
