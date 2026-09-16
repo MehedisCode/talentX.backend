@@ -36,6 +36,7 @@ public sealed class VerifyEmployerEmailCommandHandlerTests
                 employer.CompanyName,
                 employer.Role,
                 employer.IsVerified,
+                employer.VerificationStatus,
                 employer.CreatedAt,
                 employer.UpdatedAt
             ));

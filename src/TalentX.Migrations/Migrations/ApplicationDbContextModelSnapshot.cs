@@ -154,6 +154,64 @@ namespace TalentX.Migrations.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("TalentX.Domain.Company", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CompanySize")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
+
+                    b.Property<string>("EmployerId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("FacebookUrl")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Industry")
+                        .HasColumnType("text");
+
+                    b.Property<string>("LinkedInUrl")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Location")
+                        .HasColumnType("text");
+
+                    b.Property<string>("LogoStorageKey")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("TwitterUrl")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Website")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EmployerId")
+                        .IsUnique();
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("Companies", (string)null);
+                });
+
             modelBuilder.Entity("TalentX.Domain.EmailVerificationToken", b =>
                 {
                     b.Property<Guid>("Id")

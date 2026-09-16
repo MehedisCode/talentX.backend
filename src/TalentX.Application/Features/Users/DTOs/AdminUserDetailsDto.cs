@@ -34,4 +34,5 @@ public sealed record AdminTalentDetailsSectionDto
 public sealed record AdminEmployerDetailsSectionDto
 {
     public string CompanyName { get; init; } = string.Empty;
+    public EmployerVerificationStatus VerificationStatus { get; init; }
 }

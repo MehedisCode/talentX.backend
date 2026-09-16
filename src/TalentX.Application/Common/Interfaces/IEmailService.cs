@@ -110,6 +110,23 @@ public interface IEmailService
     );
 
     /// <summary>
+    /// Renders the HTML body for an employer-approved notification email.
+    /// </summary>
+    Task<string> RenderEmployerApprovedEmailAsync(
+        string recipientName,
+        CancellationToken cancellationToken = default
+    );
+
+    /// <summary>
+    /// Renders the HTML body for an employer-rejected notification email, including the reason.
+    /// </summary>
+    Task<string> RenderEmployerRejectedEmailAsync(
+        string recipientName,
+        string rejectionReason,
+        CancellationToken cancellationToken = default
+    );
+
+    /// <summary>
     /// Renders the HTML body for an account activated/deactivated notification email. The
     /// deactivation copy is tailored to the recipient's role (e.g. an Employer is told they can't
     /// post jobs, a Talent that they can't apply to jobs).
