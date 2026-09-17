@@ -62,8 +62,6 @@ public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountC
 
         await _attemptTracker.ResetAsync(otpKey, cancellationToken);
 
-        // A null user means a prior attempt deleted the domain data but not the
-        // identity row; skip straight to identity cleanup so retries converge.
         var user = await _unitOfWork.Users.GetByUserIdAsync(identityUserId, cancellationToken);
         var recipientName = string.IsNullOrWhiteSpace(user?.Name) ? email : user!.Name;
 
@@ -84,7 +82,6 @@ public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountC
 
         await _tokenService.RevokeAllForUserAsync(identityUserId);
 
-        // Policy: the account is already gone, so a confirmation-email failure is logged, never thrown.
         try
         {
             await _emailService.SendAccountDeletedEmailAsync(email, recipientName, cancellationToken);

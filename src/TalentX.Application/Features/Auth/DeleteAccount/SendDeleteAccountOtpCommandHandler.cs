@@ -36,8 +36,6 @@ public sealed class SendDeleteAccountOtpCommandHandler : IRequestHandler<SendDel
         var email = _currentUserService.Email!;
         var identityUserId = _currentUserService.UserId!;
 
-        // Domain row may already be gone when a previous delete deleted the data but
-        // failed to remove the identity row. Allow the retry so that flow can converge.
         var user = await _unitOfWork.Users.GetByUserIdAsync(identityUserId, cancellationToken);
         var recipientName = string.IsNullOrWhiteSpace(user?.Name) ? email : user!.Name;
 
@@ -52,10 +50,8 @@ public sealed class SendDeleteAccountOtpCommandHandler : IRequestHandler<SendDel
 
         var otp = await _otpService.GenerateOtpAsync(otpKey, cancellationToken: cancellationToken);
 
-        // A new code must clear any lockout, otherwise the "request a new code" path is blocked.
         await _attemptTracker.ResetAsync(otpKey, cancellationToken);
 
-        // Policy: OTP delivery is the requested action, so a render/dispatch failure surfaces.
         await _emailService.SendOtpEmailAsync(email, recipientName, otp, cancellationToken);
 
         await _cooldownTracker.SetCooldownAsync(otpKey, OtpAttemptPolicy.ResendCooldown, cancellationToken);
