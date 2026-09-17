@@ -31,11 +31,18 @@ public sealed class NotificationRepository : INotificationRepository
         string recipientUserId,
         int pageNumber,
         int pageSize,
+        bool unreadOnly,
         CancellationToken cancellationToken)
     {
         var query = _context.Notifications
-            .Where(notification => notification.RecipientUserId == recipientUserId)
-            .OrderByDescending(notification => notification.CreatedAt);
+            .Where(notification => notification.RecipientUserId == recipientUserId);
+
+        if (unreadOnly)
+        {
+            query = query.Where(notification => notification.ReadAt == null);
+        }
+
+        query = query.OrderByDescending(notification => notification.CreatedAt);
 
         var totalCount = await query.CountAsync(cancellationToken);
 

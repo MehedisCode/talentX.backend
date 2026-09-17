@@ -85,13 +85,39 @@ public sealed class NotificationRepositoryTests
         await repository.AddAsync(otherRecipient, CancellationToken.None);
         await context.SaveChangesAsync();
 
-        var result = await repository.GetByRecipientAsync("talent-1", pageNumber: 1, pageSize: 20, CancellationToken.None);
+        var result = await repository.GetByRecipientAsync("talent-1", pageNumber: 1, pageSize: 20, unreadOnly: false, CancellationToken.None);
 
         result.TotalCount.Should().Be(2);
         result.Items.Should().HaveCount(2);
         result.Items[0].Title.Should().Be("Second");
         result.Items[1].Title.Should().Be("First");
         result.Items.Should().OnlyContain(notification => notification.RecipientUserId == "talent-1");
+    }
+
+    [Fact]
+    public async Task GetByRecipientAsync_WithUnreadOnlyTrue_ReturnsOnlyUnreadRowsForRecipient()
+    {
+        await using var context = NewContext();
+        var repository = new NotificationRepository(context);
+
+        var unreadNotification = Notification.Create("talent-1", NotificationType.JobAlertMatch, "Unread Title", "Body 1", null);
+        var readNotification = Notification.Create("talent-1", NotificationType.JobAlertMatch, "Read Title", "Body 2", null);
+        readNotification.MarkAsRead();
+        var otherRecipientUnread = Notification.Create("talent-2", NotificationType.JobAlertMatch, "Other Title", "Body 3", null);
+
+        await repository.AddAsync(unreadNotification, CancellationToken.None);
+        await repository.AddAsync(readNotification, CancellationToken.None);
+        await repository.AddAsync(otherRecipientUnread, CancellationToken.None);
+        await context.SaveChangesAsync();
+
+        var result = await repository.GetByRecipientAsync("talent-1", pageNumber: 1, pageSize: 20, unreadOnly: true, CancellationToken.None);
+
+        result.TotalCount.Should().Be(1);
+        result.Items.Should().HaveCount(1);
+        result.Items[0].Id.Should().Be(unreadNotification.Id);
+        result.Items[0].Title.Should().Be("Unread Title");
+        result.Items[0].ReadAt.Should().BeNull();
+        result.Items.Should().OnlyContain(notification => notification.RecipientUserId == "talent-1" && notification.ReadAt == null);
     }
 
     [Fact]

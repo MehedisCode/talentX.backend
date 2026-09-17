@@ -18,10 +18,11 @@ public sealed class NotificationsController : BaseApiController
     public async Task<IActionResult> GetNotifications(
         [FromQuery] int page = PaginationRequest.DefaultPageNumber,
         [FromQuery] int pageSize = PaginationRequest.DefaultPageSize,
+        [FromQuery] bool unreadOnly = false,
         CancellationToken cancellationToken = default)
     {
-        var result = await Sender.Send(new GetNotificationsQuery(page, pageSize), cancellationToken);
-        return Ok(result);
+        var notifications = await Sender.Send(new GetNotificationsQuery(page, pageSize, unreadOnly), cancellationToken);
+        return Ok(notifications);
     }
 
     [HttpGet("unread-count")]

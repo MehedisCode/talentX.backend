@@ -58,7 +58,7 @@ public class GetNotificationsQueryHandlerTests
         };
 
         _notificationRepository
-            .Setup(repository => repository.GetByRecipientAsync("talent-user-1", 1, 20, It.IsAny<CancellationToken>()))
+            .Setup(repository => repository.GetByRecipientAsync("talent-user-1", 1, 20, false, It.IsAny<CancellationToken>()))
             .ReturnsAsync(paginatedNotifications);
 
         _mapper
@@ -72,7 +72,7 @@ public class GetNotificationsQueryHandlerTests
         result.TotalCount.Should().Be(1);
 
         _notificationRepository.Verify(
-            repository => repository.GetByRecipientAsync("talent-user-1", 1, 20, It.IsAny<CancellationToken>()),
+            repository => repository.GetByRecipientAsync("talent-user-1", 1, 20, false, It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -82,7 +82,7 @@ public class GetNotificationsQueryHandlerTests
         var paginatedNotifications = new PaginatedList<Notification>(new List<Notification>(), 1, 20, 0);
 
         _notificationRepository
-            .Setup(repository => repository.GetByRecipientAsync("talent-user-1", 1, 20, It.IsAny<CancellationToken>()))
+            .Setup(repository => repository.GetByRecipientAsync("talent-user-1", 1, 20, false, It.IsAny<CancellationToken>()))
             .ReturnsAsync(paginatedNotifications);
 
         _mapper
@@ -93,6 +93,30 @@ public class GetNotificationsQueryHandlerTests
 
         result.Items.Should().BeEmpty();
         result.TotalCount.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Handle_WhenUnreadOnlyIsTrue_ForwardsUnreadOnlyToRepository()
+    {
+        var paginatedNotifications = new PaginatedList<Notification>(new List<Notification>(), 1, 20, 0);
+
+        _notificationRepository
+            .Setup(repository => repository.GetByRecipientAsync("talent-user-1", 1, 20, true, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(paginatedNotifications);
+
+        _mapper
+            .Setup(mapper => mapper.Map<List<NotificationDto>>(It.IsAny<List<Notification>>()))
+            .Returns(new List<NotificationDto>());
+
+        var query = new GetNotificationsQuery(Page: 1, PageSize: 20, UnreadOnly: true);
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        result.Items.Should().BeEmpty();
+        result.TotalCount.Should().Be(0);
+
+        _notificationRepository.Verify(
+            repository => repository.GetByRecipientAsync("talent-user-1", 1, 20, true, It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]

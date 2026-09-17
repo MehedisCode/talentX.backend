@@ -6,5 +6,7 @@ namespace TalentX.Application.Features.Notifications.Queries.GetNotifications;
 
 public sealed record GetNotificationsQuery(
     int Page = PaginationRequest.DefaultPageNumber,
-    int PageSize = PaginationRequest.DefaultPageSize
+    int PageSize = PaginationRequest.DefaultPageSize,
+    bool UnreadOnly = false
 ) : IRequest<PaginatedList<NotificationDto>>;
+

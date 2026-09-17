@@ -52,13 +52,40 @@ public class NotificationsControllerTests
             .Setup(sender => sender.Send(It.IsAny<GetNotificationsQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(expectedResult);
 
-        var actionResult = await _controller.GetNotifications(1, 20, CancellationToken.None);
+        var actionResult = await _controller.GetNotifications(1, 20, false, CancellationToken.None);
 
         var okResult = actionResult.Should().BeOfType<OkObjectResult>().Subject;
         okResult.Value.Should().BeEquivalentTo(expectedResult);
 
         _sender.Verify(
-            sender => sender.Send(It.IsAny<GetNotificationsQuery>(), It.IsAny<CancellationToken>()),
+            sender => sender.Send(
+                It.Is<GetNotificationsQuery>(query => query.Page == 1 && query.PageSize == 20 && !query.UnreadOnly),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task GetNotifications_WithUnreadOnlyTrue_SendsGetNotificationsQueryWithUnreadOnlyTrue()
+    {
+        var expectedResult = new PaginatedList<NotificationDto>(
+            new List<NotificationDto>(),
+            1,
+            20,
+            0);
+
+        _sender
+            .Setup(sender => sender.Send(It.IsAny<GetNotificationsQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expectedResult);
+
+        var actionResult = await _controller.GetNotifications(1, 20, true, CancellationToken.None);
+
+        var okResult = actionResult.Should().BeOfType<OkObjectResult>().Subject;
+        okResult.Value.Should().BeEquivalentTo(expectedResult);
+
+        _sender.Verify(
+            sender => sender.Send(
+                It.Is<GetNotificationsQuery>(query => query.Page == 1 && query.PageSize == 20 && query.UnreadOnly),
+                It.IsAny<CancellationToken>()),
             Times.Once);
     }
 

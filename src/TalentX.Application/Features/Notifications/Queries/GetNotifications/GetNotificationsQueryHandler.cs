@@ -35,7 +35,7 @@ public sealed class GetNotificationsQueryHandler
         var (page, pageSize) = PaginationRequest.Normalize(request.Page, request.PageSize);
 
         var notifications = await _unitOfWork.Notifications.GetByRecipientAsync(
-            talentId, page, pageSize, cancellationToken);
+            talentId, page, pageSize, request.UnreadOnly, cancellationToken);
 
         var items = _mapper.Map<List<NotificationDto>>(notifications.Items);
 
