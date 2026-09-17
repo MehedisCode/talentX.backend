@@ -239,4 +239,25 @@ public sealed class ReactivateJobCommandHandlerTests
 
         await handleAction.Should().ThrowAsync<NotFoundException>();
     }
+
+    [Theory]
+    [InlineData(null, "admin@talentx.com")]
+    [InlineData("admin-1", null)]
+    public async Task Handle_WhenCallerIdentityIsMissing_ThrowsUnauthorizedAndTouchesNothing(string? userId, string? email)
+    {
+        _currentUserService.SetupGet(service => service.UserId).Returns(userId);
+        _currentUserService.SetupGet(service => service.Email).Returns(email);
+
+        var handleAction = () => _handler.Handle(new ReactivateJobCommand(Guid.NewGuid()), CancellationToken.None);
+
+        await handleAction.Should().ThrowAsync<UnauthorizedException>()
+            .WithMessage("You must be signed in to reactivate a job.");
+        _jobRepository.Verify(
+            repository => repository.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        _unitOfWork.Verify(unitOfWork => unitOfWork.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+        _jobAlertQueue.Verify(
+            queue => queue.EnqueuePublishedJobAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
 }
