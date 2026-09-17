@@ -1,9 +1,9 @@
 using AutoMapper;
 using Microsoft.Extensions.Logging;
 using TalentX.Application.Common.Interfaces;
+using TalentX.Application.Common.Models;
 using TalentX.Application.Features.Notifications.DTOs;
 using TalentX.Domain.Entities;
-using TalentX.Domain.Enums;
 
 namespace TalentX.Application.Features.Notifications.Services;
 
@@ -27,14 +27,15 @@ public sealed class NotificationService : INotificationService
     }
 
     public async Task<NotificationDto> PublishAsync(
-        string recipientUserId,
-        NotificationType type,
-        string title,
-        string body,
-        string? metadata,
+        PublishNotificationParameters parameters,
         CancellationToken cancellationToken)
     {
-        var notification = Notification.Create(recipientUserId, type, title, body, metadata);
+        var notification = Notification.Create(
+            parameters.RecipientUserId,
+            parameters.Type,
+            parameters.Title,
+            parameters.Body,
+            parameters.Metadata);
 
         await _unitOfWork.Notifications.AddAsync(notification, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -43,7 +44,10 @@ public sealed class NotificationService : INotificationService
 
         try
         {
-            await _notificationBroadcaster.PublishToUserAsync(recipientUserId, notificationDto, cancellationToken);
+            await _notificationBroadcaster.PublishToUserAsync(
+                parameters.RecipientUserId,
+                notificationDto,
+                cancellationToken);
         }
         catch (Exception exception)
         {
@@ -51,7 +55,7 @@ public sealed class NotificationService : INotificationService
                 exception,
                 "Failed to broadcast notification {NotificationId} to user {RecipientUserId}",
                 notification.Id,
-                recipientUserId);
+                parameters.RecipientUserId);
         }
 
         return notificationDto;

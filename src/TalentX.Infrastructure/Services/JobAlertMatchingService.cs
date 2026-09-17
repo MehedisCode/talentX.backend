@@ -167,13 +167,14 @@ public sealed class JobAlertMatchingService : IJobAlertMatchingService
         {
             try
             {
-                await _notificationService.PublishAsync(
+                var notificationParameters = new PublishNotificationParameters(
                     pendingNotification.TalentId,
                     NotificationType.JobAlertMatch,
                     pendingNotification.Title,
                     pendingNotification.Body,
-                    pendingNotification.MetadataJson,
-                    cancellationToken);
+                    pendingNotification.MetadataJson);
+
+                await _notificationService.PublishAsync(notificationParameters, cancellationToken);
             }
             catch (Exception exception)
             {

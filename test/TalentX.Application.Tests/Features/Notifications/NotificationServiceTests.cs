@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Common.Interfaces.Repositories;
+using TalentX.Application.Common.Models;
 using TalentX.Application.Features.Notifications.DTOs;
 using TalentX.Application.Features.Notifications.Services;
 using TalentX.Domain.Entities;
@@ -61,13 +62,14 @@ public class NotificationServiceTests
                 return expectedDto;
             });
 
-        var result = await _service.PublishAsync(
+        var parameters = new PublishNotificationParameters(
             "talent-user-1",
             NotificationType.JobAlertMatch,
             "New match",
             "A job matches your alert",
-            "{\"jobId\":\"abc\"}",
-            CancellationToken.None);
+            "{\"jobId\":\"abc\"}");
+
+        var result = await _service.PublishAsync(parameters, CancellationToken.None);
 
         capturedNotification.Should().NotBeNull();
         capturedNotification!.RecipientUserId.Should().Be("talent-user-1");
@@ -102,13 +104,14 @@ public class NotificationServiceTests
                 It.IsAny<string>(), It.IsAny<NotificationDto>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("Broadcast failure"));
 
-        var action = () => _service.PublishAsync(
+        var parameters = new PublishNotificationParameters(
             "talent-user-1",
             NotificationType.JobAlertMatch,
             "New match",
             "A job matches your alert",
-            metadata: null,
-            CancellationToken.None);
+            Metadata: null);
+
+        var action = () => _service.PublishAsync(parameters, CancellationToken.None);
 
         var result = await action.Should().NotThrowAsync();
 

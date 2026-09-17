@@ -40,12 +40,8 @@ public sealed class JobAlertMatchingServiceTests
         _unitOfWork.SetupGet(u => u.Users).Returns(_userRepository.Object);
         _unitOfWork.SetupGet(u => u.EmailDispatchLogs).Returns(_emailDispatchLogRepository.Object);
 
-        _notificationService.Setup(n => n.PublishAsync(
-                It.IsAny<string>(),
-                It.IsAny<NotificationType>(),
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<string?>(),
+        _notificationService.Setup(service => service.PublishAsync(
+                It.IsAny<PublishNotificationParameters>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new NotificationDto(Guid.NewGuid(), NotificationType.JobAlertMatch, "title", "body", null, null, DateTime.UtcNow));
 
@@ -128,12 +124,8 @@ public sealed class JobAlertMatchingServiceTests
 
         _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
 
-        _notificationService.Verify(n => n.PublishAsync(
-            "talent-1",
-            NotificationType.JobAlertMatch,
-            It.IsAny<string>(),
-            It.IsAny<string>(),
-            It.IsAny<string?>(),
+        _notificationService.Verify(service => service.PublishAsync(
+            It.Is<PublishNotificationParameters>(parameters => parameters.RecipientUserId == "talent-1" && parameters.Type == NotificationType.JobAlertMatch),
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -159,12 +151,8 @@ public sealed class JobAlertMatchingServiceTests
         _historyRepository.Verify(r => r.AddAsync(It.IsAny<JobAlertNotificationHistory>(), It.IsAny<CancellationToken>()), Times.Never);
         _emailDispatchLogRepository.Verify(r => r.AddAsync(It.IsAny<EmailDispatchLog>(), It.IsAny<CancellationToken>()), Times.Never);
         _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
-        _notificationService.Verify(n => n.PublishAsync(
-            It.IsAny<string>(),
-            It.IsAny<NotificationType>(),
-            It.IsAny<string>(),
-            It.IsAny<string>(),
-            It.IsAny<string?>(),
+        _notificationService.Verify(service => service.PublishAsync(
+            It.IsAny<PublishNotificationParameters>(),
             It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -186,12 +174,8 @@ public sealed class JobAlertMatchingServiceTests
         _historyRepository.Verify(r => r.AddAsync(It.IsAny<JobAlertNotificationHistory>(), It.IsAny<CancellationToken>()), Times.Never);
         _emailDispatchLogRepository.Verify(r => r.AddAsync(It.IsAny<EmailDispatchLog>(), It.IsAny<CancellationToken>()), Times.Never);
         _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
-        _notificationService.Verify(n => n.PublishAsync(
-            It.IsAny<string>(),
-            It.IsAny<NotificationType>(),
-            It.IsAny<string>(),
-            It.IsAny<string>(),
-            It.IsAny<string?>(),
+        _notificationService.Verify(service => service.PublishAsync(
+            It.IsAny<PublishNotificationParameters>(),
             It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -323,54 +307,46 @@ public sealed class JobAlertMatchingServiceTests
         var talentOne = new Talent("talent-1", "John Doe", "john@example.com");
         var talentTwo = new Talent("talent-2", "Jane Smith", "jane.smith@example.com");
 
-        _jobRepository.Setup(r => r.GetByIdAsync(job.Id, It.IsAny<CancellationToken>()))
+        _jobRepository.Setup(repository => repository.GetByIdAsync(job.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(job);
-        _jobAlertRepository.Setup(r => r.GetAllActiveAlertsAsync(It.IsAny<CancellationToken>()))
+        _jobAlertRepository.Setup(repository => repository.GetAllActiveAlertsAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync([alertForTalentOne, alertForTalentTwo]);
-        _historyRepository.Setup(r => r.GetNotifiedTalentIdsAsync(job.Id, It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>()))
+        _historyRepository.Setup(repository => repository.GetNotifiedTalentIdsAsync(job.Id, It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
-        _preferenceRepository.Setup(r => r.GetByTalentIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        _preferenceRepository.Setup(repository => repository.GetByTalentIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((TalentNotificationPreference?)null);
-        _talentRepository.Setup(r => r.GetByUserIdAsync("talent-1", It.IsAny<CancellationToken>()))
+        _talentRepository.Setup(repository => repository.GetByUserIdAsync("talent-1", It.IsAny<CancellationToken>()))
             .ReturnsAsync(talentOne);
-        _talentRepository.Setup(r => r.GetByUserIdAsync("talent-2", It.IsAny<CancellationToken>()))
+        _talentRepository.Setup(repository => repository.GetByUserIdAsync("talent-2", It.IsAny<CancellationToken>()))
             .ReturnsAsync(talentTwo);
-        _emailService.Setup(e => e.RenderJobAlertEmailAsync(It.IsAny<RenderJobAlertEmailParameters>(), It.IsAny<CancellationToken>()))
+        _emailService.Setup(emailService => emailService.RenderJobAlertEmailAsync(It.IsAny<RenderJobAlertEmailParameters>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync("<html>Alert email content</html>");
 
-        _notificationService.Setup(n => n.PublishAsync(
-                "talent-1",
-                It.IsAny<NotificationType>(),
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<string?>(),
+        _notificationService.Setup(service => service.PublishAsync(
+                It.Is<PublishNotificationParameters>(parameters => parameters.RecipientUserId == "talent-1"),
                 It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("Simulated notification publish failure."));
 
         await _sut.ProcessAlertsForJobAsync(job.Id, CancellationToken.None);
 
-        _historyRepository.Verify(r => r.AddAsync(
-            It.Is<JobAlertNotificationHistory>(h => h.TalentId == "talent-1"),
+        _historyRepository.Verify(repository => repository.AddAsync(
+            It.Is<JobAlertNotificationHistory>(history => history.TalentId == "talent-1"),
             It.IsAny<CancellationToken>()), Times.Once);
-        _historyRepository.Verify(r => r.AddAsync(
-            It.Is<JobAlertNotificationHistory>(h => h.TalentId == "talent-2"),
-            It.IsAny<CancellationToken>()), Times.Once);
-
-        _emailDispatchLogRepository.Verify(r => r.AddAsync(
-            It.Is<EmailDispatchLog>(l => l.RecipientEmail == "john@example.com"),
-            It.IsAny<CancellationToken>()), Times.Once);
-        _emailDispatchLogRepository.Verify(r => r.AddAsync(
-            It.Is<EmailDispatchLog>(l => l.RecipientEmail == "jane.smith@example.com"),
+        _historyRepository.Verify(repository => repository.AddAsync(
+            It.Is<JobAlertNotificationHistory>(history => history.TalentId == "talent-2"),
             It.IsAny<CancellationToken>()), Times.Once);
 
-        _notificationService.Verify(n => n.PublishAsync(
-            "talent-2",
-            It.IsAny<NotificationType>(),
-            It.IsAny<string>(),
-            It.IsAny<string>(),
-            It.IsAny<string?>(),
+        _emailDispatchLogRepository.Verify(repository => repository.AddAsync(
+            It.Is<EmailDispatchLog>(log => log.RecipientEmail == "john@example.com"),
+            It.IsAny<CancellationToken>()), Times.Once);
+        _emailDispatchLogRepository.Verify(repository => repository.AddAsync(
+            It.Is<EmailDispatchLog>(log => log.RecipientEmail == "jane.smith@example.com"),
             It.IsAny<CancellationToken>()), Times.Once);
 
-        _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _notificationService.Verify(service => service.PublishAsync(
+            It.Is<PublishNotificationParameters>(parameters => parameters.RecipientUserId == "talent-2" && parameters.Type == NotificationType.JobAlertMatch),
+            It.IsAny<CancellationToken>()), Times.Once);
+
+        _unitOfWork.Verify(unitOfWork => unitOfWork.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 }
