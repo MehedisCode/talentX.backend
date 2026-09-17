@@ -98,6 +98,7 @@ public class SaveJobCommandHandlerTests
     public async Task Handle_WhenJobIsClosed_ThrowsNotFoundException()
     {
         var job = CreatePublishedJob();
+        job.MarkAsPublished();
         job.MarkAsClosed();
         _jobRepository.Setup(r => r.GetPublishedJobByIdAsync(job.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync((Job?)null);

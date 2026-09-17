@@ -107,4 +107,42 @@ public class EmailTemplateRenderTests
         html.Should().Contain("http://localhost:3000/jobs/123");
         html.Should().Contain("C# Remote Alerts");
     }
+
+    [Fact]
+    public async Task JobDeactivated_renders()
+    {
+        var html = await Engine.CompileRenderAsync(
+            EmailConstants.Templates.JobDeactivated,
+            new JobDeactivatedEmailModel(
+                "Ayesha",
+                "Senior Backend Engineer",
+                "Misleading or invalid information",
+                "The salary range does not match the one described in the job body.",
+                "http://localhost:3000/job/6f1c2b7e-0000-0000-0000-000000000001/edit"));
+
+        html.Should().Contain("Job Deactivated");
+        html.Should().Contain("Ayesha");
+        html.Should().Contain("Senior Backend Engineer");
+        html.Should().Contain("Misleading or invalid information");
+        html.Should().Contain("The salary range does not match the one described in the job body.");
+        html.Should().Contain("http://localhost:3000/job/6f1c2b7e-0000-0000-0000-000000000001/edit");
+        html.Should().Contain("resubmit it for review");
+    }
+
+    [Fact]
+    public async Task JobReactivated_renders()
+    {
+        var html = await Engine.CompileRenderAsync(
+            EmailConstants.Templates.JobReactivated,
+            new JobReactivatedEmailModel(
+                "Ayesha",
+                "Senior Backend Engineer",
+                "http://localhost:3000/jobs/6f1c2b7e-0000-0000-0000-000000000001"));
+
+        html.Should().Contain("Job Reactivated");
+        html.Should().Contain("Ayesha");
+        html.Should().Contain("Senior Backend Engineer");
+        html.Should().Contain("http://localhost:3000/jobs/6f1c2b7e-0000-0000-0000-000000000001");
+        html.Should().Contain("visible to candidates again");
+    }
 }
