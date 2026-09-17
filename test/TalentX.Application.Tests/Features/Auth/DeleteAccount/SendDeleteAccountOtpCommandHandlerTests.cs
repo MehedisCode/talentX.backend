@@ -25,6 +25,7 @@ public class SendDeleteAccountOtpCommandHandlerTests
     private readonly Mock<IEmailService> _emailServiceMock = new();
 
     private readonly FakeOtpAttemptTracker _attemptTracker = new();
+    private readonly FakeOtpCooldownTracker _cooldownTracker = new();
     private readonly SendDeleteAccountOtpCommandHandler _handler;
     private readonly string _otpKey = OtpKeys.DeleteAccount(Email);
 
@@ -48,6 +49,7 @@ public class SendDeleteAccountOtpCommandHandlerTests
             _unitOfWorkMock.Object,
             _otpServiceMock.Object,
             _attemptTracker,
+            _cooldownTracker,
             _emailServiceMock.Object);
     }
 
@@ -109,28 +111,53 @@ public class SendDeleteAccountOtpCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WithMissingEmail_ShouldThrowUnauthorized()
+    public async Task Handle_WhenCalledTwiceWithinCooldown_ShouldThrowValidationExceptionAndBlockSecondOtp()
     {
-        _currentUserServiceMock.SetupGet(c => c.Email).Returns((string?)null);
+        // First send succeeds and initiates cooldown
+        await _handler.Handle(new SendDeleteAccountOtpCommand(), CancellationToken.None);
 
+        _otpServiceMock.Verify(
+            o => o.GenerateOtpAsync(_otpKey, It.IsAny<TimeSpan?>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+        _emailServiceMock.Verify(
+            e => e.SendOtpEmailAsync(Email, "Test User", IssuedOtp, It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        // Advance 15 seconds (still within 60s cooldown)
+        _cooldownTracker.AdvanceTime(TimeSpan.FromSeconds(15));
+
+        // Second send must be rejected
         var act = () => _handler.Handle(new SendDeleteAccountOtpCommand(), CancellationToken.None);
 
-        await act.Should().ThrowAsync<UnauthorizedException>();
+        var exception = await act.Should().ThrowAsync<ValidationException>();
+        exception.Which.Message.Should().Contain("Please wait 45 seconds before requesting a new verification code.");
+
+        // Verification service & email service should not have been called again
         _otpServiceMock.Verify(
-            o => o.GenerateOtpAsync(It.IsAny<string>(), It.IsAny<TimeSpan?>(), It.IsAny<CancellationToken>()),
-            Times.Never);
+            o => o.GenerateOtpAsync(_otpKey, It.IsAny<TimeSpan?>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+        _emailServiceMock.Verify(
+            e => e.SendOtpEmailAsync(Email, "Test User", IssuedOtp, It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
-    public async Task Handle_WithMissingUserId_ShouldThrowUnauthorized()
+    public async Task Handle_AfterCooldownExpires_ShouldAllowSendingNewOtp()
     {
-        _currentUserServiceMock.SetupGet(c => c.UserId).Returns((string?)null);
+        // First send
+        await _handler.Handle(new SendDeleteAccountOtpCommand(), CancellationToken.None);
 
-        var act = () => _handler.Handle(new SendDeleteAccountOtpCommand(), CancellationToken.None);
+        // Advance past 60s cooldown
+        _cooldownTracker.AdvanceTime(TimeSpan.FromSeconds(61));
 
-        await act.Should().ThrowAsync<UnauthorizedException>();
+        // Second send should succeed
+        await _handler.Handle(new SendDeleteAccountOtpCommand(), CancellationToken.None);
+
         _otpServiceMock.Verify(
-            o => o.GenerateOtpAsync(It.IsAny<string>(), It.IsAny<TimeSpan?>(), It.IsAny<CancellationToken>()),
-            Times.Never);
+            o => o.GenerateOtpAsync(_otpKey, It.IsAny<TimeSpan?>(), It.IsAny<CancellationToken>()),
+            Times.Exactly(2));
+        _emailServiceMock.Verify(
+            e => e.SendOtpEmailAsync(Email, "Test User", IssuedOtp, It.IsAny<CancellationToken>()),
+            Times.Exactly(2));
     }
 }
