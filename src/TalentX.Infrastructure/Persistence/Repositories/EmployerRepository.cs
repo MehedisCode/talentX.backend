@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using TalentX.Application.Common.Interfaces.Repositories;
 using TalentX.Domain;
+using TalentX.Domain.Enums;
 using TalentX.Infrastructure.Persistence.Contexts;
 
 namespace TalentX.Infrastructure.Persistence.Repositories;
@@ -46,5 +47,39 @@ public sealed class EmployerRepository : IEmployerRepository
     {
         return await _context.Employers
             .AnyAsync(e => e.Email == email, cancellationToken);
+    }
+
+    public async Task<(IReadOnlyList<Employer> Items, int TotalCount)> GetPagedAsync(
+        string? search,
+        EmployerVerificationStatus? status,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _context.Employers.AsNoTracking().AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var term = search.Trim().ToLowerInvariant();
+            query = query.Where(e =>
+                e.Name.ToLower().Contains(term) ||
+                e.Email.ToLower().Contains(term) ||
+                e.CompanyName.ToLower().Contains(term));
+        }
+
+        if (status.HasValue)
+        {
+            query = query.Where(e => e.VerificationStatus == status.Value);
+        }
+
+        var totalCount = await query.CountAsync(cancellationToken);
+
+        var items = await query
+            .OrderByDescending(e => e.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return (items, totalCount);
     }
 }

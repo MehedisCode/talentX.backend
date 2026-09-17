@@ -88,4 +88,218 @@ public class GeminiResponseMapperTests
         result.Email.Should().Be("alice.deterministic@example.com");
         result.Phone.Should().Be("+1-555-000-1111");
     }
+
+    [Fact]
+    public void MapToResult_MovesLoneEducationYear_ToEndDate()
+    {
+        var json = """
+        {
+          "fullName": "Alice Smith",
+          "education": [
+            {
+              "institution": "MIT",
+              "degree": "B.S. Computer Science",
+              "startDate": "2019",
+              "endDate": null
+            }
+          ]
+        }
+        """;
+
+        var result = GeminiResponseMapper.MapToResult(json, null, null, NullLogger.Instance);
+
+        result.Education.Should().ContainSingle();
+        result.Education[0].StartDate.Should().BeNull();
+        result.Education[0].EndDate.Should().Be("2019");
+    }
+
+    [Fact]
+    public void MapToResult_KeepsEducationRange_WhenTwoYearsProvided()
+    {
+        var json = """
+        {
+          "fullName": "Alice Smith",
+          "education": [
+            {
+              "institution": "MIT",
+              "degree": "B.S. Computer Science",
+              "startDate": "2017",
+              "endDate": "2021"
+            }
+          ]
+        }
+        """;
+
+        var result = GeminiResponseMapper.MapToResult(json, null, null, NullLogger.Instance);
+
+        result.Education[0].StartDate.Should().Be("2017");
+        result.Education[0].EndDate.Should().Be("2021");
+    }
+
+    [Fact]
+    public void MapToResult_SplitsEducationRangeReturnedInOneField()
+    {
+        var json = """
+        {
+          "fullName": "Alice Smith",
+          "education": [
+            {
+              "institution": "MIT",
+              "degree": "B.S. Computer Science",
+              "startDate": "2016 - 2020",
+              "endDate": ""
+            }
+          ]
+        }
+        """;
+
+        var result = GeminiResponseMapper.MapToResult(json, null, null, NullLogger.Instance);
+
+        result.Education[0].StartDate.Should().Be("2016");
+        result.Education[0].EndDate.Should().Be("2020");
+    }
+
+    [Fact]
+    public void MapToResult_MarksCurrentRole_WhenEndDateIsPresent()
+    {
+        var json = """
+        {
+          "fullName": "Alice Smith",
+          "workExperience": [
+            {
+              "companyName": "Acme",
+              "jobTitle": "Engineer",
+              "startDate": "Jan 2020",
+              "endDate": "Present"
+            }
+          ]
+        }
+        """;
+
+        var result = GeminiResponseMapper.MapToResult(json, null, null, NullLogger.Instance);
+
+        result.WorkExperience[0].IsCurrent.Should().BeTrue();
+        result.WorkExperience[0].EndDate.Should().Be("Present");
+    }
+
+    [Fact]
+    public void MapToResult_MarksPastRole_AsNotCurrent()
+    {
+        var json = """
+        {
+          "fullName": "Alice Smith",
+          "workExperience": [
+            {
+              "companyName": "Acme",
+              "jobTitle": "Engineer",
+              "startDate": "2017",
+              "endDate": "2019"
+            }
+          ]
+        }
+        """;
+
+        var result = GeminiResponseMapper.MapToResult(json, null, null, NullLogger.Instance);
+
+        result.WorkExperience[0].IsCurrent.Should().BeFalse();
+        result.WorkExperience[0].EndDate.Should().Be("2019");
+    }
+
+    [Fact]
+    public void MapToResult_KeepsDatelessWorkEntry()
+    {
+        var json = """
+        {
+          "fullName": "Alice Smith",
+          "workExperience": [
+            {
+              "companyName": "Acme",
+              "jobTitle": "Engineer",
+              "startDate": ""
+            }
+          ]
+        }
+        """;
+
+        var result = GeminiResponseMapper.MapToResult(json, null, null, NullLogger.Instance);
+
+        result.WorkExperience.Should().ContainSingle();
+        result.WorkExperience[0].CompanyName.Should().Be("Acme");
+        result.WorkExperience[0].IsCurrent.Should().BeFalse();
+    }
+
+    [Fact]
+    public void MapToResult_OrdersWorkExperience_NewestFirst_WithCurrentFirst()
+    {
+        var json = """
+        {
+          "fullName": "Alice Smith",
+          "workExperience": [
+            { "companyName": "Old Co", "jobTitle": "Developer", "startDate": "2016", "endDate": "2018" },
+            { "companyName": "Present Co", "jobTitle": "Lead", "startDate": "Jan 2021", "endDate": "Present" },
+            { "companyName": "Mid Co", "jobTitle": "Engineer", "startDate": "2019", "endDate": "2020" }
+          ]
+        }
+        """;
+
+        var result = GeminiResponseMapper.MapToResult(json, null, null, NullLogger.Instance);
+
+        result.WorkExperience.Select(w => w.CompanyName).Should().Equal("Present Co", "Mid Co", "Old Co");
+    }
+
+    [Fact]
+    public void MapToResult_PutsUndatedWorkEntryLast()
+    {
+        var json = """
+        {
+          "fullName": "Alice Smith",
+          "workExperience": [
+            { "companyName": "No Dates", "jobTitle": "Intern", "startDate": "" },
+            { "companyName": "Dated", "jobTitle": "Engineer", "startDate": "2020", "endDate": "2021" }
+          ]
+        }
+        """;
+
+        var result = GeminiResponseMapper.MapToResult(json, null, null, NullLogger.Instance);
+
+        result.WorkExperience.Select(w => w.CompanyName).Should().Equal("Dated", "No Dates");
+    }
+
+    [Fact]
+    public void MapToResult_OrdersEducation_NewestGraduationFirst()
+    {
+        var json = """
+        {
+          "fullName": "Alice Smith",
+          "education": [
+            { "institution": "Old University", "degree": "B.Sc" , "startDate": "2012", "endDate": "2016" },
+            { "institution": "New University", "degree": "M.Sc", "startDate": "2019", "endDate": "2021" }
+          ]
+        }
+        """;
+
+        var result = GeminiResponseMapper.MapToResult(json, null, null, NullLogger.Instance);
+
+        result.Education.Select(e => e.Institution).Should().Equal("New University", "Old University");
+    }
+
+    [Fact]
+    public void MapToResult_DetectsPersonalDomainPortfolio_ByIdentity()
+    {
+        var json = """
+        {
+          "fullName": "Aparna Khatri",
+          "portfolioUrls": ["aparnakhatri.com"]
+        }
+        """;
+
+        var result = GeminiResponseMapper.MapToResult(
+            json,
+            "aparna@example.com",
+            null,
+            NullLogger.Instance,
+            "Aparna Khatri\naparnakhatri.com");
+
+        result.PortfolioUrls.Should().Equal("https://aparnakhatri.com");
+    }
 }

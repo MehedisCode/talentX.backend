@@ -4,8 +4,10 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
+using TalentX.Application.Common.Interfaces.Repositories;
 using TalentX.Application.Features.Jobs.Commands.CreateJob;
 using TalentX.Application.Identity.Services;
+using TalentX.Domain;
 using TalentX.Domain.Entities;
 using TalentX.Domain.Enums;
 using Xunit;
@@ -17,12 +19,14 @@ public class CreateJobCommandHandlerTests
     private readonly Mock<IJobRepository> _jobRepository = new();
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
     private readonly Mock<ICurrentUserService> _currentUserService = new();
+    private readonly Mock<IEmployerRepository> _employerRepository = new();
     private readonly Mock<IJobAlertQueue> _jobAlertQueue = new();
     private readonly Mock<ILogger<CreateJobCommandHandler>> _logger = new();
     private readonly CreateJobCommandHandler _handler;
 
     public CreateJobCommandHandlerTests()
     {
+        _unitOfWork.Setup(u => u.Employers).Returns(_employerRepository.Object);
         _currentUserService.SetupGet(u => u.UserId).Returns("employer-1");
         _handler = new CreateJobCommandHandler(
             _jobRepository.Object,
@@ -30,6 +34,16 @@ public class CreateJobCommandHandlerTests
             _currentUserService.Object,
             _jobAlertQueue.Object,
             _logger.Object);
+    }
+
+    private void SetupVerifiedEmployer(string userId = "employer-1")
+    {
+        var employer = new Employer(userId, "Test Employer", "employer@test.com", "Test Corp");
+        employer.MarkEmailVerified();
+        employer.MarkAsVerified();
+        _employerRepository
+            .Setup(r => r.GetByUserIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(employer);
     }
 
     private static CreateJobCommand ValidCommand(bool publish = false) => new(
@@ -90,6 +104,7 @@ public class CreateJobCommandHandlerTests
             .Setup(r => r.AddAsync(It.IsAny<Job>(), It.IsAny<CancellationToken>()))
             .Callback<Job, CancellationToken>((job, _) => addedJob = job)
             .Returns(Task.CompletedTask);
+        SetupVerifiedEmployer();
 
         var command = ValidCommand(publish: true);
 
@@ -101,6 +116,7 @@ public class CreateJobCommandHandlerTests
     [Fact]
     public async Task Handle_WithPublishTrueAndNoVacancies_ThrowsValidationException()
     {
+        SetupVerifiedEmployer();
         var command = ValidCommand(publish: true) with { Vacancies = 0 };
 
         var act = () => _handler.Handle(command, CancellationToken.None);
@@ -111,6 +127,7 @@ public class CreateJobCommandHandlerTests
     [Fact]
     public async Task Handle_WithPublishTrueAndNoVacancies_DoesNotPersistOrSave()
     {
+        SetupVerifiedEmployer();
         var command = ValidCommand(publish: true) with { Vacancies = 0 };
 
         try
@@ -304,6 +321,7 @@ public class CreateJobCommandHandlerTests
     [Fact]
     public async Task Handle_WhenPublishIsTrue_EnqueuesJobForJobAlerts()
     {
+        SetupVerifiedEmployer();
         var command = ValidCommand(publish: true);
 
         var jobId = await _handler.Handle(command, CancellationToken.None);
