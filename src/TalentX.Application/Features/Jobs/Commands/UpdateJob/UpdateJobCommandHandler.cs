@@ -43,6 +43,15 @@ public class UpdateJobCommandHandler : IRequestHandler<UpdateJobCommand>
         if (job.EmployerId != employerId)
             throw new ForbiddenException("You do not have permission to edit this job.");
 
+        // Locked while an admin reviews it, so the job can't change after it entered the queue.
+        if (job.Status == JobStatus.PendingReview)
+            throw new BadRequestException("This job is under admin review and can't be edited until the review is complete.");
+
+        // Editing a deactivated job is how the employer fixes it, but going live again needs admin
+        // approval. Without this they'd get the generic "Only draft jobs can be published".
+        if (request.Publish && job.Status == JobStatus.Deactivated)
+            throw new BadRequestException("This job was deactivated by an admin. Save your changes and resubmit it for review instead of publishing.");
+
         job.SetDetails(
             request.Title != null ? JobRules.NormalizeText(request.Title) : job.Title,
             request.CompanyName != null ? JobRules.NormalizeText(request.CompanyName) : job.CompanyName,

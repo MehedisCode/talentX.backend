@@ -234,6 +234,7 @@ public sealed class JobRepository : RepositoryBase<Job>, IJobRepository
                 job.SalaryMax,
                 job.SalaryCurrency,
                 job.SalaryPeriod,
+                job.DeactivationReason,
                 ApplicantCount = Context.JobApplications.Count(application => application.JobId == job.Id)
             })
             .ToListAsync(cancellationToken);
@@ -257,7 +258,10 @@ public sealed class JobRepository : RepositoryBase<Job>, IJobRepository
             job.SalaryMin,
             job.SalaryMax,
             job.SalaryCurrency,
-            job.SalaryPeriod)).ToList();
+            job.SalaryPeriod,
+            job.DeactivationReason.HasValue
+                ? DeactivationReasonLabels.ToLabel(job.DeactivationReason.Value)
+                : null)).ToList();
 
         return new PaginatedList<EmployerJobListItemDto>(items, page, pageSize, totalCount);
     }

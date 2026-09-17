@@ -2,6 +2,7 @@ using MediatR;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Features.Jobs.DTOs;
+using TalentX.Application.Features.Jobs.Moderation;
 using TalentX.Application.Identity.Services;
 
 namespace TalentX.Application.Features.Jobs.Queries.GetMyJob;
@@ -53,7 +54,13 @@ public class GetMyJobQueryHandler : IRequestHandler<GetMyJobQuery, MyJobDto>
             SalaryMax = job.SalaryMax,
             SalaryCurrency = job.SalaryCurrency,
             SalaryPeriod = job.SalaryPeriod,
-            Requirements = job.Requirements
+            Requirements = job.Requirements,
+            DeactivationReason = job.DeactivationReason,
+            DeactivationReasonLabel = job.DeactivationReason.HasValue
+                ? DeactivationReasonLabels.ToLabel(job.DeactivationReason.Value)
+                : null,
+            DeactivationDetails = job.DeactivationDetails,
+            DeactivatedAt = job.DeactivatedAt
         };
     }
 }
