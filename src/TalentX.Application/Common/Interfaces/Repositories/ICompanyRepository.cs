@@ -26,4 +26,9 @@ public interface ICompanyRepository
     /// Gets a company by its associated employer identifier.
     /// </summary>
     Task<Company?> GetByEmployerIdAsync(string employerId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Deletes the company associated with the specified employer identifier.
+    /// </summary>
+    Task DeleteByEmployerIdAsync(string employerId, CancellationToken cancellationToken = default);
 }

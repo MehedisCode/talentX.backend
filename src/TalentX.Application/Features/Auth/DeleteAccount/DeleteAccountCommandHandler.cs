@@ -65,22 +65,33 @@ public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountC
         var user = await _unitOfWork.Users.GetByUserIdAsync(identityUserId, cancellationToken);
         var recipientName = string.IsNullOrWhiteSpace(user?.Name) ? email : user!.Name;
 
-        if (user is not null)
+        await _unitOfWork.BeginTransactionAsync(cancellationToken);
+        try
         {
-            await DeleteOwnedDomainDataAsync(user, identityUserId, cancellationToken);
-        }
+            if (user is not null)
+            {
+                await DeleteOwnedDomainDataAsync(user, identityUserId, cancellationToken);
+            }
 
-        var identityDelete = await _identityService.DeleteApplicationUserAsync(identityUserId);
-        if (!identityDelete.Succeeded)
+            await _tokenService.RevokeAllForUserAsync(identityUserId);
+
+            var identityDelete = await _identityService.DeleteApplicationUserAsync(identityUserId);
+            if (!identityDelete.Succeeded)
+            {
+                _logger.LogError(
+                    "Account deletion for {Email}: identity delete failed: {Errors}",
+                    email, string.Join("; ", identityDelete.Errors));
+                throw new BadGatewayException(
+                    "Your account deletion could not be completed. Please try again.");
+            }
+
+            await _unitOfWork.CommitTransactionAsync(cancellationToken);
+        }
+        catch
         {
-            _logger.LogError(
-                "Account deletion for {Email}: domain rows deleted but identity delete failed: {Errors}",
-                email, string.Join("; ", identityDelete.Errors));
-            throw new BadGatewayException(
-                "Your account data was deleted but sign-in cleanup failed. Request a new code and try again to finish.");
+            await _unitOfWork.RollbackTransactionAsync(cancellationToken);
+            throw;
         }
-
-        await _tokenService.RevokeAllForUserAsync(identityUserId);
 
         try
         {
@@ -103,7 +114,14 @@ public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountC
         if (user.Role == UserRole.Employer)
         {
             var jobs = await _unitOfWork.Jobs.GetByEmployerIdIncludingDeletedAsync(identityUserId, cancellationToken);
-            _unitOfWork.Jobs.RemoveRange(jobs);
+            if (jobs.Count > 0)
+            {
+                var jobIds = jobs.Select(j => j.Id).ToList();
+                await _unitOfWork.JobModerationHistories.DeleteByJobIdsAsync(jobIds, cancellationToken);
+                _unitOfWork.Jobs.RemoveRange(jobs);
+            }
+
+            await _unitOfWork.Companies.DeleteByEmployerIdAsync(identityUserId, cancellationToken);
         }
 
         await _unitOfWork.JobApplications.DeleteByTalentUserIdAsync(identityUserId, cancellationToken);
@@ -111,6 +129,10 @@ public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountC
         await _unitOfWork.Invitations.DeleteByTalentUserIdAsync(identityUserId, cancellationToken);
         await _unitOfWork.JobTalentMatches.DeleteByTalentUserIdAsync(identityUserId, cancellationToken);
         await _unitOfWork.SavedJobs.DeleteByTalentIdAsync(identityUserId, cancellationToken);
+
+        await _unitOfWork.JobAlerts.DeleteByTalentIdAsync(identityUserId, cancellationToken);
+        await _unitOfWork.TalentNotificationPreferences.DeleteByTalentIdAsync(identityUserId, cancellationToken);
+        await _unitOfWork.JobAlertNotificationHistories.DeleteByTalentIdAsync(identityUserId, cancellationToken);
 
         await _unitOfWork.Resumes.DeleteByUserIdAsync(identityUserId, cancellationToken);
         await _unitOfWork.WorkExperiences.DeleteByUserIdAsync(identityUserId, cancellationToken);

@@ -41,4 +41,16 @@ public sealed class JobAlertNotificationHistoryRepository : IJobAlertNotificatio
     {
         await _context.JobAlertNotificationHistories.AddAsync(history, cancellationToken);
     }
+
+    public async Task DeleteByTalentIdAsync(string talentId, CancellationToken cancellationToken = default)
+    {
+        var histories = await _context.JobAlertNotificationHistories
+            .Where(history => history.TalentId == talentId)
+            .ToListAsync(cancellationToken);
+
+        if (histories.Count > 0)
+        {
+            _context.JobAlertNotificationHistories.RemoveRange(histories);
+        }
+    }
 }

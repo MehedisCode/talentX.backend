@@ -35,4 +35,15 @@ public sealed class CompanyRepository : ICompanyRepository
         return await _context.Companies
             .FirstOrDefaultAsync(c => c.EmployerId == employerId, cancellationToken);
     }
+
+    public async Task DeleteByEmployerIdAsync(string employerId, CancellationToken cancellationToken = default)
+    {
+        var company = await _context.Companies
+            .FirstOrDefaultAsync(c => c.EmployerId == employerId, cancellationToken);
+
+        if (company is not null)
+        {
+            _context.Companies.Remove(company);
+        }
+    }
 }
