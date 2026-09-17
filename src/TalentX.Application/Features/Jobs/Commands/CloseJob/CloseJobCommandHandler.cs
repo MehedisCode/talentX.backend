@@ -34,7 +34,15 @@ public sealed class CloseJobCommandHandler : IRequestHandler<CloseJobCommand, Un
             throw new ForbiddenException("You do not have permission to close this job.");
         }
 
-        job.MarkAsClosed();
+        try
+        {
+            job.MarkAsClosed();
+        }
+        catch (InvalidOperationException exception)
+        {
+            throw new BadRequestException(exception.Message);
+        }
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return Unit.Value;

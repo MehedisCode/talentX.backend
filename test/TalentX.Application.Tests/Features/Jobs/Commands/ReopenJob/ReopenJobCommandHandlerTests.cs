@@ -52,6 +52,7 @@ public sealed class ReopenJobCommandHandlerTests
     public async Task Handle_ValidRequest_ReopensJobAndSaves()
     {
         var sampleJob = CreateSampleJob(employerId: "employer-123");
+        sampleJob.MarkAsPublished();
         sampleJob.MarkAsClosed();
         _jobRepository.Setup(repository => repository.GetByIdAsync(sampleJob.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(sampleJob);
@@ -100,6 +101,7 @@ public sealed class ReopenJobCommandHandlerTests
     public async Task Handle_UserNotOwner_ThrowsForbiddenException()
     {
         var sampleJob = CreateSampleJob(employerId: "different-employer-999");
+        sampleJob.MarkAsPublished();
         sampleJob.MarkAsClosed();
         _jobRepository.Setup(repository => repository.GetByIdAsync(sampleJob.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(sampleJob);
@@ -118,6 +120,7 @@ public sealed class ReopenJobCommandHandlerTests
     {
         var expiredDeadline = DateTime.UtcNow.AddDays(-2);
         var sampleJob = CreateSampleJob(employerId: "employer-123", expireAt: expiredDeadline);
+        sampleJob.MarkAsPublished();
         sampleJob.MarkAsClosed();
         _jobRepository.Setup(repository => repository.GetByIdAsync(sampleJob.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(sampleJob);

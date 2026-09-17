@@ -54,6 +54,10 @@ public class JobConfiguration : IEntityTypeConfiguration<Job>
         builder.Property(job => job.SalaryCurrency).HasConversion<string>();
         builder.Property(job => job.SalaryPeriod).HasConversion<string>();
 
+        builder.Property(job => job.DeactivationReason).HasConversion<string>();
+        builder.Property(job => job.DeactivationDetails).HasMaxLength(1000);
+        builder.Property(job => job.DeactivatedAt).IsRequired(false);
+
         var stringListComparer = new ValueComparer<List<string>>(
             (c1, c2) => c1 != null && c2 != null ? c1.SequenceEqual(c2) : c1 == c2,
             c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
