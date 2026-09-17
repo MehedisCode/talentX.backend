@@ -5,7 +5,7 @@ namespace TalentX.Application.Common.Interfaces;
 /// <summary>
 /// Unit of work interface coordinating repository operations and transactions.
 /// </summary>
-public interface IUnitOfWork
+public interface IUnitOfWork : IDisposable, IAsyncDisposable
 {
     IJobRepository Jobs { get; }
     IJobApplicationRepository JobApplications { get; }

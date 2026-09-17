@@ -11,6 +11,8 @@ namespace TalentX.Infrastructure.Persistence.Repositories;
 public sealed class UnitOfWork : IUnitOfWork
 {
     private readonly ApplicationDbContext _context;
+    private IDbContextTransaction? _currentTransaction;
+
     public IJobRepository Jobs { get; }
     public IJobApplicationRepository JobApplications { get; }
     public IUserRepository Users { get; }
@@ -72,8 +74,6 @@ public sealed class UnitOfWork : IUnitOfWork
         }
     }
 
-    private IDbContextTransaction? _currentTransaction;
-
     public async Task BeginTransactionAsync(CancellationToken cancellationToken = default)
     {
         if (_currentTransaction is not null)
@@ -88,8 +88,6 @@ public sealed class UnitOfWork : IUnitOfWork
     {
         try
         {
-            await SaveChangesAsync(cancellationToken);
-
             if (_currentTransaction is not null)
             {
                 await _currentTransaction.CommitAsync(cancellationToken);
@@ -126,6 +124,24 @@ public sealed class UnitOfWork : IUnitOfWork
                 await _currentTransaction.DisposeAsync();
                 _currentTransaction = null;
             }
+        }
+    }
+
+    public void Dispose()
+    {
+        if (_currentTransaction is not null)
+        {
+            _currentTransaction.Dispose();
+            _currentTransaction = null;
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_currentTransaction is not null)
+        {
+            await _currentTransaction.DisposeAsync();
+            _currentTransaction = null;
         }
     }
 }

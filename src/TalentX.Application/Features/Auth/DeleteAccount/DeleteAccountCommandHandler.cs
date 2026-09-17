@@ -15,7 +15,6 @@ public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountC
     private readonly ICurrentUserService _currentUserService;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IIdentityService _identityService;
-    private readonly ITokenService _tokenService;
     private readonly IOtpService _otpService;
     private readonly IOtpAttemptTracker _attemptTracker;
     private readonly IEmailService _emailService;
@@ -25,7 +24,6 @@ public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountC
         ICurrentUserService currentUserService,
         IUnitOfWork unitOfWork,
         IIdentityService identityService,
-        ITokenService tokenService,
         IOtpService otpService,
         IOtpAttemptTracker attemptTracker,
         IEmailService emailService,
@@ -34,7 +32,6 @@ public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountC
         _currentUserService = currentUserService;
         _unitOfWork = unitOfWork;
         _identityService = identityService;
-        _tokenService = tokenService;
         _otpService = otpService;
         _attemptTracker = attemptTracker;
         _emailService = emailService;
@@ -72,8 +69,6 @@ public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountC
             {
                 await DeleteOwnedDomainDataAsync(user, identityUserId, cancellationToken);
             }
-
-            await _tokenService.RevokeAllForUserAsync(identityUserId);
 
             var identityDelete = await _identityService.DeleteApplicationUserAsync(identityUserId);
             if (!identityDelete.Succeeded)
@@ -123,20 +118,22 @@ public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountC
 
             await _unitOfWork.Companies.DeleteByEmployerIdAsync(identityUserId, cancellationToken);
         }
+        else if (user.Role == UserRole.Talent)
+        {
+            await _unitOfWork.JobApplications.DeleteByTalentUserIdAsync(identityUserId, cancellationToken);
+            await _unitOfWork.InterviewInvitations.DeleteByTalentUserIdAsync(identityUserId, cancellationToken);
+            await _unitOfWork.Invitations.DeleteByTalentUserIdAsync(identityUserId, cancellationToken);
+            await _unitOfWork.JobTalentMatches.DeleteByTalentUserIdAsync(identityUserId, cancellationToken);
+            await _unitOfWork.SavedJobs.DeleteByTalentIdAsync(identityUserId, cancellationToken);
 
-        await _unitOfWork.JobApplications.DeleteByTalentUserIdAsync(identityUserId, cancellationToken);
-        await _unitOfWork.InterviewInvitations.DeleteByTalentUserIdAsync(identityUserId, cancellationToken);
-        await _unitOfWork.Invitations.DeleteByTalentUserIdAsync(identityUserId, cancellationToken);
-        await _unitOfWork.JobTalentMatches.DeleteByTalentUserIdAsync(identityUserId, cancellationToken);
-        await _unitOfWork.SavedJobs.DeleteByTalentIdAsync(identityUserId, cancellationToken);
+            await _unitOfWork.JobAlerts.DeleteByTalentIdAsync(identityUserId, cancellationToken);
+            await _unitOfWork.TalentNotificationPreferences.DeleteByTalentIdAsync(identityUserId, cancellationToken);
+            await _unitOfWork.JobAlertNotificationHistories.DeleteByTalentIdAsync(identityUserId, cancellationToken);
 
-        await _unitOfWork.JobAlerts.DeleteByTalentIdAsync(identityUserId, cancellationToken);
-        await _unitOfWork.TalentNotificationPreferences.DeleteByTalentIdAsync(identityUserId, cancellationToken);
-        await _unitOfWork.JobAlertNotificationHistories.DeleteByTalentIdAsync(identityUserId, cancellationToken);
-
-        await _unitOfWork.Resumes.DeleteByUserIdAsync(identityUserId, cancellationToken);
-        await _unitOfWork.WorkExperiences.DeleteByUserIdAsync(identityUserId, cancellationToken);
-        await _unitOfWork.Educations.DeleteByUserIdAsync(identityUserId, cancellationToken);
+            await _unitOfWork.Resumes.DeleteByUserIdAsync(identityUserId, cancellationToken);
+            await _unitOfWork.WorkExperiences.DeleteByUserIdAsync(identityUserId, cancellationToken);
+            await _unitOfWork.Educations.DeleteByUserIdAsync(identityUserId, cancellationToken);
+        }
 
         _unitOfWork.Users.Delete(user);
 
