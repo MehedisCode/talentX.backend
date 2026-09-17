@@ -21,12 +21,6 @@ public sealed class NotificationsHub : Hub
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
-        var userId = Context.User?.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (!string.IsNullOrEmpty(userId))
-        {
-            await Groups.RemoveFromGroupAsync(Context.ConnectionId, userId);
-        }
-
         await base.OnDisconnectedAsync(exception);
     }
 }

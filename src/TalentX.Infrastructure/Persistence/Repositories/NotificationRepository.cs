@@ -64,13 +64,27 @@ public sealed class NotificationRepository : INotificationRepository
 
     public async Task MarkAllAsReadAsync(string recipientUserId, CancellationToken cancellationToken)
     {
-        var unreadNotifications = await _context.Notifications
-            .Where(notification => notification.RecipientUserId == recipientUserId && notification.ReadAt == null)
-            .ToListAsync(cancellationToken);
+        var now = DateTime.UtcNow;
 
-        foreach (var notification in unreadNotifications)
+        if (_context.Database.ProviderName == "Microsoft.EntityFrameworkCore.InMemory")
         {
-            notification.MarkAsRead();
+            var unreadNotifications = await _context.Notifications
+                .Where(notification => notification.RecipientUserId == recipientUserId && notification.ReadAt == null)
+                .ToListAsync(cancellationToken);
+
+            foreach (var notification in unreadNotifications)
+            {
+                notification.MarkAsRead();
+            }
+
+            return;
         }
+
+        await _context.Notifications
+            .Where(notification => notification.RecipientUserId == recipientUserId && notification.ReadAt == null)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(notification => notification.ReadAt, now)
+                .SetProperty(notification => notification.UpdatedAt, now),
+                cancellationToken);
     }
 }
