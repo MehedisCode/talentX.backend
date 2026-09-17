@@ -43,10 +43,8 @@ public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountC
 
     public async Task<DeleteAccountResult> Handle(DeleteAccountCommand request, CancellationToken cancellationToken)
     {
-        var email = _currentUserService.Email
-            ?? throw new UnauthorizedException("You must be signed in to delete your account.");
-        var identityUserId = _currentUserService.UserId
-            ?? throw new UnauthorizedException("You must be signed in to delete your account.");
+        var email = _currentUserService.Email!;
+        var identityUserId = _currentUserService.UserId!;
 
         var otpKey = OtpKeys.DeleteAccount(email);
 

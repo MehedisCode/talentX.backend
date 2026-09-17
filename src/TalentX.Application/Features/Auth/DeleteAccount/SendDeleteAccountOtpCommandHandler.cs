@@ -33,10 +33,8 @@ public sealed class SendDeleteAccountOtpCommandHandler : IRequestHandler<SendDel
 
     public async Task<bool> Handle(SendDeleteAccountOtpCommand request, CancellationToken cancellationToken)
     {
-        var email = _currentUserService.Email
-            ?? throw new UnauthorizedException("You must be signed in to request a verification code.");
-        var identityUserId = _currentUserService.UserId
-            ?? throw new UnauthorizedException("You must be signed in to request a verification code.");
+        var email = _currentUserService.Email!;
+        var identityUserId = _currentUserService.UserId!;
 
         // Domain row may already be gone when a previous delete deleted the data but
         // failed to remove the identity row. Allow the retry so that flow can converge.

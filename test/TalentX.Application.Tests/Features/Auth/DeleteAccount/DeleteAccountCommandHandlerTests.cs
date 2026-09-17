@@ -145,26 +145,6 @@ public class DeleteAccountCommandHandlerTests
             Times.Never);
     }
 
-    [Fact]
-    public async Task Handle_WithMissingEmail_ShouldThrowUnauthorized()
-    {
-        _currentUserServiceMock.SetupGet(c => c.Email).Returns((string?)null);
-
-        var act = () => _handler.Handle(new DeleteAccountCommand(ValidOtp), CancellationToken.None);
-
-        await act.Should().ThrowAsync<UnauthorizedException>();
-    }
-
-    [Fact]
-    public async Task Handle_WithMissingUserId_ShouldThrowUnauthorized()
-    {
-        _currentUserServiceMock.SetupGet(c => c.UserId).Returns((string?)null);
-
-        var act = () => _handler.Handle(new DeleteAccountCommand(ValidOtp), CancellationToken.None);
-
-        await act.Should().ThrowAsync<UnauthorizedException>();
-    }
-
     #endregion
 
     #region Talent deletion

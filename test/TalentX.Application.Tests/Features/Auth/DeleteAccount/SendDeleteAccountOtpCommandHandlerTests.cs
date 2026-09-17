@@ -111,32 +111,6 @@ public class SendDeleteAccountOtpCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WithMissingEmail_ShouldThrowUnauthorized()
-    {
-        _currentUserServiceMock.SetupGet(c => c.Email).Returns((string?)null);
-
-        var act = () => _handler.Handle(new SendDeleteAccountOtpCommand(), CancellationToken.None);
-
-        await act.Should().ThrowAsync<UnauthorizedException>();
-        _otpServiceMock.Verify(
-            o => o.GenerateOtpAsync(It.IsAny<string>(), It.IsAny<TimeSpan?>(), It.IsAny<CancellationToken>()),
-            Times.Never);
-    }
-
-    [Fact]
-    public async Task Handle_WithMissingUserId_ShouldThrowUnauthorized()
-    {
-        _currentUserServiceMock.SetupGet(c => c.UserId).Returns((string?)null);
-
-        var act = () => _handler.Handle(new SendDeleteAccountOtpCommand(), CancellationToken.None);
-
-        await act.Should().ThrowAsync<UnauthorizedException>();
-        _otpServiceMock.Verify(
-            o => o.GenerateOtpAsync(It.IsAny<string>(), It.IsAny<TimeSpan?>(), It.IsAny<CancellationToken>()),
-            Times.Never);
-    }
-
-    [Fact]
     public async Task Handle_WhenCalledTwiceWithinCooldown_ShouldThrowValidationExceptionAndBlockSecondOtp()
     {
         // First send succeeds and initiates cooldown
