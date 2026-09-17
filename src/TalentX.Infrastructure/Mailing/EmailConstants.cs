@@ -19,6 +19,8 @@ public static class EmailConstants
         public const string EmployerRejected = "TalentX.Infrastructure.Mailing.Templates.Emails.EmployerRejected";
         public const string AccountStatusChanged = "TalentX.Infrastructure.Mailing.Templates.Emails.AccountStatusChanged";
         public const string JobAlert = "TalentX.Infrastructure.Mailing.Templates.Emails.JobAlert";
+        public const string JobDeactivated = "TalentX.Infrastructure.Mailing.Templates.Emails.JobDeactivated";
+        public const string JobReactivated = "TalentX.Infrastructure.Mailing.Templates.Emails.JobReactivated";
     }
 
     public static class Subjects
@@ -30,6 +32,8 @@ public static class EmailConstants
         public const string EmployerApproved = "Your TalentX Employer Account Has Been Approved";
         public const string EmployerRejected = "Your TalentX Employer Account Verification Update";
         public const string JobAlert = "New Matching Job: {0} at {1} — TalentX";
+        public const string JobDeactivated = "Your job \"{0}\" has been deactivated — TalentX";
+        public const string JobReactivated = "Your job \"{0}\" is live again — TalentX";
     }
 
     public static class Defaults
@@ -49,5 +53,7 @@ public static class EmailConstants
         public const string EmployerRejected = "EMPLOYER_REJECTED";
         public const string AccountStatusChanged = "ACCOUNT_STATUS_CHANGED";
         public const string JobAlert = "JobAlert";
+        public const string JobDeactivated = "JOB_DEACTIVATED";
+        public const string JobReactivated = "JOB_REACTIVATED";
     }
 }

@@ -1,6 +1,7 @@
 using TalentX.Application.Common.Models;
 using TalentX.Application.Features.Employers.Constants;
 using TalentX.Application.Features.Employers.DTOs;
+using TalentX.Application.Features.Jobs.DTOs;
 using TalentX.Domain.Entities;
 using TalentX.Domain.Enums;
 
@@ -41,5 +42,9 @@ public interface IJobRepository
         int page,
         int pageSize,
         string? searchTerm = null,
+        CancellationToken cancellationToken = default);
+
+    Task<PaginatedList<AdminJobListItemDto>> GetAdminJobsPagedAsync(
+        AdminJobQueryParams queryParams,
         CancellationToken cancellationToken = default);
 }

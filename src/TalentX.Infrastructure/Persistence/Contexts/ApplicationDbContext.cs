@@ -37,6 +37,7 @@ public class ApplicationDbContext
     public DbSet<TalentNotificationPreference> TalentNotificationPreferences => Set<TalentNotificationPreference>();
     public DbSet<JobAlertNotificationHistory> JobAlertNotificationHistories => Set<JobAlertNotificationHistory>();
     public DbSet<Notification> Notifications => Set<Notification>();
+    public DbSet<JobModerationHistory> JobModerationHistories => Set<JobModerationHistory>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
