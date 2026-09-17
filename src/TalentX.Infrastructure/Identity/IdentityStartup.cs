@@ -102,6 +102,7 @@ public static class IdentityStartup
         services.AddScoped<IGoogleAuthService, GoogleAuthService>();
         services.AddSingleton<IOtpService, OtpService>();
         services.AddSingleton<IOtpAttemptTracker, InMemoryOtpAttemptTracker>();
+        services.AddSingleton<IOtpCooldownTracker, InMemoryOtpCooldownTracker>();
         services.AddSingleton<IEmailService, EmailService>();
         services.AddSingleton<IJobAlertQueue, JobAlertQueue>();
         services.AddScoped<IJobAlertMatchingService, JobAlertMatchingService>();
