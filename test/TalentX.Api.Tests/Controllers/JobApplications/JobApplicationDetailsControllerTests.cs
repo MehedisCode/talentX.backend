@@ -85,11 +85,11 @@ public class JobApplicationDetailsControllerTests
     public async Task UpdateStatus_SendsCommandToMediator_ReturnsOkWithResponse()
     {
         var id = Guid.NewGuid();
-        var requestDto = new UpdateStatusRequestDto(ApplicationStatus.Shortlisted);
-        var expectedResponse = new StatusUpdateResponseDto("Application status updated to Shortlisted.");
+        var requestDto = new UpdateStatusRequestDto(ApplicationStatus.Interview);
+        var expectedResponse = new StatusUpdateResponseDto("Application status updated to Interview.");
 
         _sender
-            .Setup(s => s.Send(It.Is<UpdateApplicationStatusCommand>(c => c.ApplicationId == id && c.NewStatus == ApplicationStatus.Shortlisted), It.IsAny<CancellationToken>()))
+            .Setup(s => s.Send(It.Is<UpdateApplicationStatusCommand>(c => c.ApplicationId == id && c.NewStatus == ApplicationStatus.Interview), It.IsAny<CancellationToken>()))
             .ReturnsAsync(expectedResponse);
 
         var result = await _controller.UpdateStatus(id, requestDto, CancellationToken.None);
@@ -97,7 +97,7 @@ public class JobApplicationDetailsControllerTests
         var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
         okResult.Value.Should().Be(expectedResponse);
         _sender.Verify(
-            s => s.Send(It.Is<UpdateApplicationStatusCommand>(c => c.ApplicationId == id && c.NewStatus == ApplicationStatus.Shortlisted), It.IsAny<CancellationToken>()),
+            s => s.Send(It.Is<UpdateApplicationStatusCommand>(c => c.ApplicationId == id && c.NewStatus == ApplicationStatus.Interview), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
