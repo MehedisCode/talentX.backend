@@ -225,6 +225,7 @@ public class JobTests
     public void MarkAsClosed_SetsStatusToClosedAndUpdatesTimestamp()
     {
         var job = CreateJob();
+        job.MarkAsPublished();
         var beforeClosed = DateTime.UtcNow;
 
         job.MarkAsClosed();
@@ -257,6 +258,7 @@ public class JobTests
     public void Reopen_WhenClosedAndFutureExpiry_SetsStatusPublished()
     {
         var job = CreateJob();
+        job.MarkAsPublished();
         job.MarkAsClosed();
         var beforeReopen = DateTime.UtcNow;
 
@@ -304,11 +306,222 @@ public class JobTests
     {
         var expiredDate = DateTime.UtcNow.AddDays(-2);
         var job = CreateJob(expireAt: expiredDate);
+        job.MarkAsPublished();
         job.MarkAsClosed();
 
         var reopenAction = () => job.Reopen();
 
         reopenAction.Should().Throw<InvalidOperationException>()
             .WithMessage("Cannot reopen a job with an expired deadline. Update the application deadline before reopening.");
+    }
+
+    [Theory]
+    [InlineData(JobStatus.Draft)]
+    [InlineData(JobStatus.Closed)]
+    [InlineData(JobStatus.Deactivated)]
+    [InlineData(JobStatus.PendingReview)]
+    public void MarkAsClosed_WhenNotPublished_ThrowsInvalidOperationException(JobStatus status)
+    {
+        var job = CreateJobWithStatus(status);
+
+        var closeAction = () => job.MarkAsClosed();
+
+        closeAction.Should().Throw<InvalidOperationException>()
+            .WithMessage("Only published jobs can be closed.");
+        job.Status.Should().Be(status);
+    }
+
+    [Theory]
+    [InlineData(JobStatus.Published)]
+    [InlineData(JobStatus.PendingReview)]
+    public void Deactivate_WhenPublishedOrPendingReview_SetsDeactivatedStateAndReason(JobStatus status)
+    {
+        var job = CreateJobWithStatus(status);
+        var beforeDeactivate = DateTime.UtcNow;
+
+        job.Deactivate(DeactivationReason.Spam, "Posting links to an unrelated external site.");
+
+        var afterDeactivate = DateTime.UtcNow;
+        job.Status.Should().Be(JobStatus.Deactivated);
+        job.DeactivationReason.Should().Be(DeactivationReason.Spam);
+        job.DeactivationDetails.Should().Be("Posting links to an unrelated external site.");
+        job.DeactivatedAt.Should().NotBeNull();
+        job.DeactivatedAt!.Value.Should().BeOnOrAfter(beforeDeactivate).And.BeOnOrBefore(afterDeactivate);
+        job.UpdatedAt!.Value.Should().BeOnOrAfter(beforeDeactivate).And.BeOnOrBefore(afterDeactivate);
+    }
+
+    [Fact]
+    public void Deactivate_WhenPendingReview_ReplacesPreviousReason()
+    {
+        var job = CreateJobWithStatus(JobStatus.PendingReview);
+
+        job.Deactivate(DeactivationReason.MisleadingInformation, "Salary still does not match the description.");
+
+        job.DeactivationReason.Should().Be(DeactivationReason.MisleadingInformation);
+        job.DeactivationDetails.Should().Be("Salary still does not match the description.");
+    }
+
+    [Theory]
+    [InlineData(JobStatus.Draft)]
+    [InlineData(JobStatus.Closed)]
+    [InlineData(JobStatus.Deactivated)]
+    public void Deactivate_WhenNotPublishedOrPendingReview_ThrowsInvalidOperationException(JobStatus status)
+    {
+        var job = CreateJobWithStatus(status);
+
+        var deactivateAction = () => job.Deactivate(DeactivationReason.Other, "Some explanation text.");
+
+        deactivateAction.Should().Throw<InvalidOperationException>()
+            .WithMessage("Only published or under-review jobs can be deactivated.");
+        job.Status.Should().Be(status);
+    }
+
+    [Fact]
+    public void SubmitForReview_WhenDeactivated_SetsPendingReviewAndKeepsReason()
+    {
+        var job = CreateJobWithStatus(JobStatus.Deactivated);
+        var beforeSubmit = DateTime.UtcNow;
+
+        job.SubmitForReview();
+
+        var afterSubmit = DateTime.UtcNow;
+        job.Status.Should().Be(JobStatus.PendingReview);
+        job.DeactivationReason.Should().Be(DeactivationReason.Spam);
+        job.UpdatedAt!.Value.Should().BeOnOrAfter(beforeSubmit).And.BeOnOrBefore(afterSubmit);
+    }
+
+    [Theory]
+    [InlineData(JobStatus.Draft)]
+    [InlineData(JobStatus.Published)]
+    [InlineData(JobStatus.Closed)]
+    [InlineData(JobStatus.PendingReview)]
+    public void SubmitForReview_WhenNotDeactivated_ThrowsInvalidOperationException(JobStatus status)
+    {
+        var job = CreateJobWithStatus(status);
+
+        var submitAction = () => job.SubmitForReview();
+
+        submitAction.Should().Throw<InvalidOperationException>()
+            .WithMessage("Only deactivated jobs can be resubmitted for review.");
+        job.Status.Should().Be(status);
+    }
+
+    [Theory]
+    [InlineData(JobStatus.Deactivated)]
+    [InlineData(JobStatus.PendingReview)]
+    public void Reactivate_WhenDeactivatedOrPendingReview_PublishesAndClearsReason(JobStatus status)
+    {
+        var job = CreateJobWithStatus(status);
+        var beforeReactivate = DateTime.UtcNow;
+
+        job.Reactivate();
+
+        var afterReactivate = DateTime.UtcNow;
+        job.Status.Should().Be(JobStatus.Published);
+        job.DeactivationReason.Should().BeNull();
+        job.DeactivationDetails.Should().BeNull();
+        job.DeactivatedAt.Should().BeNull();
+        job.PublishedAt!.Value.Should().BeOnOrAfter(beforeReactivate).And.BeOnOrBefore(afterReactivate);
+        job.UpdatedAt!.Value.Should().BeOnOrAfter(beforeReactivate).And.BeOnOrBefore(afterReactivate);
+    }
+
+    [Theory]
+    [InlineData(JobStatus.Draft)]
+    [InlineData(JobStatus.Published)]
+    [InlineData(JobStatus.Closed)]
+    public void Reactivate_WhenNotDeactivatedOrPendingReview_ThrowsInvalidOperationException(JobStatus status)
+    {
+        var job = CreateJobWithStatus(status);
+
+        var reactivateAction = () => job.Reactivate();
+
+        reactivateAction.Should().Throw<InvalidOperationException>()
+            .WithMessage("Only deactivated or under-review jobs can be reactivated.");
+        job.Status.Should().Be(status);
+    }
+
+    [Fact]
+    public void Reactivate_WhenExpiredDeadline_ThrowsAndStaysDeactivated()
+    {
+        var job = CreateJobWithStatus(JobStatus.Deactivated, expireAt: DateTime.UtcNow.AddDays(-2));
+
+        var reactivateAction = () => job.Reactivate();
+
+        reactivateAction.Should().Throw<InvalidOperationException>()
+            .WithMessage("Cannot reactivate a job with an expired deadline. The employer must update the application deadline first.");
+        job.Status.Should().Be(JobStatus.Deactivated);
+        job.DeactivationReason.Should().Be(DeactivationReason.Spam);
+    }
+
+    [Fact]
+    public void JobModerationHistory_Create_SetsAllFields()
+    {
+        var jobId = Guid.NewGuid();
+        var beforeCreate = DateTime.UtcNow;
+
+        var history = JobModerationHistory.Create(
+            jobId,
+            JobModerationAction.Deactivated,
+            JobStatus.Published,
+            JobStatus.Deactivated,
+            "admin-1",
+            "admin@talentx.com",
+            DeactivationReason.DuplicatePosting,
+            "Same job posted three times.");
+
+        var afterCreate = DateTime.UtcNow;
+        history.JobId.Should().Be(jobId);
+        history.Action.Should().Be(JobModerationAction.Deactivated);
+        history.FromStatus.Should().Be(JobStatus.Published);
+        history.ToStatus.Should().Be(JobStatus.Deactivated);
+        history.ActorUserId.Should().Be("admin-1");
+        history.ActorEmail.Should().Be("admin@talentx.com");
+        history.Reason.Should().Be(DeactivationReason.DuplicatePosting);
+        history.Details.Should().Be("Same job posted three times.");
+        history.CreatedAt.Should().BeOnOrAfter(beforeCreate).And.BeOnOrBefore(afterCreate);
+    }
+
+    [Fact]
+    public void JobModerationHistory_Create_WithoutReason_LeavesReasonAndDetailsNull()
+    {
+        var history = JobModerationHistory.Create(
+            Guid.NewGuid(),
+            JobModerationAction.Reactivated,
+            JobStatus.PendingReview,
+            JobStatus.Published,
+            "admin-1",
+            "admin@talentx.com");
+
+        history.Reason.Should().BeNull();
+        history.Details.Should().BeNull();
+    }
+
+    private static Job CreateJobWithStatus(JobStatus status, DateTime? expireAt = null)
+    {
+        var job = CreateJob(expireAt: expireAt);
+
+        switch (status)
+        {
+            case JobStatus.Draft:
+                break;
+            case JobStatus.Published:
+                job.MarkAsPublished();
+                break;
+            case JobStatus.Closed:
+                job.MarkAsPublished();
+                job.MarkAsClosed();
+                break;
+            case JobStatus.Deactivated:
+                job.MarkAsPublished();
+                job.Deactivate(DeactivationReason.Spam, "Initial deactivation reason details.");
+                break;
+            case JobStatus.PendingReview:
+                job.MarkAsPublished();
+                job.Deactivate(DeactivationReason.Spam, "Initial deactivation reason details.");
+                job.SubmitForReview();
+                break;
+        }
+
+        return job;
     }
 }

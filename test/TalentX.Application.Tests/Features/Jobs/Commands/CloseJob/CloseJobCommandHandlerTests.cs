@@ -92,6 +92,7 @@ public sealed class CloseJobCommandHandlerTests
     public async Task Handle_WhenJobBelongsToCurrentEmployer_MarksJobAsClosedAndSavesChanges()
     {
         var targetJob = CreateSampleJob(employerId: "employer-123");
+        targetJob.MarkAsPublished();
         _jobRepository.Setup(repository => repository.GetByIdAsync(targetJob.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(targetJob);
 
@@ -102,5 +103,39 @@ public sealed class CloseJobCommandHandlerTests
         targetJob.Status.Should().Be(JobStatus.Closed);
         targetJob.UpdatedAt.Should().NotBeNull();
         _unitOfWork.Verify(unit => unit.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_WhenJobIsDeactivated_ThrowsBadRequestAndDoesNotSave()
+    {
+        var targetJob = CreateSampleJob(employerId: "employer-123");
+        targetJob.MarkAsPublished();
+        targetJob.Deactivate(DeactivationReason.Spam, "Deactivated by admin for spam.");
+        _jobRepository.Setup(repository => repository.GetByIdAsync(targetJob.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(targetJob);
+
+        var command = new CloseJobCommand(targetJob.Id);
+        var handleAction = () => _handler.Handle(command, CancellationToken.None);
+
+        await handleAction.Should().ThrowAsync<BadRequestException>()
+            .WithMessage("Only published jobs can be closed.");
+        targetJob.Status.Should().Be(JobStatus.Deactivated);
+        _unitOfWork.Verify(unit => unit.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_WhenJobIsDraft_ThrowsBadRequestAndDoesNotSave()
+    {
+        var targetJob = CreateSampleJob(employerId: "employer-123");
+        _jobRepository.Setup(repository => repository.GetByIdAsync(targetJob.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(targetJob);
+
+        var command = new CloseJobCommand(targetJob.Id);
+        var handleAction = () => _handler.Handle(command, CancellationToken.None);
+
+        await handleAction.Should().ThrowAsync<BadRequestException>()
+            .WithMessage("Only published jobs can be closed.");
+        targetJob.Status.Should().Be(JobStatus.Draft);
+        _unitOfWork.Verify(unit => unit.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 }

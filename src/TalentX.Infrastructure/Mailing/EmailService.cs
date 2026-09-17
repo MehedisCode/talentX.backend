@@ -227,6 +227,39 @@ public sealed class EmailService : IEmailService
                 parameters.AlertName));
     }
 
+    public Task<string> RenderJobDeactivatedEmailAsync(
+        RenderJobDeactivatedEmailParameters parameters,
+        CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation(
+            "[EMAIL] {Kind} dispatch to {RecipientName}: {JobTitle} ({ReasonLabel})",
+            EmailConstants.Kinds.JobDeactivated, parameters.RecipientName, parameters.JobTitle, parameters.ReasonLabel);
+
+        return _razor.CompileRenderAsync(
+            EmailConstants.Templates.JobDeactivated,
+            new JobDeactivatedEmailModel(
+                parameters.RecipientName,
+                parameters.JobTitle,
+                parameters.ReasonLabel,
+                parameters.Details,
+                parameters.EditJobUrl));
+    }
+
+    public Task<string> RenderJobReactivatedEmailAsync(
+        string recipientName,
+        string jobTitle,
+        string jobUrl,
+        CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation(
+            "[EMAIL] {Kind} dispatch to {RecipientName}: {JobTitle}",
+            EmailConstants.Kinds.JobReactivated, recipientName, jobTitle);
+
+        return _razor.CompileRenderAsync(
+            EmailConstants.Templates.JobReactivated,
+            new JobReactivatedEmailModel(recipientName, jobTitle, jobUrl));
+    }
+
     private void LogDispatch(string kind, string recipientName, string toEmail, string? secret)
     {
         _logger.LogInformation(

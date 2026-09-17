@@ -30,6 +30,9 @@ public class Job : BaseEntity
     public bool IsDeleted { get; private set; }
     public DateTime? DeletedAt { get; private set; }
     public DateTime? PublishedAt { get; private set; }
+    public DeactivationReason? DeactivationReason { get; private set; }
+    public string? DeactivationDetails { get; private set; }
+    public DateTime? DeactivatedAt { get; private set; }
 
     private Job() { }
 
@@ -124,6 +127,13 @@ public class Job : BaseEntity
 
     public void MarkAsClosed()
     {
+        // Without this guard an employer could Close then Reopen a Deactivated job,
+        // putting it back online without admin approval.
+        if (Status != JobStatus.Published)
+        {
+            throw new InvalidOperationException("Only published jobs can be closed.");
+        }
+
         Status = JobStatus.Closed;
         UpdatedAt = DateTime.UtcNow;
     }
@@ -141,6 +151,53 @@ public class Job : BaseEntity
         }
 
         Status = JobStatus.Published;
+        PublishedAt = DateTime.UtcNow;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void Deactivate(DeactivationReason reason, string details)
+    {
+        if (Status is not (JobStatus.Published or JobStatus.PendingReview))
+        {
+            throw new InvalidOperationException("Only published or under-review jobs can be deactivated.");
+        }
+
+        Status = JobStatus.Deactivated;
+        DeactivationReason = reason;
+        DeactivationDetails = details;
+        DeactivatedAt = DateTime.UtcNow;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void SubmitForReview()
+    {
+        if (Status != JobStatus.Deactivated)
+        {
+            throw new InvalidOperationException("Only deactivated jobs can be resubmitted for review.");
+        }
+
+        Status = JobStatus.PendingReview;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void Reactivate()
+    {
+        if (Status is not (JobStatus.Deactivated or JobStatus.PendingReview))
+        {
+            throw new InvalidOperationException("Only deactivated or under-review jobs can be reactivated.");
+        }
+
+        if (ExpireAt < DateTime.UtcNow.Date)
+        {
+            throw new InvalidOperationException("Cannot reactivate a job with an expired deadline. The employer must update the application deadline first.");
+        }
+
+        // The reason only describes why the job is currently down; the full record
+        // stays in JobModerationHistory.
+        Status = JobStatus.Published;
+        DeactivationReason = null;
+        DeactivationDetails = null;
+        DeactivatedAt = null;
         PublishedAt = DateTime.UtcNow;
         UpdatedAt = DateTime.UtcNow;
     }
