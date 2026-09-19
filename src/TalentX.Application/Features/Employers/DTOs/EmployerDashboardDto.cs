@@ -7,4 +7,6 @@ public sealed record EmployerDashboardDto(
     int DraftJobsCount,
     int ClosedJobsCount,
     int ExpiredJobsCount,
+    int DeactivatedJobsCount,
+    int PendingReviewJobsCount,
     IReadOnlyList<EmployerRecentJobDto> RecentJobs);

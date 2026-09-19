@@ -115,7 +115,10 @@ public sealed class JobRepository : RepositoryBase<Job>, IJobRepository
                 Active = group.Count(job => job.Status == JobStatus.Published && job.ExpireAt.Date >= currentDate),
                 Draft = group.Count(job => job.Status == JobStatus.Draft),
                 Closed = group.Count(job => job.Status == JobStatus.Closed),
-                Expired = group.Count(job => job.Status == JobStatus.Published && job.ExpireAt.Date < currentDate)
+                Expired = group.Count(job => job.Status == JobStatus.Published && job.ExpireAt.Date < currentDate),
+                // Without these, moderated jobs still count in TotalPosted but appear in no breakdown.
+                Deactivated = group.Count(job => job.Status == JobStatus.Deactivated),
+                PendingReview = group.Count(job => job.Status == JobStatus.PendingReview)
             })
             .FirstOrDefaultAsync(cancellationToken);
 
@@ -124,7 +127,9 @@ public sealed class JobRepository : RepositoryBase<Job>, IJobRepository
             statistics?.Active ?? 0,
             statistics?.Draft ?? 0,
             statistics?.Closed ?? 0,
-            statistics?.Expired ?? 0);
+            statistics?.Expired ?? 0,
+            statistics?.Deactivated ?? 0,
+            statistics?.PendingReview ?? 0);
     }
 
     public async Task<List<EmployerRecentJobDto>> GetRecentJobsByEmployerIdAsync(
