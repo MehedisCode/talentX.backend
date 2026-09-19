@@ -139,15 +139,16 @@ public sealed class ResubmitJobForReviewCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WhenJobIsIncomplete_ThrowsValidationErrorAndStaysDeactivated()
+    public async Task Handle_WhenJobIsIncomplete_ThrowsBadRequestNamingTheMissingFieldsAndStaysDeactivated()
     {
         var job = CreateCompleteDeactivatedJob(withRequirements: false);
         SetupJob(job);
 
         var handleAction = () => _handler.Handle(new ResubmitJobForReviewCommand(job.Id), CancellationToken.None);
 
-        await handleAction.Should().ThrowAsync<FluentValidation.ValidationException>()
-            .WithMessage("*Requirements*");
+        // BadRequest carries this message through to the client as userResponse.message.
+        await handleAction.Should().ThrowAsync<BadRequestException>()
+            .WithMessage("Job cannot be published. Invalid or missing fields: Requirements");
         job.Status.Should().Be(JobStatus.Deactivated);
         VerifyNothingWritten();
     }

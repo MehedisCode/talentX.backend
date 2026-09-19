@@ -41,14 +41,16 @@ public sealed class ResubmitJobForReviewCommandHandler : IRequestHandler<Resubmi
         }
 
         // Same completeness rules as publishing, so an unfinished job never reaches the admin's
-        // review queue.
+        // review queue. BadRequest, not a message-only ValidationException: the exception
+        // middleware builds validation responses from the (empty) Errors list and a fixed
+        // "Validation Failed" title, which would drop the list of missing fields.
         try
         {
             JobRules.EnsureContentComplete(job);
         }
         catch (InvalidOperationException exception)
         {
-            throw new FluentValidation.ValidationException(exception.Message);
+            throw new BadRequestException(exception.Message);
         }
 
         var fromStatus = job.Status;
