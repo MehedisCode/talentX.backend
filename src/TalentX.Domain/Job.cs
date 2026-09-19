@@ -208,4 +208,10 @@ public class Job : BaseEntity
         DeletedAt = DateTime.UtcNow;
         UpdatedAt = DateTime.UtcNow;
     }
+
+    public bool IsExpired() =>
+        Status == JobStatus.Published && ExpireAt.Date < DateTime.UtcNow.Date;
+
+    public JobStatus GetEffectiveStatus() =>
+        IsExpired() ? JobStatus.Expired : Status;
 }

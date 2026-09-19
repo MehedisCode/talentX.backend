@@ -6,5 +6,6 @@ public enum JobStatus
     Published = 1,
     Closed = 2,
     Deactivated = 3,
-    PendingReview = 4
+    PendingReview = 4,
+    Expired = 5
 }
