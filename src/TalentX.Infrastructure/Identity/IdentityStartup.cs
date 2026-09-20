@@ -79,10 +79,22 @@ public static class IdentityStartup
             {
                 OnMessageReceived = context =>
                 {
-                    if (context.Request.Cookies.TryGetValue("TalentXAccessToken", out var token))
+                    if (context.Request.Cookies.TryGetValue("TalentXAccessToken", out var cookieToken))
                     {
-                        context.Token = token;
+                        context.Token = cookieToken;
+                        return Task.CompletedTask;
                     }
+
+                    var hubPath = context.Request.Path;
+                    if (hubPath.StartsWithSegments("/api/v1/hubs") || hubPath.StartsWithSegments("/hubs"))
+                    {
+                        var queryToken = context.Request.Query["access_token"].ToString();
+                        if (!string.IsNullOrEmpty(queryToken))
+                        {
+                            context.Token = queryToken;
+                        }
+                    }
+
                     return Task.CompletedTask;
                 }
             };
