@@ -158,26 +158,26 @@ public class GetJobApplicantsQueryHandlerTests
             .ReturnsAsync(job);
 
         _jobApplicationRepository
-            .Setup(r => r.GetByJobIdPaginatedAsync(job.Id, "Alice", ApplicationStatus.Shortlisted, null, null, 1, 10, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByJobIdPaginatedAsync(job.Id, "Alice", ApplicationStatus.Interview, null, null, 1, 10, It.IsAny<CancellationToken>()))
             .ReturnsAsync(paginated);
 
         var query = new GetJobApplicantsQuery(
             JobId: job.Id,
             Search: "Alice",
-            Status: ApplicationStatus.Shortlisted,
+            Status: ApplicationStatus.Interview,
             Page: 0, // Should clamp to 1
             PageSize: 150 // Should clamp to 100
         );
 
         _jobApplicationRepository
-            .Setup(r => r.GetByJobIdPaginatedAsync(job.Id, "Alice", ApplicationStatus.Shortlisted, null, null, 1, 100, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByJobIdPaginatedAsync(job.Id, "Alice", ApplicationStatus.Interview, null, null, 1, 100, It.IsAny<CancellationToken>()))
             .ReturnsAsync(paginated);
 
         var result = await _handler.Handle(query, CancellationToken.None);
 
         result.Should().NotBeNull();
         _jobApplicationRepository.Verify(
-            r => r.GetByJobIdPaginatedAsync(job.Id, "Alice", ApplicationStatus.Shortlisted, null, null, 1, 100, It.IsAny<CancellationToken>()),
+            r => r.GetByJobIdPaginatedAsync(job.Id, "Alice", ApplicationStatus.Interview, null, null, 1, 100, It.IsAny<CancellationToken>()),
             Times.Once);
     }
 

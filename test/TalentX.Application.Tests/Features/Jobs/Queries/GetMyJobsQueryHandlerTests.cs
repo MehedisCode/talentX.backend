@@ -151,4 +151,30 @@ public class GetMyJobsQueryHandlerTests
         liveDto.DeactivationReasonLabel.Should().BeNull();
         liveDto.DeactivationDetails.Should().BeNull();
     }
+
+    [Fact]
+    public async Task Handle_WhenJobIsPublishedAndExpireAtIsInPast_ReturnsExpiredStatus()
+    {
+        var job = CreateTestJob("employer-1");
+        job.MarkAsPublished();
+        job.SetDetails(
+            job.Title,
+            job.CompanyName,
+            job.Description,
+            job.EmploymentType,
+            job.ExperienceLevel,
+            job.Location,
+            job.WorkArrangement,
+            job.RequiredSkills,
+            job.Vacancies,
+            DateTime.UtcNow.AddDays(-1));
+
+        _jobRepository.Setup(r => r.GetByEmployerIdAsync("employer-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Job> { job });
+
+        var result = await _handler.Handle(new GetMyJobsQuery(), CancellationToken.None);
+
+        result.Should().ContainSingle();
+        result.First().Status.Should().Be(JobStatus.Expired.ToString());
+    }
 }

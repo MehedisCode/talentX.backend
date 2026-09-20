@@ -37,7 +37,7 @@ public class GetMyJobsQueryHandler : IRequestHandler<GetMyJobsQuery, List<MyJobD
             Location = job.Location,
             WorkArrangement = job.WorkArrangement.ToString(),
             RequiredSkills = job.RequiredSkills,
-            Status = job.Status.ToString(),
+            Status = job.GetEffectiveStatus().ToString(),
             Vacancies = job.Vacancies,
             ExpireAt = job.ExpireAt,
             CreatedAt = job.CreatedAt,
