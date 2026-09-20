@@ -155,7 +155,7 @@ public sealed class JobRepository : RepositoryBase<Job>, IJobRepository
             job.Id,
             job.Title,
             job.Status == JobStatus.Published && job.ExpireAt.Date < currentDate
-                ? "Expired"
+                ? JobStatus.Expired.ToString()
                 : job.Status.ToString(),
             job.CreatedAt,
             job.ExpireAt,
@@ -243,7 +243,7 @@ public sealed class JobRepository : RepositoryBase<Job>, IJobRepository
             job.Title,
             job.CompanyName,
             job.Status == JobStatus.Published && job.ExpireAt.Date < currentDate
-                ? "Expired"
+                ? JobStatus.Expired.ToString()
                 : job.Status.ToString(),
             job.EmploymentType,
             job.WorkArrangement,

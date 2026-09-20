@@ -71,14 +71,14 @@ public class UpdateApplicationStatusCommandHandlerTests
             .Setup(r => r.GetByIdAsync(job.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(job);
 
-        var command = new UpdateApplicationStatusCommand(application.Id, ApplicationStatus.Shortlisted);
+        var command = new UpdateApplicationStatusCommand(application.Id, ApplicationStatus.Interview);
 
         var result = await _handler.Handle(command, CancellationToken.None);
 
-        application.Status.Should().Be(ApplicationStatus.Shortlisted);
+        application.Status.Should().Be(ApplicationStatus.Interview);
         _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
         result.Should().BeOfType<StatusUpdateResponseDto>();
-        result.Message.Should().Be("Application status updated to Shortlisted.");
+        result.Message.Should().Be("Application status updated to Interview.");
     }
 
     [Fact]

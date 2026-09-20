@@ -496,6 +496,70 @@ public class JobTests
         history.Details.Should().BeNull();
     }
 
+    [Fact]
+    public void IsExpired_WhenPublishedWithFutureExpiry_ReturnsFalse()
+    {
+        var job = CreateJobWithStatus(JobStatus.Published, expireAt: DateTime.UtcNow.AddDays(5));
+
+        job.IsExpired().Should().BeFalse();
+    }
+
+    [Fact]
+    public void GetEffectiveStatus_WhenPublishedWithFutureExpiry_ReturnsPublished()
+    {
+        var job = CreateJobWithStatus(JobStatus.Published, expireAt: DateTime.UtcNow.AddDays(5));
+
+        job.GetEffectiveStatus().Should().Be(JobStatus.Published);
+    }
+
+    [Fact]
+    public void IsExpired_WhenPublishedWithPastExpiry_ReturnsTrue()
+    {
+        var job = CreateJobWithStatus(JobStatus.Published, expireAt: DateTime.UtcNow.AddDays(-2));
+
+        job.IsExpired().Should().BeTrue();
+    }
+
+    [Fact]
+    public void GetEffectiveStatus_WhenPublishedWithPastExpiry_ReturnsExpired()
+    {
+        var job = CreateJobWithStatus(JobStatus.Published, expireAt: DateTime.UtcNow.AddDays(-2));
+
+        job.GetEffectiveStatus().Should().Be(JobStatus.Expired);
+    }
+
+    [Fact]
+    public void IsExpired_WhenClosedWithPastExpiry_ReturnsFalse()
+    {
+        var job = CreateJobWithStatus(JobStatus.Closed, expireAt: DateTime.UtcNow.AddDays(-2));
+
+        job.IsExpired().Should().BeFalse();
+    }
+
+    [Fact]
+    public void GetEffectiveStatus_WhenClosedWithPastExpiry_ReturnsClosed()
+    {
+        var job = CreateJobWithStatus(JobStatus.Closed, expireAt: DateTime.UtcNow.AddDays(-2));
+
+        job.GetEffectiveStatus().Should().Be(JobStatus.Closed);
+    }
+
+    [Fact]
+    public void IsExpired_WhenDraft_ReturnsFalse()
+    {
+        var job = CreateJobWithStatus(JobStatus.Draft, expireAt: DateTime.UtcNow.AddDays(-2));
+
+        job.IsExpired().Should().BeFalse();
+    }
+
+    [Fact]
+    public void GetEffectiveStatus_WhenDraft_ReturnsDraft()
+    {
+        var job = CreateJobWithStatus(JobStatus.Draft, expireAt: DateTime.UtcNow.AddDays(-2));
+
+        job.GetEffectiveStatus().Should().Be(JobStatus.Draft);
+    }
+
     private static Job CreateJobWithStatus(JobStatus status, DateTime? expireAt = null)
     {
         var job = CreateJob(expireAt: expireAt);
