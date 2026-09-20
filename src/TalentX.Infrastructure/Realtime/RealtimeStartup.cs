@@ -8,7 +8,11 @@ public static class RealtimeStartup
 {
     public static IServiceCollection AddRealtime(this IServiceCollection services)
     {
-        services.AddSignalR();
+        services.AddSignalR(options =>
+        {
+            options.EnableDetailedErrors = true;
+        });
+
         services.AddScoped<INotificationBroadcaster, SignalRNotificationBroadcaster>();
         services.AddScoped<INotificationService, NotificationService>();
 
