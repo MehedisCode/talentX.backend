@@ -9,4 +9,9 @@ public sealed record ApplyToJobRequestDto(
     string CoverLetter,
     decimal ExpectedSalary,
     decimal TotalYearsExperience,
-    string? Location);
+    string? Location,
+    string? ExtractedTechnicalSkills = null,
+    string? ExtractedSoftSkills = null,
+    string? ExtractedToolsAndPlatforms = null,
+    string? ExtractedWorkExperience = null,
+    string? ExtractedEducation = null);

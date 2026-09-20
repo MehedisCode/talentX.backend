@@ -50,32 +50,34 @@ public class ApplyToJobCommandHandler : IRequestHandler<ApplyToJobCommand, Apply
         var name = request.ApplicantName.Trim();
         var email = request.ApplicantEmail.Trim().ToLowerInvariant();
 
-        var existingUser = await _unitOfWork.Users.GetByEmailAsync(email);
-        if (existingUser is not null)
+        var existingApplication = await _jobApplicationRepository.GetAnyByJobIdAndEmailAsync(request.JobId, email, cancellationToken);
+
+        if (existingApplication is not null)
         {
-            return new ApplyToJobResponse(Guid.Empty, request.JobId, RequiresLogin: true);
-        }
+            if (existingApplication.Status == Domain.Enums.ApplicationStatus.Applied)
+            {
+                return new ApplyToJobResponse(existingApplication.Id, request.JobId, AlreadyApplied: true);
+            }
 
-        var existingPending = await _jobApplicationRepository.GetPendingByJobIdAndEmailAsync(request.JobId, email, cancellationToken);
+            if (existingApplication.Status == Domain.Enums.ApplicationStatus.PendingVerification)
+            {
+                var newToken = GenerateSecureToken();
+                var resendTokenEntity = new EmailVerificationToken(
+                    newToken,
+                    email,
+                    existingApplication.Id,
+                    TimeSpan.FromMinutes(30));
 
-        if (existingPending is not null)
-        {
-            var newToken = GenerateSecureToken();
-            var resendTokenEntity = new EmailVerificationToken(
-                newToken,
-                email,
-                existingPending.Id,
-                TimeSpan.FromMinutes(30));
+                await _verificationTokenRepository.AddAsync(resendTokenEntity, cancellationToken);
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            await _verificationTokenRepository.AddAsync(resendTokenEntity, cancellationToken);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
+                var baseUrl = GetFrontendBaseUrl();
+                var newUrl = $"{baseUrl}/verify-application?token={newToken}";
+                _logger.LogInformation("[VERIFY] Verification link for {Email}: {Url}", email, newUrl);
+                await _emailService.SendVerificationLinkEmailAsync(email, name, newUrl, cancellationToken);
 
-            var baseUrl = GetFrontendBaseUrl();
-            var newUrl = $"{baseUrl}/verify-application?token={newToken}";
-            _logger.LogInformation("[VERIFY] Verification link for {Email}: {Url}", email, newUrl);
-            await _emailService.SendVerificationLinkEmailAsync(email, name, newUrl, cancellationToken);
-
-            return new ApplyToJobResponse(existingPending.Id, existingPending.JobId, VerificationEmailResent: true);
+                return new ApplyToJobResponse(existingApplication.Id, existingApplication.JobId, VerificationEmailResent: true);
+            }
         }
 
         var sanitizedResumeFileName = TalentMediaStorageKeyGuard.SanitizeFileNameSegment(request.ResumeFile.FileName);
@@ -103,7 +105,12 @@ public class ApplyToJobCommandHandler : IRequestHandler<ApplyToJobCommand, Apply
             coverLetter: request.CoverLetter?.Replace("\r\n", "\n").Replace("\r", "\n"),
             expectedSalary: request.ExpectedSalary,
             totalYearsExperience: request.TotalYearsExperience,
-            location: request.Location);
+            location: request.Location,
+            extractedTechnicalSkillsJson: request.ExtractedTechnicalSkillsJson,
+            extractedSoftSkillsJson: request.ExtractedSoftSkillsJson,
+            extractedToolsAndPlatformsJson: request.ExtractedToolsAndPlatformsJson,
+            extractedWorkExperienceJson: request.ExtractedWorkExperienceJson,
+            extractedEducationJson: request.ExtractedEducationJson);
 
         await _jobApplicationRepository.AddAsync(application, cancellationToken);
 

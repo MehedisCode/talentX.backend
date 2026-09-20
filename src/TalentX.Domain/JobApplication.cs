@@ -1,3 +1,4 @@
+using System.Text.Json;
 using TalentX.Domain.Common;
 using TalentX.Domain.Enums;
 
@@ -17,6 +18,16 @@ public sealed class JobApplication : BaseEntity
     public ApplicationStatus Status { get; private set; }
     public decimal? AiMatchScore { get; private set; }
     public DateTime AppliedAt { get; private set; }
+    public string? ExtractedTechnicalSkillsJson { get; private set; }
+    public string? ExtractedSoftSkillsJson { get; private set; }
+    public string? ExtractedToolsAndPlatformsJson { get; private set; }
+    public string? ExtractedWorkExperienceJson { get; private set; }
+    public string? ExtractedEducationJson { get; private set; }
+
+    private static readonly JsonSerializerOptions s_jsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+    };
 
     private JobApplication() { }
 
@@ -53,9 +64,14 @@ public sealed class JobApplication : BaseEntity
         string? coverLetter = null,
         decimal? expectedSalary = null,
         decimal? totalYearsExperience = null,
-        string? location = null)
+        string? location = null,
+        string? extractedTechnicalSkillsJson = null,
+        string? extractedSoftSkillsJson = null,
+        string? extractedToolsAndPlatformsJson = null,
+        string? extractedWorkExperienceJson = null,
+        string? extractedEducationJson = null)
     {
-        return new JobApplication(
+        var application = new JobApplication(
             jobId,
             talentUserId: null,
             applicantName,
@@ -65,7 +81,30 @@ public sealed class JobApplication : BaseEntity
             expectedSalary,
             totalYearsExperience,
             location);
+
+        application.ExtractedTechnicalSkillsJson = extractedTechnicalSkillsJson;
+        application.ExtractedSoftSkillsJson = extractedSoftSkillsJson;
+        application.ExtractedToolsAndPlatformsJson = extractedToolsAndPlatformsJson;
+        application.ExtractedWorkExperienceJson = extractedWorkExperienceJson;
+        application.ExtractedEducationJson = extractedEducationJson;
+
+        return application;
     }
+
+    public List<string> GetExtractedTechnicalSkills() =>
+        DeserializeStringList(ExtractedTechnicalSkillsJson);
+
+    public List<string> GetExtractedSoftSkills() =>
+        DeserializeStringList(ExtractedSoftSkillsJson);
+
+    public List<string> GetExtractedToolsAndPlatforms() =>
+        DeserializeStringList(ExtractedToolsAndPlatformsJson);
+
+    public List<ExtractedWorkExperienceItem> GetExtractedWorkExperience() =>
+        DeserializeList<ExtractedWorkExperienceItem>(ExtractedWorkExperienceJson);
+
+    public List<ExtractedEducationItem> GetExtractedEducation() =>
+        DeserializeList<ExtractedEducationItem>(ExtractedEducationJson);
 
     public void UpdateStatus(ApplicationStatus status)
     {
@@ -102,4 +141,31 @@ public sealed class JobApplication : BaseEntity
         Location = location;
         UpdatedAt = DateTime.UtcNow;
     }
+
+    private static List<string> DeserializeStringList(string? json) =>
+        string.IsNullOrWhiteSpace(json)
+            ? new List<string>()
+            : JsonSerializer.Deserialize<List<string>>(json, s_jsonOptions) ?? new List<string>();
+
+    private static List<T> DeserializeList<T>(string? json) =>
+        string.IsNullOrWhiteSpace(json)
+            ? new List<T>()
+            : JsonSerializer.Deserialize<List<T>>(json, s_jsonOptions) ?? new List<T>();
+}
+
+public sealed class ExtractedWorkExperienceItem
+{
+    public string? CompanyName { get; init; }
+    public string? JobTitle { get; init; }
+    public string? StartDate { get; init; }
+    public string? EndDate { get; init; }
+    public bool IsCurrent { get; init; }
+}
+
+public sealed class ExtractedEducationItem
+{
+    public string? Institution { get; init; }
+    public string? Degree { get; init; }
+    public string? StartDate { get; init; }
+    public string? EndDate { get; init; }
 }
