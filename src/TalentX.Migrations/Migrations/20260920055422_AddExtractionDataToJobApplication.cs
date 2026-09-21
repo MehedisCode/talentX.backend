@@ -40,33 +40,6 @@ namespace TalentX.Migrations.Migrations
                 table: "JobApplications",
                 type: "text",
                 nullable: true);
-
-            migrationBuilder.AddColumn<DateTime>(
-                name: "RejectedAt",
-                table: "Employers",
-                type: "timestamp with time zone",
-                nullable: true);
-
-            migrationBuilder.AddColumn<string>(
-                name: "RejectionReason",
-                table: "Employers",
-                type: "character varying(1000)",
-                maxLength: 1000,
-                nullable: true);
-
-            migrationBuilder.AddColumn<string>(
-                name: "VerificationStatus",
-                table: "Employers",
-                type: "character varying(50)",
-                maxLength: 50,
-                nullable: false,
-                defaultValue: "PendingVerification");
-
-            migrationBuilder.AddColumn<DateTime>(
-                name: "VerifiedAt",
-                table: "Employers",
-                type: "timestamp with time zone",
-                nullable: true);
         }
 
         /// <inheritdoc />
@@ -91,22 +64,6 @@ namespace TalentX.Migrations.Migrations
             migrationBuilder.DropColumn(
                 name: "ExtractedWorkExperienceJson",
                 table: "JobApplications");
-
-            migrationBuilder.DropColumn(
-                name: "RejectedAt",
-                table: "Employers");
-
-            migrationBuilder.DropColumn(
-                name: "RejectionReason",
-                table: "Employers");
-
-            migrationBuilder.DropColumn(
-                name: "VerificationStatus",
-                table: "Employers");
-
-            migrationBuilder.DropColumn(
-                name: "VerifiedAt",
-                table: "Employers");
         }
     }
 }
