@@ -203,6 +203,7 @@ public class GetSavedJobsQueryHandlerTests
     public async Task Handle_PostedDateMapsFromJobPublishedAt()
     {
         var job = CreatePublishedJob();
+        Thread.Sleep(5);
         var savedJob = SavedJob.Create(job.Id, "talent-1");
 
         var paginatedResult = new PaginatedList<SavedJob>(

@@ -25,6 +25,7 @@ public interface IUnitOfWork
     IJobAlertRepository JobAlerts { get; }
     ITalentNotificationPreferenceRepository TalentNotificationPreferences { get; }
     IJobAlertNotificationHistoryRepository JobAlertNotificationHistories { get; }
+    INotificationRepository Notifications { get; }
     IJobModerationHistoryRepository JobModerationHistories { get; }
 
     /// <summary>

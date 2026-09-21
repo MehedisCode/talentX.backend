@@ -37,7 +37,7 @@ public sealed class GetTalentApplicationsQueryHandler
             }
             else
             {
-                throw new BadRequestException($"Invalid status filter '{request.Status}'. Allowed values are Applied, Viewed, Interview, Hired, Rejected.");
+                throw new BadRequestException($"Invalid status filter '{request.Status}'. Allowed values are Applied, Reviewed, Interview, Hired, Rejected.");
             }
         }
 
