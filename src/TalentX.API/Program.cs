@@ -113,6 +113,7 @@ if (!app.Environment.IsDevelopment())
 // 7. Middlewares & Routing
 app.UseInfrastructureMiddlewares();
 app.UseCors(CorsPolicyName);
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseMiddleware<AccountStatusMiddleware>();
 app.UseAuthorization();

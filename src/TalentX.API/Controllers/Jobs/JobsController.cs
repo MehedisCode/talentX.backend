@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using TalentX.Application.Features.JobApplications.Commands.Apply;
 using TalentX.Application.Features.Jobs.Commands.CloseJob;
 using TalentX.Application.Features.Jobs.Commands.CreateJob;
@@ -133,6 +134,7 @@ public class JobsController : BaseApiController
     [HttpPost("{id:guid}/apply")]
     [AllowAnonymous]
     [Consumes("multipart/form-data")]
+    [EnableRateLimiting("JobApply")]
     public async Task<IActionResult> Apply(
         Guid id,
         [FromForm] ApplyToJobRequestDto request,
