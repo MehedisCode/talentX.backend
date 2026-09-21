@@ -5,4 +5,6 @@ public sealed record EmployerJobStatsDto(
     int ActiveJobsCount,
     int DraftJobsCount,
     int ClosedJobsCount,
-    int ExpiredJobsCount);
+    int ExpiredJobsCount,
+    int DeactivatedJobsCount,
+    int PendingReviewJobsCount);

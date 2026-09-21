@@ -21,6 +21,13 @@ public static class JobRules
         if (job.Status != JobStatus.Draft)
             throw new InvalidOperationException("Only draft jobs can be published.");
 
+        EnsureContentComplete(job);
+    }
+
+    // The required-field checks on their own, without the Draft-only status rule, so resubmitting
+    // a deactivated job for review uses exactly the same definition of "complete" as publishing.
+    public static void EnsureContentComplete(Job job)
+    {
         var missing = new List<string>();
 
         if (string.IsNullOrWhiteSpace(job.Title))

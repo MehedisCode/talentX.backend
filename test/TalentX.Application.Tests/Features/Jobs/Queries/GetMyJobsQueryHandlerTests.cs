@@ -130,6 +130,29 @@ public class GetMyJobsQueryHandlerTests
     }
 
     [Fact]
+    public async Task Handle_MapsDeactivationFieldsOnlyForDeactivatedJobs()
+    {
+        var deactivated = CreateTestJob(title: "Deactivated Job");
+        deactivated.MarkAsPublished();
+        deactivated.Deactivate(DeactivationReason.DuplicatePosting, "Same role posted three times this week.");
+        var live = CreateTestJob(title: "Live Job");
+        live.MarkAsPublished();
+        _jobRepository.Setup(r => r.GetByEmployerIdAsync("employer-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Job> { deactivated, live });
+
+        var result = await _handler.Handle(new GetMyJobsQuery(), CancellationToken.None);
+
+        var deactivatedDto = result.Single(j => j.Title == "Deactivated Job");
+        deactivatedDto.DeactivationReasonLabel.Should().Be("Duplicate posting");
+        deactivatedDto.DeactivationDetails.Should().Be("Same role posted three times this week.");
+        deactivatedDto.DeactivatedAt.Should().NotBeNull();
+
+        var liveDto = result.Single(j => j.Title == "Live Job");
+        liveDto.DeactivationReasonLabel.Should().BeNull();
+        liveDto.DeactivationDetails.Should().BeNull();
+    }
+
+    [Fact]
     public async Task Handle_WhenJobIsPublishedAndExpireAtIsInPast_ReturnsExpiredStatus()
     {
         var job = CreateTestJob("employer-1");

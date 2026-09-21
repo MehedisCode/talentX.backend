@@ -187,4 +187,38 @@ public class GetMyJobQueryHandlerTests
 
         result.Status.Should().Be(JobStatus.Closed.ToString());
     }
+
+    [Fact]
+    public async Task Handle_WhenJobIsDeactivated_ReturnsTheReasonLabelDetailsAndDate()
+    {
+        var job = CreateTestJob();
+        job.MarkAsPublished();
+        job.Deactivate(DeactivationReason.MisleadingInformation, "Salary does not match the description.");
+        _jobRepository.Setup(r => r.GetByIdAsync(job.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(job);
+
+        var result = await _handler.Handle(new GetMyJobQuery(job.Id), CancellationToken.None);
+
+        result.Status.Should().Be("Deactivated");
+        result.DeactivationReason.Should().Be(DeactivationReason.MisleadingInformation);
+        result.DeactivationReasonLabel.Should().Be("Misleading or invalid information");
+        result.DeactivationDetails.Should().Be("Salary does not match the description.");
+        result.DeactivatedAt.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task Handle_WhenJobWasNeverDeactivated_LeavesDeactivationFieldsNull()
+    {
+        var job = CreateTestJob();
+        job.MarkAsPublished();
+        _jobRepository.Setup(r => r.GetByIdAsync(job.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(job);
+
+        var result = await _handler.Handle(new GetMyJobQuery(job.Id), CancellationToken.None);
+
+        result.DeactivationReason.Should().BeNull();
+        result.DeactivationReasonLabel.Should().BeNull();
+        result.DeactivationDetails.Should().BeNull();
+        result.DeactivatedAt.Should().BeNull();
+    }
 }

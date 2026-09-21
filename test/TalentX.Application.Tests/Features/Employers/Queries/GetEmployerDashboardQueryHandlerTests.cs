@@ -46,11 +46,13 @@ public sealed class GetEmployerDashboardQueryHandlerTests
         _currentUserService.SetupGet(service => service.UserId).Returns(currentEmployerUserId);
 
         var expectedJobStats = new EmployerJobStatsDto(
-            TotalPostedJobs: 12,
+            TotalPostedJobs: 14,
             ActiveJobsCount: 6,
             DraftJobsCount: 3,
             ClosedJobsCount: 2,
-            ExpiredJobsCount: 1);
+            ExpiredJobsCount: 1,
+            DeactivatedJobsCount: 1,
+            PendingReviewJobsCount: 1);
 
         var recentJobsList = new List<EmployerRecentJobDto>
         {
@@ -79,12 +81,14 @@ public sealed class GetEmployerDashboardQueryHandlerTests
         var dashboardResult = await _handler.Handle(new GetEmployerDashboardQuery(), CancellationToken.None);
 
         dashboardResult.Should().NotBeNull();
-        dashboardResult.TotalPostedJobs.Should().Be(12);
+        dashboardResult.TotalPostedJobs.Should().Be(14);
         dashboardResult.TotalHires.Should().Be(4);
         dashboardResult.ActiveJobsCount.Should().Be(6);
         dashboardResult.DraftJobsCount.Should().Be(3);
         dashboardResult.ClosedJobsCount.Should().Be(2);
         dashboardResult.ExpiredJobsCount.Should().Be(1);
+        dashboardResult.DeactivatedJobsCount.Should().Be(1);
+        dashboardResult.PendingReviewJobsCount.Should().Be(1);
         dashboardResult.RecentJobs.Should().HaveCount(1);
         dashboardResult.RecentJobs[0].Title.Should().Be("Senior .NET Engineer");
         dashboardResult.RecentJobs[0].ApplicantCount.Should().Be(7);

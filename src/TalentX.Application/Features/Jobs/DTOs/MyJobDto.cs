@@ -28,4 +28,11 @@ public class MyJobDto
     public Currency? SalaryCurrency { get; set; }
     public SalaryPeriod? SalaryPeriod { get; set; }
     public string? Requirements { get; set; }
+
+    // Why an admin took this job down, so the employer knows what to fix before resubmitting.
+    // All null unless the job is Deactivated or PendingReview.
+    public DeactivationReason? DeactivationReason { get; set; }
+    public string? DeactivationReasonLabel { get; set; }
+    public string? DeactivationDetails { get; set; }
+    public DateTime? DeactivatedAt { get; set; }
 }
