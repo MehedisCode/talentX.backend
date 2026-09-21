@@ -1,3 +1,4 @@
+using System.IO;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using TalentX.Application.Common.Exceptions;
@@ -49,7 +50,7 @@ public sealed class VerifyGuestEmailCommandHandler : IRequestHandler<VerifyGuest
         var email = tokenEntity.ApplicantEmail;
 
         var (talentUserId, temporaryPassword, isNewTalent) = await GetOrCreateTalentUserAsync(
-            email, application.ApplicantName, cancellationToken);
+            email, application.ApplicantName, application, cancellationToken);
 
         await LinkApplicationsToTalentAsync(email, talentUserId, application, cancellationToken);
 
@@ -69,7 +70,8 @@ public sealed class VerifyGuestEmailCommandHandler : IRequestHandler<VerifyGuest
             talentUserId,
             email,
             accessToken,
-            refreshToken);
+            refreshToken,
+            RequiresPasswordChange: isNewTalent);
     }
 
     private async Task<(EmailVerificationToken TokenEntity, JobApplication Application)> ValidateVerifyEmailRequestAsync(
@@ -94,6 +96,7 @@ public sealed class VerifyGuestEmailCommandHandler : IRequestHandler<VerifyGuest
     private async Task<(string UserId, string? TemporaryPassword, bool IsNewTalent)> GetOrCreateTalentUserAsync(
         string email,
         string applicantName,
+        JobApplication application,
         CancellationToken cancellationToken)
     {
         var existingTalent = await _talentRepository.GetByEmailAsync(email, cancellationToken);
@@ -111,9 +114,111 @@ public sealed class VerifyGuestEmailCommandHandler : IRequestHandler<VerifyGuest
         }
 
         var talentUserId = createResult.Data.UserId;
-        await _talentRepository.AddAsync(new Talent(talentUserId, applicantName, email), cancellationToken);
+
+        var talent = new Talent(talentUserId, applicantName, email);
+        talent.UpdateProfile(
+            name: applicantName,
+            tagline: null,
+            shortBio: null,
+            location: application.Location,
+            phone: null,
+            linkedInUrl: null,
+            additionalUrls: null,
+            totalYearsExperience: application.TotalYearsExperience,
+            expectedSalary: application.ExpectedSalary,
+            skillPropositions: null);
+
+        var technicalSkills = application.GetExtractedTechnicalSkills();
+        var softSkills = application.GetExtractedSoftSkills();
+        var toolsAndPlatforms = application.GetExtractedToolsAndPlatforms();
+        talent.UpdateSkills(technicalSkills, softSkills, toolsAndPlatforms);
+
+        await _talentRepository.AddAsync(talent, cancellationToken);
+
+        await CreateResumeForGuestAsync(talentUserId, application, cancellationToken);
+        await CreateWorkExperienceForGuestAsync(talentUserId, application, cancellationToken);
+        await CreateEducationForGuestAsync(talentUserId, application, cancellationToken);
 
         return (talentUserId, temporaryPassword, true);
+    }
+
+    private async Task CreateResumeForGuestAsync(
+        string talentUserId,
+        JobApplication application,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(application.ResumeStorageKey))
+            return;
+
+        var originalFileName = Path.GetFileName(application.ResumeStorageKey);
+        if (string.IsNullOrWhiteSpace(originalFileName))
+            return;
+
+        var existingResume = await _unitOfWork.Resumes.GetByUserIdAsync(talentUserId, cancellationToken);
+        if (existingResume is not null)
+            return;
+
+        await _unitOfWork.Resumes.AddAsync(
+            new Resume(
+                talentUserId,
+                application.ResumeStorageKey,
+                originalFileName,
+                "application/octet-stream",
+                0),
+            cancellationToken);
+    }
+
+    private async Task CreateWorkExperienceForGuestAsync(
+        string talentUserId,
+        JobApplication application,
+        CancellationToken cancellationToken)
+    {
+        var existing = await _unitOfWork.WorkExperiences.GetByUserIdAsync(talentUserId, cancellationToken);
+        if (existing.Count > 0)
+            return;
+
+        var workExperiences = application.GetExtractedWorkExperience();
+        foreach (var we in workExperiences)
+        {
+            if (string.IsNullOrWhiteSpace(we.CompanyName) && string.IsNullOrWhiteSpace(we.JobTitle))
+                continue;
+
+            await _unitOfWork.WorkExperiences.AddAsync(
+                new WorkExperience(
+                    talentUserId,
+                    we.CompanyName ?? string.Empty,
+                    we.JobTitle ?? string.Empty,
+                    we.StartDate,
+                    we.EndDate,
+                    we.IsCurrent),
+                cancellationToken);
+        }
+    }
+
+    private async Task CreateEducationForGuestAsync(
+        string talentUserId,
+        JobApplication application,
+        CancellationToken cancellationToken)
+    {
+        var existing = await _unitOfWork.Educations.GetByUserIdAsync(talentUserId, cancellationToken);
+        if (existing.Count > 0)
+            return;
+
+        var educations = application.GetExtractedEducation();
+        foreach (var edu in educations)
+        {
+            if (string.IsNullOrWhiteSpace(edu.Institution) && string.IsNullOrWhiteSpace(edu.Degree))
+                continue;
+
+            await _unitOfWork.Educations.AddAsync(
+                new Education(
+                    talentUserId,
+                    edu.Institution ?? string.Empty,
+                    edu.Degree ?? string.Empty,
+                    edu.StartDate,
+                    edu.EndDate),
+                cancellationToken);
+        }
     }
 
     private async Task LinkApplicationsToTalentAsync(
@@ -124,6 +229,52 @@ public sealed class VerifyGuestEmailCommandHandler : IRequestHandler<VerifyGuest
     {
         application.LinkTalentUser(talentUserId);
         application.UpdateStatus(ApplicationStatus.Applied);
+
+        var talent = await _talentRepository.GetByUserIdAsync(talentUserId, cancellationToken);
+        if (talent is not null)
+        {
+            var hasNullProfileFields =
+                talent.Location is null ||
+                talent.ExpectedSalary is null ||
+                talent.TotalYearsExperience is null;
+
+            if (hasNullProfileFields)
+            {
+                talent.UpdateProfile(
+                    name: talent.Name,
+                    tagline: talent.Tagline,
+                    shortBio: talent.ShortBio,
+                    location: talent.Location ?? application.Location,
+                    phone: talent.Phone,
+                    linkedInUrl: talent.LinkedInUrl,
+                    additionalUrls: talent.AdditionalUrls,
+                    totalYearsExperience: talent.TotalYearsExperience ?? application.TotalYearsExperience,
+                    expectedSalary: talent.ExpectedSalary ?? application.ExpectedSalary,
+                    skillPropositions: talent.SkillPropositions);
+                _talentRepository.Update(talent);
+            }
+
+            var hasEmptySkills =
+                talent.TechnicalSkills.Count == 0 &&
+                talent.SoftSkills.Count == 0 &&
+                talent.ToolsAndPlatforms.Count == 0;
+
+            if (hasEmptySkills)
+            {
+                var technicalSkills = application.GetExtractedTechnicalSkills();
+                var softSkills = application.GetExtractedSoftSkills();
+                var toolsAndPlatforms = application.GetExtractedToolsAndPlatforms();
+                if (technicalSkills.Count > 0 || softSkills.Count > 0 || toolsAndPlatforms.Count > 0)
+                {
+                    talent.UpdateSkills(technicalSkills, softSkills, toolsAndPlatforms);
+                    _talentRepository.Update(talent);
+                }
+            }
+
+            await CreateResumeForGuestAsync(talentUserId, application, cancellationToken);
+            await CreateWorkExperienceForGuestAsync(talentUserId, application, cancellationToken);
+            await CreateEducationForGuestAsync(talentUserId, application, cancellationToken);
+        }
 
         var otherPending = await _jobApplicationRepository.GetPendingByEmailAsync(email, cancellationToken);
         foreach (var pending in otherPending)
