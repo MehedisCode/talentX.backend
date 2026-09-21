@@ -147,7 +147,12 @@ public class JobsController : BaseApiController
             request.CoverLetter,
             request.ExpectedSalary,
             request.TotalYearsExperience,
-            request.Location);
+            request.Location,
+            request.ExtractedTechnicalSkills,
+            request.ExtractedSoftSkills,
+            request.ExtractedToolsAndPlatforms,
+            request.ExtractedWorkExperience,
+            request.ExtractedEducation);
 
         var response = await Sender.Send(command, cancellationToken);
         return Ok(response);

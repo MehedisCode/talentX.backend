@@ -11,5 +11,10 @@ public record ApplyToJobCommand(
     string CoverLetter,
     decimal ExpectedSalary,
     decimal TotalYearsExperience,
-    string? Location
+    string? Location,
+    string? ExtractedTechnicalSkillsJson = null,
+    string? ExtractedSoftSkillsJson = null,
+    string? ExtractedToolsAndPlatformsJson = null,
+    string? ExtractedWorkExperienceJson = null,
+    string? ExtractedEducationJson = null
 ) : IRequest<ApplyToJobResponse>;

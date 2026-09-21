@@ -831,6 +831,21 @@ namespace TalentX.Migrations.Migrations
                         .HasPrecision(12, 2)
                         .HasColumnType("numeric(12,2)");
 
+                    b.Property<string>("ExtractedEducationJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ExtractedSoftSkillsJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ExtractedTechnicalSkillsJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ExtractedToolsAndPlatformsJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ExtractedWorkExperienceJson")
+                        .HasColumnType("text");
+
                     b.Property<Guid>("JobId")
                         .HasColumnType("uuid");
 
@@ -1318,6 +1333,23 @@ namespace TalentX.Migrations.Migrations
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime?>("RejectedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("RejectionReason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("VerificationStatus")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasDefaultValue("PendingVerification");
+
+                    b.Property<DateTime?>("VerifiedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.ToTable("Employers", (string)null);
                 });
