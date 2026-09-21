@@ -3,6 +3,7 @@ using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using TalentX.Infrastructure.RateLimiting.Policies;
 
 namespace TalentX.Infrastructure.RateLimiting;
 
@@ -38,71 +39,10 @@ public static class RateLimitingStartup
                 }, cancellationToken);
             };
 
-            // ── Policy: VerifyEmail (Anonymous, IP-keyed) ──
-            options.AddPolicy("VerifyEmail", context =>
-                RateLimitPartition.GetFixedWindowLimiter(
-                    partitionKey: GetClientIp(context),
-                    factory: _ => new FixedWindowRateLimiterOptions
-                    {
-                        PermitLimit = 5,
-                        Window = TimeSpan.FromMinutes(1),
-                        QueueLimit = 0
-                    }));
-
-            // ── Policy: JobApply (Anonymous, IP-keyed) ──
-            options.AddPolicy("JobApply", context =>
-                RateLimitPartition.GetFixedWindowLimiter(
-                    partitionKey: GetClientIp(context),
-                    factory: _ => new FixedWindowRateLimiterOptions
-                    {
-                        PermitLimit = 5,
-                        Window = TimeSpan.FromMinutes(1),
-                        QueueLimit = 0
-                    }));
-
-            // ── Policy: UploadResume (Authenticated, User-keyed) ──
-            options.AddPolicy("UploadResume", context =>
-                RateLimitPartition.GetFixedWindowLimiter(
-                    partitionKey: GetUserId(context),
-                    factory: _ => new FixedWindowRateLimiterOptions
-                    {
-                        PermitLimit = 10,
-                        Window = TimeSpan.FromMinutes(1),
-                        QueueLimit = 0
-                    }));
-
-            // ── Policy: RunMatching (Authenticated, User-keyed) ──
-            options.AddPolicy("RunMatching", context =>
-                RateLimitPartition.GetFixedWindowLimiter(
-                    partitionKey: GetUserId(context),
-                    factory: _ => new FixedWindowRateLimiterOptions
-                    {
-                        PermitLimit = 3,
-                        Window = TimeSpan.FromMinutes(1),
-                        QueueLimit = 0
-                    }));
-
-            // ── Policy: GetCandidates (Authenticated, User-keyed) ──
-            options.AddPolicy("GetCandidates", context =>
-                RateLimitPartition.GetFixedWindowLimiter(
-                    partitionKey: GetUserId(context),
-                    factory: _ => new FixedWindowRateLimiterOptions
-                    {
-                        PermitLimit = 20,
-                        Window = TimeSpan.FromMinutes(1),
-                        QueueLimit = 0
-                    }));
-
-            // ── Policy: CandidateSummary (Authenticated, User-keyed) ──
-            options.AddPolicy("CandidateSummary", context =>
-                RateLimitPartition.GetFixedWindowLimiter(
-                    partitionKey: GetUserId(context),
-                    factory: _ => new FixedWindowRateLimiterOptions
-                    {
-                        PermitLimit = 15,
-                        Window = TimeSpan.FromMinutes(1),
-                        QueueLimit = 0
-                    }));
+            // ── Register domain-specific policies ──
+            AuthRateLimitPolicies.Register(options);
+            JobRateLimitPolicies.Register(options);
+            EmployerRateLimitPolicies.Register(options);
         });
 
         return services;
@@ -115,11 +55,11 @@ public static class RateLimitingStartup
         return app;
     }
 
-    // ── Helpers ──
+    // ── Shared helpers (used by policy files) ──
 
-    private static string GetClientIp(HttpContext context) =>
+    internal static string GetClientIp(HttpContext context) =>
         context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 
-    private static string GetUserId(HttpContext context) =>
+    internal static string GetUserId(HttpContext context) =>
         context.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? GetClientIp(context);
 }
