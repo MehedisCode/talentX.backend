@@ -26,4 +26,10 @@ public interface ICompanyRepository
     /// Gets a company by its associated employer identifier.
     /// </summary>
     Task<Company?> GetByEmployerIdAsync(string employerId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets companies for a batch of employer identifiers in a single query.
+    /// Used to enrich job lists without N+1 round-trips.
+    /// </summary>
+    Task<IReadOnlyList<Company>> GetByEmployerIdsAsync(IEnumerable<string> employerIds, CancellationToken cancellationToken = default);
 }

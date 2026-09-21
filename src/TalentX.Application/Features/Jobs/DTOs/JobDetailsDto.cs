@@ -6,6 +6,8 @@ public class JobDetailsDto
 {
     public Guid Id { get; set; }
     public string EmployerId {get; set;} = string.Empty;
+    public Guid? CompanyId { get; set; }
+    public string? LogoUrl { get; set; }
     public string Title { get; set; } = string.Empty;
     public string CompanyName { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
