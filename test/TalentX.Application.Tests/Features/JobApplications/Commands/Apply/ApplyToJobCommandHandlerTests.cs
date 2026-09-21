@@ -143,7 +143,7 @@ public class ApplyToJobCommandHandlerTests
         var existingApp = JobApplication.CreateGuestApplication(
             Guid.NewGuid(), "Jane Doe", "jane@example.com", "resumes/old.pdf");
         _jobApplicationRepository
-            .Setup(r => r.GetPendingByJobIdAndEmailAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetAnyByJobIdAndEmailAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(existingApp);
 
         EmailVerificationToken? addedToken = null;
@@ -242,50 +242,48 @@ public class ApplyToJobCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WhenUserExistsAsTalent_ReturnsRequiresLogin()
+    public async Task Handle_WhenApplicationExistsAsApplied_ReturnsAlreadyApplied()
     {
         SetupPublishedJob();
-        _userRepository
-            .Setup(r => r.GetByEmailAsync("jane@example.com"))
-            .ReturnsAsync(new User("user-1", "Jane Doe", "jane@example.com", UserRole.Talent));
+        var existingApp = new JobApplication(
+            Guid.Parse("11111111-1111-1111-1111-111111111111"),
+            "user-1",
+            "Jane Doe",
+            "jane@example.com",
+            "resumes/test.pdf");
+        _jobApplicationRepository
+            .Setup(r => r.GetAnyByJobIdAndEmailAsync(It.IsAny<Guid>(), "jane@example.com", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(existingApp);
 
         var command = ValidCommand();
         var response = await _handler.Handle(command, CancellationToken.None);
 
-        response.RequiresLogin.Should().BeTrue();
-        response.ApplicationId.Should().BeEmpty();
+        response.AlreadyApplied.Should().BeTrue();
+        response.ApplicationId.Should().Be(existingApp.Id);
         _jobApplicationRepository.Verify(r => r.AddAsync(It.IsAny<JobApplication>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
-    public async Task Handle_WhenUserExistsAsGuest_ReturnsRequiresLogin()
+    public async Task Handle_WhenApplicationExistsAsPendingVerification_ResendsVerificationEmail()
     {
         SetupPublishedJob();
-        _userRepository
-            .Setup(r => r.GetByEmailAsync("jane@example.com"))
-            .ReturnsAsync(new User("user-1", "Jane Doe", "jane@example.com", UserRole.Guest));
+        var existingApp = new JobApplication(
+            Guid.Parse("11111111-1111-1111-1111-111111111111"),
+            null,
+            "Jane Doe",
+            "jane@example.com",
+            "resumes/test.pdf");
+        _jobApplicationRepository
+            .Setup(r => r.GetAnyByJobIdAndEmailAsync(It.IsAny<Guid>(), "jane@example.com", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(existingApp);
 
         var command = ValidCommand();
         var response = await _handler.Handle(command, CancellationToken.None);
 
-        response.RequiresLogin.Should().BeTrue();
-        response.ApplicationId.Should().BeEmpty();
+        response.VerificationEmailResent.Should().BeTrue();
+        response.ApplicationId.Should().Be(existingApp.Id);
         _jobApplicationRepository.Verify(r => r.AddAsync(It.IsAny<JobApplication>(), It.IsAny<CancellationToken>()), Times.Never);
-    }
-
-    [Fact]
-    public async Task Handle_WhenUserExistsAsEmployer_ReturnsRequiresLogin()
-    {
-        SetupPublishedJob();
-        _userRepository
-            .Setup(r => r.GetByEmailAsync("jane@example.com"))
-            .ReturnsAsync(new User("user-1", "Jane Doe", "jane@example.com", UserRole.Employer));
-
-        var command = ValidCommand();
-        var response = await _handler.Handle(command, CancellationToken.None);
-
-        response.RequiresLogin.Should().BeTrue();
-        response.ApplicationId.Should().BeEmpty();
-        _jobApplicationRepository.Verify(r => r.AddAsync(It.IsAny<JobApplication>(), It.IsAny<CancellationToken>()), Times.Never);
+        _emailService.Verify(e => e.SendVerificationLinkEmailAsync(
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 }

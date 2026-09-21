@@ -145,10 +145,9 @@ public class GetMyJobQueryHandlerTests
     }
 
     [Fact]
-    public async Task Handle_PublishedJob_ReturnsPublishedStatus()
+    public async Task Handle_PublishedJobWithFutureDeadline_ReturnsPublishedStatus()
     {
         var job = CreateTestJob();
-        job.UpdateWizardDetails("Dhaka", "Bangladesh", null, null);
         job.MarkAsPublished();
 
         _jobRepository.Setup(r => r.GetByIdAsync(job.Id, It.IsAny<CancellationToken>()))
@@ -156,6 +155,70 @@ public class GetMyJobQueryHandlerTests
 
         var result = await _handler.Handle(new GetMyJobQuery(job.Id), CancellationToken.None);
 
-        result.Status.Should().Be("Published");
+        result.Status.Should().Be(JobStatus.Published.ToString());
+    }
+
+    [Fact]
+    public async Task Handle_PublishedJobWithPastDeadline_ReturnsExpiredStatus()
+    {
+        var job = CreateTestJob();
+        job.MarkAsPublished();
+        job.SetDetails(job.Title, job.CompanyName, job.Description, EmploymentType.FullTime, ExperienceLevel.MidLevel, job.Location, WorkArrangement.Hybrid, new List<string> { "C#" }, 2, DateTime.UtcNow.AddDays(-1));
+
+        _jobRepository.Setup(r => r.GetByIdAsync(job.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(job);
+
+        var result = await _handler.Handle(new GetMyJobQuery(job.Id), CancellationToken.None);
+
+        result.Status.Should().Be(JobStatus.Expired.ToString());
+    }
+
+    [Fact]
+    public async Task Handle_ClosedJob_ReturnsClosedStatus()
+    {
+        var job = CreateTestJob();
+        job.MarkAsPublished();
+        job.MarkAsClosed();
+
+        _jobRepository.Setup(r => r.GetByIdAsync(job.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(job);
+
+        var result = await _handler.Handle(new GetMyJobQuery(job.Id), CancellationToken.None);
+
+        result.Status.Should().Be(JobStatus.Closed.ToString());
+    }
+
+    [Fact]
+    public async Task Handle_WhenJobIsDeactivated_ReturnsTheReasonLabelDetailsAndDate()
+    {
+        var job = CreateTestJob();
+        job.MarkAsPublished();
+        job.Deactivate(DeactivationReason.MisleadingInformation, "Salary does not match the description.");
+        _jobRepository.Setup(r => r.GetByIdAsync(job.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(job);
+
+        var result = await _handler.Handle(new GetMyJobQuery(job.Id), CancellationToken.None);
+
+        result.Status.Should().Be("Deactivated");
+        result.DeactivationReason.Should().Be(DeactivationReason.MisleadingInformation);
+        result.DeactivationReasonLabel.Should().Be("Misleading or invalid information");
+        result.DeactivationDetails.Should().Be("Salary does not match the description.");
+        result.DeactivatedAt.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task Handle_WhenJobWasNeverDeactivated_LeavesDeactivationFieldsNull()
+    {
+        var job = CreateTestJob();
+        job.MarkAsPublished();
+        _jobRepository.Setup(r => r.GetByIdAsync(job.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(job);
+
+        var result = await _handler.Handle(new GetMyJobQuery(job.Id), CancellationToken.None);
+
+        result.DeactivationReason.Should().BeNull();
+        result.DeactivationReasonLabel.Should().BeNull();
+        result.DeactivationDetails.Should().BeNull();
+        result.DeactivatedAt.Should().BeNull();
     }
 }

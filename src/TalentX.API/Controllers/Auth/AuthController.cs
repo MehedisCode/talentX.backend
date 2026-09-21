@@ -139,7 +139,8 @@ public class AuthController : BaseApiController
             result.UserId,
             result.Email,
             result.AccessToken,
-            result.RefreshToken
+            result.RefreshToken,
+            result.RequiresPasswordChange
         });
     }
 }

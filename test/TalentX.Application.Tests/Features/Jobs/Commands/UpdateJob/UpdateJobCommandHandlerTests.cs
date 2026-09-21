@@ -370,4 +370,63 @@ public class UpdateJobCommandHandlerTests
 
         _jobAlertQueue.Verify(q => q.EnqueuePublishedJobAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
     }
+
+    private static Job ExistingDeactivatedJob(bool pendingReview = false)
+    {
+        var job = ExistingDraftJob();
+        job.MarkAsPublished();
+        job.Deactivate(DeactivationReason.Spam, "Posting links to an unrelated external site.");
+        if (pendingReview)
+        {
+            job.SubmitForReview();
+        }
+
+        return job;
+    }
+
+    [Fact]
+    public async Task Handle_WhenJobIsPendingReview_ThrowsBadRequestAndLeavesTheJobUnchanged()
+    {
+        var job = ExistingDeactivatedJob(pendingReview: true);
+        _jobRepository.Setup(r => r.GetByIdAsync(job.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(job);
+
+        var act = () => _handler.Handle(CommandFor(job.Id), CancellationToken.None);
+
+        await act.Should().ThrowAsync<BadRequestException>()
+            .WithMessage("This job is under admin review and can't be edited until the review is complete.");
+        job.Title.Should().Be("Backend Engineer");
+        job.Status.Should().Be(JobStatus.PendingReview);
+        _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_WhenPublishingADeactivatedJob_ThrowsBadRequestPointingToResubmit()
+    {
+        var job = ExistingDeactivatedJob();
+        _jobRepository.Setup(r => r.GetByIdAsync(job.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(job);
+
+        var act = () => _handler.Handle(CommandFor(job.Id, publish: true), CancellationToken.None);
+
+        await act.Should().ThrowAsync<BadRequestException>()
+            .WithMessage("This job was deactivated by an admin. Save your changes and resubmit it for review instead of publishing.");
+        job.Status.Should().Be(JobStatus.Deactivated);
+        _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+        _jobAlertQueue.Verify(q => q.EnqueuePublishedJobAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_WhenEditingADeactivatedJobWithoutPublishing_SavesTheFixAndStaysDeactivated()
+    {
+        var job = ExistingDeactivatedJob();
+        _jobRepository.Setup(r => r.GetByIdAsync(job.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(job);
+
+        await _handler.Handle(CommandFor(job.Id, publish: false), CancellationToken.None);
+
+        job.Title.Should().Be("New Title");
+        job.Status.Should().Be(JobStatus.Deactivated);
+        _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
 }

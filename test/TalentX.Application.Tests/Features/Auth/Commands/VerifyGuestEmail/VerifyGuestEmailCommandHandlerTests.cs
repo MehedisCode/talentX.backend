@@ -24,6 +24,9 @@ public class VerifyGuestEmailCommandHandlerTests
     private readonly Mock<IEmailService> _emailService = new();
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
     private readonly Mock<IAuditLogRepository> _auditLogRepository = new();
+    private readonly Mock<IResumeRepository> _resumeRepository = new();
+    private readonly Mock<IWorkExperienceRepository> _workExperienceRepository = new();
+    private readonly Mock<IEducationRepository> _educationRepository = new();
     private readonly Mock<ILogger<VerifyGuestEmailCommandHandler>> _logger = new();
 
     private readonly VerifyGuestEmailCommandHandler _handler;
@@ -31,6 +34,19 @@ public class VerifyGuestEmailCommandHandlerTests
     public VerifyGuestEmailCommandHandlerTests()
     {
         _unitOfWork.Setup(u => u.AuditLogs).Returns(_auditLogRepository.Object);
+        _unitOfWork.Setup(u => u.Resumes).Returns(_resumeRepository.Object);
+        _unitOfWork.Setup(u => u.WorkExperiences).Returns(_workExperienceRepository.Object);
+        _unitOfWork.Setup(u => u.Educations).Returns(_educationRepository.Object);
+
+        _resumeRepository
+            .Setup(r => r.GetByUserIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Resume?)null);
+        _workExperienceRepository
+            .Setup(r => r.GetByUserIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<WorkExperience>());
+        _educationRepository
+            .Setup(r => r.GetByUserIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Education>());
         _tokenService
             .Setup(t => t.CreateAsync(It.IsAny<string>()))
             .ReturnsAsync(IdentityResponse<TokenResponse>.Ok(new TokenResponse

@@ -66,6 +66,8 @@ public sealed class EmployersControllerTests
             DraftJobsCount: 1,
             ClosedJobsCount: 1,
             ExpiredJobsCount: 0,
+            DeactivatedJobsCount: 0,
+            PendingReviewJobsCount: 0,
             RecentJobs: []);
 
         _sender

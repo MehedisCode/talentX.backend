@@ -831,6 +831,21 @@ namespace TalentX.Migrations.Migrations
                         .HasPrecision(12, 2)
                         .HasColumnType("numeric(12,2)");
 
+                    b.Property<string>("ExtractedEducationJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ExtractedSoftSkillsJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ExtractedTechnicalSkillsJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ExtractedToolsAndPlatformsJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ExtractedWorkExperienceJson")
+                        .HasColumnType("text");
+
                     b.Property<Guid>("JobId")
                         .HasColumnType("uuid");
 
@@ -958,6 +973,55 @@ namespace TalentX.Migrations.Migrations
                         .IsUnique();
 
                     b.ToTable("JobTalentMatches", (string)null);
+                });
+
+            modelBuilder.Entity("TalentX.Domain.Entities.Notification", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Metadata")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<DateTime?>("ReadAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("RecipientUserId")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RecipientUserId");
+
+                    b.HasIndex("RecipientUserId", "ReadAt")
+                        .HasDatabaseName("IX_Notifications_RecipientUserId_ReadAt");
+
+                    b.ToTable("Notifications", (string)null);
                 });
 
             modelBuilder.Entity("TalentX.Domain.Entities.Resume", b =>
@@ -1269,6 +1333,23 @@ namespace TalentX.Migrations.Migrations
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime?>("RejectedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("RejectionReason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("VerificationStatus")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasDefaultValue("PendingVerification");
+
+                    b.Property<DateTime?>("VerifiedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.ToTable("Employers", (string)null);
                 });

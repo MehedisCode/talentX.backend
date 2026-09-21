@@ -45,6 +45,8 @@ public sealed class GetEmployerDashboardQueryHandler : IRequestHandler<GetEmploy
             jobStats.DraftJobsCount,
             jobStats.ClosedJobsCount,
             jobStats.ExpiredJobsCount,
+            jobStats.DeactivatedJobsCount,
+            jobStats.PendingReviewJobsCount,
             recentJobs);
     }
 }

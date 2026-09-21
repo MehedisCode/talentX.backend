@@ -57,6 +57,21 @@ public sealed class JobApplicationConfiguration : IEntityTypeConfiguration<JobAp
         builder.Property(application => application.CreatedAt)
             .IsRequired();
 
+        builder.Property(application => application.ExtractedTechnicalSkillsJson)
+            .HasColumnType("text");
+
+        builder.Property(application => application.ExtractedSoftSkillsJson)
+            .HasColumnType("text");
+
+        builder.Property(application => application.ExtractedToolsAndPlatformsJson)
+            .HasColumnType("text");
+
+        builder.Property(application => application.ExtractedWorkExperienceJson)
+            .HasColumnType("text");
+
+        builder.Property(application => application.ExtractedEducationJson)
+            .HasColumnType("text");
+
         builder.HasOne<Job>()
             .WithMany()
             .HasForeignKey(application => application.JobId)
