@@ -135,6 +135,9 @@ public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountC
             await _unitOfWork.Educations.DeleteByUserIdAsync(identityUserId, cancellationToken);
         }
 
+        // Both roles receive in-app notifications; RecipientUserId has no FK, so nothing cascades.
+        await _unitOfWork.Notifications.DeleteByRecipientIdAsync(identityUserId, cancellationToken);
+
         _unitOfWork.Users.Delete(user);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);

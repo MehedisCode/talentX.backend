@@ -42,6 +42,7 @@ public class DeleteAccountCommandHandlerTests
     private readonly Mock<IJobAlertRepository> _jobAlertRepositoryMock = new();
     private readonly Mock<ITalentNotificationPreferenceRepository> _talentNotificationPreferenceRepositoryMock = new();
     private readonly Mock<IJobAlertNotificationHistoryRepository> _jobAlertNotificationHistoryRepositoryMock = new();
+    private readonly Mock<INotificationRepository> _notificationRepositoryMock = new();
     private readonly Mock<IIdentityService> _identityServiceMock = new();
     private readonly Mock<IOtpService> _otpServiceMock = new();
     private readonly Mock<IEmailService> _emailServiceMock = new();
@@ -67,6 +68,7 @@ public class DeleteAccountCommandHandlerTests
         _unitOfWorkMock.SetupGet(u => u.JobAlerts).Returns(_jobAlertRepositoryMock.Object);
         _unitOfWorkMock.SetupGet(u => u.TalentNotificationPreferences).Returns(_talentNotificationPreferenceRepositoryMock.Object);
         _unitOfWorkMock.SetupGet(u => u.JobAlertNotificationHistories).Returns(_jobAlertNotificationHistoryRepositoryMock.Object);
+        _unitOfWorkMock.SetupGet(u => u.Notifications).Returns(_notificationRepositoryMock.Object);
 
         _currentUserServiceMock.SetupGet(c => c.Email).Returns(Email);
         _currentUserServiceMock.SetupGet(c => c.UserId).Returns(IdentityUserId);
@@ -176,6 +178,7 @@ public class DeleteAccountCommandHandlerTests
         _unitOfWorkMock.Verify(u => u.JobAlerts.DeleteByTalentIdAsync(IdentityUserId, It.IsAny<CancellationToken>()), Times.Once);
         _unitOfWorkMock.Verify(u => u.TalentNotificationPreferences.DeleteByTalentIdAsync(IdentityUserId, It.IsAny<CancellationToken>()), Times.Once);
         _unitOfWorkMock.Verify(u => u.JobAlertNotificationHistories.DeleteByTalentIdAsync(IdentityUserId, It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWorkMock.Verify(u => u.Notifications.DeleteByRecipientIdAsync(IdentityUserId, It.IsAny<CancellationToken>()), Times.Once);
         _unitOfWorkMock.Verify(u => u.Resumes.DeleteByUserIdAsync(IdentityUserId, It.IsAny<CancellationToken>()), Times.Once);
         _unitOfWorkMock.Verify(u => u.WorkExperiences.DeleteByUserIdAsync(IdentityUserId, It.IsAny<CancellationToken>()), Times.Once);
         _unitOfWorkMock.Verify(u => u.Educations.DeleteByUserIdAsync(IdentityUserId, It.IsAny<CancellationToken>()), Times.Once);
@@ -214,6 +217,7 @@ public class DeleteAccountCommandHandlerTests
         _unitOfWorkMock.Verify(u => u.JobModerationHistories.DeleteByJobIdsAsync(It.IsAny<IEnumerable<Guid>>(), It.IsAny<CancellationToken>()), Times.Once);
         _jobRepositoryMock.Verify(j => j.RemoveRange(jobs), Times.Once);
         _unitOfWorkMock.Verify(u => u.Companies.DeleteByEmployerIdAsync(IdentityUserId, It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWorkMock.Verify(u => u.Notifications.DeleteByRecipientIdAsync(IdentityUserId, It.IsAny<CancellationToken>()), Times.Once);
         // Talent-scoped cleanup must NOT run for an employer
         _unitOfWorkMock.Verify(u => u.JobApplications.DeleteByTalentUserIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
         _unitOfWorkMock.Verify(u => u.JobAlerts.DeleteByTalentIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -237,6 +241,7 @@ public class DeleteAccountCommandHandlerTests
 
         result.Email.Should().Be(Email);
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+        _unitOfWorkMock.Verify(u => u.Notifications.DeleteByRecipientIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
         _identityServiceMock.Verify(i => i.DeleteApplicationUserAsync(IdentityUserId), Times.Once);
         _unitOfWorkMock.Verify(u => u.CommitTransactionAsync(It.IsAny<CancellationToken>()), Times.Once);
         _emailServiceMock.Verify(
