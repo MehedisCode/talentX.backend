@@ -1,7 +1,9 @@
+using System.Text.Json;
 using AutoMapper;
 using MediatR;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
+using TalentX.Application.Common.Models;
 using TalentX.Application.DTOs.Auth;
 using TalentX.Application.DTOs.Employers;
 using TalentX.Application.Identity.Interfaces;
@@ -17,19 +19,22 @@ public sealed class CreateEmployerCommandHandler : IRequestHandler<CreateEmploye
     private readonly IOtpService _otpService;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
+    private readonly INotificationService _notificationService;
 
     public CreateEmployerCommandHandler(
         IIdentityService identityService,
         ITokenService tokenService,
         IOtpService otpService,
         IUnitOfWork unitOfWork,
-        IMapper mapper)
+        IMapper mapper,
+        INotificationService notificationService)
     {
         _identityService = identityService;
         _tokenService = tokenService;
         _otpService = otpService;
         _unitOfWork = unitOfWork;
         _mapper = mapper;
+        _notificationService = notificationService;
     }
 
     public async Task<AuthResponseDto> Handle(CreateEmployerCommand request, CancellationToken cancellationToken)
@@ -106,6 +111,8 @@ public sealed class CreateEmployerCommandHandler : IRequestHandler<CreateEmploye
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
+        await PublishEmployerRegisteredNotificationsAsync(employer, cancellationToken);
+
         await _otpService.ConsumeEmailVerificationAsync(request.Email, cancellationToken);
 
         var tokenResult = await _tokenService.CreateAsync(employer.UserId);
@@ -119,5 +126,31 @@ public sealed class CreateEmployerCommandHandler : IRequestHandler<CreateEmploye
             AccessToken: tokenResult.Data.AccessToken,
             RefreshToken: tokenResult.Data.RefreshToken
         );
+    }
+
+    private async Task PublishEmployerRegisteredNotificationsAsync(
+        Employer employer,
+        CancellationToken cancellationToken)
+    {
+        var adminUserIds = await _unitOfWork.Users.GetAdminUserIdsAsync(cancellationToken);
+
+        var metadata = JsonSerializer.Serialize(new
+        {
+            employerId = employer.UserId,
+            employerName = employer.Name,
+            companyName = employer.CompanyName
+        });
+
+        foreach (var adminUserId in adminUserIds)
+        {
+            await _notificationService.PublishAsync(
+                new PublishNotificationParameters(
+                    adminUserId,
+                    NotificationType.EmployerRegistered,
+                    "New Employer Registration",
+                    $"{employer.Name} from {employer.CompanyName} has registered and needs verification.",
+                    metadata),
+                cancellationToken);
+        }
     }
 }
