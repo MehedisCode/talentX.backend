@@ -57,6 +57,10 @@ public sealed class CreateEmployerCommandHandlerTests
         _otpServiceMock
             .Setup(o => o.IsEmailVerifiedAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
+
+        _userRepositoryMock
+            .Setup(r => r.GetAdminUserIdsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<string>());
     }
 
     [Fact]
