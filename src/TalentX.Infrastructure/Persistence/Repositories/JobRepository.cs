@@ -115,7 +115,7 @@ public sealed class JobRepository : RepositoryBase<Job>, IJobRepository
                 Active = group.Count(job => job.Status == JobStatus.Published && job.ExpireAt.Date >= currentDate),
                 Draft = group.Count(job => job.Status == JobStatus.Draft),
                 Closed = group.Count(job => job.Status == JobStatus.Closed),
-                Expired = group.Count(job => job.Status == JobStatus.Published && job.ExpireAt.Date < currentDate),
+                Expired = group.Count(job => job.Status == JobStatus.Expired || (job.Status == JobStatus.Published && job.ExpireAt.Date < currentDate)),
                 // Without these, moderated jobs still count in TotalPosted but appear in no breakdown.
                 Deactivated = group.Count(job => job.Status == JobStatus.Deactivated),
                 PendingReview = group.Count(job => job.Status == JobStatus.PendingReview)
@@ -159,7 +159,7 @@ public sealed class JobRepository : RepositoryBase<Job>, IJobRepository
         return recentJobs.Select(job => new EmployerRecentJobDto(
             job.Id,
             job.Title,
-            job.Status == JobStatus.Published && job.ExpireAt.Date < currentDate
+            job.Status == JobStatus.Expired || (job.Status == JobStatus.Published && job.ExpireAt.Date < currentDate)
                 ? JobStatus.Expired.ToString()
                 : job.Status.ToString(),
             job.CreatedAt,
@@ -192,6 +192,10 @@ public sealed class JobRepository : RepositoryBase<Job>, IJobRepository
             {
                 query = query.Where(job => job.Status == JobStatus.Published && job.ExpireAt.Date >= currentDate);
             }
+            else if (status.Value == JobStatus.Expired)
+            {
+                query = query.Where(job => job.Status == JobStatus.Expired || (job.Status == JobStatus.Published && job.ExpireAt.Date < currentDate));
+            }
             else
             {
                 query = query.Where(job => job.Status == status.Value);
@@ -199,11 +203,11 @@ public sealed class JobRepository : RepositoryBase<Job>, IJobRepository
         }
         else if (isExpired == true)
         {
-            query = query.Where(job => job.Status == JobStatus.Published && job.ExpireAt.Date < currentDate);
+            query = query.Where(job => job.Status == JobStatus.Expired || (job.Status == JobStatus.Published && job.ExpireAt.Date < currentDate));
         }
         else if (isExpired == false)
         {
-            query = query.Where(job => !(job.Status == JobStatus.Published && job.ExpireAt.Date < currentDate));
+            query = query.Where(job => !(job.Status == JobStatus.Expired || (job.Status == JobStatus.Published && job.ExpireAt.Date < currentDate)));
         }
 
         if (!string.IsNullOrWhiteSpace(searchTerm))
@@ -248,7 +252,7 @@ public sealed class JobRepository : RepositoryBase<Job>, IJobRepository
             job.Id,
             job.Title,
             job.CompanyName,
-            job.Status == JobStatus.Published && job.ExpireAt.Date < currentDate
+            job.Status == JobStatus.Expired || (job.Status == JobStatus.Published && job.ExpireAt.Date < currentDate)
                 ? JobStatus.Expired.ToString()
                 : job.Status.ToString(),
             job.EmploymentType,

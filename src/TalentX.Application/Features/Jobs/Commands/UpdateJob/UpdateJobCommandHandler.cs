@@ -52,6 +52,12 @@ public class UpdateJobCommandHandler : IRequestHandler<UpdateJobCommand>
         if (request.Publish && job.Status == JobStatus.Deactivated)
             throw new BadRequestException("This job was deactivated by an admin. Save your changes and resubmit it for review instead of publishing.");
 
+        var isCurrentlyExpired = job.GetEffectiveStatus() == JobStatus.Expired;
+        if (isCurrentlyExpired)
+        {
+            job.MarkAsExpired();
+        }
+
         job.SetDetails(
             request.Title != null ? JobRules.NormalizeText(request.Title) : job.Title,
             request.CompanyName != null ? JobRules.NormalizeText(request.CompanyName) : job.CompanyName,
@@ -101,9 +107,9 @@ public class UpdateJobCommandHandler : IRequestHandler<UpdateJobCommand>
                 JobRules.EnsurePublishable(job);
                 job.MarkAsPublished();
             }
-            catch (InvalidOperationException ex)
+            catch (InvalidOperationException exception)
             {
-                throw new FluentValidation.ValidationException(ex.Message);
+                throw new FluentValidation.ValidationException(exception.Message);
             }
         }
 

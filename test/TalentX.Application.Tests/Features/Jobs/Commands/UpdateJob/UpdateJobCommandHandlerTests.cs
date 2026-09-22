@@ -429,4 +429,70 @@ public class UpdateJobCommandHandlerTests
         job.Status.Should().Be(JobStatus.Deactivated);
         _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
+
+    private static Job ExistingExpiredJob()
+    {
+        var job = Job.Create(
+            "employer-1",
+            "Backend Engineer",
+            "Acme Corp",
+            "Build and maintain backend services.",
+            EmploymentType.FullTime,
+            ExperienceLevel.MidLevel,
+            "Dhaka",
+            WorkArrangement.FullRemote,
+            new List<string> { "C#" },
+            2,
+            DateTime.UtcNow.AddDays(-5)
+        );
+
+        job.UpdateWizardDetails(
+            null,
+            null,
+            4,
+            null,
+            SalaryType.Negotiable,
+            requirements: "- 3-5 years of relevant experience\n- Bachelor's degree or equivalent"
+        );
+
+        job.MarkAsPublished();
+        return job;
+    }
+
+    [Fact]
+    public async Task Handle_WhenSavingChangesOnExpiredJobWithFutureDeadline_RetainsExpiredStatus()
+    {
+        var job = ExistingExpiredJob();
+        _jobRepository.Setup(r => r.GetByIdAsync(job.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(job);
+
+        var futureDate = DateTime.UtcNow.AddDays(15);
+        var command = CommandFor(job.Id, publish: false) with { ExpireAt = futureDate };
+
+        await _handler.Handle(command, CancellationToken.None);
+
+        job.ExpireAt.Should().Be(futureDate);
+        job.Status.Should().Be(JobStatus.Expired);
+        _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _jobAlertQueue.Verify(q => q.EnqueuePublishedJobAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_WhenPublishingExpiredJobWithFutureDeadline_PublishesJobAndEnqueuesAlert()
+    {
+        var job = ExistingExpiredJob();
+        _jobRepository.Setup(r => r.GetByIdAsync(job.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(job);
+        SetupVerifiedEmployer();
+
+        var futureDate = DateTime.UtcNow.AddDays(15);
+        var command = CommandFor(job.Id, publish: true) with { ExpireAt = futureDate };
+
+        await _handler.Handle(command, CancellationToken.None);
+
+        job.ExpireAt.Should().Be(futureDate);
+        job.Status.Should().Be(JobStatus.Published);
+        _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _jobAlertQueue.Verify(q => q.EnqueuePublishedJobAsync(job.Id, It.IsAny<CancellationToken>()), Times.Once);
+    }
 }
