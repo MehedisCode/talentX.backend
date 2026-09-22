@@ -11,7 +11,7 @@ namespace TalentX.API.Controllers.Notifications;
 
 [ApiController]
 [Route("api/v1/notifications")]
-[Authorize(Roles = nameof(UserRole.Talent))]
+[Authorize(Roles = $"{nameof(UserRole.Talent)},{nameof(UserRole.Admin)},{nameof(UserRole.Employer)}")]
 public sealed class NotificationsController : BaseApiController
 {
     [HttpGet]

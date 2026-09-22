@@ -2,5 +2,9 @@ namespace TalentX.Domain.Enums;
 
 public enum NotificationType
 {
-    JobAlertMatch
+    JobAlertMatch,
+    EmployerRegistered,
+    EmployerReApplied,
+    EmployerApproved,
+    EmployerRejected
 }

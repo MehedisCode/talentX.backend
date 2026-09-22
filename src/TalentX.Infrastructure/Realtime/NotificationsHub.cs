@@ -5,7 +5,7 @@ using TalentX.Domain.Enums;
 
 namespace TalentX.Infrastructure.Realtime;
 
-[Authorize(Roles = nameof(UserRole.Talent))]
+[Authorize(Roles = $"{nameof(UserRole.Talent)},{nameof(UserRole.Admin)},{nameof(UserRole.Employer)}")]
 public sealed class NotificationsHub : Hub
 {
     public override async Task OnConnectedAsync()
