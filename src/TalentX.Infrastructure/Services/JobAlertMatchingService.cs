@@ -73,8 +73,7 @@ public sealed class JobAlertMatchingService : IJobAlertMatchingService
             .GetNotifiedTalentIdsAsync(job.Id, candidateIds, cancellationToken);
 
         var emailsQueuedCount = 0;
-        var frontendUrl = Environment.GetEnvironmentVariable("FRONTEND_URL")?.TrimEnd('/')
-            ?? JobAlertConstants.DefaultFrontendBaseUrl;
+        var frontendUrl = ResolveFrontendUrl();
         var jobUrl = $"{frontendUrl}/jobs/{job.Id}";
         var pendingNotifications = new List<(string TalentId, string Title, string Body, string MetadataJson)>();
 
@@ -185,5 +184,23 @@ public sealed class JobAlertMatchingService : IJobAlertMatchingService
                     job.Id);
             }
         }
+    }
+
+    private static string ResolveFrontendUrl()
+    {
+        var corsOrigins = Environment.GetEnvironmentVariable("CORS_ALLOWED_ORIGINS");
+        if (!string.IsNullOrWhiteSpace(corsOrigins))
+        {
+            var firstOrigin = corsOrigins
+                .Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .FirstOrDefault();
+
+            if (!string.IsNullOrWhiteSpace(firstOrigin))
+            {
+                return firstOrigin.TrimEnd('/');
+            }
+        }
+
+        return JobAlertConstants.DefaultFrontendBaseUrl;
     }
 }
