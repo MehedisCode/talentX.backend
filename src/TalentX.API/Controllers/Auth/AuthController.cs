@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using TalentX.Application.Features.Auth.Commands.VerifyGuestEmail;
 using TalentX.Application.Features.Auth.AddPassword;
 using TalentX.Application.Features.Auth.ChangePassword;
@@ -130,6 +131,7 @@ public class AuthController : BaseApiController
 
     [AllowAnonymous]
     [HttpPost("verify-email")]
+    [EnableRateLimiting("VerifyEmail")]
     public async Task<IActionResult> VerifyGuestEmail(VerifyGuestEmailCommand command)
     {
         var result = await Sender.Send(command);
