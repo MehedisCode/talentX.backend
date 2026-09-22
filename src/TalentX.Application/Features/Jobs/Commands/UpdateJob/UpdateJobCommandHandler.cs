@@ -107,9 +107,9 @@ public class UpdateJobCommandHandler : IRequestHandler<UpdateJobCommand>
                 JobRules.EnsurePublishable(job);
                 job.MarkAsPublished();
             }
-            catch (InvalidOperationException ex)
+            catch (InvalidOperationException exception)
             {
-                throw new FluentValidation.ValidationException(ex.Message);
+                throw new FluentValidation.ValidationException(exception.Message);
             }
         }
 
