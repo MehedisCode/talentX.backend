@@ -101,7 +101,7 @@ public class JobRulesTests
         var act = () => JobRules.EnsurePublishable(job);
 
         act.Should().Throw<InvalidOperationException>()
-            .WithMessage("Only draft jobs can be published.");
+            .WithMessage("Only draft or expired jobs can be published.");
     }
 
     [Theory]
@@ -320,6 +320,6 @@ public class JobRulesTests
 
         var act = () => JobRules.EnsurePublishable(job);
 
-        act.Should().Throw<InvalidOperationException>().WithMessage("Only draft jobs can be published.");
+        act.Should().Throw<InvalidOperationException>().WithMessage("Only draft or expired jobs can be published.");
     }
 }
