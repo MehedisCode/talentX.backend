@@ -70,7 +70,7 @@ public class UpdateJobCommandValidator : AbstractValidator<UpdateJobCommand>
         RuleFor(v => v.ExpireAt)
             .Must(expireAt => expireAt.HasValue && expireAt.Value.Date >= DateTime.UtcNow.Date)
             .WithMessage("Expire date must be today or in the future.")
-            .When(v => v.ExpireAt.HasValue);
+            .When(v => v.Publish && v.ExpireAt.HasValue);
 
         // Conditional validation for wizard fields — only enforced when publishing.
         RuleFor(v => v.City)

@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using TalentX.Application.Features.JobApplications.Commands.Apply;
 using TalentX.Application.Features.Jobs.Commands.CloseJob;
 using TalentX.Application.Features.Jobs.Commands.CreateJob;
@@ -9,6 +10,7 @@ using TalentX.Application.Features.Jobs.Commands.GenerateJobDescription;
 using TalentX.Application.Features.Jobs.Commands.GenerateJobRequirements;
 using TalentX.Application.Features.Jobs.Commands.GenerateSkills;
 using TalentX.Application.Features.Jobs.Commands.ReopenJob;
+using TalentX.Application.Features.Jobs.Commands.ResubmitJobForReview;
 using TalentX.Application.Features.Jobs.Commands.UpdateJob;
 using TalentX.Application.Features.Jobs.DTOs;
 using TalentX.Application.Features.Jobs.Queries.GetJobDetails;
@@ -133,6 +135,7 @@ public class JobsController : BaseApiController
     [HttpPost("{id:guid}/apply")]
     [AllowAnonymous]
     [Consumes("multipart/form-data")]
+    [EnableRateLimiting("JobApply")]
     public async Task<IActionResult> Apply(
         Guid id,
         [FromForm] ApplyToJobRequestDto request,
@@ -146,7 +149,12 @@ public class JobsController : BaseApiController
             request.CoverLetter,
             request.ExpectedSalary,
             request.TotalYearsExperience,
-            request.Location);
+            request.Location,
+            request.ExtractedTechnicalSkills,
+            request.ExtractedSoftSkills,
+            request.ExtractedToolsAndPlatforms,
+            request.ExtractedWorkExperience,
+            request.ExtractedEducation);
 
         var response = await Sender.Send(command, cancellationToken);
         return Ok(response);
@@ -165,6 +173,14 @@ public class JobsController : BaseApiController
     public async Task<IActionResult> ReopenJob(Guid id, CancellationToken cancellationToken)
     {
         await Sender.Send(new ReopenJobCommand(id), cancellationToken);
+        return NoContent();
+    }
+
+    [HttpPatch("{id:guid}/resubmit")]
+    [Authorize(Roles = $"{nameof(UserRole.Employer)}")]
+    public async Task<IActionResult> ResubmitJobForReview(Guid id, CancellationToken cancellationToken)
+    {
+        await Sender.Send(new ResubmitJobForReviewCommand(id), cancellationToken);
         return NoContent();
     }
 

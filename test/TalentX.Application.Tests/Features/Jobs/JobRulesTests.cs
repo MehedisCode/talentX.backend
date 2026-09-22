@@ -101,7 +101,7 @@ public class JobRulesTests
         var act = () => JobRules.EnsurePublishable(job);
 
         act.Should().Throw<InvalidOperationException>()
-            .WithMessage("Only draft jobs can be published.");
+            .WithMessage("Only draft or expired jobs can be published.");
     }
 
     [Theory]
@@ -285,5 +285,41 @@ public class JobRulesTests
         var act = () => JobRules.EnsurePublishable(job);
 
         act.Should().Throw<InvalidOperationException>().WithMessage("*MinOverlapHours*");
+    }
+
+    [Fact]
+    public void EnsureContentComplete_CompleteDeactivatedJob_DoesNotThrow()
+    {
+        // No Draft-only rule here: this is what lets a fixed deactivated job be resubmitted.
+        var job = ValidDraft();
+        job.MarkAsPublished();
+        job.Deactivate(DeactivationReason.Spam, "Posting links to an unrelated external site.");
+
+        var act = () => JobRules.EnsureContentComplete(job);
+
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void EnsureContentComplete_JobMissingRequirements_ThrowsAndListsRequirements()
+    {
+        var job = ValidDraft();
+        job.UpdateWizardDetails(null, null, 4, null, SalaryType.Negotiable);
+
+        var act = () => JobRules.EnsureContentComplete(job);
+
+        act.Should().Throw<InvalidOperationException>().WithMessage("*Requirements*");
+    }
+
+    [Fact]
+    public void EnsurePublishable_DeactivatedJob_StillRejectsWithTheDraftOnlyRule()
+    {
+        var job = ValidDraft();
+        job.MarkAsPublished();
+        job.Deactivate(DeactivationReason.Spam, "Posting links to an unrelated external site.");
+
+        var act = () => JobRules.EnsurePublishable(job);
+
+        act.Should().Throw<InvalidOperationException>().WithMessage("Only draft or expired jobs can be published.");
     }
 }

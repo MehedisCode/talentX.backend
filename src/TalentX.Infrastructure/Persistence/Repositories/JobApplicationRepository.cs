@@ -52,6 +52,18 @@ public sealed class JobApplicationRepository : IJobApplicationRepository
                 cancellationToken);
     }
 
+    public async Task<JobApplication?> GetAnyByJobIdAndEmailAsync(
+        Guid jobId,
+        string email,
+        CancellationToken cancellationToken = default)
+    {
+        return await _context.JobApplications
+            .FirstOrDefaultAsync(
+                application => application.JobId == jobId
+                    && application.ApplicantEmail == email,
+                cancellationToken);
+    }
+
     public async Task<IReadOnlyList<JobApplication>> GetPendingByEmailAsync(
         string email,
         CancellationToken cancellationToken = default)
@@ -214,5 +226,10 @@ public sealed class JobApplicationRepository : IJobApplicationRepository
         {
             _context.JobApplications.RemoveRange(applications);
         }
+    }
+
+    public void Delete(JobApplication jobApplication)
+    {
+        _context.JobApplications.Remove(jobApplication);
     }
 }

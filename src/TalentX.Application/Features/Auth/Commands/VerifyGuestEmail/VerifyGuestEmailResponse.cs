@@ -4,5 +4,6 @@ public sealed record VerifyGuestEmailResponse(
     string UserId,
     string Email,
     string AccessToken,
-    string RefreshToken
+    string RefreshToken,
+    bool RequiresPasswordChange
 );

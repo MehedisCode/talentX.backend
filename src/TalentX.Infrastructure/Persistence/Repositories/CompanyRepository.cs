@@ -46,4 +46,18 @@ public sealed class CompanyRepository : ICompanyRepository
             _context.Companies.Remove(company);
         }
     }
+
+    public async Task<IReadOnlyList<Company>> GetByEmployerIdsAsync(IEnumerable<string> employerIds, CancellationToken cancellationToken = default)
+    {
+        var ids = employerIds.Where(id => !string.IsNullOrWhiteSpace(id)).Distinct().ToList();
+        if (ids.Count == 0)
+        {
+            return Array.Empty<Company>();
+        }
+
+        return await _context.Companies
+            .AsNoTracking()
+            .Where(c => ids.Contains(c.EmployerId))
+            .ToListAsync(cancellationToken);
+    }
 }

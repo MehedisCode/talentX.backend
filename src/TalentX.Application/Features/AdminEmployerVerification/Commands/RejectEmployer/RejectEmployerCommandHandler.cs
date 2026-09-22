@@ -1,6 +1,7 @@
 using MediatR;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
+using TalentX.Application.Common.Models;
 using TalentX.Domain.Entities;
 using TalentX.Domain.Enums;
 
@@ -10,11 +11,16 @@ public sealed class RejectEmployerCommandHandler : IRequestHandler<RejectEmploye
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly IEmailService _emailService;
+    private readonly INotificationService _notificationService;
 
-    public RejectEmployerCommandHandler(IUnitOfWork unitOfWork, IEmailService emailService)
+    public RejectEmployerCommandHandler(
+        IUnitOfWork unitOfWork,
+        IEmailService emailService,
+        INotificationService notificationService)
     {
         _unitOfWork = unitOfWork;
         _emailService = emailService;
+        _notificationService = notificationService;
     }
 
     public async Task Handle(RejectEmployerCommand request, CancellationToken cancellationToken)
@@ -38,5 +44,20 @@ public sealed class RejectEmployerCommandHandler : IRequestHandler<RejectEmploye
             cancellationToken);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        await _notificationService.PublishAsync(
+            new PublishNotificationParameters(
+                employer.UserId,
+                NotificationType.EmployerRejected,
+                "Verification Rejected",
+                $"Your employer verification was rejected. Reason: {request.Reason}",
+                System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    employerId = employer.UserId,
+                    employerName = employer.Name,
+                    companyName = employer.CompanyName,
+                    rejectionReason = request.Reason
+                })),
+            cancellationToken);
     }
 }

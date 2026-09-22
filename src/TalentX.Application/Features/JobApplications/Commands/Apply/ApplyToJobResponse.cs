@@ -4,5 +4,5 @@ public record ApplyToJobResponse(
     Guid ApplicationId,
     Guid JobId,
     bool VerificationEmailResent = false,
-    bool RequiresLogin = false
+    bool AlreadyApplied = false
 );

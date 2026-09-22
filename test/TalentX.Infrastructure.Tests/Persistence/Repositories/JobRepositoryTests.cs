@@ -425,18 +425,57 @@ public class JobRepositoryTests
         var softDeletedJob = MakeCustomJob("employer-1", "Deleted Job", JobStatus.Published, daysUntilExpiry: 10);
         softDeletedJob.SoftDelete();
 
+        var deactivatedJob = MakeCustomJob("employer-1", "Deactivated Job", JobStatus.Published, daysUntilExpiry: 10);
+        deactivatedJob.Deactivate(DeactivationReason.Spam, "Posting links to an unrelated external site.");
+        var pendingReviewJob = MakeCustomJob("employer-1", "Pending Review Job", JobStatus.Published, daysUntilExpiry: 10);
+        pendingReviewJob.Deactivate(DeactivationReason.Spam, "Posting links to an unrelated external site.");
+        pendingReviewJob.SubmitForReview();
+
         var otherEmployerJob = MakeCustomJob("employer-2", "Other Employer Job", JobStatus.Published, daysUntilExpiry: 10);
 
-        context.Jobs.AddRange(activeJob, expiredJob, draftJob, closedJob, softDeletedJob, otherEmployerJob);
+        context.Jobs.AddRange(
+            activeJob, expiredJob, draftJob, closedJob, deactivatedJob, pendingReviewJob, softDeletedJob, otherEmployerJob);
         await context.SaveChangesAsync();
 
         var stats = await repository.GetEmployerStatsAsync("employer-1");
 
-        stats.TotalPostedJobs.Should().Be(4);
+        stats.TotalPostedJobs.Should().Be(6);
         stats.ActiveJobsCount.Should().Be(1);
         stats.DraftJobsCount.Should().Be(1);
         stats.ClosedJobsCount.Should().Be(1);
         stats.ExpiredJobsCount.Should().Be(1);
+        stats.DeactivatedJobsCount.Should().Be(1);
+        stats.PendingReviewJobsCount.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task GetEmployerStatsAsync_StatusCountsAddUpToTotalPosted()
+    {
+        // Every job must land in exactly one breakdown, or the dashboard donut's slices
+        // stop adding up to "Total Posted" (the bug moderated jobs used to cause).
+        await using var context = NewContext();
+        var repository = new JobRepository(context);
+
+        var deactivatedJob = MakeCustomJob("employer-1", "Deactivated Job", JobStatus.Published, daysUntilExpiry: 10);
+        deactivatedJob.Deactivate(DeactivationReason.InappropriateContent, "Contains offensive language in the description.");
+        var pendingReviewJob = MakeCustomJob("employer-1", "Pending Review Job", JobStatus.Published, daysUntilExpiry: 10);
+        pendingReviewJob.Deactivate(DeactivationReason.Spam, "Posting links to an unrelated external site.");
+        pendingReviewJob.SubmitForReview();
+
+        context.Jobs.AddRange(
+            MakeCustomJob("employer-1", "Active Job", JobStatus.Published, daysUntilExpiry: 10),
+            MakeCustomJob("employer-1", "Expired Job", JobStatus.Published, daysUntilExpiry: -2),
+            MakeCustomJob("employer-1", "Draft Job", JobStatus.Draft, daysUntilExpiry: 30),
+            MakeCustomJob("employer-1", "Closed Job", JobStatus.Closed, daysUntilExpiry: 30),
+            deactivatedJob,
+            pendingReviewJob);
+        await context.SaveChangesAsync();
+
+        var stats = await repository.GetEmployerStatsAsync("employer-1");
+
+        var breakdownTotal = stats.ActiveJobsCount + stats.DraftJobsCount + stats.ClosedJobsCount
+            + stats.ExpiredJobsCount + stats.DeactivatedJobsCount + stats.PendingReviewJobsCount;
+        breakdownTotal.Should().Be(stats.TotalPostedJobs);
     }
 
     [Fact]
@@ -452,6 +491,8 @@ public class JobRepositoryTests
         stats.DraftJobsCount.Should().Be(0);
         stats.ClosedJobsCount.Should().Be(0);
         stats.ExpiredJobsCount.Should().Be(0);
+        stats.DeactivatedJobsCount.Should().Be(0);
+        stats.PendingReviewJobsCount.Should().Be(0);
     }
 
     [Fact]

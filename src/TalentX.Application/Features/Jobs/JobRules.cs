@@ -18,9 +18,16 @@ public static class JobRules
 
     public static void EnsurePublishable(Job job)
     {
-        if (job.Status != JobStatus.Draft)
-            throw new InvalidOperationException("Only draft jobs can be published.");
+        if (job.Status is not (JobStatus.Draft or JobStatus.Expired))
+            throw new InvalidOperationException("Only draft or expired jobs can be published.");
 
+        EnsureContentComplete(job);
+    }
+
+    // The required-field checks on their own, without the Draft-only status rule, so resubmitting
+    // a deactivated job for review uses exactly the same definition of "complete" as publishing.
+    public static void EnsureContentComplete(Job job)
+    {
         var missing = new List<string>();
 
         if (string.IsNullOrWhiteSpace(job.Title))
@@ -50,7 +57,7 @@ public static class JobRules
         if (job.Vacancies <= 0)
             missing.Add(nameof(job.Vacancies));
 
-        if (job.ExpireAt < DateTime.Now.Date)
+        if (job.ExpireAt.Date < DateTime.UtcNow.Date)
             missing.Add(nameof(job.ExpireAt));
 
         // Conditional validation for wizard fields based on WorkArrangement

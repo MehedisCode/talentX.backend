@@ -342,6 +342,16 @@ public class CreateJobCommandValidatorTests
     }
 
     [Fact]
+    public void Validate_DraftWithExpireAtInThePast_HasNoError()
+    {
+        var command = ValidCommand() with { ExpireAt = DateTime.UtcNow.AddDays(-1), Publish = false };
+
+        var result = _validator.TestValidate(command);
+
+        result.ShouldNotHaveValidationErrorFor(c => c.ExpireAt);
+    }
+
+    [Fact]
     public void Validate_WithExpireAtInTheFuture_HasNoError()
     {
         var command = ValidCommand() with { ExpireAt = DateTime.UtcNow.AddDays(1) };

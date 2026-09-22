@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using TalentX.Application.Features.JobApplications.Commands.ApplyToJob;
 using TalentX.Application.Features.JobApplications.Commands.UploadApplicationResume;
 using TalentX.Application.Features.JobApplications.Queries.GetMyApplicationStatus;
@@ -36,6 +37,7 @@ public sealed class JobApplicationsController : BaseApiController
     [HttpPost("application-resumes")]
     [Consumes("multipart/form-data")]
     [RequestSizeLimit(5 * 1024 * 1024)]
+    [EnableRateLimiting("UploadResume")]
     public async Task<IActionResult> UploadApplicationResume(
         IFormFile file,
         CancellationToken cancellationToken)

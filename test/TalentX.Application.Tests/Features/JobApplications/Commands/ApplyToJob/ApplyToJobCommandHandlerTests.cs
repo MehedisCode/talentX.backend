@@ -1,4 +1,5 @@
 using FluentAssertions;
+using Microsoft.Extensions.Logging;
 using Moq;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
@@ -16,6 +17,8 @@ public class ApplyToJobCommandHandlerTests
     private readonly Mock<IJobApplicationRepository> _jobApplicationRepository = new();
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
     private readonly Mock<ICurrentUserService> _currentUserService = new();
+    private readonly Mock<IFileStorageService> _fileStorageService = new();
+    private readonly Mock<ILogger<ApplyToJobCommandHandler>> _logger = new();
     private readonly ApplyToJobCommandHandler _handler;
 
     public ApplyToJobCommandHandlerTests()
@@ -23,7 +26,7 @@ public class ApplyToJobCommandHandlerTests
         _unitOfWork.Setup(u => u.Jobs).Returns(_jobRepository.Object);
         _unitOfWork.Setup(u => u.JobApplications).Returns(_jobApplicationRepository.Object);
         _currentUserService.SetupGet(u => u.UserId).Returns("talent-1");
-        _handler = new ApplyToJobCommandHandler(_unitOfWork.Object, _currentUserService.Object);
+        _handler = new ApplyToJobCommandHandler(_unitOfWork.Object, _currentUserService.Object, _fileStorageService.Object, _logger.Object);
     }
 
     private static Job PublishedJob()

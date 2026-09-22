@@ -19,4 +19,5 @@ public sealed record EmployerJobListItemDto(
     decimal? SalaryMin,
     decimal? SalaryMax,
     Currency? SalaryCurrency,
-    SalaryPeriod? SalaryPeriod);
+    SalaryPeriod? SalaryPeriod,
+    string? DeactivationReasonLabel = null);

@@ -12,6 +12,7 @@ using TalentX.Application.Features.Jobs.Commands.CloseJob;
 using TalentX.Application.Features.Jobs.Commands.CreateJob;
 using TalentX.Application.Features.Jobs.Commands.DeleteJob;
 using TalentX.Application.Features.Jobs.Commands.ReopenJob;
+using TalentX.Application.Features.Jobs.Commands.ResubmitJobForReview;
 using TalentX.Application.Features.Jobs.Commands.UpdateJob;
 using TalentX.Application.Features.Jobs.DTOs;
 using TalentX.Application.Features.Jobs.Queries.GetJobDetails;
@@ -250,5 +251,32 @@ public class JobsControllerTests
 
         actionResult.Should().BeOfType<NoContentResult>();
         _sender.Verify(sender => sender.Send(new ReopenJobCommand(jobId), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ResubmitJobForReview_SendsCommandAndReturnsNoContent()
+    {
+        var jobId = Guid.NewGuid();
+        _sender
+            .Setup(sender => sender.Send(It.IsAny<ResubmitJobForReviewCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Unit.Value);
+
+        var actionResult = await _controller.ResubmitJobForReview(jobId, CancellationToken.None);
+
+        actionResult.Should().BeOfType<NoContentResult>();
+        _sender.Verify(
+            sender => sender.Send(new ResubmitJobForReviewCommand(jobId), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public void ResubmitJobForReview_IsRestrictedToEmployers()
+    {
+        var authorizeAttribute = typeof(JobsController)
+            .GetMethod(nameof(JobsController.ResubmitJobForReview))!
+            .GetCustomAttribute<AuthorizeAttribute>();
+
+        authorizeAttribute.Should().NotBeNull();
+        authorizeAttribute!.Roles.Should().Be(nameof(UserRole.Employer));
     }
 }

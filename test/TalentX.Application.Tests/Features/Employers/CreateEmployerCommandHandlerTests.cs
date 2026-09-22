@@ -1,9 +1,9 @@
 using AutoMapper;
 using Moq;
 using TalentX.Application.Common.Exceptions;
+using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Identity.Interfaces;
 using TalentX.Application.Identity.Models;
-using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Common.Interfaces.Repositories;
 using TalentX.Application.DTOs.Employers;
 using TalentX.Application.Features.Employers.Commands.CreateEmployer;
@@ -21,12 +21,15 @@ public sealed class CreateEmployerCommandHandlerTests
     private readonly Mock<IUnitOfWork> _unitOfWorkMock = new();
     private readonly Mock<IEmployerRepository> _employerRepositoryMock = new();
     private readonly Mock<ICompanyRepository> _companyRepositoryMock = new();
+    private readonly Mock<IUserRepository> _userRepositoryMock = new();
     private readonly Mock<IMapper> _mapperMock = new();
+    private readonly Mock<INotificationService> _notificationServiceMock = new();
 
     public CreateEmployerCommandHandlerTests()
     {
         _unitOfWorkMock.Setup(u => u.Employers).Returns(_employerRepositoryMock.Object);
         _unitOfWorkMock.Setup(u => u.Companies).Returns(_companyRepositoryMock.Object);
+        _unitOfWorkMock.Setup(u => u.Users).Returns(_userRepositoryMock.Object);
 
         _mapperMock
             .Setup(m => m.Map<EmployerDto>(It.IsAny<Employer>()))
@@ -54,6 +57,10 @@ public sealed class CreateEmployerCommandHandlerTests
         _otpServiceMock
             .Setup(o => o.IsEmailVerifiedAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
+
+        _userRepositoryMock
+            .Setup(r => r.GetAdminUserIdsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<string>());
     }
 
     [Fact]
@@ -84,7 +91,8 @@ public sealed class CreateEmployerCommandHandlerTests
             _tokenServiceMock.Object,
             _otpServiceMock.Object,
             _unitOfWorkMock.Object,
-            _mapperMock.Object
+            _mapperMock.Object,
+            _notificationServiceMock.Object
         );
 
         var result = await handler.Handle(command, CancellationToken.None);
@@ -126,7 +134,8 @@ public sealed class CreateEmployerCommandHandlerTests
             _tokenServiceMock.Object,
             _otpServiceMock.Object,
             _unitOfWorkMock.Object,
-            _mapperMock.Object
+            _mapperMock.Object,
+            _notificationServiceMock.Object
         );
 
         await Assert.ThrowsAsync<ConflictException>(() => handler.Handle(command, CancellationToken.None));
@@ -157,7 +166,8 @@ public sealed class CreateEmployerCommandHandlerTests
             _tokenServiceMock.Object,
             _otpServiceMock.Object,
             _unitOfWorkMock.Object,
-            _mapperMock.Object
+            _mapperMock.Object,
+            _notificationServiceMock.Object
         );
 
         var exception = await Assert.ThrowsAsync<ValidationException>(() => handler.Handle(command, CancellationToken.None));
@@ -187,7 +197,8 @@ public sealed class CreateEmployerCommandHandlerTests
             _tokenServiceMock.Object,
             _otpServiceMock.Object,
             _unitOfWorkMock.Object,
-            _mapperMock.Object
+            _mapperMock.Object,
+            _notificationServiceMock.Object
         );
 
         var result = await handler.Handle(command, CancellationToken.None);
@@ -228,7 +239,8 @@ public sealed class CreateEmployerCommandHandlerTests
             _tokenServiceMock.Object,
             _otpServiceMock.Object,
             _unitOfWorkMock.Object,
-            _mapperMock.Object
+            _mapperMock.Object,
+            _notificationServiceMock.Object
         );
 
         var exception = await Assert.ThrowsAsync<ValidationException>(() => handler.Handle(command, CancellationToken.None));

@@ -95,6 +95,17 @@ public class UserRepository : IUserRepository
         return (roleCounts, statusCounts);
     }
 
+    public async Task<IReadOnlyList<string>> GetAdminUserIdsAsync(CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        return await _context.DomainUsers
+            .AsNoTracking()
+            .Where(u => u.Role == UserRole.Admin)
+            .Select(u => u.UserId)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task AddAsync(User user, CancellationToken cancellationToken = default)
     {
         await _context.DomainUsers.AddAsync(user, cancellationToken);

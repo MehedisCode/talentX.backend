@@ -10,6 +10,7 @@ public interface IUserRepository
     Task<User?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<(IReadOnlyList<User> Items, int TotalCount)> GetPagedAsync(UserQueryParams queryParams, CancellationToken cancellationToken = default);
     Task<(IReadOnlyDictionary<UserRole, int> RoleCounts, IReadOnlyDictionary<AccountStatus, int> StatusCounts)> GetRoleAndStatusCountsAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<string>> GetAdminUserIdsAsync(CancellationToken cancellationToken = default);
     Task AddAsync(User user, CancellationToken cancellationToken = default);
     void Update(User user);
     void Delete(User user);

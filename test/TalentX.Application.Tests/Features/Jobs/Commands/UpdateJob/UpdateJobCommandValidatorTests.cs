@@ -317,14 +317,24 @@ public class UpdateJobCommandValidatorTests
     }
 
     [Fact]
-    public void Validate_WithExpireAtInThePast_HasError()
+    public void Validate_WithExpireAtInThePast_WhenPublishing_HasError()
     {
-        var command = EmptyCommand() with { ExpireAt = DateTime.UtcNow.AddDays(-1) };
+        var command = EmptyCommand() with { ExpireAt = DateTime.UtcNow.AddDays(-1), Publish = true };
 
         var result = _validator.TestValidate(command);
 
         result.ShouldHaveValidationErrorFor(c => c.ExpireAt)
             .WithErrorMessage("Expire date must be today or in the future.");
+    }
+
+    [Fact]
+    public void Validate_WithExpireAtInThePast_WhenPublishIsFalse_HasNoError()
+    {
+        var command = EmptyCommand() with { ExpireAt = DateTime.UtcNow.AddDays(-1), Publish = false };
+
+        var result = _validator.TestValidate(command);
+
+        result.ShouldNotHaveValidationErrorFor(c => c.ExpireAt);
     }
 
     [Fact]

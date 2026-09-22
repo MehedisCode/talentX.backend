@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using TalentX.Application.Features.Invitations.Commands.SendJobInvitation;
 using TalentX.Application.Features.Invitations.DTOs;
 using TalentX.Application.Features.Invitations.Queries.GetJobInvitations;
@@ -22,6 +23,7 @@ public sealed class EmployerTalentMatchingController : BaseApiController
     /// Triggers AI candidate evaluation and scoring for a published job.
     /// </summary>
     [HttpPost("jobs/{jobId:guid}/match")]
+    [EnableRateLimiting("RunMatching")]
     public async Task<IActionResult> RunMatching(Guid jobId, CancellationToken cancellationToken)
     {
         var result = await Sender.Send(new RunJobTalentMatchingCommand(jobId), cancellationToken);
@@ -32,6 +34,7 @@ public sealed class EmployerTalentMatchingController : BaseApiController
     /// Retrieves ranked candidate matches for an employer's job.
     /// </summary>
     [HttpGet("jobs/{jobId:guid}/candidates")]
+    [EnableRateLimiting("GetCandidates")]
     public async Task<IActionResult> GetMatchedCandidates(Guid jobId, CancellationToken cancellationToken)
     {
         var result = await Sender.Send(new GetMatchedCandidatesQuery(jobId), cancellationToken);
@@ -81,6 +84,7 @@ public sealed class EmployerTalentMatchingController : BaseApiController
     /// Gets a comprehensive profile summary of a candidate for employer review.
     /// </summary>
     [HttpGet("candidates/{id}/summary")]
+    [EnableRateLimiting("CandidateSummary")]
     public async Task<IActionResult> GetCandidateSummary(string id, CancellationToken cancellationToken)
     {
         var result = await Sender.Send(new GetCandidateSummaryQuery(id), cancellationToken);

@@ -5,8 +5,7 @@ public enum ApplicationStatus
     PendingVerification = 0,
     Applied = 1,
     Reviewed = 2,
-    Shortlisted = 3,
+    Interview = 3,
     Hired = 4,
-    Rejected = 5,
-    Interview = 6
+    Rejected = 5
 }
