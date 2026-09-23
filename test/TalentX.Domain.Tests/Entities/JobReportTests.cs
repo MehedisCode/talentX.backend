@@ -8,7 +8,7 @@ namespace TalentX.Domain.Tests.Entities;
 public class JobReportTests
 {
     [Fact]
-    public void Constructor_SetsPropertiesAndInitialPendingStatus()
+    public void Constructor_ValidState_SetsProperties()
     {
         // Arrange
         var jobId = Guid.NewGuid();
@@ -30,7 +30,7 @@ public class JobReportTests
     }
 
     [Fact]
-    public void Resolve_WhenPending_SetsResolvedStatusAndTimestamps()
+    public void Resolve_PendingStatus_SetsResolvedStatus()
     {
         // Arrange
         var report = new JobReport(Guid.NewGuid(), "user1", JobReportReason.SuspectedScam, null);
@@ -48,7 +48,7 @@ public class JobReportTests
     }
 
     [Fact]
-    public void Resolve_WhenNotPending_ThrowsInvalidOperationException()
+    public void Resolve_NotPendingStatus_ThrowsInvalidOperationException()
     {
         // Arrange
         var report = new JobReport(Guid.NewGuid(), "user1", JobReportReason.SuspectedScam, null);
@@ -62,7 +62,7 @@ public class JobReportTests
     }
 
     [Fact]
-    public void Dismiss_WhenPending_SetsDismissedStatusAndTimestamps()
+    public void Dismiss_PendingStatus_SetsDismissedStatus()
     {
         // Arrange
         var report = new JobReport(Guid.NewGuid(), "user1", JobReportReason.SuspectedScam, null);
@@ -80,7 +80,7 @@ public class JobReportTests
     }
 
     [Fact]
-    public void Dismiss_WhenNotPending_ThrowsInvalidOperationException()
+    public void Dismiss_NotPendingStatus_ThrowsInvalidOperationException()
     {
         // Arrange
         var report = new JobReport(Guid.NewGuid(), "user1", JobReportReason.SuspectedScam, null);

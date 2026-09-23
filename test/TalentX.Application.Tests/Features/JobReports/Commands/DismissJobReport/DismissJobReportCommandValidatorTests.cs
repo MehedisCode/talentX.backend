@@ -20,7 +20,7 @@ public class DismissJobReportCommandValidatorTests
     }
 
     [Fact]
-    public void ReportId_WhenEmpty_HasValidationError()
+    public void ReportId_EmptyState_HasValidationError()
     {
         var command = ValidCommand() with { ReportId = Guid.Empty };
         var result = _validator.TestValidate(command);
@@ -28,7 +28,7 @@ public class DismissJobReportCommandValidatorTests
     }
 
     [Fact]
-    public void AdminNotes_WhenTooLong_HasValidationError()
+    public void AdminNotes_TooLongState_HasValidationError()
     {
         var command = ValidCommand() with { AdminNotes = new string('a', 1001) };
         var result = _validator.TestValidate(command);
@@ -36,7 +36,7 @@ public class DismissJobReportCommandValidatorTests
     }
 
     [Fact]
-    public void ValidCommand_PassesValidation()
+    public void Validate_ValidCommand_PassesValidation()
     {
         var command = ValidCommand();
         var result = _validator.TestValidate(command);

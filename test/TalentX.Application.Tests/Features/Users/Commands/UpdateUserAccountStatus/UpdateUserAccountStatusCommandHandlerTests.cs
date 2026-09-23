@@ -86,11 +86,11 @@ public sealed class UpdateUserAccountStatusCommandHandlerTests
             Times.Once);
         _emailDispatchLogRepository.Verify(
             r => r.AddAsync(
-                It.Is<EmailDispatchLog>(e =>
-                    e.RecipientEmail == "jordan@talentx.com" &&
-                    e.RecipientName == "Jordan Smith" &&
-                    e.EmailType == "AccountStatusChanged" &&
-                    e.Subject.Contains("Deactivated")),
+                It.Is<EmailDispatchLog>(log =>
+                    log.RecipientEmail == "jordan@talentx.com" &&
+                    log.RecipientName == "Jordan Smith" &&
+                    log.EmailType == "AccountStatusChanged" &&
+                    log.Subject.Contains("Deactivated")),
                 It.IsAny<CancellationToken>()),
             Times.Once);
         _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
@@ -129,11 +129,11 @@ public sealed class UpdateUserAccountStatusCommandHandlerTests
             Times.Once);
         _emailDispatchLogRepository.Verify(
             r => r.AddAsync(
-                It.Is<EmailDispatchLog>(e =>
-                    e.RecipientEmail == "jordan@talentx.com" &&
-                    e.RecipientName == "Jordan Smith" &&
-                    e.EmailType == "AccountStatusChanged" &&
-                    e.Subject.Contains("Activated")),
+                It.Is<EmailDispatchLog>(log =>
+                    log.RecipientEmail == "jordan@talentx.com" &&
+                    log.RecipientName == "Jordan Smith" &&
+                    log.EmailType == "AccountStatusChanged" &&
+                    log.Subject.Contains("Activated")),
                 It.IsAny<CancellationToken>()),
             Times.Once);
         _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);

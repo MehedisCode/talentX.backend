@@ -36,7 +36,7 @@ public class GetJobReportDetailsQueryHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WhenReportNotFound_ThrowsNotFoundException()
+    public async Task Handle_ReportNotFound_ThrowsNotFoundException()
     {
         var reportId = Guid.NewGuid();
         _jobReportRepository.Setup(r => r.GetByIdAsync(reportId, It.IsAny<CancellationToken>()))
@@ -50,7 +50,7 @@ public class GetJobReportDetailsQueryHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WhenFound_ReturnsFullJobReportDetailsDto()
+    public async Task Handle_ReportFound_ReturnsFullJobReportDetailsDto()
     {
         var jobId = Guid.NewGuid();
         var job = (Job)System.Runtime.Serialization.FormatterServices.GetUninitializedObject(typeof(Job)); job.GetType().GetProperty("Title")?.SetValue(job, "Job Title"); job.GetType().GetProperty("EmployerId")?.SetValue(job, "employer-1");

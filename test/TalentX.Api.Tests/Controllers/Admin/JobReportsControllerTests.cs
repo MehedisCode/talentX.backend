@@ -45,13 +45,13 @@ public class JobReportsControllerTests
     }
 
     [Fact]
-    public void Controller_InheritsBaseApiController()
+    public void JobReportsController_Class_InheritsBaseApiController()
     {
         typeof(JobReportsController).Should().BeDerivedFrom<BaseApiController>();
     }
 
     [Fact]
-    public void Controller_RequiresAdminRole()
+    public void JobReportsController_Class_RequiresAdminRole()
     {
         var attributes = typeof(JobReportsController).GetCustomAttributes(typeof(AuthorizeAttribute), true);
         attributes.Should().ContainSingle();
@@ -60,7 +60,7 @@ public class JobReportsControllerTests
     }
 
     [Fact]
-    public void Controller_HasRouteAttributeWithExpectedTemplate()
+    public void JobReportsController_Class_HasRouteAttributeWithExpectedTemplate()
     {
         var attributes = typeof(JobReportsController).GetCustomAttributes(typeof(RouteAttribute), true);
         attributes.Should().ContainSingle();
@@ -69,7 +69,7 @@ public class JobReportsControllerTests
     }
 
     [Fact]
-    public async Task GetReports_DispatchesGetJobReportsQuery_AndReturnsOk()
+    public async Task GetReports_ValidState_ReturnsOk()
     {
         var queryParams = new AdminJobReportQueryParams { Page = 1, PageSize = 10 };
         var paginatedList = new PaginatedList<JobReportListItemDto>(new System.Collections.Generic.List<JobReportListItemDto>(), 1, 10, 0);
@@ -88,7 +88,7 @@ public class JobReportsControllerTests
     }
 
     [Fact]
-    public async Task GetReportDetails_DispatchesGetJobReportDetailsQuery_AndReturnsOk()
+    public async Task GetReportDetails_ValidState_ReturnsOk()
     {
         var reportId = Guid.NewGuid();
         var detailsDto = new JobReportDetailsDto(reportId, Guid.NewGuid(), "Job", "Company", JobReportReason.SuspectedScam, "Spam", JobReportStatus.Pending, "Details", null, "reporter-1", "reporter@test.com", null, null, null, DateTime.UtcNow, JobStatus.Published);
@@ -106,7 +106,7 @@ public class JobReportsControllerTests
     }
 
     [Fact]
-    public async Task ResolveReport_DispatchesResolveJobReportCommand_AndReturnsOk()
+    public async Task ResolveReport_ValidState_ReturnsOk()
     {
         var reportId = Guid.NewGuid();
         var requestDto = new ResolveJobReportRequestDto(DeactivationReason.Spam, "Spam details", "Admin notes");
@@ -129,7 +129,7 @@ public class JobReportsControllerTests
     }
 
     [Fact]
-    public async Task DismissReport_DispatchesDismissJobReportCommand_AndReturnsOk()
+    public async Task DismissReport_ValidState_ReturnsOk()
     {
         var reportId = Guid.NewGuid();
         var requestDto = new DismissJobReportRequestDto("Not spam");

@@ -21,7 +21,7 @@ public class ReportJobCommandValidatorTests
     }
 
     [Fact]
-    public void JobId_WhenEmpty_HasValidationError()
+    public void JobId_EmptyState_HasValidationError()
     {
         var command = ValidCommand() with { JobId = Guid.Empty };
         var result = _validator.TestValidate(command);
@@ -29,7 +29,7 @@ public class ReportJobCommandValidatorTests
     }
 
     [Fact]
-    public void Reason_WhenInvalidEnum_HasValidationError()
+    public void Reason_InvalidEnumState_HasValidationError()
     {
         var command = ValidCommand() with { Reason = (JobReportReason)999 };
         var result = _validator.TestValidate(command);
@@ -37,7 +37,7 @@ public class ReportJobCommandValidatorTests
     }
 
     [Fact]
-    public void Reason_WhenOtherAndAdditionalDetailsEmpty_HasValidationError()
+    public void Validate_ReasonOtherAndAdditionalDetailsEmpty_HasValidationError()
     {
         var command = ValidCommand() with { Reason = JobReportReason.Other, AdditionalDetails = "" };
         var result = _validator.TestValidate(command);
@@ -45,7 +45,7 @@ public class ReportJobCommandValidatorTests
     }
 
     [Fact]
-    public void Reason_WhenOtherAndAdditionalDetailsTooShort_HasValidationError()
+    public void Validate_ReasonOtherAndAdditionalDetailsTooShort_HasValidationError()
     {
         var command = ValidCommand() with { Reason = JobReportReason.Other, AdditionalDetails = "abc" };
         var result = _validator.TestValidate(command);
@@ -53,7 +53,7 @@ public class ReportJobCommandValidatorTests
     }
 
     [Fact]
-    public void Reason_WhenNotOtherAndAdditionalDetailsProvidedButTooShort_HasValidationError()
+    public void Validate_ReasonNotOtherAndAdditionalDetailsProvidedButTooShort_HasValidationError()
     {
         var command = ValidCommand() with { Reason = JobReportReason.SuspectedScam, AdditionalDetails = "abc" };
         var result = _validator.TestValidate(command);
@@ -61,7 +61,7 @@ public class ReportJobCommandValidatorTests
     }
 
     [Fact]
-    public void AdditionalDetails_WhenExceeds1000Chars_HasValidationError()
+    public void AdditionalDetails_Exceeds1000CharsState_HasValidationError()
     {
         var command = ValidCommand() with { AdditionalDetails = new string('a', 1001) };
         var result = _validator.TestValidate(command);
@@ -69,7 +69,7 @@ public class ReportJobCommandValidatorTests
     }
 
     [Fact]
-    public void ValidCommand_PassesValidation()
+    public void Validate_ValidCommand_PassesValidation()
     {
         var command = ValidCommand();
         var result = _validator.TestValidate(command);

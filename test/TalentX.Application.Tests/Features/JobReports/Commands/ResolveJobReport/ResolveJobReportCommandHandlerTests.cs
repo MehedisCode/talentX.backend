@@ -82,7 +82,7 @@ public class ResolveJobReportCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WhenReportNotFound_ThrowsNotFoundException()
+    public async Task Handle_ReportNotFound_ThrowsNotFoundException()
     {
         _currentUserService.SetupGet(s => s.UserId).Returns("admin-1");
         _currentUserService.SetupGet(s => s.Email).Returns("admin@test.com");
@@ -99,7 +99,7 @@ public class ResolveJobReportCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WhenReportNotPending_ThrowsBadRequestException()
+    public async Task Handle_ReportNotPending_ThrowsBadRequestException()
     {
         _currentUserService.SetupGet(s => s.UserId).Returns("admin-1");
         _currentUserService.SetupGet(s => s.Email).Returns("admin@test.com");
@@ -119,7 +119,7 @@ public class ResolveJobReportCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WhenJobNotFound_ThrowsNotFoundException()
+    public async Task Handle_JobNotFound_ThrowsNotFoundException()
     {
         _currentUserService.SetupGet(s => s.UserId).Returns("admin-1");
         _currentUserService.SetupGet(s => s.Email).Returns("admin@test.com");
@@ -141,7 +141,7 @@ public class ResolveJobReportCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WhenValidPendingReport_ResolvesReport_DeactivatesJob_AddsModerationHistory_AddsAuditLog_QueuesEmail_PublishesNotification_AndSavesChanges()
+    public async Task Handle_ValidPendingReport_ResolvesReport()
     {
         _currentUserService.SetupGet(s => s.UserId).Returns("admin-1");
         _currentUserService.SetupGet(s => s.Email).Returns("admin@test.com");
@@ -194,9 +194,9 @@ public class ResolveJobReportCommandHandlerTests
             a.Action.Contains("Resolved report") &&
             a.Action.Contains(job.Title)), It.IsAny<CancellationToken>()), Times.Once);
 
-        _emailDispatchLogRepository.Verify(r => r.AddAsync(It.Is<EmailDispatchLog>(e =>
-            e.RecipientEmail == "employer@test.com" &&
-            e.HtmlBody == "<html>email</html>"), It.IsAny<CancellationToken>()), Times.Once);
+        _emailDispatchLogRepository.Verify(r => r.AddAsync(It.Is<EmailDispatchLog>(log =>
+            log.RecipientEmail == "employer@test.com" &&
+            log.HtmlBody == "<html>email</html>"), It.IsAny<CancellationToken>()), Times.Once);
 
         _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
 

@@ -57,7 +57,7 @@ public class DismissJobReportCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WhenReportNotFound_ThrowsNotFoundException()
+    public async Task Handle_ReportNotFound_ThrowsNotFoundException()
     {
         _currentUserService.SetupGet(s => s.UserId).Returns("admin-1");
         _currentUserService.SetupGet(s => s.Email).Returns("admin@test.com");
@@ -74,7 +74,7 @@ public class DismissJobReportCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WhenReportNotPending_ThrowsBadRequestException()
+    public async Task Handle_ReportNotPending_ThrowsBadRequestException()
     {
         _currentUserService.SetupGet(s => s.UserId).Returns("admin-1");
         _currentUserService.SetupGet(s => s.Email).Returns("admin@test.com");
@@ -94,7 +94,7 @@ public class DismissJobReportCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WhenValid_DismissesReport_AddsAuditLog_AndSavesChanges()
+    public async Task Handle_ValidState_DismissesReport()
     {
         _currentUserService.SetupGet(s => s.UserId).Returns("admin-1");
         _currentUserService.SetupGet(s => s.Email).Returns("admin@test.com");

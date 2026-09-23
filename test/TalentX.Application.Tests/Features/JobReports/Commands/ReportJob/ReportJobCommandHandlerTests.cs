@@ -93,7 +93,7 @@ public class ReportJobCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_HappyPath_CreatesReportAndNotifications()
+    public async Task Handle_ValidState_CreatesReport()
     {
         _currentUserServiceMock.Setup(c => c.UserId).Returns("user1");
         _currentUserServiceMock.Setup(c => c.Email).Returns("user1@test.com");

@@ -96,9 +96,9 @@ public sealed class ResolveJobReportCommandHandler : IRequestHandler<ResolveJobR
                     job.Id.ToString()),
                 cancellationToken);
         }
-        catch (Exception ex)
+        catch (Exception exception)
         {
-            _logger.LogWarning(ex, "Failed to publish in-app notification for resolved job report {ReportId}", report.Id);
+            _logger.LogWarning(exception, "Failed to publish in-app notification for resolved job report {ReportId}", report.Id);
         }
 
         return new StatusUpdateResponseDto("Job report resolved and job deactivated.");

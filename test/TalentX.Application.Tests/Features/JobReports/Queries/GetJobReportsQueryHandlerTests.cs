@@ -37,7 +37,7 @@ public class GetJobReportsQueryHandlerTests
     }
 
     [Fact]
-    public async Task Handle_ReturnsPaginatedListOfJobReportListItemDto_WithMappedLabelsAndReporterEmails()
+    public async Task Handle_ValidState_ReturnsPaginatedListOfJobReportListItemDto()
     {
         var jobId = Guid.NewGuid();
         var job = (Job)System.Runtime.Serialization.FormatterServices.GetUninitializedObject(typeof(Job)); job.GetType().GetProperty("Title")?.SetValue(job, "Job Title"); job.GetType().GetProperty("EmployerId")?.SetValue(job, "employer-1");

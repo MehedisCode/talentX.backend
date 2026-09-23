@@ -281,7 +281,7 @@ public class JobsControllerTests
     }
 
     [Fact]
-    public async Task ReportJob_DispatchesCommand_ReturnsOk()
+    public async Task ReportJob_ValidState_ReturnsOk()
     {
         var jobId = Guid.NewGuid();
         var request = new TalentX.Application.Features.JobReports.DTOs.ReportJobRequestDto(TalentX.Domain.Enums.JobReportReason.SuspectedScam, "Scam");
