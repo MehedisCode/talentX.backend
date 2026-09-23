@@ -24,4 +24,15 @@ public sealed class TalentNotificationPreferenceRepository : ITalentNotification
     {
         await _context.TalentNotificationPreferences.AddAsync(entity, cancellationToken);
     }
+
+    public async Task DeleteByTalentIdAsync(string talentId, CancellationToken cancellationToken = default)
+    {
+        var preference = await _context.TalentNotificationPreferences
+            .FirstOrDefaultAsync(p => p.TalentId == talentId, cancellationToken);
+
+        if (preference is not null)
+        {
+            _context.TalentNotificationPreferences.Remove(preference);
+        }
+    }
 }

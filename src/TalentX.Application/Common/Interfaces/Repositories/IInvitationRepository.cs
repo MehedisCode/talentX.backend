@@ -30,4 +30,5 @@ public interface IInvitationRepository
     Task<bool> ExistsActiveAsync(Guid jobId, string talentUserId, CancellationToken cancellationToken = default);
     Task AddAsync(Invitation invitation, CancellationToken cancellationToken = default);
     void Update(Invitation invitation);
+    Task DeleteByTalentUserIdAsync(string talentUserId, CancellationToken cancellationToken = default);
 }

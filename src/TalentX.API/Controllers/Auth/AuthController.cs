@@ -6,6 +6,7 @@ using TalentX.Application.Features.Auth.Commands.VerifyGuestEmail;
 using TalentX.Application.Features.Auth.AddPassword;
 using TalentX.Application.Features.Auth.ChangePassword;
 using TalentX.Application.Features.Auth.CurrentUser;
+using TalentX.Application.Features.Auth.DeleteAccount;
 using TalentX.Application.Features.Auth.ForgotPassword;
 using TalentX.Application.Features.Auth.Login;
 using TalentX.Application.Features.Auth.Logout;
@@ -144,6 +145,24 @@ public class AuthController : BaseApiController
             result.RefreshToken,
             result.RequiresPasswordChange
         });
+    }
+
+    [Authorize(Roles = $"{nameof(UserRole.Employer)},{nameof(UserRole.Talent)}")]
+    [HttpPost("delete-account/send-otp")]
+    public async Task<IActionResult> SendDeleteAccountOtp(CancellationToken cancellationToken)
+    {
+        await Sender.Send(new SendDeleteAccountOtpCommand(), cancellationToken);
+        return NoContent();
+    }
+
+    [Authorize(Roles = $"{nameof(UserRole.Employer)},{nameof(UserRole.Talent)}")]
+    [HttpPost("delete-account")]
+    public async Task<ActionResult<DeleteAccountResult>> DeleteAccount(
+        [FromBody] DeleteAccountCommand command,
+        CancellationToken cancellationToken)
+    {
+        var result = await Sender.Send(command, cancellationToken);
+        return Ok(result);
     }
 }
 

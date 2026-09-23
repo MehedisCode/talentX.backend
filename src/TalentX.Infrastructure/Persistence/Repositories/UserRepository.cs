@@ -16,18 +16,18 @@ public class UserRepository : IUserRepository
         _context = context;
     }
 
-    public async Task<User?> GetByEmailAsync(string email)
+    public async Task<User?> GetByEmailAsync(string email, CancellationToken cancellationToken = default)
     {
         return await _context.DomainUsers
             .AsNoTracking()
-            .FirstOrDefaultAsync(u => u.Email == email);
+            .FirstOrDefaultAsync(u => u.Email == email, cancellationToken);
     }
 
-    public async Task<User?> GetByUserIdAsync(string userId)
+    public async Task<User?> GetByUserIdAsync(string userId, CancellationToken cancellationToken = default)
     {
         return await _context.DomainUsers
             .AsNoTracking()
-            .FirstOrDefaultAsync(u => u.UserId == userId);
+            .FirstOrDefaultAsync(u => u.UserId == userId, cancellationToken);
     }
 
     public async Task<User?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
@@ -114,6 +114,11 @@ public class UserRepository : IUserRepository
     public void Update(User user)
     {
         _context.DomainUsers.Update(user);
+    }
+
+    public void Delete(User user)
+    {
+        _context.DomainUsers.Remove(user);
     }
 }
 

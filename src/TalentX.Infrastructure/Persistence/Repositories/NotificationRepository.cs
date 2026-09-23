@@ -87,4 +87,18 @@ public sealed class NotificationRepository : INotificationRepository
                 .SetProperty(notification => notification.UpdatedAt, now),
                 cancellationToken);
     }
+
+    public async Task DeleteByRecipientIdAsync(string recipientUserId, CancellationToken cancellationToken = default)
+    {
+        // Tracked load + RemoveRange (not ExecuteDeleteAsync) so the audit interceptor records
+        // the account-deletion deletes, matching DeleteAccountCommandHandler's audit guarantee.
+        var notifications = await _context.Notifications
+            .Where(notification => notification.RecipientUserId == recipientUserId)
+            .ToListAsync(cancellationToken);
+
+        if (notifications.Count > 0)
+        {
+            _context.Notifications.RemoveRange(notifications);
+        }
+    }
 }

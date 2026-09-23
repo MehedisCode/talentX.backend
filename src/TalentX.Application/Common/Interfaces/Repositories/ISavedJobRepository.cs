@@ -10,4 +10,5 @@ public interface ISavedJobRepository
     void Remove(SavedJob entity);
     Task<PaginatedList<SavedJob>> GetSavedJobsAsync(string talentId, int page, int pageSize, CancellationToken cancellationToken = default);
     Task<List<Guid>> GetSavedJobIdsAsync(string talentId, CancellationToken cancellationToken = default);
+    Task DeleteByTalentIdAsync(string talentId, CancellationToken cancellationToken = default);
 }

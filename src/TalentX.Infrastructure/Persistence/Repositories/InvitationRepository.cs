@@ -136,4 +136,17 @@ public sealed class InvitationRepository : IInvitationRepository
     {
         _context.Invitations.Update(invitation);
     }
+
+    public async Task DeleteByTalentUserIdAsync(string talentUserId, CancellationToken cancellationToken = default)
+    {
+        var invitations = await _context.Invitations
+            .IgnoreQueryFilters()
+            .Where(x => x.TalentUserId == talentUserId)
+            .ToListAsync(cancellationToken);
+
+        if (invitations.Count > 0)
+        {
+            _context.Invitations.RemoveRange(invitations);
+        }
+    }
 }

@@ -39,6 +39,17 @@ public sealed class CompanyRepository : ICompanyRepository
             .FirstOrDefaultAsync(c => c.EmployerId == employerId, cancellationToken);
     }
 
+    public async Task DeleteByEmployerIdAsync(string employerId, CancellationToken cancellationToken = default)
+    {
+        var company = await _context.Companies
+            .FirstOrDefaultAsync(c => c.EmployerId == employerId, cancellationToken);
+
+        if (company is not null)
+        {
+            _context.Companies.Remove(company);
+        }
+    }
+
     public async Task<IReadOnlyList<Company>> GetByEmployerIdsAsync(IEnumerable<string> employerIds, CancellationToken cancellationToken = default)
     {
         var ids = employerIds.Where(id => !string.IsNullOrWhiteSpace(id)).Distinct().ToList();

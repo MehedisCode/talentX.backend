@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using TalentX.API.Controllers.Auth;
 using TalentX.Application.Features.Auth.AddPassword;
+using TalentX.Application.Features.Auth.DeleteAccount;
 using TalentX.Application.Features.Auth.ForgotPassword;
 using TalentX.Application.Features.Auth.ResetPassword;
 using Xunit;
@@ -126,6 +127,64 @@ public sealed class AuthControllerTests
                     command.Token == request.Token &&
                     command.NewPassword == request.NewPassword &&
                     command.ConfirmPassword == request.ConfirmPassword),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public void SendDeleteAccountOtp_IsRestrictedToEmployerAndTalentRoles()
+    {
+        var method = typeof(AuthController).GetMethod(nameof(AuthController.SendDeleteAccountOtp));
+        var attribute = method?.GetCustomAttribute<AuthorizeAttribute>(inherit: false);
+
+        attribute.Should().NotBeNull();
+        attribute!.Roles.Should().Be("Employer,Talent");
+    }
+
+    [Fact]
+    public async Task SendDeleteAccountOtp_SendsCommandAndReturnsNoContent()
+    {
+        _senderMock
+            .Setup(sender => sender.Send(It.IsAny<SendDeleteAccountOtpCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var response = await _controller.SendDeleteAccountOtp(CancellationToken.None);
+
+        response.Should().BeOfType<NoContentResult>();
+
+        _senderMock.Verify(
+            sender => sender.Send(It.IsAny<SendDeleteAccountOtpCommand>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public void DeleteAccount_IsRestrictedToEmployerAndTalentRoles()
+    {
+        var method = typeof(AuthController).GetMethod(nameof(AuthController.DeleteAccount));
+        var attribute = method?.GetCustomAttribute<AuthorizeAttribute>(inherit: false);
+
+        attribute.Should().NotBeNull();
+        attribute!.Roles.Should().Be("Employer,Talent");
+    }
+
+    [Fact]
+    public async Task DeleteAccount_SendsCommandAndReturnsOkWithResult()
+    {
+        var request = new DeleteAccountCommand("123456");
+        var expectedResult = new DeleteAccountResult("user@example.com");
+
+        _senderMock
+            .Setup(sender => sender.Send(It.IsAny<DeleteAccountCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expectedResult);
+
+        var response = await _controller.DeleteAccount(request, CancellationToken.None);
+
+        var okResult = response.Result.Should().BeOfType<OkObjectResult>().Subject;
+        okResult.Value.Should().Be(expectedResult);
+
+        _senderMock.Verify(
+            sender => sender.Send(
+                It.Is<DeleteAccountCommand>(command => command.Otp == request.Otp),
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }

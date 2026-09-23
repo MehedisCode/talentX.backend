@@ -150,4 +150,44 @@ public sealed class NotificationRepositoryTests
         talentOneNotifications.Should().OnlyContain(notification => notification.ReadAt != null);
         talentTwoNotifications.Should().OnlyContain(notification => notification.ReadAt == null);
     }
+
+    [Fact]
+    public async Task DeleteByRecipientIdAsync_DeletesOnlyMatchingRecipient()
+    {
+        await using var context = NewContext();
+        var repository = new NotificationRepository(context);
+
+        var first = Notification.Create("talent-1", NotificationType.JobAlertMatch, "First", "Body", null);
+        var second = Notification.Create("talent-1", NotificationType.JobAlertMatch, "Second", "Body", null);
+        var otherRecipient = Notification.Create("talent-2", NotificationType.JobAlertMatch, "Other", "Body", null);
+
+        await repository.AddAsync(first, CancellationToken.None);
+        await repository.AddAsync(second, CancellationToken.None);
+        await repository.AddAsync(otherRecipient, CancellationToken.None);
+        await context.SaveChangesAsync();
+
+        await repository.DeleteByRecipientIdAsync("talent-1", CancellationToken.None);
+        await context.SaveChangesAsync();
+
+        var remaining = await context.Notifications.AsNoTracking().ToListAsync();
+
+        remaining.Should().ContainSingle();
+        remaining[0].RecipientUserId.Should().Be("talent-2");
+    }
+
+    [Fact]
+    public async Task DeleteByRecipientIdAsync_WhenRecipientHasNoNotifications_DoesNothing()
+    {
+        await using var context = NewContext();
+        var repository = new NotificationRepository(context);
+
+        var notification = Notification.Create("talent-2", NotificationType.JobAlertMatch, "Other", "Body", null);
+        await repository.AddAsync(notification, CancellationToken.None);
+        await context.SaveChangesAsync();
+
+        await repository.DeleteByRecipientIdAsync("talent-1", CancellationToken.None);
+        await context.SaveChangesAsync();
+
+        (await context.Notifications.AsNoTracking().CountAsync()).Should().Be(1);
+    }
 }

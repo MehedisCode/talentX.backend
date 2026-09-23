@@ -115,4 +115,27 @@ public class JobModerationHistoryRepositoryTests
 
         result.Should().BeEmpty();
     }
+
+    [Fact]
+    public async Task DeleteByJobIdsAsync_DeletesHistoriesMatchingJobIds()
+    {
+        await using var context = NewContext();
+        var repository = new JobModerationHistoryRepository(context);
+
+        var job1 = MakePublishedJob("Job 1");
+        var job2 = MakePublishedJob("Job 2");
+        var otherJob = MakePublishedJob("Other Job");
+        context.Jobs.AddRange(job1, job2, otherJob);
+
+        var h1 = MakeHistory(job1.Id);
+        var h2 = MakeHistory(job2.Id);
+        var hOther = MakeHistory(otherJob.Id);
+        context.JobModerationHistories.AddRange(h1, h2, hOther);
+        await context.SaveChangesAsync();
+
+        await repository.DeleteByJobIdsAsync(new[] { job1.Id, job2.Id });
+        await context.SaveChangesAsync();
+
+        context.JobModerationHistories.Should().ContainSingle(h => h.JobId == otherJob.Id);
+    }
 }
