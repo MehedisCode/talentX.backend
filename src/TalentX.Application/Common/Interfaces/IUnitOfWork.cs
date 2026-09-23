@@ -5,7 +5,7 @@ namespace TalentX.Application.Common.Interfaces;
 /// <summary>
 /// Unit of work interface coordinating repository operations and transactions.
 /// </summary>
-public interface IUnitOfWork
+public interface IUnitOfWork : IDisposable, IAsyncDisposable
 {
     IJobRepository Jobs { get; }
     IJobApplicationRepository JobApplications { get; }
@@ -34,4 +34,8 @@ public interface IUnitOfWork
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The number of state entries written to the database.</returns>
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
+
+    Task BeginTransactionAsync(CancellationToken cancellationToken = default);
+    Task CommitTransactionAsync(CancellationToken cancellationToken = default);
+    Task RollbackTransactionAsync(CancellationToken cancellationToken = default);
 }

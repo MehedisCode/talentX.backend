@@ -58,4 +58,16 @@ public sealed class JobAlertRepository : IJobAlertRepository
             .Where(alert => alert.IsEnabled)
             .ToListAsync(cancellationToken);
     }
+
+    public async Task DeleteByTalentIdAsync(string talentId, CancellationToken cancellationToken = default)
+    {
+        var alerts = await _context.JobAlerts
+            .Where(alert => alert.TalentId == talentId)
+            .ToListAsync(cancellationToken);
+
+        if (alerts.Count > 0)
+        {
+            _context.JobAlerts.RemoveRange(alerts);
+        }
+    }
 }

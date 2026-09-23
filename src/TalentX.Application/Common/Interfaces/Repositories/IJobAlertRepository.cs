@@ -11,4 +11,5 @@ public interface IJobAlertRepository
     void Remove(JobAlert entity);
     Task<List<JobAlert>> GetActiveAlertsByTalentIdAsync(string talentId, CancellationToken cancellationToken = default);
     Task<List<JobAlert>> GetAllActiveAlertsAsync(CancellationToken cancellationToken = default);
+    Task DeleteByTalentIdAsync(string talentId, CancellationToken cancellationToken = default);
 }

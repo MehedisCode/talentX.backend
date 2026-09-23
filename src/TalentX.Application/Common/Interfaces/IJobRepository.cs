@@ -14,6 +14,7 @@ public interface IJobRepository
     Task<List<Job>> GetByIdsAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken = default);
     Task AddAsync(Job job, CancellationToken cancellationToken = default);
     void Update(Job job);
+    void RemoveRange(IEnumerable<Job> jobs);
 
     Task<PaginatedList<Job>> GetPublishedJobsAsync(
         int page,
@@ -27,6 +28,7 @@ public interface IJobRepository
 
     Task<Job?> GetPublishedJobByIdAsync(Guid id, CancellationToken cancellationToken);
     Task<List<Job>> GetByEmployerIdAsync(string employerId, CancellationToken cancellationToken = default);
+    Task<List<Job>> GetByEmployerIdIncludingDeletedAsync(string employerId, CancellationToken cancellationToken = default);
     Task<List<Job>> GetActivePublishedJobsByEmployerIdAsync(string employerId, CancellationToken cancellationToken = default);
     Task<IEnumerable<Job>> GetActivePublishedJobsAsync(CancellationToken cancellationToken);
 

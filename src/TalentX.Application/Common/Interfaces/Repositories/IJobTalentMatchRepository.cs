@@ -9,4 +9,5 @@ public interface IJobTalentMatchRepository
     Task AddAsync(JobTalentMatch match, CancellationToken cancellationToken = default);
     void Update(JobTalentMatch match);
     Task DeleteByJobIdAsync(Guid jobId, CancellationToken cancellationToken = default);
+    Task DeleteByTalentUserIdAsync(string talentUserId, CancellationToken cancellationToken = default);
 }
