@@ -67,4 +67,17 @@ public sealed class SavedJobRepository : ISavedJobRepository
             .Select(savedJob => savedJob.JobId)
             .ToListAsync(cancellationToken);
     }
+
+    public async Task DeleteByTalentIdAsync(string talentId, CancellationToken cancellationToken = default)
+    {
+        var savedJobs = await _context.SavedJobs
+            .IgnoreQueryFilters()
+            .Where(savedJob => savedJob.TalentId == talentId)
+            .ToListAsync(cancellationToken);
+
+        if (savedJobs.Count > 0)
+        {
+            _context.SavedJobs.RemoveRange(savedJobs);
+        }
+    }
 }

@@ -28,6 +28,11 @@ public interface ICompanyRepository
     Task<Company?> GetByEmployerIdAsync(string employerId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Deletes the company associated with the specified employer identifier.
+    /// </summary>
+    Task DeleteByEmployerIdAsync(string employerId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets companies for a batch of employer identifiers in a single query.
     /// Used to enrich job lists without N+1 round-trips.
     /// </summary>

@@ -15,4 +15,5 @@ public interface INotificationRepository
         CancellationToken cancellationToken);
     Task<int> GetUnreadCountAsync(string recipientUserId, CancellationToken cancellationToken);
     Task MarkAllAsReadAsync(string recipientUserId, CancellationToken cancellationToken);
+    Task DeleteByRecipientIdAsync(string recipientUserId, CancellationToken cancellationToken = default);
 }
