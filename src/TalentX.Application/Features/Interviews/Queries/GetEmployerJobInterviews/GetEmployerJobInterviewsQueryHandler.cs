@@ -1,6 +1,7 @@
 using MediatR;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
+using TalentX.Application.Common.Interfaces.Repositories;
 using TalentX.Application.Common.Models;
 using TalentX.Application.Features.Interviews.DTOs;
 using TalentX.Application.Identity.Services;
@@ -38,8 +39,9 @@ public sealed class GetEmployerJobInterviewsQueryHandler
 
         var (page, pageSize) = PaginationRequest.Normalize(request.Page, request.PageSize);
 
+        var filter = new InterviewInvitationListFilter(request.Status, request.Type);
         var invitations = await _unitOfWork.InterviewInvitations.GetByJobIdPaginatedAsync(
-            request.JobId, page, pageSize, cancellationToken);
+            request.JobId, filter, page, pageSize, cancellationToken);
 
         var result = new List<EmployerInterviewDto>();
 
