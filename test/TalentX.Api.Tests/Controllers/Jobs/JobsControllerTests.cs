@@ -279,4 +279,21 @@ public class JobsControllerTests
         authorizeAttribute.Should().NotBeNull();
         authorizeAttribute!.Roles.Should().Be(nameof(UserRole.Employer));
     }
+
+    [Fact]
+    public async Task ReportJob_DispatchesCommand_ReturnsOk()
+    {
+        var jobId = Guid.NewGuid();
+        var request = new TalentX.Application.Features.JobReports.DTOs.ReportJobRequestDto(TalentX.Domain.Enums.JobReportReason.SuspectedScam, "Scam");
+        var expectedResponse = new TalentX.Application.Features.JobReports.DTOs.JobReportConfirmationDto(Guid.NewGuid(), "Success");
+        
+        _sender
+            .Setup(sender => sender.Send(It.IsAny<TalentX.Application.Features.JobReports.Commands.ReportJob.ReportJobCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expectedResponse);
+
+        var actionResult = await _controller.ReportJob(jobId, request, CancellationToken.None);
+
+        var okResult = actionResult.Should().BeOfType<OkObjectResult>().Subject;
+        okResult.Value.Should().BeEquivalentTo(expectedResponse);
+    }
 }
