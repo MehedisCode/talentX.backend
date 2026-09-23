@@ -73,8 +73,9 @@ public class CreateJobCommandValidator : AbstractValidator<CreateJobCommand>
                 .WithMessage("Skill entries must contain at least one letter.");
 
         RuleFor(v => v.ExpireAt)
-            .Must(expireAt => expireAt.Date >= DateTime.Now.Date)
-            .WithMessage("Expire date must be today or in the future.");
+            .Must(expireAt => expireAt.Date >= DateTime.UtcNow.Date)
+            .WithMessage("Expire date must be today or in the future.")
+            .When(v => v.Publish);
 
         // Conditional validation for wizard fields — only enforced when publishing.
         // Drafts can be saved from any step with these fields still blank.
