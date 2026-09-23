@@ -56,6 +56,12 @@ public sealed class SendBatchInterviewInvitationsCommandHandler
                 continue;
             }
 
+            if (application.Status is ApplicationStatus.Hired or ApplicationStatus.Rejected)
+            {
+                // Already resolved; don't let a re-invite silently overwrite a hiring/rejection decision.
+                continue;
+            }
+
             var existingInvite = await _unitOfWork.InterviewInvitations.GetByApplicationIdAsync(applicationId, cancellationToken);
             if (existingInvite is not null && existingInvite.Status == InterviewInvitationStatus.Pending)
             {
@@ -83,6 +89,7 @@ public sealed class SendBatchInterviewInvitationsCommandHandler
             }
 
             await _unitOfWork.InterviewInvitations.AddAsync(invitation, cancellationToken);
+            application.UpdateStatus(ApplicationStatus.Invited);
             createdInvitationIds.Add(invitation.Id);
 
             if (!string.IsNullOrWhiteSpace(application.ApplicantEmail))

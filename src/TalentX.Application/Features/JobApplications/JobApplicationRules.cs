@@ -7,4 +7,7 @@ public static class JobApplicationRules
 
     public static string? NormalizeOptional(string? value)
         => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    public static bool IsManuallyAssignable(ApplicationStatus status) =>
+        status is ApplicationStatus.Reviewed or ApplicationStatus.Hired or ApplicationStatus.Rejected;
 }
