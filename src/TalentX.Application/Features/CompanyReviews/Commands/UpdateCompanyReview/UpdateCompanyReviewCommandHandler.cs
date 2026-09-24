@@ -1,11 +1,12 @@
 using MediatR;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
+using TalentX.Application.Features.JobApplications.DTOs;
 using TalentX.Application.Identity.Services;
 
 namespace TalentX.Application.Features.CompanyReviews.Commands.UpdateCompanyReview;
 
-public sealed class UpdateCompanyReviewCommandHandler : IRequestHandler<UpdateCompanyReviewCommand>
+public sealed class UpdateCompanyReviewCommandHandler : IRequestHandler<UpdateCompanyReviewCommand, StatusUpdateResponseDto>
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUserService;
@@ -18,10 +19,9 @@ public sealed class UpdateCompanyReviewCommandHandler : IRequestHandler<UpdateCo
         _currentUserService = currentUserService;
     }
 
-    public async Task Handle(UpdateCompanyReviewCommand request, CancellationToken cancellationToken)
+    public async Task<StatusUpdateResponseDto> Handle(UpdateCompanyReviewCommand request, CancellationToken cancellationToken)
     {
-        var userId = _currentUserService.UserId
-            ?? throw new UnauthorizedException("You must be signed in to edit a review.");
+        var userId = _currentUserService.UserId!;
 
         var review = await _unitOfWork.CompanyReviews.GetByIdAsync(request.ReviewId, cancellationToken)
             ?? throw new NotFoundException("Company review", request.ReviewId);
@@ -47,5 +47,7 @@ public sealed class UpdateCompanyReviewCommandHandler : IRequestHandler<UpdateCo
         }
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return new StatusUpdateResponseDto("Review updated and sent for moderation.");
     }
 }

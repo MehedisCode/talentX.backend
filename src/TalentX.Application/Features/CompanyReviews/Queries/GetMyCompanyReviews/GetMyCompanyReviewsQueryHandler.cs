@@ -31,8 +31,7 @@ public sealed class GetMyCompanyReviewsQueryHandler
         GetMyCompanyReviewsQuery request,
         CancellationToken cancellationToken)
     {
-        var userId = _currentUserService.UserId
-            ?? throw new UnauthorizedException("You must be signed in to view your reviews.");
+        var userId = _currentUserService.UserId!;
 
         var (page, pageSize) = PaginationRequest.Normalize(request.Page, request.PageSize);
 

@@ -64,6 +64,17 @@ public class UpdateCompanyReviewCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_ReturnsTheConfirmationMessage()
+    {
+        var review = NewReview();
+        Returns(review);
+
+        var result = await _handler.Handle(Command(review), CancellationToken.None);
+
+        result.Message.Should().Be("Review updated and sent for moderation.");
+    }
+
+    [Fact]
     public async Task Handle_PublishedReview_GoesBackToPendingAndLeavesPublicView()
     {
         var review = NewReview();

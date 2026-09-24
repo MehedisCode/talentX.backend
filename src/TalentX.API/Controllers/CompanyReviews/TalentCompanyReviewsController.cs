@@ -6,6 +6,7 @@ using TalentX.Application.Features.CompanyReviews.Commands.UpdateCompanyReview;
 using TalentX.Application.Features.CompanyReviews.Commands.WithdrawCompanyReview;
 using TalentX.Application.Features.CompanyReviews.DTOs;
 using TalentX.Application.Features.CompanyReviews.Queries.GetMyCompanyReviews;
+using TalentX.Application.Features.JobApplications.DTOs;
 using TalentX.Domain.Enums;
 
 namespace TalentX.API.Controllers.CompanyReviews;
@@ -66,7 +67,7 @@ public sealed class TalentCompanyReviewsController : BaseApiController
     /// <returns>A confirmation message.</returns>
     [HttpPut("{reviewId:guid}")]
     [Authorize(Roles = nameof(UserRole.Talent))]
-    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(StatusUpdateResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status403Forbidden)]
@@ -76,8 +77,8 @@ public sealed class TalentCompanyReviewsController : BaseApiController
         [FromBody] UpdateCompanyReviewCommand command,
         CancellationToken cancellationToken)
     {
-        await Sender.Send(command with { ReviewId = reviewId }, cancellationToken);
-        return Ok(new { Message = "Review updated and sent for moderation." });
+        var result = await Sender.Send(command with { ReviewId = reviewId }, cancellationToken);
+        return Ok(result);
     }
 
     /// <summary>
@@ -88,7 +89,7 @@ public sealed class TalentCompanyReviewsController : BaseApiController
     /// <returns>A confirmation message.</returns>
     [HttpPost("{reviewId:guid}/withdraw")]
     [Authorize(Roles = nameof(UserRole.Talent))]
-    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(StatusUpdateResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status403Forbidden)]
@@ -97,7 +98,7 @@ public sealed class TalentCompanyReviewsController : BaseApiController
         Guid reviewId,
         CancellationToken cancellationToken)
     {
-        await Sender.Send(new WithdrawCompanyReviewCommand(reviewId), cancellationToken);
-        return Ok(new { Message = "Review withdrawn." });
+        var result = await Sender.Send(new WithdrawCompanyReviewCommand(reviewId), cancellationToken);
+        return Ok(result);
     }
 }

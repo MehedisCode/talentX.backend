@@ -25,8 +25,7 @@ public sealed class SubmitCompanyReviewCommandHandler : IRequestHandler<SubmitCo
 
     public async Task<Guid> Handle(SubmitCompanyReviewCommand request, CancellationToken cancellationToken)
     {
-        var userId = _currentUserService.UserId
-            ?? throw new UnauthorizedException("You must be signed in to review a company.");
+        var userId = _currentUserService.UserId!;
 
         var application = await _unitOfWork.JobApplications.GetByIdAsync(request.JobApplicationId, cancellationToken)
             ?? throw new NotFoundException(nameof(JobApplication), request.JobApplicationId);

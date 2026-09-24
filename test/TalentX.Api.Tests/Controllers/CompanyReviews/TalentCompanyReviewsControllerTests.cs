@@ -13,6 +13,7 @@ using TalentX.Application.Features.CompanyReviews.Commands.UpdateCompanyReview;
 using TalentX.Application.Features.CompanyReviews.Commands.WithdrawCompanyReview;
 using TalentX.Application.Features.CompanyReviews.DTOs;
 using TalentX.Application.Features.CompanyReviews.Queries.GetMyCompanyReviews;
+using TalentX.Application.Features.JobApplications.DTOs;
 using TalentX.Domain.Enums;
 using Xunit;
 
@@ -97,10 +98,14 @@ public class TalentCompanyReviewsControllerTests
     {
         var routeId = Guid.NewGuid();
         var body = new UpdateCompanyReviewCommand(Guid.NewGuid(), ReviewSentiment.Negative, "Updated.", null);
+        var response = new StatusUpdateResponseDto("Review updated and sent for moderation.");
+        _sender
+            .Setup(s => s.Send(It.IsAny<UpdateCompanyReviewCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(response);
 
         var result = await _controller.UpdateCompanyReview(routeId, body, CancellationToken.None);
 
-        result.Should().BeOfType<OkObjectResult>();
+        result.Should().BeOfType<OkObjectResult>().Which.Value.Should().BeSameAs(response);
         _sender.Verify(
             s => s.Send(It.Is<UpdateCompanyReviewCommand>(c => c.ReviewId == routeId && c.Comment == "Updated."), It.IsAny<CancellationToken>()),
             Times.Once);
@@ -110,10 +115,14 @@ public class TalentCompanyReviewsControllerTests
     public async Task WithdrawCompanyReview_SendsTheRouteIdAndReturnsOk()
     {
         var routeId = Guid.NewGuid();
+        var response = new StatusUpdateResponseDto("Review withdrawn.");
+        _sender
+            .Setup(s => s.Send(It.IsAny<WithdrawCompanyReviewCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(response);
 
         var result = await _controller.WithdrawCompanyReview(routeId, CancellationToken.None);
 
-        result.Should().BeOfType<OkObjectResult>();
+        result.Should().BeOfType<OkObjectResult>().Which.Value.Should().BeSameAs(response);
         _sender.Verify(
             s => s.Send(It.Is<WithdrawCompanyReviewCommand>(c => c.ReviewId == routeId), It.IsAny<CancellationToken>()),
             Times.Once);

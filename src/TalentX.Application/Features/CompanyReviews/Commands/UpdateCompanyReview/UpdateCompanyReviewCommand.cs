@@ -1,4 +1,5 @@
 using MediatR;
+using TalentX.Application.Features.JobApplications.DTOs;
 using TalentX.Application.Features.CompanyReviews.DTOs;
 using TalentX.Domain.Enums;
 
@@ -9,4 +10,4 @@ public sealed record UpdateCompanyReviewCommand(
     ReviewSentiment Sentiment,
     string? Comment,
     CompanyReviewRatingsDto? Ratings
-) : IRequest;
+) : IRequest<StatusUpdateResponseDto>;

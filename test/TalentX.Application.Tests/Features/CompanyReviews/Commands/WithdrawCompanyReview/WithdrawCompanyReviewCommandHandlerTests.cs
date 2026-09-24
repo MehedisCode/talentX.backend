@@ -51,6 +51,17 @@ public class WithdrawCompanyReviewCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_ReturnsTheConfirmationMessage()
+    {
+        var review = NewReview();
+        Returns(review);
+
+        var result = await _handler.Handle(new WithdrawCompanyReviewCommand(review.Id), CancellationToken.None);
+
+        result.Message.Should().Be("Review withdrawn.");
+    }
+
+    [Fact]
     public async Task Handle_PublishedReview_IsWithdrawn()
     {
         var review = NewReview();
