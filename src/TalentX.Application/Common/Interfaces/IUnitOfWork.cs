@@ -27,6 +27,7 @@ public interface IUnitOfWork : IDisposable, IAsyncDisposable
     IJobAlertNotificationHistoryRepository JobAlertNotificationHistories { get; }
     INotificationRepository Notifications { get; }
     IJobModerationHistoryRepository JobModerationHistories { get; }
+    IJobReportRepository JobReports { get; }
 
     /// <summary>
     /// Asynchronously persists all changes made in the context to the database.

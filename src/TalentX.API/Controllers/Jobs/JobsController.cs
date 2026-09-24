@@ -191,4 +191,16 @@ public class JobsController : BaseApiController
         await Sender.Send(new DeleteJobCommand(id), cancellationToken);
         return NoContent();
     }
+
+    [HttpPost("{id:guid}/report")]
+    [Authorize(Roles = nameof(UserRole.Talent))]
+    public async Task<IActionResult> ReportJob(
+        [FromRoute] Guid id,
+        [FromBody] TalentX.Application.Features.JobReports.DTOs.ReportJobRequestDto request,
+        CancellationToken cancellationToken)
+    {
+        var command = new TalentX.Application.Features.JobReports.Commands.ReportJob.ReportJobCommand(id, request.Reason, request.AdditionalDetails);
+        var result = await Sender.Send(command, cancellationToken);
+        return Ok(result);
+    }
 }

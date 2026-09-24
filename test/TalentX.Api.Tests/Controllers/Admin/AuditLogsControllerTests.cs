@@ -38,7 +38,7 @@ public sealed class AuditLogsControllerTests
     }
 
     [Fact]
-    public void Controller_InheritsBaseApiController()
+    public void JobReportsController_Class_InheritsBaseApiController()
     {
         typeof(AuditLogsController).BaseType.Should().Be(typeof(BaseApiController));
     }
@@ -53,7 +53,7 @@ public sealed class AuditLogsControllerTests
     }
 
     [Fact]
-    public void Controller_HasRouteAttributeWithExpectedTemplate()
+    public void JobReportsController_Class_HasRouteAttributeWithExpectedTemplate()
     {
         var routeAttribute = typeof(AuditLogsController).GetCustomAttribute<RouteAttribute>();
 
