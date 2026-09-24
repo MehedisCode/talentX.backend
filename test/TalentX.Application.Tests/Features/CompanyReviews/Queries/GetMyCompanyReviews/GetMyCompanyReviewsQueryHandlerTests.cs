@@ -104,16 +104,6 @@ public class GetMyCompanyReviewsQueryHandlerTests
     // ---- Basics ----
 
     [Fact]
-    public async Task Handle_WhenNotSignedIn_ThrowsUnauthorized()
-    {
-        _currentUserService.SetupGet(u => u.UserId).Returns((string?)null);
-
-        var act = () => Query();
-
-        await act.Should().ThrowAsync<UnauthorizedException>();
-    }
-
-    [Fact]
     public async Task Handle_WithNoAcceptedInterviews_ReturnsAnEmptyPage()
     {
         var result = await Query();

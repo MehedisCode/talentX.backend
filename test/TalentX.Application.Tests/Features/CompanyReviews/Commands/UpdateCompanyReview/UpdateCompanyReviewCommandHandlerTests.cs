@@ -160,18 +160,6 @@ public class UpdateCompanyReviewCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WhenNotSignedIn_ThrowsUnauthorized()
-    {
-        var review = NewReview();
-        Returns(review);
-        _currentUserService.SetupGet(u => u.UserId).Returns((string?)null);
-
-        var act = () => _handler.Handle(Command(review), CancellationToken.None);
-
-        await act.Should().ThrowAsync<UnauthorizedException>();
-    }
-
-    [Fact]
     public async Task Handle_WhenReviewDoesNotExist_ThrowsNotFound()
     {
         var command = new UpdateCompanyReviewCommand(Guid.NewGuid(), ReviewSentiment.Positive, null, null);

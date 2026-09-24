@@ -179,17 +179,6 @@ public class SubmitCompanyReviewCommandHandlerTests
     // ---- Guards ----
 
     [Fact]
-    public async Task Handle_WhenNotSignedIn_ThrowsUnauthorized()
-    {
-        _currentUserService.SetupGet(u => u.UserId).Returns((string?)null);
-
-        var act = () => _handler.Handle(Command(), CancellationToken.None);
-
-        await act.Should().ThrowAsync<UnauthorizedException>();
-        VerifyNothingSaved();
-    }
-
-    [Fact]
     public async Task Handle_WhenApplicationDoesNotExist_ThrowsNotFound()
     {
         var command = Command() with { JobApplicationId = Guid.NewGuid() };

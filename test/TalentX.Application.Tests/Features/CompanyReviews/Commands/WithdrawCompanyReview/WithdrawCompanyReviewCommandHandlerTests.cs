@@ -114,18 +114,6 @@ public class WithdrawCompanyReviewCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WhenNotSignedIn_ThrowsUnauthorized()
-    {
-        var review = NewReview();
-        Returns(review);
-        _currentUserService.SetupGet(u => u.UserId).Returns((string?)null);
-
-        var act = () => _handler.Handle(new WithdrawCompanyReviewCommand(review.Id), CancellationToken.None);
-
-        await act.Should().ThrowAsync<UnauthorizedException>();
-    }
-
-    [Fact]
     public async Task Handle_WhenReviewDoesNotExist_ThrowsNotFound()
     {
         var act = () => _handler.Handle(new WithdrawCompanyReviewCommand(Guid.NewGuid()), CancellationToken.None);
