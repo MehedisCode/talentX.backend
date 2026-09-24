@@ -91,7 +91,7 @@ public sealed class ResolveJobReportCommandHandler : IRequestHandler<ResolveJobR
                 new PublishNotificationParameters(
                     job.EmployerId,
                     NotificationType.JobReportResolved,
-                    "Job Report Resolved",
+                    "Job Deactivated",
                     $"Your job '{job.Title}' has been deactivated. Reason: {reasonLabel}.",
                     job.Id.ToString()),
                 cancellationToken);
