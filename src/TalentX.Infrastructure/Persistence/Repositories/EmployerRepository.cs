@@ -82,4 +82,41 @@ public sealed class EmployerRepository : IEmployerRepository
 
         return (items, totalCount);
     }
+
+    public async Task<IReadOnlyDictionary<EmployerVerificationStatus, int>> GetVerificationStatusCountsCreatedBetweenAsync(
+        DateTime startUtc,
+        DateTime endUtc,
+        CancellationToken cancellationToken = default)
+    {
+        return await _context.Employers
+            .AsNoTracking()
+            .Where(e => e.CreatedAt >= startUtc && e.CreatedAt <= endUtc)
+            .GroupBy(e => e.VerificationStatus)
+            .Select(g => new { Status = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.Status, x => x.Count, cancellationToken);
+    }
+
+    public async Task<DateTime?> GetOldestPendingCreatedAtAsync(CancellationToken cancellationToken = default)
+    {
+        return await _context.Employers
+            .AsNoTracking()
+            .Where(e => e.VerificationStatus == EmployerVerificationStatus.PendingVerification)
+            .OrderBy(e => e.CreatedAt)
+            .Select(e => (DateTime?)e.CreatedAt)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<Employer>> GetRecentCreatedBetweenAsync(
+        DateTime startUtc,
+        DateTime endUtc,
+        int take,
+        CancellationToken cancellationToken = default)
+    {
+        return await _context.Employers
+            .AsNoTracking()
+            .Where(e => e.CreatedAt >= startUtc && e.CreatedAt <= endUtc)
+            .OrderByDescending(e => e.CreatedAt)
+            .Take(take)
+            .ToListAsync(cancellationToken);
+    }
 }

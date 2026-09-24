@@ -58,4 +58,19 @@ public interface IEmployerRepository
         int page,
         int pageSize,
         CancellationToken cancellationToken = default);
+
+    // Admin dashboard. Bounds are UTC instants, inclusive.
+    Task<IReadOnlyDictionary<EmployerVerificationStatus, int>> GetVerificationStatusCountsCreatedBetweenAsync(
+        DateTime startUtc,
+        DateTime endUtc,
+        CancellationToken cancellationToken = default);
+
+    // Not range-limited: the age of the real pending queue. Null when nothing is pending.
+    Task<DateTime?> GetOldestPendingCreatedAtAsync(CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<Employer>> GetRecentCreatedBetweenAsync(
+        DateTime startUtc,
+        DateTime endUtc,
+        int take,
+        CancellationToken cancellationToken = default);
 }
