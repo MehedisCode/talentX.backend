@@ -11,6 +11,7 @@ public class UpdateApplicationStatusCommandValidatorTests
 
     [Theory]
     [InlineData(ApplicationStatus.Reviewed)]
+    [InlineData(ApplicationStatus.Shortlisted)]
     [InlineData(ApplicationStatus.Hired)]
     [InlineData(ApplicationStatus.Rejected)]
     public void Validate_ManuallyAssignableStatus_ShouldNotHaveValidationError(ApplicationStatus status)
