@@ -39,6 +39,7 @@ public class ApplicationDbContext
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<JobModerationHistory> JobModerationHistories => Set<JobModerationHistory>();
     public DbSet<CompanyReview> CompanyReviews => Set<CompanyReview>();
+    public DbSet<JobReport> JobReports => Set<JobReport>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

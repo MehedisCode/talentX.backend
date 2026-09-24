@@ -42,7 +42,7 @@ public sealed class UsersControllerTests
     }
 
     [Fact]
-    public void Controller_InheritsBaseApiController()
+    public void JobReportsController_Class_InheritsBaseApiController()
     {
         typeof(UsersController).BaseType.Should().Be(typeof(BaseApiController));
     }
@@ -63,7 +63,7 @@ public sealed class UsersControllerTests
     }
 
     [Fact]
-    public void Controller_HasRouteAttributeWithExpectedTemplate()
+    public void JobReportsController_Class_HasRouteAttributeWithExpectedTemplate()
     {
         var routeAttribute = typeof(UsersController).GetCustomAttribute<RouteAttribute>();
 

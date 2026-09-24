@@ -57,7 +57,7 @@ public sealed class DeleteJobCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WhenJobNotFound_ThrowsNotFoundException()
+    public async Task Handle_JobNotFound_ThrowsNotFoundException()
     {
         var targetJobId = Guid.NewGuid();
         _jobRepository.Setup(repository => repository.GetByIdAsync(targetJobId, It.IsAny<CancellationToken>()))

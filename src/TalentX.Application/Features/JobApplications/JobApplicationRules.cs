@@ -9,5 +9,8 @@ public static class JobApplicationRules
         => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     public static bool IsManuallyAssignable(ApplicationStatus status) =>
-        status is ApplicationStatus.Reviewed or ApplicationStatus.Hired or ApplicationStatus.Rejected;
+        status is ApplicationStatus.Reviewed
+            or ApplicationStatus.Shortlisted
+            or ApplicationStatus.Hired
+            or ApplicationStatus.Rejected;
 }

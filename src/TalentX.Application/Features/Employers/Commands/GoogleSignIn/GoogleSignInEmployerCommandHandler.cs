@@ -107,7 +107,7 @@ public sealed class GoogleSignInEmployerCommandHandler : IRequestHandler<GoogleS
 
         await _unitOfWork.Employers.AddAsync(employer, cancellationToken);
 
-        var company = new Company(employer.UserId, googleUser.Name.Trim());
+        var company = new Company(employer.UserId, googleUser.Email.Trim());
         await _unitOfWork.Companies.AddAsync(company, cancellationToken);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
