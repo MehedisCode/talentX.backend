@@ -27,6 +27,7 @@ public interface IUnitOfWork
     IJobAlertNotificationHistoryRepository JobAlertNotificationHistories { get; }
     INotificationRepository Notifications { get; }
     IJobModerationHistoryRepository JobModerationHistories { get; }
+    IInterviewPreparationRepository InterviewPreparations { get; }
 
     /// <summary>
     /// Asynchronously persists all changes made in the context to the database.

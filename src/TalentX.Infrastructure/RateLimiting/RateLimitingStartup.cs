@@ -43,6 +43,7 @@ public static class RateLimitingStartup
             AuthRateLimitPolicies.Register(options);
             JobRateLimitPolicies.Register(options);
             EmployerRateLimitPolicies.Register(options);
+            InterviewPrepRateLimitPolicies.Register(options);
         });
 
         return services;
