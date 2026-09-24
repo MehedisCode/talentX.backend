@@ -38,6 +38,7 @@ public class ApplicationDbContext
     public DbSet<JobAlertNotificationHistory> JobAlertNotificationHistories => Set<JobAlertNotificationHistory>();
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<JobModerationHistory> JobModerationHistories => Set<JobModerationHistory>();
+    public DbSet<CompanyReview> CompanyReviews => Set<CompanyReview>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

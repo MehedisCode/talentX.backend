@@ -154,4 +154,167 @@ public sealed class InterviewInvitationRepositoryTests
         result.Items.Should().HaveCount(2);
         result.Items.Select(x => x.Id).Should().Contain(new[] { pending.Id, accepted.Id });
     }
+
+    // ---- GetAcceptedBy... (company reviews eligibility) ----
+
+    private static Job NewJob(bool deleted = false)
+    {
+        var job = Job.Create(
+            "employer-1",
+            "Backend Engineer",
+            "Acme Corp",
+            "Build things.",
+            EmploymentType.FullTime,
+            ExperienceLevel.MidLevel,
+            "Dhaka",
+            WorkArrangement.FullRemote,
+            new List<string> { "C#" },
+            1,
+            DateTime.UtcNow.AddDays(30));
+        if (deleted)
+        {
+            job.SoftDelete();
+        }
+
+        return job;
+    }
+
+    private static InterviewInvitation NewAccepted(Guid jobId, Guid applicationId, string talentUserId = "talent-1")
+    {
+        var invitation = new InterviewInvitation(
+            jobId, applicationId, "employer-1", talentUserId, InterviewType.OnCall);
+        invitation.AddTimeslot(DateTime.UtcNow.AddDays(-1), DateTime.UtcNow.AddDays(-1).AddHours(1));
+        invitation.Accept(invitation.Timeslots[0].Id, invitation.Timeslots[0].StartTime);
+        return invitation;
+    }
+
+    [Fact]
+    public async Task GetAcceptedByTalentUserIdAsync_ReturnsOnlyAcceptedInvitations()
+    {
+        await using var context = NewContext();
+        var repository = new InterviewInvitationRepository(context);
+        var job = NewJob();
+        var acceptedApp = NewApplication(job.Id);
+        var pendingApp = NewApplication(job.Id);
+        var declinedApp = NewApplication(job.Id);
+        var cancelledApp = NewApplication(job.Id);
+        context.Jobs.Add(job);
+        context.JobApplications.AddRange(acceptedApp, pendingApp, declinedApp, cancelledApp);
+
+        var accepted = NewAccepted(job.Id, acceptedApp.Id);
+        var pending = NewInvitation(job.Id, pendingApp.Id);
+        var declined = NewInvitation(job.Id, declinedApp.Id);
+        declined.Decline();
+        var cancelled = NewAccepted(job.Id, cancelledApp.Id);
+        cancelled.Cancel();
+        context.InterviewInvitations.AddRange(accepted, pending, declined, cancelled);
+        await context.SaveChangesAsync();
+
+        var result = await repository.GetAcceptedByTalentUserIdAsync("talent-1");
+
+        result.Select(x => x.Id).Should().BeEquivalentTo(new[] { accepted.Id });
+    }
+
+    [Fact]
+    public async Task GetAcceptedByTalentUserIdAsync_DoesNotReturnOtherTalentsInvitations()
+    {
+        await using var context = NewContext();
+        var repository = new InterviewInvitationRepository(context);
+        var job = NewJob();
+        var mineApp = NewApplication(job.Id);
+        var theirsApp = NewApplication(job.Id);
+        context.Jobs.Add(job);
+        context.JobApplications.AddRange(mineApp, theirsApp);
+        var mine = NewAccepted(job.Id, mineApp.Id, "talent-1");
+        var theirs = NewAccepted(job.Id, theirsApp.Id, "talent-2");
+        context.InterviewInvitations.AddRange(mine, theirs);
+        await context.SaveChangesAsync();
+
+        var result = await repository.GetAcceptedByTalentUserIdAsync("talent-1");
+
+        result.Select(x => x.Id).Should().BeEquivalentTo(new[] { mine.Id });
+    }
+
+    [Fact]
+    public async Task GetAcceptedByTalentUserIdAsync_StillReturnsInvitationWhoseJobWasSoftDeleted()
+    {
+        await using var context = NewContext();
+        var repository = new InterviewInvitationRepository(context);
+        var job = NewJob(deleted: true);
+        var app = NewApplication(job.Id);
+        context.Jobs.Add(job);
+        context.JobApplications.Add(app);
+        var accepted = NewAccepted(job.Id, app.Id);
+        context.InterviewInvitations.Add(accepted);
+        await context.SaveChangesAsync();
+
+        var result = await repository.GetAcceptedByTalentUserIdAsync("talent-1");
+
+        result.Should().ContainSingle();
+        result.Single().Job.Should().NotBeNull();
+        result.Single().Job!.IsDeleted.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task GetAcceptedByTalentUserIdAsync_LoadsTimeslotsJobAndApplication()
+    {
+        await using var context = NewContext();
+        var repository = new InterviewInvitationRepository(context);
+        var job = NewJob();
+        var app = NewApplication(job.Id);
+        context.Jobs.Add(job);
+        context.JobApplications.Add(app);
+        var accepted = NewAccepted(job.Id, app.Id);
+        context.InterviewInvitations.Add(accepted);
+        await context.SaveChangesAsync();
+
+        var result = (await repository.GetAcceptedByTalentUserIdAsync("talent-1")).Single();
+
+        result.Timeslots.Should().ContainSingle();
+        result.SelectedTimeslotId.Should().Be(result.Timeslots[0].Id);
+        result.Job!.Title.Should().Be("Backend Engineer");
+        result.JobApplication!.Id.Should().Be(app.Id);
+    }
+
+    [Fact]
+    public async Task GetAcceptedByApplicationIdAsync_ReturnsEveryAcceptedRoundOfThatApplicationOnly()
+    {
+        await using var context = NewContext();
+        var repository = new InterviewInvitationRepository(context);
+        var job = NewJob();
+        var app = NewApplication(job.Id);
+        var otherApp = NewApplication(job.Id);
+        context.Jobs.Add(job);
+        context.JobApplications.AddRange(app, otherApp);
+
+        var round1 = NewAccepted(job.Id, app.Id);
+        var round2 = NewAccepted(job.Id, app.Id);
+        var declinedRound = NewInvitation(job.Id, app.Id);
+        declinedRound.Decline();
+        var otherAppRound = NewAccepted(job.Id, otherApp.Id);
+        context.InterviewInvitations.AddRange(round1, round2, declinedRound, otherAppRound);
+        await context.SaveChangesAsync();
+
+        var result = await repository.GetAcceptedByApplicationIdAsync(app.Id);
+
+        result.Select(x => x.Id).Should().BeEquivalentTo(new[] { round1.Id, round2.Id });
+        result.Should().OnlyContain(x => x.Timeslots.Count == 1);
+    }
+
+    [Fact]
+    public async Task GetAcceptedByApplicationIdAsync_NoAcceptedRounds_ReturnsEmpty()
+    {
+        await using var context = NewContext();
+        var repository = new InterviewInvitationRepository(context);
+        var job = NewJob();
+        var app = NewApplication(job.Id);
+        context.Jobs.Add(job);
+        context.JobApplications.Add(app);
+        context.InterviewInvitations.Add(NewInvitation(job.Id, app.Id));
+        await context.SaveChangesAsync();
+
+        var result = await repository.GetAcceptedByApplicationIdAsync(app.Id);
+
+        result.Should().BeEmpty();
+    }
 }
