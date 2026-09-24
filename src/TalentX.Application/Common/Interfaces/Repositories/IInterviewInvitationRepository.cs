@@ -26,4 +26,12 @@ public interface IInterviewInvitationRepository
     Task AddAsync(InterviewInvitation invitation, CancellationToken cancellationToken = default);
     void Update(InterviewInvitation invitation);
     Task DeleteByTalentUserIdAsync(string talentUserId, CancellationToken cancellationToken = default);
+
+    // Admin dashboard. Invitations created in range (UTC, inclusive), excluding Cancelled, keyed by the UTC hour
+    // (groupByHour) or UTC day start.
+    Task<IReadOnlyDictionary<DateTime, int>> GetCreatedCountsByBucketAsync(
+        DateTime startUtc,
+        DateTime endUtc,
+        bool groupByHour,
+        CancellationToken cancellationToken = default);
 }

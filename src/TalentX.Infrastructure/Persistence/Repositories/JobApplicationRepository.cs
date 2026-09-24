@@ -232,4 +232,52 @@ public sealed class JobApplicationRepository : IJobApplicationRepository
     {
         _context.JobApplications.Remove(jobApplication);
     }
+
+    public async Task<IReadOnlyDictionary<ApplicationStatus, int>> GetStatusCountsAppliedBetweenAsync(
+        DateTime startUtc,
+        DateTime endUtc,
+        CancellationToken cancellationToken = default)
+    {
+        return await _context.JobApplications
+            .AsNoTracking()
+            .Where(a => a.AppliedAt >= startUtc
+                        && a.AppliedAt <= endUtc
+                        && a.Status != ApplicationStatus.PendingVerification)
+            .GroupBy(a => a.Status)
+            .Select(g => new { Status = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.Status, x => x.Count, cancellationToken);
+    }
+
+    public async Task<IReadOnlyDictionary<DateTime, int>> GetAppliedCountsByBucketAsync(
+        DateTime startUtc,
+        DateTime endUtc,
+        bool groupByHour,
+        CancellationToken cancellationToken = default)
+    {
+        var appliedAt = _context.JobApplications
+            .AsNoTracking()
+            .Where(a => a.AppliedAt >= startUtc
+                        && a.AppliedAt <= endUtc
+                        && a.Status != ApplicationStatus.PendingVerification)
+            .Select(a => a.AppliedAt);
+
+        return await TimeBucketCounter.CountAsync(appliedAt, groupByHour, cancellationToken);
+    }
+
+    public async Task<IReadOnlyDictionary<DateTime, int>> GetHiredCountsByBucketAsync(
+        DateTime startUtc,
+        DateTime endUtc,
+        bool groupByHour,
+        CancellationToken cancellationToken = default)
+    {
+        var hiredAt = _context.JobApplications
+            .AsNoTracking()
+            .Where(a => a.Status == ApplicationStatus.Hired
+                        && a.UpdatedAt != null
+                        && a.UpdatedAt >= startUtc
+                        && a.UpdatedAt <= endUtc)
+            .Select(a => a.UpdatedAt!.Value);
+
+        return await TimeBucketCounter.CountAsync(hiredAt, groupByHour, cancellationToken);
+    }
 }

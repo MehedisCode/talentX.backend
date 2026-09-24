@@ -41,4 +41,24 @@ public interface IJobApplicationRepository
         int pageSize,
         CancellationToken cancellationToken = default);
     Task<int> CountHiredByEmployerIdAsync(string employerId, CancellationToken cancellationToken = default);
+
+    // Admin dashboard. Bounds are UTC instants, inclusive. PendingVerification (unverified guest applications) is excluded.
+    Task<IReadOnlyDictionary<ApplicationStatus, int>> GetStatusCountsAppliedBetweenAsync(
+        DateTime startUtc,
+        DateTime endUtc,
+        CancellationToken cancellationToken = default);
+
+    // Keyed by the UTC hour (groupByHour) or UTC day start, on AppliedAt.
+    Task<IReadOnlyDictionary<DateTime, int>> GetAppliedCountsByBucketAsync(
+        DateTime startUtc,
+        DateTime endUtc,
+        bool groupByHour,
+        CancellationToken cancellationToken = default);
+
+    // There is no HiredAt column, so a hire is dated by UpdatedAt on applications whose status is Hired.
+    Task<IReadOnlyDictionary<DateTime, int>> GetHiredCountsByBucketAsync(
+        DateTime startUtc,
+        DateTime endUtc,
+        bool groupByHour,
+        CancellationToken cancellationToken = default);
 }

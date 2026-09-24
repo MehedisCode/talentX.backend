@@ -113,4 +113,20 @@ public sealed class InterviewInvitationRepository : IInterviewInvitationReposito
             _context.InterviewInvitations.RemoveRange(invitations);
         }
     }
+
+    public async Task<IReadOnlyDictionary<DateTime, int>> GetCreatedCountsByBucketAsync(
+        DateTime startUtc,
+        DateTime endUtc,
+        bool groupByHour,
+        CancellationToken cancellationToken = default)
+    {
+        var createdAt = _context.InterviewInvitations
+            .AsNoTracking()
+            .Where(x => x.CreatedAt >= startUtc
+                        && x.CreatedAt <= endUtc
+                        && x.Status != InterviewInvitationStatus.Cancelled)
+            .Select(x => x.CreatedAt);
+
+        return await TimeBucketCounter.CountAsync(createdAt, groupByHour, cancellationToken);
+    }
 }
