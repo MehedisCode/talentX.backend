@@ -27,4 +27,22 @@ public sealed class JobModerationHistoryRepository : IJobModerationHistoryReposi
             .OrderByDescending(history => history.CreatedAt)
             .ToListAsync(cancellationToken);
     }
+
+    public async Task DeleteByJobIdsAsync(IEnumerable<Guid> jobIds, CancellationToken cancellationToken = default)
+    {
+        var jobIdList = jobIds.ToList();
+        if (jobIdList.Count == 0)
+        {
+            return;
+        }
+
+        var histories = await _context.JobModerationHistories
+            .Where(history => jobIdList.Contains(history.JobId))
+            .ToListAsync(cancellationToken);
+
+        if (histories.Count > 0)
+        {
+            _context.JobModerationHistories.RemoveRange(histories);
+        }
+    }
 }

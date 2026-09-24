@@ -79,20 +79,25 @@ public static class IdentityStartup
             {
                 OnMessageReceived = context =>
                 {
-                    if (context.Request.Cookies.TryGetValue("TalentXAccessToken", out var cookieToken))
-                    {
-                        context.Token = cookieToken;
-                        return Task.CompletedTask;
-                    }
-
-                    var hubPath = context.Request.Path;
-                    if (hubPath.StartsWithSegments("/api/v1/hubs") || hubPath.StartsWithSegments("/hubs"))
+                    // SignalR hub paths: query token must take precedence over the cookie because
+                    // accessTokenFactory always supplies a fresh token via ?access_token=, while
+                    // the browser sends the HttpOnly cookie simultaneously (withCredentials: true).
+                    // The cookie's maxAge (24 h) far exceeds the JWT expiry (15 min), so an idle
+                    // session would always forward a stale cookie if the cookie wins.
+                    var requestPath = context.Request.Path;
+                    if (requestPath.StartsWithSegments("/api/v1/hubs") || requestPath.StartsWithSegments("/hubs"))
                     {
                         var queryToken = context.Request.Query["access_token"].ToString();
                         if (!string.IsNullOrEmpty(queryToken))
                         {
                             context.Token = queryToken;
+                            return Task.CompletedTask;
                         }
+                    }
+
+                    if (context.Request.Cookies.TryGetValue("TalentXAccessToken", out var cookieToken))
+                    {
+                        context.Token = cookieToken;
                     }
 
                     return Task.CompletedTask;
@@ -113,6 +118,8 @@ public static class IdentityStartup
         services.AddScoped<IExternalIdentityService, ExternalIdentityService>();
         services.AddScoped<IGoogleAuthService, GoogleAuthService>();
         services.AddSingleton<IOtpService, OtpService>();
+        services.AddSingleton<IOtpAttemptTracker, InMemoryOtpAttemptTracker>();
+        services.AddSingleton<IOtpCooldownTracker, InMemoryOtpCooldownTracker>();
         services.AddSingleton<IEmailService, EmailService>();
         services.AddSingleton<IJobAlertQueue, JobAlertQueue>();
         services.AddScoped<IJobAlertMatchingService, JobAlertMatchingService>();

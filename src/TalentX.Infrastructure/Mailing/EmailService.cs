@@ -29,12 +29,12 @@ public sealed class EmailService : IEmailService
             .SetOperatingAssembly(typeof(EmailService).Assembly)
             .Build();
 
-        _smtpHost    = Env("SMTP_HOST");
-        _smtpPort    = int.TryParse(Env("SMTP_PORT"), out var p) ? p : 587;
-        _smtpUser    = Env("SMTP_USER");
-        _smtpPass    = Env("SMTP_PASS");
+        _smtpHost = Env("SMTP_HOST");
+        _smtpPort = int.TryParse(Env("SMTP_PORT"), out var p) ? p : 587;
+        _smtpUser = Env("SMTP_USER");
+        _smtpPass = Env("SMTP_PASS");
         _senderEmail = Env("SENDER_EMAIL");
-        _senderName  = Env("SENDER_NAME") is { Length: > 0 } n ? n : EmailConstants.Defaults.SenderName;
+        _senderName = Env("SENDER_NAME") is { Length: > 0 } n ? n : EmailConstants.Defaults.SenderName;
     }
 
     public async Task SendOtpEmailAsync(
@@ -166,6 +166,22 @@ public sealed class EmailService : IEmailService
             new PasswordResetEmailModel(recipientName, resetUrl));
 
         DispatchAfterLogging(toEmail, recipientName, EmailConstants.Subjects.PasswordReset, html);
+    }
+
+    public async Task SendAccountDeletedEmailAsync(
+        string toEmail,
+        string recipientName,
+        CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation(
+            "[EMAIL] {Kind} dispatch to {RecipientName} <{ToEmail}>",
+            EmailConstants.Kinds.AccountDeleted, recipientName, toEmail);
+
+        var html = await _razor.CompileRenderAsync(
+            EmailConstants.Templates.AccountDeleted,
+            new AccountDeletedEmailModel(recipientName));
+
+        DispatchAfterLogging(toEmail, recipientName, EmailConstants.Subjects.AccountDeleted, html);
     }
 
     public Task<string> RenderEmployerApprovedEmailAsync(

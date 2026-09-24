@@ -8,4 +8,5 @@ public interface IResumeRepository
     Task AddAsync(Resume resume, CancellationToken cancellationToken = default);
     void Update(Resume resume);
     void Delete(Resume resume);
+    Task DeleteByUserIdAsync(string userId, CancellationToken cancellationToken = default);
 }

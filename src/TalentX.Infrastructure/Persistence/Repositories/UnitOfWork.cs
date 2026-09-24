@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Npgsql;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
@@ -10,6 +11,8 @@ namespace TalentX.Infrastructure.Persistence.Repositories;
 public sealed class UnitOfWork : IUnitOfWork
 {
     private readonly ApplicationDbContext _context;
+    private IDbContextTransaction? _currentTransaction;
+
     public IJobRepository Jobs { get; }
     public IJobApplicationRepository JobApplications { get; }
     public IUserRepository Users { get; }
@@ -72,6 +75,77 @@ public sealed class UnitOfWork : IUnitOfWork
             // handlers' own pre-checks provide the specific, friendly message in the normal case.
             throw new ConflictException(
                 "This action conflicts with an existing record. Please refresh and try again.");
+        }
+    }
+
+    public async Task BeginTransactionAsync(CancellationToken cancellationToken = default)
+    {
+        if (_currentTransaction is not null)
+        {
+            return;
+        }
+
+        _currentTransaction = await _context.Database.BeginTransactionAsync(cancellationToken);
+    }
+
+    public async Task CommitTransactionAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            if (_currentTransaction is not null)
+            {
+                await _currentTransaction.CommitAsync(cancellationToken);
+            }
+        }
+        catch
+        {
+            await RollbackTransactionAsync(cancellationToken);
+            throw;
+        }
+        finally
+        {
+            if (_currentTransaction is not null)
+            {
+                await _currentTransaction.DisposeAsync();
+                _currentTransaction = null;
+            }
+        }
+    }
+
+    public async Task RollbackTransactionAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            if (_currentTransaction is not null)
+            {
+                await _currentTransaction.RollbackAsync(cancellationToken);
+            }
+        }
+        finally
+        {
+            if (_currentTransaction is not null)
+            {
+                await _currentTransaction.DisposeAsync();
+                _currentTransaction = null;
+            }
+        }
+    }
+
+    public void Dispose()
+    {
+        if (_currentTransaction is not null)
+        {
+            _currentTransaction.Dispose();
+            _currentTransaction = null;
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_currentTransaction is not null)
+        {
+            await _currentTransaction.DisposeAsync();
+            _currentTransaction = null;
         }
     }
 }

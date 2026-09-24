@@ -1,7 +1,12 @@
 using TalentX.Application.Common.Models;
 using TalentX.Domain.Entities;
+using TalentX.Domain.Enums;
 
 namespace TalentX.Application.Common.Interfaces.Repositories;
+
+public sealed record InterviewInvitationListFilter(
+    InterviewInvitationStatus? Status = null,
+    InterviewType? Type = null);
 
 public interface IInterviewInvitationRepository
 {
@@ -11,7 +16,7 @@ public interface IInterviewInvitationRepository
     /// <summary>
     /// Paginated, with Job/JobApplication/Timeslots eager-loaded in the same query (no N+1).
     /// </summary>
-    Task<PaginatedList<InterviewInvitation>> GetByJobIdPaginatedAsync(Guid jobId, int page, int pageSize, CancellationToken cancellationToken = default);
+    Task<PaginatedList<InterviewInvitation>> GetByJobIdPaginatedAsync(Guid jobId, InterviewInvitationListFilter filter, int page, int pageSize, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Paginated, with Job/Timeslots eager-loaded in the same query (no N+1).
@@ -20,4 +25,5 @@ public interface IInterviewInvitationRepository
     Task<InterviewInvitation?> GetByApplicationIdAsync(Guid applicationId, CancellationToken cancellationToken = default);
     Task AddAsync(InterviewInvitation invitation, CancellationToken cancellationToken = default);
     void Update(InterviewInvitation invitation);
+    Task DeleteByTalentUserIdAsync(string talentUserId, CancellationToken cancellationToken = default);
 }

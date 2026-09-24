@@ -30,6 +30,7 @@ public sealed class InterviewInvitationRepository : IInterviewInvitationReposito
 
     public async Task<PaginatedList<InterviewInvitation>> GetByJobIdPaginatedAsync(
         Guid jobId,
+        InterviewInvitationListFilter filter,
         int page,
         int pageSize,
         CancellationToken cancellationToken = default)
@@ -37,8 +38,19 @@ public sealed class InterviewInvitationRepository : IInterviewInvitationReposito
         var query = _context.InterviewInvitations
             .Include(x => x.JobApplication)
             .Include(x => x.Timeslots)
-            .Where(x => x.JobId == jobId)
-            .OrderByDescending(x => x.SentAt);
+            .Where(x => x.JobId == jobId);
+
+        if (filter.Status.HasValue)
+        {
+            query = query.Where(x => x.Status == filter.Status.Value);
+        }
+
+        if (filter.Type.HasValue)
+        {
+            query = query.Where(x => x.Type == filter.Type.Value);
+        }
+
+        query = query.OrderByDescending(x => x.SentAt);
 
         var totalCount = await query.CountAsync(cancellationToken);
         var items = await query
@@ -86,5 +98,19 @@ public sealed class InterviewInvitationRepository : IInterviewInvitationReposito
     public void Update(InterviewInvitation invitation)
     {
         _context.InterviewInvitations.Update(invitation);
+    }
+
+    public async Task DeleteByTalentUserIdAsync(string talentUserId, CancellationToken cancellationToken = default)
+    {
+        var invitations = await _context.InterviewInvitations
+            .IgnoreQueryFilters()
+            .Include(x => x.Timeslots)
+            .Where(x => x.TalentUserId == talentUserId)
+            .ToListAsync(cancellationToken);
+
+        if (invitations.Count > 0)
+        {
+            _context.InterviewInvitations.RemoveRange(invitations);
+        }
     }
 }

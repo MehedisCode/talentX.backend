@@ -101,6 +101,15 @@ public interface IEmailService
     );
 
     /// <summary>
+    /// Sends a confirmation email after the recipient's account has been permanently deleted.
+    /// </summary>
+    Task SendAccountDeletedEmailAsync(
+        string toEmail,
+        string recipientName,
+        CancellationToken cancellationToken = default
+    );
+
+    /// <summary>
     /// Renders the HTML body for an employer-approved notification email.
     /// </summary>
     Task<string> RenderEmployerApprovedEmailAsync(

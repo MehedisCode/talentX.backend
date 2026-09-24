@@ -32,7 +32,7 @@ public sealed class ResetPasswordCommandHandler : IRequestHandler<ResetPasswordC
             throw new BadRequestException("Invalid or expired password reset token.");
         }
 
-        var domainUser = await _unitOfWork.Users.GetByEmailAsync(request.Email);
+        var domainUser = await _unitOfWork.Users.GetByEmailAsync(request.Email, cancellationToken);
         if (domainUser is not null)
         {
             var isModified = false;

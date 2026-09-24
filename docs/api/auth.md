@@ -242,3 +242,53 @@ Verifies a guest candidate's job application email using the verification link t
   "refreshToken": "4a71b2d0..."
 }
 ```
+
+---
+
+## 10. Send Delete Account OTP
+
+Emails a 6-digit, single-use verification code to the **authenticated** user's own address, used to confirm a permanent account deletion. No email is accepted in the request body, so the code can only ever be sent to the caller. Codes are keyed separately from signup OTPs, expire after 10 minutes, and are invalidated for 10 minutes after 5 failed verification attempts.
+
+* **Method**: `POST`
+* **Route**: `/api/v1/auth/delete-account/send-otp`
+* **Auth**: `[Authorize(Roles = "Employer,Talent")]`
+
+### Request Body
+None.
+
+### Response
+* `204 No Content`: Code generated and dispatched.
+
+### Error Responses
+* `401 Unauthorized`: Missing or invalid access token.
+* `403 Forbidden`: Caller is neither `Employer` nor `Talent`.
+
+---
+
+## 11. Delete Account
+
+Permanently (hard) deletes the authenticated user's account and all owned domain data — profile, resume, work experience, education, saved jobs, applications, invitations, interview invitations, matches, and (for employers) every job posting including soft-deleted ones, along with its cascaded applications. The identity row is then removed, all refresh tokens are revoked, and a confirmation email is sent. The operation is single-use per code; a second call requires a new code.
+
+* **Method**: `POST`
+* **Route**: `/api/v1/auth/delete-account`
+* **Auth**: `[Authorize(Roles = "Employer,Talent")]`
+
+### Request Body
+```json
+{
+  "otp": "123456"
+}
+```
+
+### Response (`200 OK`)
+```json
+{
+  "email": "user@example.com"
+}
+```
+
+### Error Responses
+* `400 Bad Request`: OTP is missing/malformed, invalid, expired, or the attempt limit is exceeded.
+* `401 Unauthorized`: Missing or invalid access token.
+* `403 Forbidden`: Caller is neither `Employer` nor `Talent`.
+* `502 Bad Gateway`: Domain data was deleted but the sign-in (identity) cleanup failed; retry with a new code to finish.
