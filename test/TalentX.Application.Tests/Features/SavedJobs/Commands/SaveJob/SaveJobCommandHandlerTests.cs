@@ -59,7 +59,7 @@ public class SaveJobCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WhenJobNotFound_ThrowsNotFoundException()
+    public async Task Handle_JobNotFound_ThrowsNotFoundException()
     {
         _jobRepository.Setup(r => r.GetPublishedJobByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((Job?)null);
