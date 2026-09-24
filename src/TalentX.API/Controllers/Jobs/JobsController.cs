@@ -9,6 +9,7 @@ using TalentX.Application.Features.Jobs.Commands.DeleteJob;
 using TalentX.Application.Features.Jobs.Commands.GenerateJobDescription;
 using TalentX.Application.Features.Jobs.Commands.GenerateJobRequirements;
 using TalentX.Application.Features.Jobs.Commands.GenerateSkills;
+using TalentX.Application.Features.Jobs.Commands.PublishJob;
 using TalentX.Application.Features.Jobs.Commands.ReopenJob;
 using TalentX.Application.Features.Jobs.Commands.ResubmitJobForReview;
 using TalentX.Application.Features.Jobs.Commands.UpdateJob;
@@ -165,6 +166,14 @@ public class JobsController : BaseApiController
     public async Task<IActionResult> CloseJob(Guid id, CancellationToken cancellationToken)
     {
         await Sender.Send(new CloseJobCommand(id), cancellationToken);
+        return NoContent();
+    }
+
+    [HttpPatch("{id:guid}/publish")]
+    [Authorize(Roles = $"{nameof(UserRole.Employer)}")]
+    public async Task<IActionResult> PublishJob(Guid id, CancellationToken cancellationToken)
+    {
+        await Sender.Send(new PublishJobCommand(id), cancellationToken);
         return NoContent();
     }
 
