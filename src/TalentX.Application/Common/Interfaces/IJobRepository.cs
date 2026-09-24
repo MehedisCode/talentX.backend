@@ -49,4 +49,23 @@ public interface IJobRepository
     Task<PaginatedList<AdminJobListItemDto>> GetAdminJobsPagedAsync(
         AdminJobQueryParams queryParams,
         CancellationToken cancellationToken = default);
+
+    // Admin dashboard. Bounds are UTC instants, inclusive. Soft-deleted jobs are excluded by the default query filter.
+    Task<IReadOnlyDictionary<JobStatus, int>> GetStatusCountsCreatedBetweenAsync(
+        DateTime startUtc,
+        DateTime endUtc,
+        CancellationToken cancellationToken = default);
+
+    // Keyed by the UTC hour (groupByHour) or UTC day start, on PublishedAt.
+    Task<IReadOnlyDictionary<DateTime, int>> GetPublishedCountsByBucketAsync(
+        DateTime startUtc,
+        DateTime endUtc,
+        bool groupByHour,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<Job>> GetRecentPublishedBetweenAsync(
+        DateTime startUtc,
+        DateTime endUtc,
+        int take,
+        CancellationToken cancellationToken = default);
 }

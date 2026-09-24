@@ -380,4 +380,45 @@ public sealed class JobRepository : RepositoryBase<Job>, IJobRepository
     {
         Context.Jobs.RemoveRange(jobs);
     }
+
+    public async Task<IReadOnlyDictionary<JobStatus, int>> GetStatusCountsCreatedBetweenAsync(
+        DateTime startUtc,
+        DateTime endUtc,
+        CancellationToken cancellationToken = default)
+    {
+        return await Context.Jobs
+            .AsNoTracking()
+            .Where(j => j.CreatedAt >= startUtc && j.CreatedAt <= endUtc && j.Status != JobStatus.Draft)
+            .GroupBy(j => j.Status)
+            .Select(g => new { Status = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.Status, x => x.Count, cancellationToken);
+    }
+
+    public async Task<IReadOnlyDictionary<DateTime, int>> GetPublishedCountsByBucketAsync(
+        DateTime startUtc,
+        DateTime endUtc,
+        bool groupByHour,
+        CancellationToken cancellationToken = default)
+    {
+        var publishedAt = Context.Jobs
+            .AsNoTracking()
+            .Where(j => j.PublishedAt != null && j.PublishedAt >= startUtc && j.PublishedAt <= endUtc)
+            .Select(j => j.PublishedAt!.Value);
+
+        return await TimeBucketCounter.CountAsync(publishedAt, groupByHour, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<Job>> GetRecentPublishedBetweenAsync(
+        DateTime startUtc,
+        DateTime endUtc,
+        int take,
+        CancellationToken cancellationToken = default)
+    {
+        return await Context.Jobs
+            .AsNoTracking()
+            .Where(j => j.PublishedAt != null && j.PublishedAt >= startUtc && j.PublishedAt <= endUtc)
+            .OrderByDescending(j => j.PublishedAt)
+            .Take(take)
+            .ToListAsync(cancellationToken);
+    }
 }
