@@ -8,6 +8,7 @@ using TalentX.Infrastructure.Identity.Seed;
 using TalentX.Infrastructure.Middlewares;
 using TalentX.Infrastructure.Persistence.Contexts;
 using TalentX.Infrastructure.Persistence;
+using TalentX.Infrastructure.Realtime;
 
 // 1. Walk up directory tree to discover and load .env from solution root (talentx2026q3.backend/.env)
 var envFile = Path.Combine(Directory.GetCurrentDirectory(), ".env");
@@ -117,6 +118,7 @@ app.UseAuthentication();
 app.UseMiddleware<AccountStatusMiddleware>();
 app.UseAuthorization();
 app.MapControllers();
+app.MapNotificationHub();
 
 app.Run();
 
