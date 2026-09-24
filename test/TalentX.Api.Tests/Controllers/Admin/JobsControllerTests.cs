@@ -42,13 +42,13 @@ public sealed class JobsControllerTests
     }
 
     [Fact]
-    public void Controller_InheritsBaseApiController()
+    public void JobReportsController_Class_InheritsBaseApiController()
     {
         typeof(AdminJobsController).BaseType.Should().Be(typeof(BaseApiController));
     }
 
     [Fact]
-    public void Controller_RequiresAdminRoleForEveryAction()
+    public void JobReportsController_Class_RequiresAdminRoleForEveryAction()
     {
         // Declared once on the class, so it covers all four actions.
         var authorizeAttribute = typeof(AdminJobsController).GetCustomAttribute<AuthorizeAttribute>();
@@ -58,7 +58,7 @@ public sealed class JobsControllerTests
     }
 
     [Fact]
-    public void Controller_HasRouteAttributeWithExpectedTemplate()
+    public void JobReportsController_Class_HasRouteAttributeWithExpectedTemplate()
     {
         var routeAttribute = typeof(AdminJobsController).GetCustomAttribute<RouteAttribute>();
 

@@ -75,7 +75,7 @@ public class RunJobTalentMatchingCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WhenJobNotFound_ThrowsNotFoundException()
+    public async Task Handle_JobNotFound_ThrowsNotFoundException()
     {
         _jobRepo.Setup(r => r.GetByIdAsync(_jobId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((Job?)null);

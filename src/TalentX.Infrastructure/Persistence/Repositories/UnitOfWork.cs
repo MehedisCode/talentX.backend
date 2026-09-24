@@ -34,6 +34,7 @@ public sealed class UnitOfWork : IUnitOfWork
     public INotificationRepository Notifications { get; }
     public IJobModerationHistoryRepository JobModerationHistories { get; }
     public IInterviewPreparationRepository InterviewPreparations { get; }
+    public IJobReportRepository JobReports { get; }
 
     public UnitOfWork(ApplicationDbContext context)
     {
@@ -59,6 +60,7 @@ public sealed class UnitOfWork : IUnitOfWork
         Notifications = new NotificationRepository(_context);
         JobModerationHistories = new JobModerationHistoryRepository(_context);
         InterviewPreparations = new InterviewPreparationRepository(_context);
+        JobReports = new JobReportRepository(_context);
     }
 
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
