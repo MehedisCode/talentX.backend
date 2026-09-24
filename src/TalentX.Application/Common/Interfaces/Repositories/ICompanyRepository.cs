@@ -1,3 +1,5 @@
+using TalentX.Application.Common.Models;
+using TalentX.Application.Features.Companies.DTOs;
 using TalentX.Domain;
 
 namespace TalentX.Application.Common.Interfaces.Repositories;
@@ -37,4 +39,22 @@ public interface ICompanyRepository
     /// Used to enrich job lists without N+1 round-trips.
     /// </summary>
     Task<IReadOnlyList<Company>> GetByEmployerIdsAsync(IEnumerable<string> employerIds, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Searches companies by name with industry/location/size filters and active-job aggregates.
+    /// Only active published jobs (published, not deleted, not expired) contribute to
+    /// <see cref="CompanySearchItem.OpeningsCount"/> (job count) and
+    /// <see cref="CompanySearchItem.VacanciesCount"/> (sum of openings).
+    /// SortBy: name (default, A-Z), openings, vacancies, newest. SortDir: asc (default), desc.
+    /// </summary>
+    Task<PaginatedList<CompanySearchItem>> GetAllAsync(
+        string? keyword,
+        string? industry,
+        string? location,
+        string? companySize,
+        string sortBy,
+        string sortDir,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default);
 }
