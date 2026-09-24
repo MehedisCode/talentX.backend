@@ -35,14 +35,22 @@ public sealed class UpdateCompanyProfileCommandHandler : IRequestHandler<UpdateC
 
         var company = await _unitOfWork.Companies.GetByEmployerIdAsync(userId, cancellationToken);
 
+        var companyName = request.CompanyName.Trim();
+
+        var nameOwner = await _unitOfWork.Companies.GetByNameAsync(companyName, cancellationToken);
+        if (nameOwner is not null && (company is null || nameOwner.Id != company.Id))
+        {
+            throw new ConflictException($"A company with the name '{nameOwner.Name}' already exists. Please use a different name.");
+        }
+
         if (company is null)
         {
-            company = new Company(userId, request.CompanyName.Trim());
+            company = new Company(userId, companyName);
             await _unitOfWork.Companies.AddAsync(company, cancellationToken);
         }
 
         company.UpdateProfile(
-            request.CompanyName.Trim(),
+            companyName,
             request.Description?.Trim(),
             request.Industry?.Trim(),
             request.CompanySize?.Trim(),
@@ -53,7 +61,7 @@ public sealed class UpdateCompanyProfileCommandHandler : IRequestHandler<UpdateC
             request.Facebook?.Trim()
         );
 
-        employer.UpdateCompany(request.CompanyName.Trim());
+        employer.UpdateCompany(companyName);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 

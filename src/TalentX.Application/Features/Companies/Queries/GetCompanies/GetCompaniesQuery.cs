@@ -1,5 +1,4 @@
 using MediatR;
-using TalentX.Application.Common.Models;
 using TalentX.Application.Features.Companies.DTOs;
 
 namespace TalentX.Application.Features.Companies.Queries.GetCompanies;
@@ -13,7 +12,7 @@ public sealed record GetCompaniesQuery(
     string? SortDir = null,
     int Page = 1,
     int PageSize = 10
-) : IRequest<PaginatedList<CompanyListItemDto>>
+) : IRequest<CompanyListResult>
 {
     public GetCompaniesQuery(CompanyQueryParams parameters)
         : this(

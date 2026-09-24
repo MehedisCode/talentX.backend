@@ -30,6 +30,11 @@ public interface ICompanyRepository
     Task<Company?> GetByEmployerIdAsync(string employerId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Gets a company by exact name (case-insensitive), or null when no company uses that name.
+    /// </summary>
+    Task<Company?> GetByNameAsync(string name, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Deletes the company associated with the specified employer identifier.
     /// </summary>
     Task DeleteByEmployerIdAsync(string employerId, CancellationToken cancellationToken = default);
@@ -41,13 +46,17 @@ public interface ICompanyRepository
     Task<IReadOnlyList<Company>> GetByEmployerIdsAsync(IEnumerable<string> employerIds, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Searches companies by name with industry/location/size filters and active-job aggregates.
+    /// Searches companies by keyword (matched against name, location and industry)
+    /// with industry/location/size filters and active-job aggregates.
     /// Only active published jobs (published, not deleted, not expired) contribute to
     /// <see cref="CompanySearchItem.OpeningsCount"/> (job count) and
     /// <see cref="CompanySearchItem.VacanciesCount"/> (sum of openings).
+    /// <see cref="CompanySearchResult.TotalOpenings"/> and
+    /// <see cref="CompanySearchResult.TotalVacancies"/> aggregate the whole
+    /// filtered set, independent of sorting and paging.
     /// SortBy: name (default, A-Z), openings, vacancies, newest. SortDir: asc (default), desc.
     /// </summary>
-    Task<PaginatedList<CompanySearchItem>> GetAllAsync(
+    Task<CompanySearchResult> GetAllAsync(
         string? keyword,
         string? industry,
         string? location,

@@ -39,6 +39,18 @@ public sealed class CompanyRepository : ICompanyRepository
             .FirstOrDefaultAsync(c => c.EmployerId == employerId, cancellationToken);
     }
 
+    public async Task<Company?> GetByNameAsync(string name, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return null;
+        }
+
+        var normalizedName = name.Trim().ToLower();
+        return await _context.Companies
+            .FirstOrDefaultAsync(c => c.Name.Trim().ToLower() == normalizedName, cancellationToken);
+    }
+
     public async Task DeleteByEmployerIdAsync(string employerId, CancellationToken cancellationToken = default)
     {
         var company = await _context.Companies
@@ -64,7 +76,7 @@ public sealed class CompanyRepository : ICompanyRepository
             .ToListAsync(cancellationToken);
     }
 
-    public async Task<PaginatedList<CompanySearchItem>> GetAllAsync(
+    public async Task<CompanySearchResult> GetAllAsync(
         string? keyword,
         string? industry,
         string? location,
@@ -83,7 +95,10 @@ public sealed class CompanyRepository : ICompanyRepository
         if (!string.IsNullOrWhiteSpace(keyword))
         {
             var normalizedKeyword = keyword.Trim().ToLower();
-            filteredCompaniesQuery = filteredCompaniesQuery.Where(company => company.Name.ToLower().Contains(normalizedKeyword));
+            filteredCompaniesQuery = filteredCompaniesQuery.Where(company =>
+                company.Name.ToLower().Contains(normalizedKeyword) ||
+                (company.Location != null && company.Location.ToLower().Contains(normalizedKeyword)) ||
+                (company.Industry != null && company.Industry.ToLower().Contains(normalizedKeyword)));
         }
 
         if (!string.IsNullOrWhiteSpace(industry))
@@ -177,7 +192,28 @@ public sealed class CompanyRepository : ICompanyRepository
 
             var pagedCompanySearchItems = pagedCompanies.Select(company => ToCompanySearchItem(company, jobCountsByEmployerId)).ToList();
 
-            return new PaginatedList<CompanySearchItem>(pagedCompanySearchItems, page, pageSize, totalMatchingCompanyCount);
+            // Filtered-set totals (stable across sorting and paging): aggregate
+            // active jobs of every filtered company in scalar SQL queries.
+            var filteredEmployerIds = filteredCompaniesQuery.Select(company => company.EmployerId);
+
+            var totalOpenings = await activeJobsQuery
+                .Where(job => filteredEmployerIds.Contains(job.EmployerId))
+                .CountAsync(cancellationToken);
+
+            var totalVacancies = await activeJobsQuery
+                .Where(job => filteredEmployerIds.Contains(job.EmployerId))
+                .SumAsync(job => (int?)job.Vacancies, cancellationToken) ?? 0;
+
+            var paged = new PaginatedList<CompanySearchItem>(pagedCompanySearchItems, page, pageSize, totalMatchingCompanyCount);
+
+            return new CompanySearchResult(
+                paged.Items,
+                paged.Page,
+                paged.PageSize,
+                paged.TotalCount,
+                paged.TotalPages,
+                totalOpenings,
+                totalVacancies);
         }
 
         // Openings/vacancies sorts depend on an aggregate EF Core can't translate
@@ -205,6 +241,19 @@ public sealed class CompanyRepository : ICompanyRepository
             .Take(pageSize)
             .ToList();
 
-        return new PaginatedList<CompanySearchItem>(pagedSortedCompanySearchItems, page, pageSize, sortedCompanySearchItemsList.Count);
+        // All matches (and their job counts) are already in memory on this path.
+        var allMatchesTotalOpenings = jobCountsByEmployerIdForAllMatches.Values.Sum(counts => counts.Openings);
+        var allMatchesTotalVacancies = jobCountsByEmployerIdForAllMatches.Values.Sum(counts => counts.Vacancies);
+
+        var sortedPaged = new PaginatedList<CompanySearchItem>(pagedSortedCompanySearchItems, page, pageSize, sortedCompanySearchItemsList.Count);
+
+        return new CompanySearchResult(
+            sortedPaged.Items,
+            sortedPaged.Page,
+            sortedPaged.PageSize,
+            sortedPaged.TotalCount,
+            sortedPaged.TotalPages,
+            allMatchesTotalOpenings,
+            allMatchesTotalVacancies);
     }
 }
