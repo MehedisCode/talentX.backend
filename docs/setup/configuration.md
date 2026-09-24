@@ -59,11 +59,6 @@ FILE_STORAGE_LOCAL_BASE_PATH=uploads/resumes
 FILE_STORAGE_S3_BUCKET_NAME=talentx-s3-staging
 FILE_STORAGE_S3_REGION=ap-southeast-1
 FILE_STORAGE_S3_FOLDER_PREFIX=resumes
-
-# Company Reviews Configuration (optional, default 1)
-# Days after an online assessment's deadline before the talent can review the company.
-# Also settable as CompanyReview:AssessmentReviewDelayDays in appsettings.
-COMPANY_REVIEW_ASSESSMENT_DELAY_DAYS=1
 ```
 
 ---

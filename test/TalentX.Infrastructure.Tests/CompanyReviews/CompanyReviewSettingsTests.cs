@@ -5,12 +5,8 @@ using Xunit;
 
 namespace TalentX.Infrastructure.Tests.CompanyReviews;
 
-// Reads a process-wide env var, so everything that touches it stays in this one class
-// (xUnit runs the tests of a class sequentially).
 public class CompanyReviewSettingsTests
 {
-    private const string EnvVar = "COMPANY_REVIEW_ASSESSMENT_DELAY_DAYS";
-
     private static IConfiguration Config(string? value)
     {
         var values = new Dictionary<string, string?>();
@@ -22,19 +18,8 @@ public class CompanyReviewSettingsTests
         return new ConfigurationBuilder().AddInMemoryCollection(values).Build();
     }
 
-    private static int Resolve(string? configValue, string? envValue = null)
-    {
-        var previous = Environment.GetEnvironmentVariable(EnvVar);
-        try
-        {
-            Environment.SetEnvironmentVariable(EnvVar, envValue);
-            return CompanyReviewSettings.FromConfiguration(Config(configValue)).AssessmentReviewDelayDays;
-        }
-        finally
-        {
-            Environment.SetEnvironmentVariable(EnvVar, previous);
-        }
-    }
+    private static int Resolve(string? configValue) =>
+        CompanyReviewSettings.FromConfiguration(Config(configValue)).AssessmentReviewDelayDays;
 
     [Fact]
     public void FromConfiguration_NothingConfigured_UsesDefaultOfOne()
@@ -46,12 +31,6 @@ public class CompanyReviewSettingsTests
     public void FromConfiguration_ReadsConfigSection()
     {
         Resolve(configValue: "3").Should().Be(3);
-    }
-
-    [Fact]
-    public void FromConfiguration_EnvVarTakesPrecedenceOverConfigSection()
-    {
-        Resolve(configValue: "3", envValue: "5").Should().Be(5);
     }
 
     [Fact]

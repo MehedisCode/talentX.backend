@@ -9,12 +9,12 @@ public sealed class CompanyReviewSettings : ICompanyReviewSettings
 
     public int AssessmentReviewDelayDays { get; init; } = DefaultAssessmentReviewDelayDays;
 
-    // Env-first: flat env var -> CompanyReview:AssessmentReviewDelayDays -> default.
-    // An unparseable value falls back to the default; a negative one is clamped to 0.
+    // Read from configuration only (appsettings, CompanyReview:AssessmentReviewDelayDays) — there is
+    // deliberately no dedicated environment variable. An unparseable value falls back to the default;
+    // a negative one is clamped to 0.
     public static CompanyReviewSettings FromConfiguration(IConfiguration configuration)
     {
-        var raw = Environment.GetEnvironmentVariable("COMPANY_REVIEW_ASSESSMENT_DELAY_DAYS")
-            ?? configuration["CompanyReview:AssessmentReviewDelayDays"];
+        var raw = configuration["CompanyReview:AssessmentReviewDelayDays"];
 
         var days = int.TryParse(raw, out var parsed) ? parsed : DefaultAssessmentReviewDelayDays;
 
