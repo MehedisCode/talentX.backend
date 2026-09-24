@@ -40,7 +40,7 @@ public sealed class UpdateCompanyProfileCommandHandler : IRequestHandler<UpdateC
         var nameOwner = await _unitOfWork.Companies.GetByNameAsync(companyName, cancellationToken);
         if (nameOwner is not null && (company is null || nameOwner.Id != company.Id))
         {
-            throw new ConflictException($"A company with the name '{nameOwner.Name}' already exists. Please use a different name.");
+            throw new ConflictException($"Company Name Already Exists.");
         }
 
         if (company is null)
