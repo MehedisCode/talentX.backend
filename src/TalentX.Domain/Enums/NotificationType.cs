@@ -9,5 +9,8 @@ public enum NotificationType
     EmployerRejected,
     JobReported,
     JobReportResolved,
-    JobReportDismissed
+    JobReportDismissed,
+    JobDeactivated,
+    JobReactivated,
+    JobResubmittedForReview
 }
