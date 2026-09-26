@@ -85,7 +85,8 @@ public sealed class CompanyRepository : ICompanyRepository
         string sortDir,
         int page,
         int pageSize,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        bool? hiringOnly = null)
     {
         var today = DateTime.UtcNow.Date;
         var sortDescending = sortDir == "desc";
@@ -122,6 +123,12 @@ public sealed class CompanyRepository : ICompanyRepository
         var activeJobsQuery = _context.Jobs
             .AsNoTracking()
             .Where(job => job.Status == JobStatus.Published && !job.IsDeleted && job.ExpireAt.Date >= today);
+
+        if (hiringOnly == true)
+        {
+            filteredCompaniesQuery = filteredCompaniesQuery.Where(company =>
+                activeJobsQuery.Any(job => job.EmployerId == company.EmployerId));
+        }
 
         // Active-job aggregates per employer, fetched in one GROUP BY query.
         // Companies without active jobs simply get 0 openings / 0 vacancies.

@@ -40,7 +40,8 @@ public sealed class GetCompaniesQueryHandler : IRequestHandler<GetCompaniesQuery
             sortDir,
             page,
             pageSize,
-            cancellationToken);
+            cancellationToken,
+            request.Hiring);
 
         var items = new List<CompanyListItemDto>(paged.Items.Count);
         foreach (var item in paged.Items)

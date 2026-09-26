@@ -65,5 +65,6 @@ public interface ICompanyRepository
         string sortDir,
         int page,
         int pageSize,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        bool? hiringOnly = null);
 }
