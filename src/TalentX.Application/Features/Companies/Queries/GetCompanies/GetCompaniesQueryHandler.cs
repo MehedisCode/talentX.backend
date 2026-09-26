@@ -5,7 +5,7 @@ using TalentX.Application.Features.Companies.DTOs;
 
 namespace TalentX.Application.Features.Companies.Queries.GetCompanies;
 
-public sealed class GetCompaniesQueryHandler : IRequestHandler<GetCompaniesQuery, PaginatedList<CompanyListItemDto>>
+public sealed class GetCompaniesQueryHandler : IRequestHandler<GetCompaniesQuery, CompanyListResult>
 {
     private static readonly TimeSpan LogoUrlExpiry = TimeSpan.FromHours(1);
 
@@ -22,7 +22,7 @@ public sealed class GetCompaniesQueryHandler : IRequestHandler<GetCompaniesQuery
         _presignedUrlService = presignedUrlService;
     }
 
-    public async Task<PaginatedList<CompanyListItemDto>> Handle(GetCompaniesQuery request, CancellationToken cancellationToken)
+    public async Task<CompanyListResult> Handle(GetCompaniesQuery request, CancellationToken cancellationToken)
     {
         var page = request.Page < 1 ? 1 : request.Page;
         var pageSize = request.PageSize is < 1 or > PaginationRequest.MaxPageSize
@@ -40,7 +40,8 @@ public sealed class GetCompaniesQueryHandler : IRequestHandler<GetCompaniesQuery
             sortDir,
             page,
             pageSize,
-            cancellationToken);
+            cancellationToken,
+            request.Hiring);
 
         var items = new List<CompanyListItemDto>(paged.Items.Count);
         foreach (var item in paged.Items)
@@ -67,6 +68,6 @@ public sealed class GetCompaniesQueryHandler : IRequestHandler<GetCompaniesQuery
                 item.VacanciesCount));
         }
 
-        return new PaginatedList<CompanyListItemDto>(items, paged.Page, paged.PageSize, paged.TotalCount);
+        return new CompanyListResult(items, paged.Page, paged.PageSize, paged.TotalCount, paged.TotalPages, paged.TotalOpenings, paged.TotalVacancies);
     }
 }
