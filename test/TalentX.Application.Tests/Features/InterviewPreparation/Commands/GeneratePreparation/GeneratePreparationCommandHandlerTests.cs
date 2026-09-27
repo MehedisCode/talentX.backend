@@ -159,7 +159,7 @@ public class GeneratePreparationCommandHandlerTests
         result.Status.Should().Be("Generated");
         result.GenerationCount.Should().Be(1);
         result.IsAccessible.Should().BeTrue();
-        result.AdditionalQuestions.Should().BeNull();
+        result.AdditionalQuestions.Should().BeEmpty();
         result.TechnicalQuestions.Should().HaveCount(1);
         result.TechnicalQuestions[0].Question.Should().Be("What is a closure?");
         result.KeyTopicsToPrepare.Should().Equal("Idempotency");

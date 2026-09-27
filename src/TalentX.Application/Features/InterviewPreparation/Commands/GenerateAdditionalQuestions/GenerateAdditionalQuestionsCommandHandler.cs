@@ -1,10 +1,9 @@
-using System.Text.Json;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Features.InterviewPreparation.DTOs;
-using TalentX.Domain.Enums;
+using TalentX.Application.Features.InterviewPreparation.Mappers;
 using TalentX.Application.Identity.Services;
 
 namespace TalentX.Application.Features.InterviewPreparation.Commands.GenerateAdditionalQuestions;
@@ -34,81 +33,73 @@ public sealed class GenerateAdditionalQuestionsCommandHandler
     {
         var userId = _currentUser.UserId!;
 
-        var existing = await _unitOfWork.InterviewPreparations
-            .GetByInvitationIdAsync(request.InvitationId, ct)
-            ?? throw new NotFoundException("Interview preparation not found.");
+        var preparation = await GetPreparationAsync(request.InvitationId, ct);
 
-        if (existing.TalentUserId != userId)
-            throw new ForbiddenException("You do not have access to this interview preparation.");
-
-        if (!existing.IsAccessible())
-            throw new ForbiddenException("Preparation is no longer accessible as the interview has already taken place.");
+        EnsureUserCanAccess(preparation, userId);
+        EnsurePreparationIsAccessible(preparation);
 
         var talent = await _unitOfWork.Talents.GetByUserIdAsync(userId, ct);
 
-        var context = new AdditionalQuestionsContext
-        {
-            JobTitle = existing.JobTitle,
-            CompanyName = existing.CompanyName,
-            TalentName = talent?.Name ?? "Candidate",
-            ExistingTechnicalQuestions = existing.TechnicalQuestions,
-            ExistingBehavioralQuestions = existing.BehavioralQuestions,
-            ExistingRoleSpecificQuestions = existing.RoleSpecificQuestions,
-            ExistingExperienceBasedQuestions = existing.ExperienceBasedQuestions
-        };
+        var context = CreateContext(preparation, talent?.Name);
 
-        AdditionalQuestionsResult aiResult;
+        var result = await GenerateQuestionsAsync(context, request.InvitationId, ct);
+
+        preparation.SetAdditionalQuestions(result.AdditionalQuestions);
+
+        _unitOfWork.InterviewPreparations.Update(preparation);
+        await _unitOfWork.SaveChangesAsync(ct);
+
+        return InterviewPreparationMapper.ToDto(preparation);
+    }
+
+    private async Task<Domain.Entities.InterviewPreparation> GetPreparationAsync(
+        Guid invitationId, CancellationToken ct)
+    {
+        return await _unitOfWork.InterviewPreparations
+            .GetByInvitationIdAsync(invitationId, ct)
+            ?? throw new NotFoundException("Interview preparation not found.");
+    }
+
+    private static void EnsureUserCanAccess(
+        Domain.Entities.InterviewPreparation preparation, string userId)
+    {
+        if (preparation.TalentUserId != userId)
+            throw new ForbiddenException("You do not have access to this interview preparation.");
+    }
+
+    private static void EnsurePreparationIsAccessible(
+        Domain.Entities.InterviewPreparation preparation)
+    {
+        if (!preparation.IsAccessible())
+            throw new ForbiddenException("Preparation is no longer accessible as the interview has already taken place.");
+    }
+
+    private static AdditionalQuestionsContext CreateContext(
+        Domain.Entities.InterviewPreparation preparation, string? talentName)
+    {
+        return new AdditionalQuestionsContext
+        {
+            JobTitle = preparation.JobTitle,
+            CompanyName = preparation.CompanyName,
+            TalentName = talentName ?? "Candidate",
+            ExistingTechnicalQuestions = preparation.TechnicalQuestions,
+            ExistingBehavioralQuestions = preparation.BehavioralQuestions,
+            ExistingRoleSpecificQuestions = preparation.RoleSpecificQuestions,
+            ExistingExperienceBasedQuestions = preparation.ExperienceBasedQuestions
+        };
+    }
+
+    private async Task<AdditionalQuestionsResult> GenerateQuestionsAsync(
+        AdditionalQuestionsContext context, Guid invitationId, CancellationToken ct)
+    {
         try
         {
-            aiResult = await _aiService.GenerateAdditionalQuestionsAsync(context, ct);
+            return await _aiService.GenerateAdditionalQuestionsAsync(context, ct);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "AI additional questions generation failed for invitation {Id}", request.InvitationId);
+            _logger.LogError(ex, "AI additional questions generation failed for invitation {Id}", invitationId);
             throw new BadGatewayException("AI service is temporarily unavailable.");
         }
-
-        existing.SetAdditionalQuestions(aiResult.AdditionalQuestions);
-
-        _unitOfWork.InterviewPreparations.Update(existing);
-        await _unitOfWork.SaveChangesAsync(ct);
-
-        return MapToDto(existing);
-    }
-
-    private static InterviewPreparationDto MapToDto(Domain.Entities.InterviewPreparation preparation)
-    {
-        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-        
-        return new InterviewPreparationDto
-        {
-            Id = preparation.Id,
-            InterviewInvitationId = preparation.InterviewInvitationId,
-            JobId = preparation.JobId,
-            JobTitle = preparation.JobTitle,
-            CompanyName = preparation.CompanyName,
-            InterviewType = preparation.InterviewType,
-            ScheduledAt = preparation.ScheduledAt,
-            Status = preparation.Status.ToString(),
-            TechnicalQuestions = Deserialize<List<PrepQuestion>>(preparation.TechnicalQuestions, options) ?? new(),
-            BehavioralQuestions = Deserialize<List<PrepQuestion>>(preparation.BehavioralQuestions, options) ?? new(),
-            ExperienceBasedQuestions = Deserialize<List<PrepQuestion>>(preparation.ExperienceBasedQuestions, options) ?? new(),
-            RoleSpecificQuestions = Deserialize<List<PrepQuestion>>(preparation.RoleSpecificQuestions, options) ?? new(),
-            KeyTopicsToPrepare = Deserialize<List<string>>(preparation.KeyTopicsToPrepare, options) ?? new(),
-            SuggestedRevisionAreas = Deserialize<List<string>>(preparation.SuggestedRevisionAreas, options) ?? new(),
-            AdditionalQuestions = string.IsNullOrEmpty(preparation.AdditionalQuestions) 
-                ? null 
-                : Deserialize<List<PrepQuestion>>(preparation.AdditionalQuestions, options),
-            GenerationCount = preparation.GenerationCount,
-            GeneratedAt = preparation.CreatedAt,
-            IsAccessible = preparation.IsAccessible()
-        };
-    }
-
-    private static T? Deserialize<T>(string json, JsonSerializerOptions options)
-    {
-        if (string.IsNullOrWhiteSpace(json)) return default;
-        try { return JsonSerializer.Deserialize<T>(json, options); }
-        catch { return default; }
     }
 }

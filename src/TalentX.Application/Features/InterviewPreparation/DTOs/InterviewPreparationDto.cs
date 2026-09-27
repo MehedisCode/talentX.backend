@@ -18,7 +18,7 @@ public sealed record InterviewPreparationDto
     public List<PrepQuestion> RoleSpecificQuestions { get; init; } = new();
     public List<string> KeyTopicsToPrepare { get; init; } = new();
     public List<string> SuggestedRevisionAreas { get; init; } = new();
-    public List<PrepQuestion>? AdditionalQuestions { get; init; }
+    public List<PrepQuestion> AdditionalQuestions { get; init; } = new();
 
     public int GenerationCount { get; init; }
     public DateTime GeneratedAt { get; init; }

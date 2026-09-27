@@ -152,7 +152,7 @@ public class RegeneratePreparationCommandHandlerTests
         result.TechnicalQuestions.Should().ContainSingle()
             .Which.Question.Should().Be("New question");
         result.KeyTopicsToPrepare.Should().Equal("New topic");
-        result.AdditionalQuestions.Should().BeNull();
+        result.AdditionalQuestions.Should().BeEmpty();
 
         _preparationRepository.Verify(r => r.Update(existing), Times.Once);
         _preparationRepository.Verify(

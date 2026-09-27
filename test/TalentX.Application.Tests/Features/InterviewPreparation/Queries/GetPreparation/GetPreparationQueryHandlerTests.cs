@@ -66,7 +66,7 @@ public class GetPreparationQueryHandlerTests
             .Which.Question.Should().Be("What is a closure?");
         result.KeyTopicsToPrepare.Should().Equal("Idempotency");
         result.SuggestedRevisionAreas.Should().Equal("SQL tuning");
-        result.AdditionalQuestions.Should().BeNull();
+        result.AdditionalQuestions.Should().BeEmpty();
         result.Disclaimer.Should().NotBeEmpty();
     }
 

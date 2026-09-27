@@ -1,10 +1,9 @@
-using System.Text.Json;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Features.InterviewPreparation.DTOs;
-using TalentX.Domain.Enums;
+using TalentX.Application.Features.InterviewPreparation.Mappers;
 using TalentX.Application.Identity.Services;
 
 namespace TalentX.Application.Features.InterviewPreparation.Commands.RegeneratePreparation;
@@ -34,15 +33,10 @@ public sealed class RegeneratePreparationCommandHandler
     {
         var userId = _currentUser.UserId!;
 
-        var existing = await _unitOfWork.InterviewPreparations
-            .GetByInvitationIdAsync(request.InvitationId, ct)
-            ?? throw new NotFoundException("Interview preparation not found.");
+        var existing = await GetPreparationAsync(request.InvitationId, ct);
 
-        if (existing.TalentUserId != userId)
-            throw new ForbiddenException("You do not have access to this interview preparation.");
-
-        if (!existing.IsAccessible())
-            throw new ForbiddenException("Preparation is no longer accessible as the interview has already taken place.");
+        EnsureUserCanAccess(existing, userId);
+        EnsurePreparationIsAccessible(existing);
 
         if (existing.GenerationCount >= 3)
             throw new BadRequestException("Maximum regeneration limit reached (3 times).");
@@ -55,55 +49,23 @@ public sealed class RegeneratePreparationCommandHandler
         var invitation = await _unitOfWork.InterviewInvitations
             .GetByIdAsync(request.InvitationId, ct)
             ?? throw new NotFoundException("Interview invitation not found.");
-            
+
         var job = await _unitOfWork.Jobs.GetByIdAsync(invitation.JobId, ct)
             ?? throw new NotFoundException("Job not found.");
 
         var talent = await _unitOfWork.Talents.GetByUserIdAsync(userId, ct)
             ?? throw new NotFoundException("Talent profile not found.");
-        
+
         var workExperiences = await _unitOfWork.WorkExperiences
             .GetByUserIdAsync(userId, ct);
-        
+
         var educations = await _unitOfWork.Educations
             .GetByUserIdAsync(userId, ct);
 
-        var context = new InterviewPreparationContext
-        {
-            JobTitle = job.Title,
-            CompanyName = job.CompanyName,
-            JobDescription = job.Description,
-            Responsibilities = job.Responsibilities,
-            Requirements = job.Requirements,
-            RequiredSkills = job.RequiredSkills,
-            ExperienceLevel = job.ExperienceLevel.ToString(),
-            EmploymentType = job.EmploymentType.ToString(),
-            WorkArrangement = job.WorkArrangement.ToString(),
-            TalentName = talent.Name,
-            Tagline = talent.Tagline,
-            ShortBio = talent.ShortBio,
-            TotalYearsExperience = talent.TotalYearsExperience,
-            TechnicalSkills = talent.TechnicalSkills,
-            SoftSkills = talent.SoftSkills,
-            ToolsAndPlatforms = talent.ToolsAndPlatforms,
-            WorkExperiences = workExperiences.Select(w =>
-                new WorkExperienceSnapshot(w.CompanyName, w.JobTitle, w.StartDate ?? "", w.EndDate, w.IsCurrent)).ToList(),
-            Educations = educations.Select(e =>
-                new EducationSnapshot(e.Institution, e.Degree, e.StartDate ?? "", e.EndDate)).ToList(),
-            InterviewType = invitation.Type.ToString(),
-            ScheduledAt = invitation.ScheduledAt
-        };
+        var context = InterviewPreparationContextFactory.CreateContext(
+            job, talent, invitation, workExperiences, educations);
 
-        InterviewPreparationResult aiResult;
-        try
-        {
-            aiResult = await _aiService.GeneratePreparationAsync(context, ct);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "AI preparation regeneration failed for invitation {Id}", request.InvitationId);
-            throw new BadGatewayException("AI service is temporarily unavailable.");
-        }
+        var aiResult = await GenerateWithAiAsync(context, request.InvitationId, ct);
 
         existing.Regenerate(
             aiResult.TechnicalQuestions,
@@ -117,42 +79,42 @@ public sealed class RegeneratePreparationCommandHandler
         _unitOfWork.InterviewPreparations.Update(existing);
         await _unitOfWork.SaveChangesAsync(ct);
 
-        return MapToDto(existing);
+        return InterviewPreparationMapper.ToDto(existing);
     }
 
-    private static InterviewPreparationDto MapToDto(Domain.Entities.InterviewPreparation preparation)
+    private async Task<Domain.Entities.InterviewPreparation> GetPreparationAsync(
+        Guid invitationId, CancellationToken ct)
     {
-        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-        
-        return new InterviewPreparationDto
+        return await _unitOfWork.InterviewPreparations
+            .GetByInvitationIdAsync(invitationId, ct)
+            ?? throw new NotFoundException("Interview preparation not found.");
+    }
+
+    private static void EnsureUserCanAccess(
+        Domain.Entities.InterviewPreparation preparation, string userId)
+    {
+        if (preparation.TalentUserId != userId)
+            throw new ForbiddenException("You do not have access to this interview preparation.");
+    }
+
+    private static void EnsurePreparationIsAccessible(
+        Domain.Entities.InterviewPreparation preparation)
+    {
+        if (!preparation.IsAccessible())
+            throw new ForbiddenException("Preparation is no longer accessible as the interview has already taken place.");
+    }
+
+    private async Task<InterviewPreparationResult> GenerateWithAiAsync(
+        InterviewPreparationContext context, Guid invitationId, CancellationToken ct)
+    {
+        try
         {
-            Id = preparation.Id,
-            InterviewInvitationId = preparation.InterviewInvitationId,
-            JobId = preparation.JobId,
-            JobTitle = preparation.JobTitle,
-            CompanyName = preparation.CompanyName,
-            InterviewType = preparation.InterviewType,
-            ScheduledAt = preparation.ScheduledAt,
-            Status = preparation.Status.ToString(),
-            TechnicalQuestions = Deserialize<List<PrepQuestion>>(preparation.TechnicalQuestions, options) ?? new(),
-            BehavioralQuestions = Deserialize<List<PrepQuestion>>(preparation.BehavioralQuestions, options) ?? new(),
-            ExperienceBasedQuestions = Deserialize<List<PrepQuestion>>(preparation.ExperienceBasedQuestions, options) ?? new(),
-            RoleSpecificQuestions = Deserialize<List<PrepQuestion>>(preparation.RoleSpecificQuestions, options) ?? new(),
-            KeyTopicsToPrepare = Deserialize<List<string>>(preparation.KeyTopicsToPrepare, options) ?? new(),
-            SuggestedRevisionAreas = Deserialize<List<string>>(preparation.SuggestedRevisionAreas, options) ?? new(),
-            AdditionalQuestions = string.IsNullOrEmpty(preparation.AdditionalQuestions) 
-                ? null 
-                : Deserialize<List<PrepQuestion>>(preparation.AdditionalQuestions, options),
-            GenerationCount = preparation.GenerationCount,
-            GeneratedAt = preparation.CreatedAt,
-            IsAccessible = preparation.IsAccessible()
-        };
-    }
-
-    private static T? Deserialize<T>(string json, JsonSerializerOptions options)
-    {
-        if (string.IsNullOrWhiteSpace(json)) return default;
-        try { return JsonSerializer.Deserialize<T>(json, options); }
-        catch { return default; }
+            return await _aiService.GeneratePreparationAsync(context, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "AI preparation regeneration failed for invitation {Id}", invitationId);
+            throw new BadGatewayException("AI service is temporarily unavailable.");
+        }
     }
 }

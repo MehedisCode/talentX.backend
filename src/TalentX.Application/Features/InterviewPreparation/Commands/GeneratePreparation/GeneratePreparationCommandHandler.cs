@@ -1,9 +1,9 @@
-using System.Text.Json;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Features.InterviewPreparation.DTOs;
+using TalentX.Application.Features.InterviewPreparation.Mappers;
 using TalentX.Domain.Entities;
 using TalentX.Domain.Enums;
 using TalentX.Application.Identity.Services;
@@ -39,8 +39,7 @@ public sealed class GeneratePreparationCommandHandler
             .GetByIdAsync(request.InvitationId, ct)
             ?? throw new NotFoundException("Interview invitation not found.", request.InvitationId.ToString());
 
-        if (invitation.TalentUserId != userId)
-            throw new ForbiddenException("You do not have access to this interview.");
+        EnsureUserCanAccess(invitation, userId);
 
         if (invitation.Status != InterviewInvitationStatus.Accepted)
             throw new BadRequestException("Interview preparation is only available for accepted interviews.");
@@ -60,49 +59,17 @@ public sealed class GeneratePreparationCommandHandler
 
         var talent = await _unitOfWork.Talents.GetByUserIdAsync(userId, ct)
             ?? throw new NotFoundException("Talent profile not found.");
-        
+
         var workExperiences = await _unitOfWork.WorkExperiences
             .GetByUserIdAsync(userId, ct);
-        
+
         var educations = await _unitOfWork.Educations
             .GetByUserIdAsync(userId, ct);
 
-        var context = new InterviewPreparationContext
-        {
-            JobTitle = job.Title,
-            CompanyName = job.CompanyName,
-            JobDescription = job.Description,
-            Responsibilities = job.Responsibilities,
-            Requirements = job.Requirements,
-            RequiredSkills = job.RequiredSkills,
-            ExperienceLevel = job.ExperienceLevel.ToString(),
-            EmploymentType = job.EmploymentType.ToString(),
-            WorkArrangement = job.WorkArrangement.ToString(),
-            TalentName = talent.Name,
-            Tagline = talent.Tagline,
-            ShortBio = talent.ShortBio,
-            TotalYearsExperience = talent.TotalYearsExperience,
-            TechnicalSkills = talent.TechnicalSkills,
-            SoftSkills = talent.SoftSkills,
-            ToolsAndPlatforms = talent.ToolsAndPlatforms,
-            WorkExperiences = workExperiences.Select(w =>
-                new WorkExperienceSnapshot(w.CompanyName, w.JobTitle, w.StartDate ?? "", w.EndDate, w.IsCurrent)).ToList(),
-            Educations = educations.Select(e =>
-                new EducationSnapshot(e.Institution, e.Degree, e.StartDate ?? "", e.EndDate)).ToList(),
-            InterviewType = invitation.Type.ToString(),
-            ScheduledAt = invitation.ScheduledAt
-        };
+        var context = InterviewPreparationContextFactory.CreateContext(
+            job, talent, invitation, workExperiences, educations);
 
-        InterviewPreparationResult aiResult;
-        try
-        {
-            aiResult = await _aiService.GeneratePreparationAsync(context, ct);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "AI preparation generation failed for invitation {Id}", request.InvitationId);
-            throw new BadGatewayException("AI service is temporarily unavailable.");
-        }
+        var aiResult = await GenerateWithAiAsync(context, request.InvitationId, ct);
 
         var preparation = Domain.Entities.InterviewPreparation.Create(
             interviewInvitationId: invitation.Id,
@@ -122,42 +89,26 @@ public sealed class GeneratePreparationCommandHandler
         await _unitOfWork.InterviewPreparations.AddAsync(preparation, ct);
         await _unitOfWork.SaveChangesAsync(ct);
 
-        return MapToDto(preparation);
+        return InterviewPreparationMapper.ToDto(preparation);
     }
 
-    private static InterviewPreparationDto MapToDto(Domain.Entities.InterviewPreparation preparation)
+    private static void EnsureUserCanAccess(InterviewInvitation invitation, string userId)
     {
-        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-        
-        return new InterviewPreparationDto
+        if (invitation.TalentUserId != userId)
+            throw new ForbiddenException("You do not have access to this interview.");
+    }
+
+    private async Task<InterviewPreparationResult> GenerateWithAiAsync(
+        InterviewPreparationContext context, Guid invitationId, CancellationToken ct)
+    {
+        try
         {
-            Id = preparation.Id,
-            InterviewInvitationId = preparation.InterviewInvitationId,
-            JobId = preparation.JobId,
-            JobTitle = preparation.JobTitle,
-            CompanyName = preparation.CompanyName,
-            InterviewType = preparation.InterviewType,
-            ScheduledAt = preparation.ScheduledAt,
-            Status = preparation.Status.ToString(),
-            TechnicalQuestions = Deserialize<List<PrepQuestion>>(preparation.TechnicalQuestions, options) ?? new(),
-            BehavioralQuestions = Deserialize<List<PrepQuestion>>(preparation.BehavioralQuestions, options) ?? new(),
-            ExperienceBasedQuestions = Deserialize<List<PrepQuestion>>(preparation.ExperienceBasedQuestions, options) ?? new(),
-            RoleSpecificQuestions = Deserialize<List<PrepQuestion>>(preparation.RoleSpecificQuestions, options) ?? new(),
-            KeyTopicsToPrepare = Deserialize<List<string>>(preparation.KeyTopicsToPrepare, options) ?? new(),
-            SuggestedRevisionAreas = Deserialize<List<string>>(preparation.SuggestedRevisionAreas, options) ?? new(),
-            AdditionalQuestions = string.IsNullOrEmpty(preparation.AdditionalQuestions) 
-                ? null 
-                : Deserialize<List<PrepQuestion>>(preparation.AdditionalQuestions, options),
-            GenerationCount = preparation.GenerationCount,
-            GeneratedAt = preparation.CreatedAt,
-            IsAccessible = preparation.IsAccessible()
-        };
-    }
-
-    private static T? Deserialize<T>(string json, JsonSerializerOptions options)
-    {
-        if (string.IsNullOrWhiteSpace(json)) return default;
-        try { return JsonSerializer.Deserialize<T>(json, options); }
-        catch { return default; }
+            return await _aiService.GeneratePreparationAsync(context, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "AI preparation generation failed for invitation {Id}", invitationId);
+            throw new BadGatewayException("AI service is temporarily unavailable.");
+        }
     }
 }
