@@ -32,8 +32,7 @@ public sealed class GenerateAdditionalQuestionsCommandHandler
     public async Task<InterviewPreparationDto> Handle(
         GenerateAdditionalQuestionsCommand request, CancellationToken ct)
     {
-        var userId = _currentUser.UserId
-            ?? throw new UnauthorizedException("You must be signed in.");
+        var userId = _currentUser.UserId!;
 
         var existing = await _unitOfWork.InterviewPreparations
             .GetByInvitationIdAsync(request.InvitationId, ct)

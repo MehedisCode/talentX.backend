@@ -1,6 +1,5 @@
 using System.Text.Json;
 using MediatR;
-using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Features.InterviewPreparation.DTOs;
 using TalentX.Application.Identity.Services;
@@ -24,8 +23,7 @@ public sealed class GetPreparationsByTalentQueryHandler
     public async Task<IReadOnlyList<InterviewPreparationDto>> Handle(
         GetPreparationsByTalentQuery request, CancellationToken ct)
     {
-        var userId = _currentUser.UserId
-            ?? throw new UnauthorizedException("You must be signed in.");
+        var userId = _currentUser.UserId!;
 
         var preparations = await _unitOfWork.InterviewPreparations
             .GetByTalentUserIdAsync(userId, ct);

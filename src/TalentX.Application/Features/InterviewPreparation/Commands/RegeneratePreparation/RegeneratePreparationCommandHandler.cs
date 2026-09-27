@@ -32,8 +32,7 @@ public sealed class RegeneratePreparationCommandHandler
     public async Task<InterviewPreparationDto> Handle(
         RegeneratePreparationCommand request, CancellationToken ct)
     {
-        var userId = _currentUser.UserId
-            ?? throw new UnauthorizedException("You must be signed in.");
+        var userId = _currentUser.UserId!;
 
         var existing = await _unitOfWork.InterviewPreparations
             .GetByInvitationIdAsync(request.InvitationId, ct)

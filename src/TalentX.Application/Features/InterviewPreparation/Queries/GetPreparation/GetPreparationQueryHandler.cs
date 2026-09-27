@@ -24,8 +24,7 @@ public sealed class GetPreparationQueryHandler
     public async Task<InterviewPreparationDto> Handle(
         GetPreparationQuery request, CancellationToken ct)
     {
-        var userId = _currentUser.UserId
-            ?? throw new UnauthorizedException("You must be signed in.");
+        var userId = _currentUser.UserId!;
 
         var preparation = await _unitOfWork.InterviewPreparations
             .GetByInvitationIdAsync(request.InvitationId, ct)
