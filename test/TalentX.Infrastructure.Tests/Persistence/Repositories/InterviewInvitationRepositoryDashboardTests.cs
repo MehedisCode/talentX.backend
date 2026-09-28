@@ -44,6 +44,54 @@ public sealed class InterviewInvitationRepositoryDashboardTests
     }
 
     [Fact]
+    public async Task CountCreatedBetweenAsync_CountsInvitationsInsideTheInclusiveRangeExcludingCancelled()
+    {
+        await using var context = NewContext();
+        AddInvitation(context, Base.AddDays(-2));
+        AddInvitation(context, Base.AddDays(-1));
+        AddInvitation(context, Base);
+        AddInvitation(context, Base.AddDays(1));
+        AddInvitation(context, Base.AddDays(2));
+        AddInvitation(context, Base, cancelled: true);
+        await context.SaveChangesAsync();
+        var repository = new InterviewInvitationRepository(context);
+
+        var count = await repository.CountCreatedBetweenAsync(Base.AddDays(-1), Base.AddDays(1));
+
+        count.Should().Be(3);
+    }
+
+    [Fact]
+    public async Task CountCreatedBetweenAsync_WithAnAllTimeRange_CountsEveryNonCancelledInvitation()
+    {
+        await using var context = NewContext();
+        AddInvitation(context, Base.AddDays(-400));
+        AddInvitation(context, Base.AddDays(-30));
+        AddInvitation(context, Base);
+        AddInvitation(context, Base.AddDays(-5), cancelled: true);
+        await context.SaveChangesAsync();
+        var repository = new InterviewInvitationRepository(context);
+        var allTimeStart = DateTime.SpecifyKind(DateTime.MinValue, DateTimeKind.Utc);
+
+        var count = await repository.CountCreatedBetweenAsync(allTimeStart, Base.AddDays(1));
+
+        count.Should().Be(3);
+    }
+
+    [Fact]
+    public async Task CountCreatedBetweenAsync_WhenNothingInRange_ReturnsZero()
+    {
+        await using var context = NewContext();
+        AddInvitation(context, Base.AddDays(-30));
+        await context.SaveChangesAsync();
+        var repository = new InterviewInvitationRepository(context);
+
+        var count = await repository.CountCreatedBetweenAsync(Base.AddDays(-1), Base);
+
+        count.Should().Be(0);
+    }
+
+    [Fact]
     public async Task GetCreatedCountsByBucketAsync_GroupsByDayExcludingCancelledAndOutOfRange()
     {
         await using var context = NewContext();
