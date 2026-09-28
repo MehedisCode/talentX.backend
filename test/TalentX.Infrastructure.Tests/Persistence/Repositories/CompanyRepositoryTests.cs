@@ -46,6 +46,22 @@ public sealed class CompanyRepositoryTests
     }
 
     [Fact]
+    public async Task GetByNameAsync_ReturnsCompanyCaseInsensitively()
+    {
+        await using var context = NewContext();
+        context.Companies.Add(MakeCompany("emp-1", "Acme Corp"));
+        await context.SaveChangesAsync();
+        var repository = new CompanyRepository(context);
+
+        var found = await repository.GetByNameAsync("  ACME CORP  ");
+        found.Should().NotBeNull();
+        found!.Name.Should().Be("Acme Corp");
+
+        (await repository.GetByNameAsync("Beta Ltd")).Should().BeNull();
+        (await repository.GetByNameAsync("   ")).Should().BeNull();
+    }
+
+    [Fact]
     public async Task GetAllAsync_ReturnsNameAscending_WithOpeningsAndVacanciesCounts()
     {
         await using var context = NewContext();
@@ -126,6 +142,31 @@ public sealed class CompanyRepositoryTests
     }
 
     [Fact]
+    public async Task GetAllAsync_KeywordMatchesNameLocationAndIndustry()
+    {
+        await using var context = NewContext();
+        context.Companies.Add(MakeCompany("emp-1", "Acme Corp", industry: "Software", location: "Dhaka", size: "11-50"));
+        context.Companies.Add(MakeCompany("emp-2", "Beta Bank", industry: "Finance & Banking", location: "Chittagong", size: "501-1000"));
+        await context.SaveChangesAsync();
+        var repository = new CompanyRepository(context);
+
+        (await repository.GetAllAsync("acme", null, null, null, "name", "asc", 1, 10))
+            .Items.Should().ContainSingle().Which.Name.Should().Be("Acme Corp");
+
+        // Location match.
+        (await repository.GetAllAsync("chittagong", null, null, null, "name", "asc", 1, 10))
+            .Items.Should().ContainSingle().Which.Name.Should().Be("Beta Bank");
+
+        // Industry match.
+        (await repository.GetAllAsync("banking", null, null, null, "name", "asc", 1, 10))
+            .Items.Should().ContainSingle().Which.Name.Should().Be("Beta Bank");
+
+        // Keyword combines with the other filters.
+        (await repository.GetAllAsync("dhaka", "Software", null, null, "name", "asc", 1, 10))
+            .Items.Should().ContainSingle().Which.Name.Should().Be("Acme Corp");
+    }
+
+    [Fact]
     public async Task GetAllAsync_Paginates_AndSortsByVacanciesDesc()
     {
         await using var context = NewContext();
@@ -143,5 +184,41 @@ public sealed class CompanyRepositoryTests
         var page2 = await repository.GetAllAsync(null, null, null, null, "name", "asc", 2, 1);
         page2.TotalCount.Should().Be(3);
         page2.Items.Should().ContainSingle().Which.Name.Should().Be("Beta Ltd");
+    }
+
+    [Fact]
+    public async Task GetAllAsync_ReturnsFilteredSetTotals_StableAcrossSortAndPage()
+    {
+        await using var context = NewContext();
+        context.Companies.Add(MakeCompany("emp-1", "Acme Corp"));
+        context.Companies.Add(MakeCompany("emp-2", "Beta Ltd"));
+        context.Companies.Add(MakeCompany("emp-3", "Gamma Inc"));
+        context.Jobs.Add(MakeJob("emp-1", vacancies: 2, DateTime.UtcNow.AddDays(30)));
+        context.Jobs.Add(MakeJob("emp-1", vacancies: 3, DateTime.UtcNow.AddDays(30)));
+        context.Jobs.Add(MakeJob("emp-3", vacancies: 9, DateTime.UtcNow.AddDays(30)));
+        await context.SaveChangesAsync();
+        var repository = new CompanyRepository(context);
+
+        // Full set: 3 openings, 14 vacancies — identical on every sort and page.
+        var byName = await repository.GetAllAsync(null, null, null, null, "name", "asc", 1, 10);
+        byName.TotalOpenings.Should().Be(3);
+        byName.TotalVacancies.Should().Be(14);
+
+        var newestPage2 = await repository.GetAllAsync(null, null, null, null, "newest", "desc", 2, 1);
+        newestPage2.TotalCount.Should().Be(3);
+        newestPage2.TotalPages.Should().Be(3);
+        newestPage2.Items.Should().ContainSingle();
+        newestPage2.TotalOpenings.Should().Be(3);
+        newestPage2.TotalVacancies.Should().Be(14);
+
+        var byVacancies = await repository.GetAllAsync(null, null, null, null, "vacancies", "desc", 1, 10);
+        byVacancies.TotalOpenings.Should().Be(3);
+        byVacancies.TotalVacancies.Should().Be(14);
+
+        // Filtered set: only Acme's jobs contribute.
+        var filtered = await repository.GetAllAsync("acme", null, null, null, "name", "asc", 1, 10);
+        filtered.TotalCount.Should().Be(1);
+        filtered.TotalOpenings.Should().Be(2);
+        filtered.TotalVacancies.Should().Be(5);
     }
 }

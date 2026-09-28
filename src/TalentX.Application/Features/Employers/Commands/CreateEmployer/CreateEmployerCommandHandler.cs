@@ -51,21 +51,29 @@ public sealed class CreateEmployerCommandHandler : IRequestHandler<CreateEmploye
             throw new ValidationException("Email verification is required or your verification session has expired. Please verify your email with OTP first.");
         }
 
+        var trimmedCompanyName = request.CompanyName.Trim();
+
         if (existingEmployer != null)
         {
+            var existingCompanyWithName = await _unitOfWork.Companies.GetByNameAsync(trimmedCompanyName, cancellationToken);
+            if (existingCompanyWithName != null && existingCompanyWithName.EmployerId != existingEmployer.UserId)
+            {
+                throw new ConflictException($"A company with the name '{trimmedCompanyName}' is already registered. Please use a different company name.");
+            }
+
             existingEmployer.Update(request.Name);
-            existingEmployer.UpdateCompany(request.CompanyName.Trim());
+            existingEmployer.UpdateCompany(trimmedCompanyName);
             existingEmployer.MarkAsVerified();
 
             var existingCompany = await _unitOfWork.Companies.GetByEmployerIdAsync(existingEmployer.UserId, cancellationToken);
             if (existingCompany is null)
             {
-                var newCompany = new Company(existingEmployer.UserId, request.CompanyName.Trim());
+                var newCompany = new Company(existingEmployer.UserId, trimmedCompanyName);
                 await _unitOfWork.Companies.AddAsync(newCompany, cancellationToken);
             }
             else
             {
-                existingCompany.UpdateName(request.CompanyName.Trim());
+                existingCompany.UpdateName(trimmedCompanyName);
             }
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -85,6 +93,12 @@ public sealed class CreateEmployerCommandHandler : IRequestHandler<CreateEmploye
             );
         }
 
+        var existingCompanyForRegistration = await _unitOfWork.Companies.GetByNameAsync(trimmedCompanyName, cancellationToken);
+        if (existingCompanyForRegistration != null)
+        {
+            throw new ConflictException($"A company with the name '{trimmedCompanyName}' is already registered. Please use a different company name.");
+        }
+
         var identityResponse = await _identityService.CreateApplicationUserAsync(
             request.Email,
             request.Password,
@@ -96,22 +110,33 @@ public sealed class CreateEmployerCommandHandler : IRequestHandler<CreateEmploye
             throw new ValidationException(string.Join("; ", identityResponse.Errors));
         }
 
-        var employer = new Employer(
-            identityResponse.Data.UserId,
-            request.Name,
-            request.Email,
-            request.CompanyName
-        );
+        var createdUserId = identityResponse.Data.UserId;
+        Employer employer;
 
-        employer.MarkEmailVerified();
-        await _unitOfWork.Employers.AddAsync(employer, cancellationToken);
+        try
+        {
+            employer = new Employer(
+                createdUserId,
+                request.Name,
+                request.Email,
+                trimmedCompanyName
+            );
 
-        var company = new Company(employer.UserId, request.CompanyName.Trim());
-        await _unitOfWork.Companies.AddAsync(company, cancellationToken);
+            employer.MarkEmailVerified();
+            await _unitOfWork.Employers.AddAsync(employer, cancellationToken);
 
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+            var company = new Company(employer.UserId, trimmedCompanyName);
+            await _unitOfWork.Companies.AddAsync(company, cancellationToken);
 
-        await PublishEmployerRegisteredNotificationsAsync(employer, cancellationToken);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            await PublishEmployerRegisteredNotificationsAsync(employer, cancellationToken);
+        }
+        catch (Exception)
+        {
+            await _identityService.DeleteApplicationUserAsync(createdUserId);
+            throw;
+        }
 
         await _otpService.ConsumeEmailVerificationAsync(request.Email, cancellationToken);
 
