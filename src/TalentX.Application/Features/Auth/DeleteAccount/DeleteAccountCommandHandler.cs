@@ -116,10 +116,19 @@ public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountC
                 _unitOfWork.Jobs.RemoveRange(jobs);
             }
 
+            // Reviews are stored against the company, so they go with it.
+            var company = await _unitOfWork.Companies.GetByEmployerIdAsync(identityUserId, cancellationToken);
+            if (company is not null)
+            {
+                await _unitOfWork.CompanyReviews.DeleteByCompanyIdAsync(company.Id, cancellationToken);
+            }
+
             await _unitOfWork.Companies.DeleteByEmployerIdAsync(identityUserId, cancellationToken);
         }
         else if (user.Role == UserRole.Talent)
         {
+            // Reviews first: they reference the job applications deleted next.
+            await _unitOfWork.CompanyReviews.DeleteByTalentUserIdAsync(identityUserId, cancellationToken);
             await _unitOfWork.JobApplications.DeleteByTalentUserIdAsync(identityUserId, cancellationToken);
             await _unitOfWork.InterviewInvitations.DeleteByTalentUserIdAsync(identityUserId, cancellationToken);
             await _unitOfWork.Invitations.DeleteByTalentUserIdAsync(identityUserId, cancellationToken);

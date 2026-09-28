@@ -49,6 +49,7 @@ public static class PersistenceStartup
         services.AddScoped<IJobAlertNotificationHistoryRepository, JobAlertNotificationHistoryRepository>();
         services.AddScoped<INotificationRepository, NotificationRepository>();
         services.AddScoped<IJobModerationHistoryRepository, JobModerationHistoryRepository>();
+        services.AddScoped<ICompanyReviewRepository, CompanyReviewRepository>();
 
         return services;
     }

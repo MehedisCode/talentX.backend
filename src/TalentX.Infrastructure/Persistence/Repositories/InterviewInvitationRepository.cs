@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using TalentX.Application.Common.Interfaces.Repositories;
 using TalentX.Application.Common.Models;
 using TalentX.Domain.Entities;
+using TalentX.Domain.Enums;
 using TalentX.Infrastructure.Persistence.Contexts;
 
 namespace TalentX.Infrastructure.Persistence.Repositories;
@@ -88,6 +89,30 @@ public sealed class InterviewInvitationRepository : IInterviewInvitationReposito
         return await _context.InterviewInvitations
             .Include(x => x.Timeslots)
             .FirstOrDefaultAsync(x => x.JobApplicationId == applicationId, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<InterviewInvitation>> GetAcceptedByTalentUserIdAsync(string talentUserId, CancellationToken cancellationToken = default)
+    {
+        // IgnoreQueryFilters: reviews belong to the company, so a soft-deleted job
+        // must not make the invitation disappear from the talent's list.
+        return await _context.InterviewInvitations
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .Include(x => x.Job)
+            .Include(x => x.JobApplication)
+            .Include(x => x.Timeslots)
+            .Where(x => x.TalentUserId == talentUserId && x.Status == InterviewInvitationStatus.Accepted)
+            .OrderByDescending(x => x.SentAt)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<InterviewInvitation>> GetAcceptedByApplicationIdAsync(Guid applicationId, CancellationToken cancellationToken = default)
+    {
+        return await _context.InterviewInvitations
+            .AsNoTracking()
+            .Include(x => x.Timeslots)
+            .Where(x => x.JobApplicationId == applicationId && x.Status == InterviewInvitationStatus.Accepted)
+            .ToListAsync(cancellationToken);
     }
 
     public async Task AddAsync(InterviewInvitation invitation, CancellationToken cancellationToken = default)

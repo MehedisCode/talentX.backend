@@ -23,6 +23,17 @@ public interface IInterviewInvitationRepository
     /// </summary>
     Task<PaginatedList<InterviewInvitation>> GetByTalentUserIdPaginatedAsync(string talentUserId, int page, int pageSize, CancellationToken cancellationToken = default);
     Task<InterviewInvitation?> GetByApplicationIdAsync(Guid applicationId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Accepted invitations for a talent with Timeslots/Job/JobApplication loaded, including those
+    /// whose job was closed or soft-deleted (company reviews outlive the job posting).
+    /// </summary>
+    Task<IReadOnlyList<InterviewInvitation>> GetAcceptedByTalentUserIdAsync(string talentUserId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Accepted invitations (one per interview round) for a single application, with Timeslots loaded.
+    /// </summary>
+    Task<IReadOnlyList<InterviewInvitation>> GetAcceptedByApplicationIdAsync(Guid applicationId, CancellationToken cancellationToken = default);
     Task AddAsync(InterviewInvitation invitation, CancellationToken cancellationToken = default);
     void Update(InterviewInvitation invitation);
     Task DeleteByTalentUserIdAsync(string talentUserId, CancellationToken cancellationToken = default);

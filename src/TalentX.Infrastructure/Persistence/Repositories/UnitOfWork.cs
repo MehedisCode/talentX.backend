@@ -33,6 +33,7 @@ public sealed class UnitOfWork : IUnitOfWork
     public IJobAlertNotificationHistoryRepository JobAlertNotificationHistories { get; }
     public INotificationRepository Notifications { get; }
     public IJobModerationHistoryRepository JobModerationHistories { get; }
+    public ICompanyReviewRepository CompanyReviews { get; }
     public IJobReportRepository JobReports { get; }
 
     public UnitOfWork(ApplicationDbContext context)
@@ -58,6 +59,7 @@ public sealed class UnitOfWork : IUnitOfWork
         JobAlertNotificationHistories = new JobAlertNotificationHistoryRepository(_context);
         Notifications = new NotificationRepository(_context);
         JobModerationHistories = new JobModerationHistoryRepository(_context);
+        CompanyReviews = new CompanyReviewRepository(_context);
         JobReports = new JobReportRepository(_context);
     }
 
