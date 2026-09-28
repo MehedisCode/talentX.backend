@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using Moq;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Common.Interfaces.Repositories;
-using TalentX.Application.Common.Models;
 using TalentX.Application.Features.Companies.DTOs;
 using TalentX.Application.Features.Companies.Queries.GetCompanies;
 using TalentX.Domain;
@@ -52,11 +51,14 @@ public sealed class GetCompaniesQueryHandlerTests
     public async Task Handle_ReturnsMappedItems_WithOpeningsAndVacanciesCounts()
     {
         var company = BuildCompany("employer-1", "Acme");
-        var paged = new PaginatedList<CompanySearchItem>(
+        var paged = new CompanySearchResult(
             new List<CompanySearchItem> { ToSearchItem(company, openings: 3, vacancies: 7) },
-            page: 1,
-            pageSize: 10,
-            totalCount: 1);
+            Page: 1,
+            PageSize: 10,
+            TotalCount: 1,
+            TotalPages: 1,
+            TotalOpenings: 3,
+            TotalVacancies: 7);
 
         _companyRepositoryMock
             .Setup(r => r.GetAllAsync("acme", null, null, null, "name", "asc", 1, 10, It.IsAny<CancellationToken>()))
@@ -69,6 +71,8 @@ public sealed class GetCompaniesQueryHandlerTests
             CancellationToken.None);
 
         Assert.Equal(1, result.TotalCount);
+        Assert.Equal(3, result.TotalOpenings);
+        Assert.Equal(7, result.TotalVacancies);
         var item = Assert.Single(result.Items);
         Assert.Equal(company.Id, item.Id);
         Assert.Equal("Acme", item.Name);
@@ -80,11 +84,14 @@ public sealed class GetCompaniesQueryHandlerTests
     [Fact]
     public async Task Handle_NormalizesInvalidPaging_ToDefaults()
     {
-        var paged = new PaginatedList<CompanySearchItem>(
+        var paged = new CompanySearchResult(
             new List<CompanySearchItem>(),
-            page: 1,
-            pageSize: 10,
-            totalCount: 0);
+            Page: 1,
+            PageSize: 10,
+            TotalCount: 0,
+            TotalPages: 0,
+            TotalOpenings: 0,
+            TotalVacancies: 0);
 
         _companyRepositoryMock
             .Setup(r => r.GetAllAsync(null, null, null, null, "name", "asc", 1, 10, It.IsAny<CancellationToken>()))
@@ -106,11 +113,14 @@ public sealed class GetCompaniesQueryHandlerTests
     public async Task Handle_ResolvesLogoUrl_WhenLogoStorageKeyPresent()
     {
         var company = BuildCompany("employer-2", "Beta");
-        var paged = new PaginatedList<CompanySearchItem>(
+        var paged = new CompanySearchResult(
             new List<CompanySearchItem> { ToSearchItem(company, openings: 1, vacancies: 2, logoStorageKey: "logos/beta.png") },
-            page: 1,
-            pageSize: 10,
-            totalCount: 1);
+            Page: 1,
+            PageSize: 10,
+            TotalCount: 1,
+            TotalPages: 1,
+            TotalOpenings: 1,
+            TotalVacancies: 2);
 
         _companyRepositoryMock
             .Setup(r => r.GetAllAsync(null, null, null, null, "name", "asc", 1, 10, It.IsAny<CancellationToken>()))
