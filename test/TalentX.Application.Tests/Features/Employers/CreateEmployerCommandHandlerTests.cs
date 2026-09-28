@@ -246,4 +246,166 @@ public sealed class CreateEmployerCommandHandlerTests
         var exception = await Assert.ThrowsAsync<ValidationException>(() => handler.Handle(command, CancellationToken.None));
         Assert.Contains("Identity creation error", exception.Message);
     }
+
+    [Fact]
+    public async Task Handle_ThrowsConflictException_WhenCompanyNameAlreadyExistsForNewEmployer()
+    {
+        var command = new CreateEmployerCommand(
+            "Jane Doe",
+            "newemployer@acme.com",
+            "Existing Company",
+            "P@ssword123!",
+            "P@ssword123!"
+        );
+
+        _employerRepositoryMock
+            .Setup(repository => repository.GetByEmailAsync(command.Email, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Employer?)null);
+
+        _companyRepositoryMock
+            .Setup(repository => repository.GetByNameAsync(command.CompanyName, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Company("other-emp-id", command.CompanyName));
+
+        var handler = new CreateEmployerCommandHandler(
+            _identityServiceMock.Object,
+            _tokenServiceMock.Object,
+            _otpServiceMock.Object,
+            _unitOfWorkMock.Object,
+            _mapperMock.Object,
+            _notificationServiceMock.Object
+        );
+
+        await Assert.ThrowsAsync<ConflictException>(() => handler.Handle(command, CancellationToken.None));
+
+        _identityServiceMock.Verify(
+            identityService => identityService.CreateApplicationUserAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<UserRole>()),
+            Times.Never
+        );
+        _otpServiceMock.Verify(
+            otpService => otpService.ConsumeEmailVerificationAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never
+        );
+    }
+
+    [Fact]
+    public async Task Handle_ThrowsConflictException_WhenExistingUnverifiedEmployerUsesCompanyNameOwnedByAnotherEmployer()
+    {
+        var command = new CreateEmployerCommand(
+            "Jane Doe",
+            "unverified@acme.com",
+            "Taken Company",
+            "P@ssword123!",
+            "P@ssword123!"
+        );
+
+        var existingEmployer = new Employer("emp-owner-1", command.Name, command.Email, "Old Company");
+
+        _employerRepositoryMock
+            .Setup(repository => repository.GetByEmailAsync(command.Email, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(existingEmployer);
+
+        _companyRepositoryMock
+            .Setup(repository => repository.GetByNameAsync(command.CompanyName, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Company("emp-owner-2", command.CompanyName));
+
+        var handler = new CreateEmployerCommandHandler(
+            _identityServiceMock.Object,
+            _tokenServiceMock.Object,
+            _otpServiceMock.Object,
+            _unitOfWorkMock.Object,
+            _mapperMock.Object,
+            _notificationServiceMock.Object
+        );
+
+        await Assert.ThrowsAsync<ConflictException>(() => handler.Handle(command, CancellationToken.None));
+
+        _unitOfWorkMock.Verify(unitOfWork => unitOfWork.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_Succeeds_WhenExistingUnverifiedEmployerUsesSameCompanyName()
+    {
+        var command = new CreateEmployerCommand(
+            "Jane Doe",
+            "unverified@acme.com",
+            "Same Company",
+            "P@ssword123!",
+            "P@ssword123!"
+        );
+
+        var existingEmployer = new Employer("emp-owner-1", command.Name, command.Email, command.CompanyName);
+
+        _employerRepositoryMock
+            .Setup(repository => repository.GetByEmailAsync(command.Email, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(existingEmployer);
+
+        var company = new Company("emp-owner-1", command.CompanyName);
+        _companyRepositoryMock
+            .Setup(repository => repository.GetByNameAsync(command.CompanyName, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(company);
+
+        _companyRepositoryMock
+            .Setup(repository => repository.GetByEmployerIdAsync("emp-owner-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(company);
+
+        var handler = new CreateEmployerCommandHandler(
+            _identityServiceMock.Object,
+            _tokenServiceMock.Object,
+            _otpServiceMock.Object,
+            _unitOfWorkMock.Object,
+            _mapperMock.Object,
+            _notificationServiceMock.Object
+        );
+
+        var result = await handler.Handle(command, CancellationToken.None);
+
+        Assert.NotNull(result);
+        Assert.NotNull(result.Employer);
+        Assert.Equal("test-access-token", result.AccessToken);
+        Assert.Equal("test-refresh-token", result.RefreshToken);
+
+        _unitOfWorkMock.Verify(unitOfWork => unitOfWork.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_DeletesApplicationUserAndThrows_WhenDomainPersistenceFailsAfterIdentityCreation()
+    {
+        var command = new CreateEmployerCommand(
+            "Jane Doe",
+            "newemployer@acme.com",
+            "Acme Corp",
+            "P@ssword123!",
+            "P@ssword123!"
+        );
+
+        _employerRepositoryMock
+            .Setup(repository => repository.GetByEmailAsync(command.Email, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Employer?)null);
+
+        _identityServiceMock
+            .Setup(identityService => identityService.CreateApplicationUserAsync(command.Email, command.Password, UserRole.Employer))
+            .ReturnsAsync(IdentityResponse<CreateUserResult>.Ok(new CreateUserResult { UserId = "orphan-user-id" }));
+
+        _unitOfWorkMock
+            .Setup(unitOfWork => unitOfWork.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("DB constraint error"));
+
+        var handler = new CreateEmployerCommandHandler(
+            _identityServiceMock.Object,
+            _tokenServiceMock.Object,
+            _otpServiceMock.Object,
+            _unitOfWorkMock.Object,
+            _mapperMock.Object,
+            _notificationServiceMock.Object
+        );
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => handler.Handle(command, CancellationToken.None));
+
+        _identityServiceMock.Verify(identityService => identityService.DeleteApplicationUserAsync("orphan-user-id"), Times.Once);
+        _otpServiceMock.Verify(
+            otpService => otpService.ConsumeEmailVerificationAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never
+        );
+    }
 }
+
