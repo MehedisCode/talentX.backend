@@ -129,6 +129,8 @@ public sealed class GetAdminDashboardQueryHandler : IRequestHandler<GetAdminDash
             TotalJobs = ToJobStatuses(jobCounts).Sum(s => s.Count),
             PublishedJobs = jobCounts.GetValueOrDefault(JobStatus.Published),
             ClosedOrExpiredJobs = jobCounts.GetValueOrDefault(JobStatus.Closed) + jobCounts.GetValueOrDefault(JobStatus.Expired),
+            DeactivatedJobs = jobCounts.GetValueOrDefault(JobStatus.Deactivated),
+            UnderReviewJobs = jobCounts.GetValueOrDefault(JobStatus.PendingReview),
             TotalApplications = applicationStatuses.Sum(s => s.Count),
             TotalInterviews = interviewCount,
             TotalHires = applicationStatuses.Single(s => s.Status == ApplicationStatus.Hired).Count

@@ -43,6 +43,9 @@ public sealed record AdminDashboardMetricsDto
     public int TotalJobs { get; init; }
     public int PublishedJobs { get; init; }
     public int ClosedOrExpiredJobs { get; init; }
+    public int DeactivatedJobs { get; init; }
+    // Jobs an employer resubmitted after a deactivation and that now wait for an admin decision.
+    public int UnderReviewJobs { get; init; }
     public int TotalApplications { get; init; }
     public int TotalInterviews { get; init; }
     public int TotalHires { get; init; }
