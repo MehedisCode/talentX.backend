@@ -1,6 +1,8 @@
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
+using TalentX.Application.Common.Models;
 using TalentX.Application.Features.CompanyReviews.DTOs;
+using TalentX.Domain;
 using TalentX.Domain.Entities;
 using TalentX.Domain.Enums;
 using TalentX.Infrastructure.Persistence.Contexts;
@@ -28,14 +30,15 @@ public class CompanyReviewRepositoryTests
         int? recruitment = null,
         int? communication = null,
         int? interview = null,
-        int? professionalism = null)
+        int? professionalism = null,
+        string jobTitle = "Backend Engineer")
     {
         return CompanyReview.Create(
             companyId ?? Guid.NewGuid(),
             Guid.NewGuid(),
             applicationId ?? Guid.NewGuid(),
             talentUserId,
-            "Backend Engineer",
+            jobTitle,
             sentiment,
             "Comment",
             recruitment,
@@ -61,6 +64,11 @@ public class CompanyReviewRepositoryTests
     {
         context.CompanyReviews.AddRange(reviews);
         await context.SaveChangesAsync();
+    }
+
+    private static Company MakeCompany(string name = "Acme Inc", string employerId = "employer-1")
+    {
+        return new Company(employerId, name);
     }
 
     // ---- CRUD ----
@@ -309,5 +317,165 @@ public class CompanyReviewRepositoryTests
 
         summary.RecruitmentProcess.Average.Should().Be(4.3m);
         summary.Communication.Average.Should().Be(4.7m);
+    }
+
+    // ---- GetAdminPagedAsync ----
+
+    private static readonly AdminCompanyReviewFilter EmptyFilter = new();
+
+    [Fact]
+    public async Task GetAdminPagedAsync_OrdersPendingOldestFirstThenOthersNewestFirst()
+    {
+        await using var context = NewContext();
+        var repository = new CompanyReviewRepository(context);
+        var company = MakeCompany();
+        context.Companies.Add(company);
+
+        var olderPending = MakeReview(company.Id, jobTitle: "Older Pending");
+        var newerPending = MakeReview(company.Id, jobTitle: "Newer Pending");
+        var olderPublished = MakePublished(company.Id);
+        var newerPublished = MakePublished(company.Id);
+        context.CompanyReviews.AddRange(olderPending, newerPending, olderPublished, newerPublished);
+        await context.SaveChangesAsync();
+
+        context.Entry(olderPending).Property(r => r.SubmittedAt).CurrentValue = DateTime.UtcNow.AddDays(-5);
+        context.Entry(newerPending).Property(r => r.SubmittedAt).CurrentValue = DateTime.UtcNow.AddDays(-1);
+        context.Entry(olderPublished).Property(r => r.SubmittedAt).CurrentValue = DateTime.UtcNow.AddDays(-10);
+        context.Entry(newerPublished).Property(r => r.SubmittedAt).CurrentValue = DateTime.UtcNow.AddDays(-2);
+        await context.SaveChangesAsync();
+
+        var result = await repository.GetAdminPagedAsync(EmptyFilter, page: 1, pageSize: 20);
+
+        result.Items.Select(i => i.Id).Should().Equal(
+            olderPending.Id,
+            newerPending.Id,
+            newerPublished.Id,
+            olderPublished.Id);
+    }
+
+    [Fact]
+    public async Task GetAdminPagedAsync_FiltersByStatus()
+    {
+        await using var context = NewContext();
+        var repository = new CompanyReviewRepository(context);
+        var company = MakeCompany();
+        context.Companies.Add(company);
+        var pending = MakeReview(company.Id);
+        var published = MakePublished(company.Id);
+        await SeedAsync(context, pending, published);
+
+        var result = await repository.GetAdminPagedAsync(
+            EmptyFilter with { Status = CompanyReviewStatus.Published }, page: 1, pageSize: 20);
+
+        result.TotalCount.Should().Be(1);
+        result.Items[0].Id.Should().Be(published.Id);
+    }
+
+    [Fact]
+    public async Task GetAdminPagedAsync_FiltersBySentiment()
+    {
+        await using var context = NewContext();
+        var repository = new CompanyReviewRepository(context);
+        var company = MakeCompany();
+        context.Companies.Add(company);
+        var positive = MakeReview(company.Id, sentiment: ReviewSentiment.Positive);
+        var negative = MakeReview(company.Id, sentiment: ReviewSentiment.Negative);
+        await SeedAsync(context, positive, negative);
+
+        var result = await repository.GetAdminPagedAsync(
+            EmptyFilter with { Sentiment = ReviewSentiment.Negative }, page: 1, pageSize: 20);
+
+        result.TotalCount.Should().Be(1);
+        result.Items[0].Id.Should().Be(negative.Id);
+    }
+
+    [Fact]
+    public async Task GetAdminPagedAsync_FiltersByCompanyId()
+    {
+        await using var context = NewContext();
+        var repository = new CompanyReviewRepository(context);
+        var companyOne = MakeCompany(name: "Acme Inc");
+        var companyTwo = MakeCompany(name: "Globex Corp", employerId: "employer-2");
+        context.Companies.AddRange(companyOne, companyTwo);
+        var reviewOne = MakeReview(companyOne.Id);
+        var reviewTwo = MakeReview(companyTwo.Id);
+        await SeedAsync(context, reviewOne, reviewTwo);
+
+        var result = await repository.GetAdminPagedAsync(
+            EmptyFilter with { CompanyId = companyOne.Id }, page: 1, pageSize: 20);
+
+        result.TotalCount.Should().Be(1);
+        result.Items[0].Id.Should().Be(reviewOne.Id);
+    }
+
+    [Theory]
+    [InlineData("acme")]
+    [InlineData("backend")]
+    public async Task GetAdminPagedAsync_SearchesCompanyNameAndJobTitle(string searchQuery)
+    {
+        await using var context = NewContext();
+        var repository = new CompanyReviewRepository(context);
+        var acme = MakeCompany(name: "Acme Inc");
+        var globex = MakeCompany(name: "Globex Corp", employerId: "employer-2");
+        context.Companies.AddRange(acme, globex);
+        var matching = MakeReview(acme.Id, jobTitle: "Backend Engineer");
+        var other = MakeReview(globex.Id, jobTitle: "Designer");
+        await SeedAsync(context, matching, other);
+
+        var result = await repository.GetAdminPagedAsync(
+            EmptyFilter with { SearchQuery = searchQuery }, page: 1, pageSize: 20);
+
+        result.TotalCount.Should().Be(1);
+        result.Items[0].Id.Should().Be(matching.Id);
+    }
+
+    [Fact]
+    public async Task GetAdminPagedAsync_IncludesCompanyNameAndAppliesPaging()
+    {
+        await using var context = NewContext();
+        var repository = new CompanyReviewRepository(context);
+        var company = MakeCompany(name: "Acme Inc");
+        context.Companies.Add(company);
+        await SeedAsync(
+            context,
+            MakeReview(company.Id, jobTitle: "Job One"),
+            MakeReview(company.Id, jobTitle: "Job Two"),
+            MakeReview(company.Id, jobTitle: "Job Three"));
+
+        var result = await repository.GetAdminPagedAsync(EmptyFilter, page: 2, pageSize: 2);
+
+        result.TotalCount.Should().Be(3);
+        result.Page.Should().Be(2);
+        result.PageSize.Should().Be(2);
+        result.Items.Should().HaveCount(1);
+        result.Items[0].CompanyName.Should().Be("Acme Inc");
+    }
+
+    // ---- GetStatusCountsAsync ----
+
+    [Fact]
+    public async Task GetStatusCountsAsync_GroupsByStatus()
+    {
+        await using var context = NewContext();
+        var repository = new CompanyReviewRepository(context);
+        var company = MakeCompany();
+        context.Companies.Add(company);
+
+        var rejected = MakeReview(company.Id);
+        rejected.Reject(ReviewModerationReason.Spam, "spam content", "admin-1");
+
+        await SeedAsync(
+            context,
+            MakeReview(company.Id),
+            MakeReview(company.Id),
+            rejected,
+            MakePublished(company.Id));
+
+        var counts = await repository.GetStatusCountsAsync();
+
+        counts[CompanyReviewStatus.Pending].Should().Be(2);
+        counts[CompanyReviewStatus.Rejected].Should().Be(1);
+        counts[CompanyReviewStatus.Published].Should().Be(1);
+        counts.Should().NotContainKey(CompanyReviewStatus.Hidden);
     }
 }
