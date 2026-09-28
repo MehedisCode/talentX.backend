@@ -66,6 +66,12 @@ public sealed class SubmitCompanyReviewCommandHandler : IRequestHandler<SubmitCo
             await _unitOfWork.Companies.AddAsync(company, cancellationToken);
         }
 
+        CompanyReviewRules.EnsureRatingsInRange(
+            request.Ratings?.RecruitmentProcess,
+            request.Ratings?.Communication,
+            request.Ratings?.InterviewExperience,
+            request.Ratings?.Professionalism);
+
         var review = CompanyReview.Create(
             company.Id,
             job.Id,

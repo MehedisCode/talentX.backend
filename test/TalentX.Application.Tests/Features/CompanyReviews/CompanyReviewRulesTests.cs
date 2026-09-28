@@ -1,4 +1,5 @@
 using FluentAssertions;
+using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Features.CompanyReviews;
 using TalentX.Domain.Entities;
 using TalentX.Domain.Enums;
@@ -10,6 +11,50 @@ public class CompanyReviewRulesTests
 {
     private static readonly DateTime Now = new(2026, 9, 24, 12, 0, 0, DateTimeKind.Utc);
 
+    private const string Admin = "admin-1";
+
+    private static CompanyReview CreateReview() =>
+        CompanyReview.Create(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            "talent-1",
+            "Backend Engineer",
+            ReviewSentiment.Positive,
+            "Great process.",
+            5,
+            4,
+            3,
+            2);
+
+    private static CompanyReview CreatePublished()
+    {
+        var review = CreateReview();
+        review.Approve(Admin);
+        return review;
+    }
+
+    private static CompanyReview CreateRejected()
+    {
+        var review = CreateReview();
+        review.Reject(ReviewModerationReason.Spam, "Looks like spam.", Admin);
+        return review;
+    }
+
+    private static CompanyReview CreateHidden()
+    {
+        var review = CreatePublished();
+        review.Hide(ReviewModerationReason.PersonalInformation, "Names a person.", Admin);
+        return review;
+    }
+
+    private static CompanyReview CreateWithdrawn()
+    {
+        var review = CreateReview();
+        review.Withdraw();
+        return review;
+    }
+
     private static InterviewInvitation NewInvitation(InterviewType type, DateTime? assessmentDeadline = null) =>
         new(Guid.NewGuid(), Guid.NewGuid(), "employer-1", "talent-1", type, assessmentDeadline: assessmentDeadline);
 
@@ -20,7 +65,6 @@ public class CompanyReviewRulesTests
         return invitation;
     }
 
-    // Adds a decoy slot first so a test can tell the booked slot from the others.
     private static InterviewInvitation AcceptedWithSlot(InterviewType type, DateTime bookedEnd)
     {
         var invitation = NewInvitation(type);
@@ -30,8 +74,6 @@ public class CompanyReviewRulesTests
         invitation.Accept(booked.Id, booked.StartTime);
         return invitation;
     }
-
-    // ---- NormalizeComment ----
 
     [Theory]
     [InlineData(null, null)]
@@ -43,8 +85,6 @@ public class CompanyReviewRulesTests
     {
         CompanyReviewRules.NormalizeComment(input).Should().Be(expected);
     }
-
-    // ---- TryGetUnlockAt ----
 
     [Theory]
     [InlineData(InterviewType.OnCall)]
@@ -145,8 +185,6 @@ public class CompanyReviewRulesTests
         CompanyReviewRules.TryGetUnlockAt(invitation, 1).Should().BeNull();
     }
 
-    // ---- TryGetApplicationUnlockAt ----
-
     [Fact]
     public void TryGetApplicationUnlockAt_NoInvitations_ReturnsNull()
     {
@@ -233,8 +271,6 @@ public class CompanyReviewRulesTests
         unlockAt.Should().Be(deadline.AddDays(2));
     }
 
-    // ---- IsUnlocked ----
-
     [Fact]
     public void IsUnlocked_NullUnlockAt_IsLocked()
     {
@@ -268,4 +304,211 @@ public class CompanyReviewRulesTests
         CompanyReviewRules.IsUnlocked(unlockAt, new DateTime(2026, 9, 24, 23, 59, 59, DateTimeKind.Utc)).Should().BeFalse();
         CompanyReviewRules.IsUnlocked(unlockAt, new DateTime(2026, 9, 25, 0, 0, 0, DateTimeKind.Utc)).Should().BeTrue();
     }
+
+    [Fact]
+    public void EnsureCanApprove_Pending_DoesNotThrow()
+    {
+        var act = () => CompanyReviewRules.EnsureCanApprove(CreateReview());
+
+        act.Should().NotThrow();
+    }
+
+    [Theory]
+    [MemberData(nameof(NonPendingReviews))]
+    public void EnsureCanApprove_NotPending_Throws(Func<CompanyReview> build)
+    {
+        var act = () => CompanyReviewRules.EnsureCanApprove(build());
+
+        act.Should().Throw<BadRequestException>().WithMessage("Only pending reviews can be approved.");
+    }
+
+    [Fact]
+    public void EnsureCanReject_Pending_DoesNotThrow()
+    {
+        var act = () => CompanyReviewRules.EnsureCanReject(CreateReview());
+
+        act.Should().NotThrow();
+    }
+
+    [Theory]
+    [MemberData(nameof(NonPendingReviews))]
+    public void EnsureCanReject_NotPending_Throws(Func<CompanyReview> build)
+    {
+        var act = () => CompanyReviewRules.EnsureCanReject(build());
+
+        act.Should().Throw<BadRequestException>().WithMessage("Only pending reviews can be rejected.");
+    }
+
+    [Fact]
+    public void EnsureCanHide_Published_DoesNotThrow()
+    {
+        var act = () => CompanyReviewRules.EnsureCanHide(CreatePublished());
+
+        act.Should().NotThrow();
+    }
+
+    [Theory]
+    [MemberData(nameof(NonPublishedReviews))]
+    public void EnsureCanHide_NotPublished_Throws(Func<CompanyReview> build)
+    {
+        var act = () => CompanyReviewRules.EnsureCanHide(build());
+
+        act.Should().Throw<BadRequestException>().WithMessage("Only published reviews can be hidden.");
+    }
+
+    [Fact]
+    public void EnsureCanUnhide_Hidden_DoesNotThrow()
+    {
+        var act = () => CompanyReviewRules.EnsureCanUnhide(CreateHidden());
+
+        act.Should().NotThrow();
+    }
+
+    [Theory]
+    [MemberData(nameof(NonHiddenReviews))]
+    public void EnsureCanUnhide_NotHidden_Throws(Func<CompanyReview> build)
+    {
+        var act = () => CompanyReviewRules.EnsureCanUnhide(build());
+
+        act.Should().Throw<BadRequestException>().WithMessage("Only hidden reviews can be unhidden.");
+    }
+
+    [Theory]
+    [MemberData(nameof(ChangeableReviews))]
+    public void EnsureCanBeEdited_ChangeableStatus_DoesNotThrow(Func<CompanyReview> build)
+    {
+        var act = () => CompanyReviewRules.EnsureCanBeEdited(build());
+
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void EnsureCanBeEdited_Hidden_ThrowsWithHiddenMessage()
+    {
+        var act = () => CompanyReviewRules.EnsureCanBeEdited(CreateHidden());
+
+        act.Should().Throw<BadRequestException>().WithMessage("*hidden*");
+    }
+
+    [Fact]
+    public void EnsureCanBeEdited_Withdrawn_ThrowsWithWithdrawnMessage()
+    {
+        var act = () => CompanyReviewRules.EnsureCanBeEdited(CreateWithdrawn());
+
+        act.Should().Throw<BadRequestException>().WithMessage("*withdrawn*");
+    }
+
+    [Theory]
+    [MemberData(nameof(ChangeableReviews))]
+    public void EnsureCanBeWithdrawn_ChangeableStatus_DoesNotThrow(Func<CompanyReview> build)
+    {
+        var act = () => CompanyReviewRules.EnsureCanBeWithdrawn(build());
+
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void EnsureCanBeWithdrawn_Hidden_ThrowsWithHiddenMessage()
+    {
+        var act = () => CompanyReviewRules.EnsureCanBeWithdrawn(CreateHidden());
+
+        act.Should().Throw<BadRequestException>().WithMessage("*hidden*");
+    }
+
+    [Fact]
+    public void EnsureCanBeWithdrawn_AlreadyWithdrawn_ThrowsWithAlreadyWithdrawnMessage()
+    {
+        var act = () => CompanyReviewRules.EnsureCanBeWithdrawn(CreateWithdrawn());
+
+        act.Should().Throw<BadRequestException>().WithMessage("*already been withdrawn*");
+    }
+
+    [Theory]
+    [MemberData(nameof(ChangeableReviews))]
+    public void CanBeChangedByTalent_PendingPublishedOrRejected_IsTrue(Func<CompanyReview> build)
+    {
+        CompanyReviewRules.CanBeChangedByTalent(build()).Should().BeTrue();
+    }
+
+    [Theory]
+    [MemberData(nameof(LockedReviews))]
+    public void CanBeChangedByTalent_HiddenOrWithdrawn_IsFalse(Func<CompanyReview> build)
+    {
+        CompanyReviewRules.CanBeChangedByTalent(build()).Should().BeFalse();
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(5)]
+    public void EnsureRatingsInRange_WithinBounds_DoesNotThrow(int rating)
+    {
+        var act = () => CompanyReviewRules.EnsureRatingsInRange(rating, rating, rating, rating);
+
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void EnsureRatingsInRange_AllNull_DoesNotThrow()
+    {
+        var act = () => CompanyReviewRules.EnsureRatingsInRange(null, null, null, null);
+
+        act.Should().NotThrow();
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(6)]
+    [InlineData(-1)]
+    public void EnsureRatingsInRange_OutOfRange_ThrowsForEachArea(int rating)
+    {
+        var cases = new Action[]
+        {
+            () => CompanyReviewRules.EnsureRatingsInRange(rating, null, null, null),
+            () => CompanyReviewRules.EnsureRatingsInRange(null, rating, null, null),
+            () => CompanyReviewRules.EnsureRatingsInRange(null, null, rating, null),
+            () => CompanyReviewRules.EnsureRatingsInRange(null, null, null, rating)
+        };
+
+        foreach (var ensure in cases)
+        {
+            ensure.Should().Throw<BadRequestException>();
+        }
+    }
+
+    public static IEnumerable<object[]> NonPendingReviews() => new[]
+    {
+        new object[] { (Func<CompanyReview>)CreatePublished },
+        new object[] { (Func<CompanyReview>)CreateRejected },
+        new object[] { (Func<CompanyReview>)CreateHidden },
+        new object[] { (Func<CompanyReview>)CreateWithdrawn }
+    };
+
+    public static IEnumerable<object[]> NonPublishedReviews() => new[]
+    {
+        new object[] { (Func<CompanyReview>)(() => CreateReview()) },
+        new object[] { (Func<CompanyReview>)CreateRejected },
+        new object[] { (Func<CompanyReview>)CreateHidden },
+        new object[] { (Func<CompanyReview>)CreateWithdrawn }
+    };
+
+    public static IEnumerable<object[]> NonHiddenReviews() => new[]
+    {
+        new object[] { (Func<CompanyReview>)(() => CreateReview()) },
+        new object[] { (Func<CompanyReview>)CreatePublished },
+        new object[] { (Func<CompanyReview>)CreateRejected },
+        new object[] { (Func<CompanyReview>)CreateWithdrawn }
+    };
+
+    public static IEnumerable<object[]> ChangeableReviews() => new[]
+    {
+        new object[] { (Func<CompanyReview>)(() => CreateReview()) },
+        new object[] { (Func<CompanyReview>)CreatePublished },
+        new object[] { (Func<CompanyReview>)CreateRejected }
+    };
+
+    public static IEnumerable<object[]> LockedReviews() => new[]
+    {
+        new object[] { (Func<CompanyReview>)CreateHidden },
+        new object[] { (Func<CompanyReview>)CreateWithdrawn }
+    };
 }

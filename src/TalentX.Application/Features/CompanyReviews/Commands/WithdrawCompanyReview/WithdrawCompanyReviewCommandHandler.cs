@@ -31,14 +31,8 @@ public sealed class WithdrawCompanyReviewCommandHandler : IRequestHandler<Withdr
             throw new ForbiddenException("You can only withdraw your own reviews.");
         }
 
-        try
-        {
-            review.Withdraw();
-        }
-        catch (InvalidOperationException exception)
-        {
-            throw new BadRequestException(exception.Message);
-        }
+        CompanyReviewRules.EnsureCanBeWithdrawn(review);
+        review.Withdraw();
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 

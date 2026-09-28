@@ -103,8 +103,8 @@ public sealed class GetMyCompanyReviewsQueryHandler
             unlockAt,
             review is null && CompanyReviewRules.IsUnlocked(unlockAt, now),
             review is null ? null : ToReviewDto(review),
-            review?.CanBeChangedByTalent ?? false,
-            review?.CanBeChangedByTalent ?? false);
+            review is not null && CompanyReviewRules.CanBeChangedByTalent(review),
+            review is not null && CompanyReviewRules.CanBeChangedByTalent(review));
     }
 
     private static MyCompanyReviewDto ToReviewDto(CompanyReview review)

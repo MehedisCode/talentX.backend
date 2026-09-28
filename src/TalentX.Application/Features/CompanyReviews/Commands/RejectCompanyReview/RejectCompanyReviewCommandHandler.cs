@@ -28,14 +28,8 @@ public sealed class RejectCompanyReviewCommandHandler : IRequestHandler<RejectCo
 
         var details = request.Details.Trim();
 
-        try
-        {
-            review.Reject(request.Reason, details, actorUserId);
-        }
-        catch (InvalidOperationException exception)
-        {
-            throw new BadRequestException(exception.Message);
-        }
+        CompanyReviewRules.EnsureCanReject(review);
+        review.Reject(request.Reason, details, actorUserId);
 
         var company = await _unitOfWork.Companies.GetByIdAsync(review.CompanyId, cancellationToken);
         var reasonLabel = ReviewModerationReasonLabels.ToLabel(request.Reason);

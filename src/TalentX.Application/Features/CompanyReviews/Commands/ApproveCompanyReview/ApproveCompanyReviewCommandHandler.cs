@@ -26,14 +26,8 @@ public sealed class ApproveCompanyReviewCommandHandler : IRequestHandler<Approve
         var review = await _unitOfWork.CompanyReviews.GetByIdAsync(request.ReviewId, cancellationToken)
             ?? throw new NotFoundException("CompanyReview", request.ReviewId);
 
-        try
-        {
-            review.Approve(actorUserId);
-        }
-        catch (InvalidOperationException exception)
-        {
-            throw new BadRequestException(exception.Message);
-        }
+        CompanyReviewRules.EnsureCanApprove(review);
+        review.Approve(actorUserId);
 
         var company = await _unitOfWork.Companies.GetByIdAsync(review.CompanyId, cancellationToken);
 

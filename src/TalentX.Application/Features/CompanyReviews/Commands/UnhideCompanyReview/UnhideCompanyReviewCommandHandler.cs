@@ -26,14 +26,8 @@ public sealed class UnhideCompanyReviewCommandHandler : IRequestHandler<UnhideCo
         var review = await _unitOfWork.CompanyReviews.GetByIdAsync(request.ReviewId, cancellationToken)
             ?? throw new NotFoundException("CompanyReview", request.ReviewId);
 
-        try
-        {
-            review.Unhide(actorUserId);
-        }
-        catch (InvalidOperationException exception)
-        {
-            throw new BadRequestException(exception.Message);
-        }
+        CompanyReviewRules.EnsureCanUnhide(review);
+        review.Unhide(actorUserId);
 
         var company = await _unitOfWork.Companies.GetByIdAsync(review.CompanyId, cancellationToken);
 

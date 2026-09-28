@@ -60,15 +60,6 @@ public class CompanyReviewTests
         return review;
     }
 
-    private static CompanyReview CreateWithdrawn()
-    {
-        var review = CreateReview();
-        review.Withdraw();
-        return review;
-    }
-
-    // ---- Create ----
-
     [Fact]
     public void Create_SetsAllFieldsFromArguments()
     {
@@ -134,38 +125,6 @@ public class CompanyReviewTests
         review.ProfessionalismRating.Should().BeNull();
     }
 
-    [Theory]
-    [InlineData(1)]
-    [InlineData(5)]
-    public void Create_AcceptsRatingBounds(int rating)
-    {
-        var act = () => CreateReview(recruitment: rating, communication: rating, interview: rating, professionalism: rating);
-
-        act.Should().NotThrow();
-    }
-
-    [Theory]
-    [InlineData(0)]
-    [InlineData(6)]
-    [InlineData(-1)]
-    public void Create_RatingOutOfRange_ThrowsForEachArea(int rating)
-    {
-        var cases = new Action[]
-        {
-            () => CreateReview(recruitment: rating),
-            () => CreateReview(communication: rating),
-            () => CreateReview(interview: rating),
-            () => CreateReview(professionalism: rating)
-        };
-
-        foreach (var create in cases)
-        {
-            create.Should().Throw<ArgumentOutOfRangeException>();
-        }
-    }
-
-    // ---- Edit ----
-
     [Fact]
     public void Edit_Pending_ReplacesContentAndStaysPending()
     {
@@ -216,43 +175,6 @@ public class CompanyReviewTests
     }
 
     [Fact]
-    public void Edit_Hidden_ThrowsAndLeavesReviewUntouched()
-    {
-        var review = CreateHidden();
-
-        var act = () => EditReview(review, comment: "Sneaky.");
-
-        act.Should().Throw<InvalidOperationException>().WithMessage("*hidden*");
-        review.Status.Should().Be(CompanyReviewStatus.Hidden);
-        review.Comment.Should().Be("Great process.");
-    }
-
-    [Fact]
-    public void Edit_Withdrawn_Throws()
-    {
-        var review = CreateWithdrawn();
-
-        var act = () => EditReview(review);
-
-        act.Should().Throw<InvalidOperationException>().WithMessage("*withdrawn*");
-        review.Status.Should().Be(CompanyReviewStatus.Withdrawn);
-    }
-
-    [Fact]
-    public void Edit_RatingOutOfRange_ThrowsAndLeavesReviewUntouched()
-    {
-        var review = CreatePublished();
-
-        var act = () => EditReview(review, comment: "Nope.", communication: 9);
-
-        act.Should().Throw<ArgumentOutOfRangeException>();
-        review.Status.Should().Be(CompanyReviewStatus.Published);
-        review.Comment.Should().Be("Great process.");
-    }
-
-    // ---- Withdraw ----
-
-    [Fact]
     public void Withdraw_Pending_SetsWithdrawnAndTimestamps()
     {
         var review = CreateReview();
@@ -287,53 +209,6 @@ public class CompanyReviewTests
     }
 
     [Fact]
-    public void Withdraw_Hidden_Throws()
-    {
-        var review = CreateHidden();
-
-        var act = () => review.Withdraw();
-
-        act.Should().Throw<InvalidOperationException>().WithMessage("*hidden*");
-        review.Status.Should().Be(CompanyReviewStatus.Hidden);
-        review.WithdrawnAt.Should().BeNull();
-    }
-
-    [Fact]
-    public void Withdraw_AlreadyWithdrawn_Throws()
-    {
-        var review = CreateWithdrawn();
-
-        var act = () => review.Withdraw();
-
-        act.Should().Throw<InvalidOperationException>().WithMessage("*already been withdrawn*");
-    }
-
-    [Fact]
-    public void Withdrawn_IsFinal_NoTransitionSucceeds()
-    {
-        var review = CreateWithdrawn();
-
-        var actions = new Action[]
-        {
-            () => EditReview(review),
-            () => review.Withdraw(),
-            () => review.Approve(Admin),
-            () => review.Reject(ReviewModerationReason.Other, "x", Admin),
-            () => review.Hide(ReviewModerationReason.Other, "x", Admin),
-            () => review.Unhide(Admin)
-        };
-
-        foreach (var action in actions)
-        {
-            action.Should().Throw<InvalidOperationException>();
-        }
-
-        review.Status.Should().Be(CompanyReviewStatus.Withdrawn);
-    }
-
-    // ---- Approve ----
-
-    [Fact]
     public void Approve_Pending_PublishesAndRecordsModerator()
     {
         var review = CreateReview();
@@ -364,21 +239,6 @@ public class CompanyReviewTests
         review.ModerationDetails.Should().BeNull();
     }
 
-    [Theory]
-    [MemberData(nameof(NonPendingReviews))]
-    public void Approve_NotPending_Throws(Func<CompanyReview> build)
-    {
-        var review = build();
-        var status = review.Status;
-
-        var act = () => review.Approve(Admin);
-
-        act.Should().Throw<InvalidOperationException>().WithMessage("Only pending reviews can be approved.");
-        review.Status.Should().Be(status);
-    }
-
-    // ---- Reject ----
-
     [Fact]
     public void Reject_Pending_RecordsReasonDetailsAndModerator()
     {
@@ -395,21 +255,6 @@ public class CompanyReviewTests
         review.UpdatedAt.Should().NotBeNull();
     }
 
-    [Theory]
-    [MemberData(nameof(NonPendingReviews))]
-    public void Reject_NotPending_Throws(Func<CompanyReview> build)
-    {
-        var review = build();
-        var status = review.Status;
-
-        var act = () => review.Reject(ReviewModerationReason.Spam, "x", Admin);
-
-        act.Should().Throw<InvalidOperationException>().WithMessage("Only pending reviews can be rejected.");
-        review.Status.Should().Be(status);
-    }
-
-    // ---- Hide ----
-
     [Fact]
     public void Hide_Published_RecordsReasonAndKeepsPublishedAt()
     {
@@ -425,21 +270,6 @@ public class CompanyReviewTests
         review.PublishedAt.Should().Be(publishedAt);
     }
 
-    [Theory]
-    [MemberData(nameof(NonPublishedReviews))]
-    public void Hide_NotPublished_Throws(Func<CompanyReview> build)
-    {
-        var review = build();
-        var status = review.Status;
-
-        var act = () => review.Hide(ReviewModerationReason.Spam, "x", Admin);
-
-        act.Should().Throw<InvalidOperationException>().WithMessage("Only published reviews can be hidden.");
-        review.Status.Should().Be(status);
-    }
-
-    // ---- Unhide ----
-
     [Fact]
     public void Unhide_Hidden_RepublishesAndClearsReason()
     {
@@ -454,37 +284,6 @@ public class CompanyReviewTests
         review.PublishedAt.Should().NotBeNull();
         review.UpdatedAt.Should().NotBeNull();
     }
-
-    [Theory]
-    [MemberData(nameof(NonHiddenReviews))]
-    public void Unhide_NotHidden_Throws(Func<CompanyReview> build)
-    {
-        var review = build();
-        var status = review.Status;
-
-        var act = () => review.Unhide(Admin);
-
-        act.Should().Throw<InvalidOperationException>().WithMessage("Only hidden reviews can be unhidden.");
-        review.Status.Should().Be(status);
-    }
-
-    // ---- CanBeChangedByTalent ----
-
-    [Theory]
-    [MemberData(nameof(ChangeableReviews))]
-    public void CanBeChangedByTalent_PendingPublishedOrRejected_IsTrue(Func<CompanyReview> build)
-    {
-        build().CanBeChangedByTalent.Should().BeTrue();
-    }
-
-    [Theory]
-    [MemberData(nameof(LockedReviews))]
-    public void CanBeChangedByTalent_HiddenOrWithdrawn_IsFalse(Func<CompanyReview> build)
-    {
-        build().CanBeChangedByTalent.Should().BeFalse();
-    }
-
-    // ---- Shared ----
 
     [Fact]
     public void EveryLegalTransition_SetsUpdatedAt()
@@ -504,41 +303,4 @@ public class CompanyReviewTests
             transition().UpdatedAt.Should().NotBeNull();
         }
     }
-
-    public static IEnumerable<object[]> NonPendingReviews() => new[]
-    {
-        new object[] { (Func<CompanyReview>)CreatePublished },
-        new object[] { (Func<CompanyReview>)CreateRejected },
-        new object[] { (Func<CompanyReview>)CreateHidden },
-        new object[] { (Func<CompanyReview>)CreateWithdrawn }
-    };
-
-    public static IEnumerable<object[]> NonPublishedReviews() => new[]
-    {
-        new object[] { (Func<CompanyReview>)(() => CreateReview()) },
-        new object[] { (Func<CompanyReview>)CreateRejected },
-        new object[] { (Func<CompanyReview>)CreateHidden },
-        new object[] { (Func<CompanyReview>)CreateWithdrawn }
-    };
-
-    public static IEnumerable<object[]> NonHiddenReviews() => new[]
-    {
-        new object[] { (Func<CompanyReview>)(() => CreateReview()) },
-        new object[] { (Func<CompanyReview>)CreatePublished },
-        new object[] { (Func<CompanyReview>)CreateRejected },
-        new object[] { (Func<CompanyReview>)CreateWithdrawn }
-    };
-
-    public static IEnumerable<object[]> ChangeableReviews() => new[]
-    {
-        new object[] { (Func<CompanyReview>)(() => CreateReview()) },
-        new object[] { (Func<CompanyReview>)CreatePublished },
-        new object[] { (Func<CompanyReview>)CreateRejected }
-    };
-
-    public static IEnumerable<object[]> LockedReviews() => new[]
-    {
-        new object[] { (Func<CompanyReview>)CreateHidden },
-        new object[] { (Func<CompanyReview>)CreateWithdrawn }
-    };
 }

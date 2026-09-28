@@ -9,7 +9,6 @@ public sealed class CompanyReview : BaseEntity
     public const int MaxRating = 5;
 
     public Guid CompanyId { get; private set; }
-    // Plain snapshot (no FK): reviews stay with the company even after the job is closed, expired or deleted.
     public Guid JobId { get; private set; }
     public Guid JobApplicationId { get; private set; }
     public string TalentUserId { get; private set; } = string.Empty;
@@ -29,11 +28,6 @@ public sealed class CompanyReview : BaseEntity
     public DateTime? PublishedAt { get; private set; }
     public DateTime? WithdrawnAt { get; private set; }
 
-    // Pending/Published/Rejected reviews can be edited or withdrawn by the talent.
-    // Hidden is a moderator takedown and Withdrawn is final, so neither can be changed.
-    public bool CanBeChangedByTalent =>
-        Status is CompanyReviewStatus.Pending or CompanyReviewStatus.Published or CompanyReviewStatus.Rejected;
-
     private CompanyReview()
     {
     }
@@ -52,12 +46,6 @@ public sealed class CompanyReview : BaseEntity
         int? professionalismRating
     )
     {
-        EnsureRatingsInRange(
-            recruitmentProcessRating,
-            communicationRating,
-            interviewExperienceRating,
-            professionalismRating);
-
         var now = DateTime.UtcNow;
 
         return new CompanyReview
@@ -79,10 +67,6 @@ public sealed class CompanyReview : BaseEntity
         };
     }
 
-    /// <summary>
-    /// Talent edit. Always re-queues the review for moderation, so a published review
-    /// leaves the public view until an admin approves the new text.
-    /// </summary>
     public void Edit(
         ReviewSentiment sentiment,
         string? comment,
@@ -92,21 +76,6 @@ public sealed class CompanyReview : BaseEntity
         int? professionalismRating
     )
     {
-        if (!CanBeChangedByTalent)
-        {
-            throw new InvalidOperationException(Status switch
-            {
-                CompanyReviewStatus.Hidden => "This review was hidden by a moderator and can no longer be edited.",
-                _ => "A withdrawn review can no longer be edited."
-            });
-        }
-
-        EnsureRatingsInRange(
-            recruitmentProcessRating,
-            communicationRating,
-            interviewExperienceRating,
-            professionalismRating);
-
         Sentiment = sentiment;
         Comment = comment;
         RecruitmentProcessRating = recruitmentProcessRating;
@@ -119,18 +88,8 @@ public sealed class CompanyReview : BaseEntity
         UpdatedAt = DateTime.UtcNow;
     }
 
-    /// <summary>Talent withdrawal. Final: the talent can never review that application again.</summary>
     public void Withdraw()
     {
-        if (!CanBeChangedByTalent)
-        {
-            throw new InvalidOperationException(Status switch
-            {
-                CompanyReviewStatus.Hidden => "This review was hidden by a moderator and can no longer be withdrawn.",
-                _ => "This review has already been withdrawn."
-            });
-        }
-
         Status = CompanyReviewStatus.Withdrawn;
         WithdrawnAt = DateTime.UtcNow;
         UpdatedAt = DateTime.UtcNow;
@@ -138,11 +97,6 @@ public sealed class CompanyReview : BaseEntity
 
     public void Approve(string actorUserId)
     {
-        if (Status != CompanyReviewStatus.Pending)
-        {
-            throw new InvalidOperationException("Only pending reviews can be approved.");
-        }
-
         var now = DateTime.UtcNow;
         Status = CompanyReviewStatus.Published;
         PublishedAt = now;
@@ -155,11 +109,6 @@ public sealed class CompanyReview : BaseEntity
 
     public void Reject(ReviewModerationReason reason, string details, string actorUserId)
     {
-        if (Status != CompanyReviewStatus.Pending)
-        {
-            throw new InvalidOperationException("Only pending reviews can be rejected.");
-        }
-
         var now = DateTime.UtcNow;
         Status = CompanyReviewStatus.Rejected;
         ModerationReason = reason;
@@ -171,11 +120,6 @@ public sealed class CompanyReview : BaseEntity
 
     public void Hide(ReviewModerationReason reason, string details, string actorUserId)
     {
-        if (Status != CompanyReviewStatus.Published)
-        {
-            throw new InvalidOperationException("Only published reviews can be hidden.");
-        }
-
         var now = DateTime.UtcNow;
         Status = CompanyReviewStatus.Hidden;
         ModerationReason = reason;
@@ -187,11 +131,6 @@ public sealed class CompanyReview : BaseEntity
 
     public void Unhide(string actorUserId)
     {
-        if (Status != CompanyReviewStatus.Hidden)
-        {
-            throw new InvalidOperationException("Only hidden reviews can be unhidden.");
-        }
-
         var now = DateTime.UtcNow;
         Status = CompanyReviewStatus.Published;
         ModerationReason = null;
@@ -207,26 +146,5 @@ public sealed class CompanyReview : BaseEntity
         ModerationDetails = null;
         ModeratedByUserId = null;
         ModeratedAt = null;
-    }
-
-    // Defense in depth — the command validators give the user-facing message.
-    private static void EnsureRatingsInRange(
-        int? recruitmentProcessRating,
-        int? communicationRating,
-        int? interviewExperienceRating,
-        int? professionalismRating)
-    {
-        EnsureInRange(recruitmentProcessRating, nameof(RecruitmentProcessRating));
-        EnsureInRange(communicationRating, nameof(CommunicationRating));
-        EnsureInRange(interviewExperienceRating, nameof(InterviewExperienceRating));
-        EnsureInRange(professionalismRating, nameof(ProfessionalismRating));
-    }
-
-    private static void EnsureInRange(int? rating, string paramName)
-    {
-        if (rating is < MinRating or > MaxRating)
-        {
-            throw new ArgumentOutOfRangeException(paramName, rating, $"A rating must be between {MinRating} and {MaxRating}.");
-        }
     }
 }

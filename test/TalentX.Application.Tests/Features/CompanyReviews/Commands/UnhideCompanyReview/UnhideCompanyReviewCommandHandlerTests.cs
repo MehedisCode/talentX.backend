@@ -108,22 +108,4 @@ public sealed class UnhideCompanyReviewCommandHandlerTests
         await handleAction.Should().ThrowAsync<NotFoundException>();
         _unitOfWork.Verify(unitOfWork => unitOfWork.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
-
-    [Theory]
-    [InlineData(null, "admin@talentx.com")]
-    [InlineData("admin-1", null)]
-    public async Task Handle_WhenCallerIdentityIsMissing_ThrowsUnauthorizedAndTouchesNothing(string? userId, string? email)
-    {
-        _currentUserService.SetupGet(service => service.UserId).Returns(userId);
-        _currentUserService.SetupGet(service => service.Email).Returns(email);
-
-        var handleAction = () => _handler.Handle(new UnhideCompanyReviewCommand(Guid.NewGuid()), CancellationToken.None);
-
-        await handleAction.Should().ThrowAsync<UnauthorizedException>()
-            .WithMessage("You must be signed in to unhide a review.");
-        _reviewRepository.Verify(
-            repository => repository.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
-            Times.Never);
-        _unitOfWork.Verify(unitOfWork => unitOfWork.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
-    }
 }

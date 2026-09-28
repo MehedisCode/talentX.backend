@@ -31,20 +31,20 @@ public sealed class UpdateCompanyReviewCommandHandler : IRequestHandler<UpdateCo
             throw new ForbiddenException("You can only edit your own reviews.");
         }
 
-        try
-        {
-            review.Edit(
-                request.Sentiment,
-                CompanyReviewRules.NormalizeComment(request.Comment),
-                request.Ratings?.RecruitmentProcess,
-                request.Ratings?.Communication,
-                request.Ratings?.InterviewExperience,
-                request.Ratings?.Professionalism);
-        }
-        catch (InvalidOperationException exception)
-        {
-            throw new BadRequestException(exception.Message);
-        }
+        CompanyReviewRules.EnsureCanBeEdited(review);
+        CompanyReviewRules.EnsureRatingsInRange(
+            request.Ratings?.RecruitmentProcess,
+            request.Ratings?.Communication,
+            request.Ratings?.InterviewExperience,
+            request.Ratings?.Professionalism);
+
+        review.Edit(
+            request.Sentiment,
+            CompanyReviewRules.NormalizeComment(request.Comment),
+            request.Ratings?.RecruitmentProcess,
+            request.Ratings?.Communication,
+            request.Ratings?.InterviewExperience,
+            request.Ratings?.Professionalism);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 

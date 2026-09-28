@@ -28,14 +28,8 @@ public sealed class HideCompanyReviewCommandHandler : IRequestHandler<HideCompan
 
         var details = request.Details.Trim();
 
-        try
-        {
-            review.Hide(request.Reason, details, actorUserId);
-        }
-        catch (InvalidOperationException exception)
-        {
-            throw new BadRequestException(exception.Message);
-        }
+        CompanyReviewRules.EnsureCanHide(review);
+        review.Hide(request.Reason, details, actorUserId);
 
         var company = await _unitOfWork.Companies.GetByIdAsync(review.CompanyId, cancellationToken);
         var reasonLabel = ReviewModerationReasonLabels.ToLabel(request.Reason);
