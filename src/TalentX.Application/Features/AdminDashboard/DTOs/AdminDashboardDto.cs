@@ -19,7 +19,10 @@ public sealed record AdminDashboardDto
 {
     public DateTime StartDate { get; init; }
     public DateTime EndDate { get; init; }
+    // Counts inside the selected range.
     public AdminDashboardMetricsDto Metrics { get; init; } = new();
+    // The same counts over all time, so the admin can see the platform's running totals whatever the range.
+    public AdminDashboardMetricsDto Totals { get; init; } = new();
     // Invited is counted under Interview; PendingVerification (unverified guest applications) is left out.
     public IReadOnlyList<AdminDashboardApplicationStatusCountDto> ApplicationStatuses { get; init; } = [];
     // Draft jobs are left out.
