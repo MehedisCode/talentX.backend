@@ -31,12 +31,10 @@ public class InterviewPreparationTests
     [Fact]
     public void Create_ValidArguments_SetsAllContentAndContextFields()
     {
-        // Arrange
         var invitationId = Guid.NewGuid();
         var jobId = Guid.NewGuid();
         var scheduledAt = DateTime.UtcNow.AddDays(1);
 
-        // Act
         var preparation = InterviewPreparation.Create(
             new CreateInterviewPreparationPayload(
                 InterviewInvitationId: invitationId,
@@ -53,7 +51,6 @@ public class InterviewPreparationTests
                 KeyTopicsToPrepare: "[\"Virtual DOM\",\"Memoization\"]",
                 SuggestedRevisionAreas: "[\"Accessibility\"]"));
 
-        // Assert
         preparation.InterviewInvitationId.Should().Be(invitationId);
         preparation.TalentUserId.Should().Be("talent-42");
         preparation.JobId.Should().Be(jobId);
@@ -72,10 +69,8 @@ public class InterviewPreparationTests
     [Fact]
     public void Create_ValidArguments_SetsGeneratedStatusAndFirstGeneration()
     {
-        // Act
         var preparation = NewPreparation();
 
-        // Assert
         preparation.Status.Should().Be(InterviewPreparationStatus.Generated);
         preparation.GenerationCount.Should().Be(1);
         preparation.AdditionalQuestions.Should().BeNull();
@@ -86,11 +81,9 @@ public class InterviewPreparationTests
     [Fact]
     public void Regenerate_WithNewContent_ReplacesContentAndSetsRegeneratedStatus()
     {
-        // Arrange
         var preparation = NewPreparation();
         var oldTechnical = preparation.TechnicalQuestions;
 
-        // Act
         preparation.Regenerate(
             new RegenerateInterviewPreparationPayload(
                 TechnicalQuestions: "[\"What is a thread pool?\"]",
@@ -100,7 +93,6 @@ public class InterviewPreparationTests
                 KeyTopicsToPrepare: "[\"Concurrency\",\"Queues\"]",
                 SuggestedRevisionAreas: "[\"Distributed locks\"]"));
 
-        // Assert
         preparation.Status.Should().Be(InterviewPreparationStatus.Regenerated);
         preparation.GenerationCount.Should().Be(2);
         preparation.TechnicalQuestions.Should().Be("[\"What is a thread pool?\"]")
@@ -116,11 +108,9 @@ public class InterviewPreparationTests
     [Fact]
     public void Regenerate_WhenAdditionalQuestionsExist_ClearsThem()
     {
-        // Arrange
         var preparation = NewPreparation();
         preparation.SetAdditionalQuestions("[\"What is DI?\"]");
 
-        // Act
         preparation.Regenerate(
             new RegenerateInterviewPreparationPayload(
                 TechnicalQuestions: "[\"q1\"]",
@@ -130,20 +120,16 @@ public class InterviewPreparationTests
                 KeyTopicsToPrepare: "[\"q5\"]",
                 SuggestedRevisionAreas: "[\"q6\"]"));
 
-        // Assert
         preparation.AdditionalQuestions.Should().BeNull();
     }
 
     [Fact]
     public void SetAdditionalQuestions_SetsValueAndUpdatedAt()
     {
-        // Arrange
         var preparation = NewPreparation();
 
-        // Act
         preparation.SetAdditionalQuestions("[\"What is the observer pattern?\"]");
 
-        // Assert
         preparation.AdditionalQuestions.Should().Be("[\"What is the observer pattern?\"]");
         preparation.UpdatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
     }
@@ -151,53 +137,41 @@ public class InterviewPreparationTests
     [Fact]
     public void IsAccessible_WhenScheduledAtIsNull_ReturnsTrue()
     {
-        // Arrange
         var preparation = NewPreparation(scheduledAt: null);
 
-        // Act
         var accessible = preparation.IsAccessible(TimeSpan.FromMinutes(30));
 
-        // Assert
         accessible.Should().BeTrue();
     }
 
     [Fact]
     public void IsAccessible_WithinThirtyMinutesAfterScheduledTime_ReturnsTrue()
     {
-        // Arrange
         var preparation = NewPreparation(scheduledAt: DateTime.UtcNow.AddMinutes(-10));
 
-        // Act
         var accessible = preparation.IsAccessible(TimeSpan.FromMinutes(30));
 
-        // Assert
         accessible.Should().BeTrue();
     }
 
     [Fact]
     public void IsAccessible_AfterWindowExpires_ReturnsFalse()
     {
-        // Arrange
         var preparation = NewPreparation(scheduledAt: DateTime.UtcNow.AddMinutes(-45));
 
-        // Act
         var accessible = preparation.IsAccessible(TimeSpan.FromMinutes(30));
 
-        // Assert
         accessible.Should().BeFalse();
     }
 
     [Fact]
     public void IsAccessible_WithCustomWindow_UsesProvidedWindow()
     {
-        // Arrange
         var preparation = NewPreparation(scheduledAt: DateTime.UtcNow.AddMinutes(-20));
 
-        // Act
         var withinCustomWindow = preparation.IsAccessible(TimeSpan.FromMinutes(30));
         var outsideCustomWindow = preparation.IsAccessible(TimeSpan.FromMinutes(10));
 
-        // Assert
         withinCustomWindow.Should().BeTrue();
         outsideCustomWindow.Should().BeFalse();
     }

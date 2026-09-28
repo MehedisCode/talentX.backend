@@ -3,22 +3,11 @@ using TalentX.Application.Features.InterviewPreparation.DTOs;
 
 namespace TalentX.Application.Features.InterviewPreparation.Mappers;
 
-/// <summary>
-/// Single place where <see cref="InterviewPreparation"/> entities become DTOs.
-/// The one fallback policy for stored question JSON lives in
-/// <see cref="DeserializeList{T}"/>: blank or corrupt JSON degrades to an empty
-/// list instead of failing the request (silent by design — one bad field must
-/// not break the whole response, including list queries).
-/// </summary>
 public static class InterviewPreparationMapper
 {
     private static readonly JsonSerializerOptions SerializerOptions =
         new() { PropertyNameCaseInsensitive = true };
 
-    /// <param name="accessWindow">
-    /// How long after the scheduled interview time the preparation stays
-    /// accessible — supplied from <see cref="InterviewPreparationSettings"/>.
-    /// </param>
     public static InterviewPreparationDto ToDto(
         Domain.Entities.InterviewPreparation preparation,
         TimeSpan accessWindow)
@@ -46,6 +35,7 @@ public static class InterviewPreparationMapper
         };
     }
 
+    // Blank or corrupt JSON degrades to [] instead of failing the request (silent by design)
     private static List<T> DeserializeList<T>(string? json)
     {
         if (string.IsNullOrWhiteSpace(json))

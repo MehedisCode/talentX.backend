@@ -14,7 +14,6 @@ internal static class InterviewPrepRateLimitPolicies
                 .Get<InterviewPreparationSettings>()
             ?? new InterviewPreparationSettings();
 
-        // POST interview preparation generation/regeneration — User-keyed, limited per window
         options.AddPolicy("InterviewPrepGenerate", context =>
             RateLimitPartition.GetFixedWindowLimiter(
                 partitionKey: RateLimitingStartup.GetUserId(context),

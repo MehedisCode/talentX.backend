@@ -42,13 +42,10 @@ public class InterviewPreparationMapperTests
     [Fact]
     public void ToDto_WithValidJson_DeserializesQuestionAndTopicLists()
     {
-        // Arrange
         var preparation = NewPreparation();
 
-        // Act
         var dto = InterviewPreparationMapper.ToDto(preparation, AccessWindow);
 
-        // Assert
         dto.TechnicalQuestions.Should().ContainSingle()
             .Which.Should().Be(new PrepQuestion("What is a closure?", "Technical", "Scope"));
         dto.BehavioralQuestions.Should().ContainSingle()
@@ -62,17 +59,14 @@ public class InterviewPreparationMapperTests
     [Fact]
     public void ToDto_WithMalformedJson_ReturnsEmptyListsWithoutThrowing()
     {
-        // Arrange
         var preparation = NewPreparation(
             technicalQuestions: "{not valid json",
             behavioralQuestions: """{"key":"object instead of list"}""",
             keyTopicsToPrepare: "42",
             suggestedRevisionAreas: "");
 
-        // Act — a throw here fails the test; corrupt fields must degrade to empty lists
         var dto = InterviewPreparationMapper.ToDto(preparation, AccessWindow);
 
-        // Assert
         dto.TechnicalQuestions.Should().BeEmpty();
         dto.BehavioralQuestions.Should().BeEmpty();
         dto.KeyTopicsToPrepare.Should().BeEmpty();
@@ -82,17 +76,14 @@ public class InterviewPreparationMapperTests
     [Fact]
     public void ToDto_WithBlankQuestionFields_ReturnsEmptyLists()
     {
-        // Arrange
         var preparation = NewPreparation(
             technicalQuestions: "",
             behavioralQuestions: "   ",
             keyTopicsToPrepare: "",
             suggestedRevisionAreas: "");
 
-        // Act
         var dto = InterviewPreparationMapper.ToDto(preparation, AccessWindow);
 
-        // Assert
         dto.TechnicalQuestions.Should().BeEmpty();
         dto.BehavioralQuestions.Should().BeEmpty();
         dto.KeyTopicsToPrepare.Should().BeEmpty();
@@ -102,28 +93,22 @@ public class InterviewPreparationMapperTests
     [Fact]
     public void ToDto_WhenAdditionalQuestionsAbsent_ReturnsEmptyList()
     {
-        // Arrange
         var preparation = NewPreparation();
 
-        // Act
         var dto = InterviewPreparationMapper.ToDto(preparation, AccessWindow);
 
-        // Assert — uniform fallback policy: absent data maps to [], never null
         dto.AdditionalQuestions.Should().NotBeNull().And.BeEmpty();
     }
 
     [Fact]
     public void ToDto_WhenAdditionalQuestionsPresent_DeserializesThem()
     {
-        // Arrange
         var preparation = NewPreparation();
         preparation.SetAdditionalQuestions(
             """[{"question":"What is DI?","category":"Technical","tip":"Containers"}]""");
 
-        // Act
         var dto = InterviewPreparationMapper.ToDto(preparation, AccessWindow);
 
-        // Assert
         dto.AdditionalQuestions.Should().ContainSingle()
             .Which.Question.Should().Be("What is DI?");
     }
@@ -131,13 +116,10 @@ public class InterviewPreparationMapperTests
     [Fact]
     public void ToDto_MapsScalarFieldsAndStatusString()
     {
-        // Arrange
         var preparation = NewPreparation();
 
-        // Act
         var dto = InterviewPreparationMapper.ToDto(preparation, AccessWindow);
 
-        // Assert
         dto.Id.Should().Be(preparation.Id);
         dto.InterviewInvitationId.Should().Be(preparation.InterviewInvitationId);
         dto.JobId.Should().Be(preparation.JobId);
@@ -154,26 +136,20 @@ public class InterviewPreparationMapperTests
     [Fact]
     public void ToDto_ComputesIsAccessibleTrue_ForUpcomingInterview()
     {
-        // Arrange
         var preparation = NewPreparation(scheduledAt: DateTime.UtcNow.AddHours(3));
 
-        // Act
         var dto = InterviewPreparationMapper.ToDto(preparation, AccessWindow);
 
-        // Assert
         dto.IsAccessible.Should().BeTrue();
     }
 
     [Fact]
     public void ToDto_ComputesIsAccessibleFalse_WhenInterviewWindowExpired()
     {
-        // Arrange
         var preparation = NewPreparation(scheduledAt: DateTime.UtcNow.AddHours(-2));
 
-        // Act
         var dto = InterviewPreparationMapper.ToDto(preparation, AccessWindow);
 
-        // Assert
         dto.IsAccessible.Should().BeFalse();
     }
 }

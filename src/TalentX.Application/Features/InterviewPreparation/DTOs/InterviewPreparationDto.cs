@@ -11,7 +11,6 @@ public sealed record InterviewPreparationDto
     public DateTime? ScheduledAt { get; init; }
     public string Status { get; init; } = string.Empty;
 
-    // Parsed question lists (deserialized from JSON)
     public List<PrepQuestion> TechnicalQuestions { get; init; } = new();
     public List<PrepQuestion> BehavioralQuestions { get; init; } = new();
     public List<PrepQuestion> ExperienceBasedQuestions { get; init; } = new();
@@ -24,7 +23,6 @@ public sealed record InterviewPreparationDto
     public DateTime GeneratedAt { get; init; }
     public bool IsAccessible { get; init; }
 
-    // AI disclaimer
     public string Disclaimer { get; init; } =
         "This content is AI-generated preparation guidance and does not guarantee interview outcomes.";
 }

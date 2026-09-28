@@ -12,7 +12,6 @@ public sealed class InterviewPreparation : BaseEntity
     public string CompanyName { get; private set; } = string.Empty;
     public InterviewPreparationStatus Status { get; private set; }
 
-    // Interview context
     public string InterviewType { get; private set; } = string.Empty;
     public DateTime? ScheduledAt { get; private set; }
 
@@ -24,10 +23,8 @@ public sealed class InterviewPreparation : BaseEntity
     public string KeyTopicsToPrepare { get; private set; } = string.Empty;
     public string SuggestedRevisionAreas { get; private set; } = string.Empty;
 
-    // Additional questions generated on demand
     public string? AdditionalQuestions { get; private set; }
 
-    // Track regeneration count for rate limiting
     public int GenerationCount { get; private set; }
 
     private InterviewPreparation() { }
@@ -63,7 +60,7 @@ public sealed class InterviewPreparation : BaseEntity
         RoleSpecificQuestions = payload.RoleSpecificQuestions;
         KeyTopicsToPrepare = payload.KeyTopicsToPrepare;
         SuggestedRevisionAreas = payload.SuggestedRevisionAreas;
-        AdditionalQuestions = null; // Clear previous additional questions
+        AdditionalQuestions = null;
         Status = InterviewPreparationStatus.Regenerated;
         GenerationCount++;
         UpdatedAt = DateTime.UtcNow;
@@ -75,13 +72,6 @@ public sealed class InterviewPreparation : BaseEntity
         UpdatedAt = DateTime.UtcNow;
     }
 
-    /// <summary>
-    /// Check if the preparation is still accessible based on the interview schedule.
-    /// The caller supplies the access window (configured per environment).
-    /// </summary>
-    /// <param name="accessWindowAfterInterview">
-    /// How long after the scheduled interview time the preparation stays accessible.
-    /// </param>
     public bool IsAccessible(TimeSpan accessWindowAfterInterview)
     {
         if (ScheduledAt is null) return true; // No schedule = always accessible

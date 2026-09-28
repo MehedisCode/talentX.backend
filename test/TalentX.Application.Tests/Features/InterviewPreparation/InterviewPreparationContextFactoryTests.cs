@@ -60,16 +60,13 @@ public class InterviewPreparationContextFactoryTests
     [Fact]
     public void CreateContext_MapsJobFields()
     {
-        // Arrange
         var job = CreateJob();
 
-        // Act
         var context = InterviewPreparationContextFactory.CreateContext(
             new InterviewPreparationContextPayload(
                 job, CreateTalent(), CreateInvitation(job.Id),
                 new List<WorkExperience>(), new List<Education>()));
 
-        // Assert
         context.JobTitle.Should().Be("Backend Engineer");
         context.CompanyName.Should().Be("Acme");
         context.JobDescription.Should().Be("Build scalable systems");
@@ -82,16 +79,13 @@ public class InterviewPreparationContextFactoryTests
     [Fact]
     public void CreateContext_MapsTalentProfileFields()
     {
-        // Arrange
         var job = CreateJob();
 
-        // Act
         var context = InterviewPreparationContextFactory.CreateContext(
             new InterviewPreparationContextPayload(
                 job, CreateTalent(), CreateInvitation(job.Id),
                 new List<WorkExperience>(), new List<Education>()));
 
-        // Assert
         context.TalentName.Should().Be("Ada Lovelace");
         context.Tagline.Should().Be("Distributed systems engineer");
         context.ShortBio.Should().Be("I build reliable backends");
@@ -104,7 +98,6 @@ public class InterviewPreparationContextFactoryTests
     [Fact]
     public void CreateContext_BuildsSnapshotsFromHistory()
     {
-        // Arrange
         var job = CreateJob();
         var workExperiences = new List<WorkExperience>
         {
@@ -116,12 +109,10 @@ public class InterviewPreparationContextFactoryTests
             new(TalentUserId, "MIT", "BSc Computer Science", "2014", "2018"),
         };
 
-        // Act
         var context = InterviewPreparationContextFactory.CreateContext(
             new InterviewPreparationContextPayload(
                 job, CreateTalent(), CreateInvitation(job.Id), workExperiences, educations));
 
-        // Assert
         context.WorkExperiences.Should().HaveCount(2);
         context.WorkExperiences[0].Should().Be(
             new WorkExperienceSnapshot("Globex", "Backend Engineer", "2020", null, true));
@@ -133,17 +124,14 @@ public class InterviewPreparationContextFactoryTests
     [Fact]
     public void CreateContext_MapsInvitationFields()
     {
-        // Arrange
         var job = CreateJob();
         var invitation = CreateInvitation(job.Id);
 
-        // Act
         var context = InterviewPreparationContextFactory.CreateContext(
             new InterviewPreparationContextPayload(
                 job, CreateTalent(), invitation,
                 new List<WorkExperience>(), new List<Education>()));
 
-        // Assert
         context.InterviewType.Should().Be("OnCall");
         context.ScheduledAt.Should().Be(invitation.ScheduledAt);
     }
@@ -151,16 +139,13 @@ public class InterviewPreparationContextFactoryTests
     [Fact]
     public void CreateContext_WithNoHistory_ReturnsEmptySnapshotLists()
     {
-        // Arrange
         var job = CreateJob();
 
-        // Act
         var context = InterviewPreparationContextFactory.CreateContext(
             new InterviewPreparationContextPayload(
                 job, CreateTalent(), CreateInvitation(job.Id),
                 new List<WorkExperience>(), new List<Education>()));
 
-        // Assert
         context.WorkExperiences.Should().BeEmpty();
         context.Educations.Should().BeEmpty();
     }

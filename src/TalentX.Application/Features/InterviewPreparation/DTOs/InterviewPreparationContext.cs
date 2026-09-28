@@ -2,7 +2,6 @@ namespace TalentX.Application.Features.InterviewPreparation.DTOs;
 
 public sealed record InterviewPreparationContext
 {
-    // Job information
     public string JobTitle { get; init; } = string.Empty;
     public string CompanyName { get; init; } = string.Empty;
     public string? JobDescription { get; init; }
@@ -13,7 +12,6 @@ public sealed record InterviewPreparationContext
     public string? EmploymentType { get; init; }
     public string? WorkArrangement { get; init; }
 
-    // Talent profile
     public string TalentName { get; init; } = string.Empty;
     public string? Tagline { get; init; }
     public string? ShortBio { get; init; }
@@ -24,7 +22,6 @@ public sealed record InterviewPreparationContext
     public List<WorkExperienceSnapshot> WorkExperiences { get; init; } = new();
     public List<EducationSnapshot> Educations { get; init; } = new();
 
-    // Interview context
     public string InterviewType { get; init; } = string.Empty;
     public DateTime? ScheduledAt { get; init; }
 }

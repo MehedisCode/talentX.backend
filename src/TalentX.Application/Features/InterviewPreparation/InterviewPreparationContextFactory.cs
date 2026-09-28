@@ -3,11 +3,6 @@ using TalentX.Domain.Entities;
 
 namespace TalentX.Application.Features.InterviewPreparation;
 
-/// <summary>
-/// Builds the AI prompt context shared by GeneratePreparation and
-/// RegeneratePreparation — the two handlers used to duplicate this
-/// initializer verbatim.
-/// </summary>
 public static class InterviewPreparationContextFactory
 {
     public static InterviewPreparationContext CreateContext(

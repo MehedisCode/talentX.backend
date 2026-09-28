@@ -12,20 +12,11 @@ using TalentX.Domain.Enums;
 
 namespace TalentX.API.Controllers.Talents;
 
-/// <summary>
-/// Provides endpoints for generating, regenerating, and viewing AI interview
-/// preparations for a talent's accepted interview invitations.
-/// </summary>
 [ApiController]
 [Route("api/v1/talents/me/interviews")]
 [Authorize(Roles = nameof(UserRole.Talent))]
 public sealed class InterviewPreparationController : BaseApiController
 {
-    /// <summary>
-    /// Gets all interview preparations belonging to the current talent.
-    /// </summary>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>The list of interview preparations.</returns>
     [HttpGet("preparations")]
     [Authorize(Roles = nameof(UserRole.Talent))]
     [ProducesResponseType(typeof(IReadOnlyList<InterviewPreparationDto>), StatusCodes.Status200OK)]
@@ -37,12 +28,6 @@ public sealed class InterviewPreparationController : BaseApiController
         return Ok(result);
     }
 
-    /// <summary>
-    /// Gets the interview preparation for a specific interview invitation.
-    /// </summary>
-    /// <param name="invitationId">The unique ID of the interview invitation.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>The interview preparation details.</returns>
     [HttpGet("{invitationId:guid}/preparation")]
     [Authorize(Roles = nameof(UserRole.Talent))]
     [ProducesResponseType(typeof(InterviewPreparationDto), StatusCodes.Status200OK)]
@@ -57,12 +42,6 @@ public sealed class InterviewPreparationController : BaseApiController
         return Ok(result);
     }
 
-    /// <summary>
-    /// Generates a new AI interview preparation for an accepted interview invitation.
-    /// </summary>
-    /// <param name="invitationId">The unique ID of the interview invitation.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>The newly generated interview preparation.</returns>
     [HttpPost("{invitationId:guid}/preparation")]
     [Authorize(Roles = nameof(UserRole.Talent))]
     [EnableRateLimiting("InterviewPrepGenerate")]
@@ -82,12 +61,6 @@ public sealed class InterviewPreparationController : BaseApiController
         return Ok(result);
     }
 
-    /// <summary>
-    /// Regenerates an existing interview preparation with fresh AI content.
-    /// </summary>
-    /// <param name="invitationId">The unique ID of the interview invitation.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>The regenerated interview preparation.</returns>
     [HttpPost("{invitationId:guid}/preparation/regenerate")]
     [Authorize(Roles = nameof(UserRole.Talent))]
     [EnableRateLimiting("InterviewPrepGenerate")]
@@ -106,12 +79,6 @@ public sealed class InterviewPreparationController : BaseApiController
         return Ok(result);
     }
 
-    /// <summary>
-    /// Generates additional practice questions for an existing interview preparation.
-    /// </summary>
-    /// <param name="invitationId">The unique ID of the interview invitation.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>The interview preparation including the additional questions.</returns>
     [HttpPost("{invitationId:guid}/preparation/additional-questions")]
     [Authorize(Roles = nameof(UserRole.Talent))]
     [EnableRateLimiting("InterviewPrepGenerate")]

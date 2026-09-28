@@ -20,7 +20,6 @@ public sealed class InterviewPreparationConfiguration
         builder.Property(p => p.InterviewType).HasMaxLength(50).IsRequired();
         builder.Property(p => p.Status).HasConversion<int>().IsRequired();
 
-        // AI-generated content columns
         builder.Property(p => p.TechnicalQuestions).HasMaxLength(8000).IsRequired();
         builder.Property(p => p.BehavioralQuestions).HasMaxLength(8000).IsRequired();
         builder.Property(p => p.ExperienceBasedQuestions).HasMaxLength(8000).IsRequired();
@@ -29,12 +28,10 @@ public sealed class InterviewPreparationConfiguration
         builder.Property(p => p.SuggestedRevisionAreas).HasMaxLength(4000).IsRequired();
         builder.Property(p => p.AdditionalQuestions).HasMaxLength(8000);
 
-        // Indexes
         builder.HasIndex(p => p.TalentUserId);
         builder.HasIndex(p => p.InterviewInvitationId).IsUnique();
         builder.HasIndex(p => new { p.TalentUserId, p.JobId });
 
-        // Foreign keys
         builder.HasOne<InterviewInvitation>()
             .WithMany().HasForeignKey(p => p.InterviewInvitationId)
             .OnDelete(DeleteBehavior.Cascade);
