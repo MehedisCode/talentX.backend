@@ -114,6 +114,20 @@ public sealed class InterviewInvitationRepository : IInterviewInvitationReposito
         }
     }
 
+    public async Task<int> CountCreatedBetweenAsync(
+        DateTime startUtc,
+        DateTime endUtc,
+        CancellationToken cancellationToken = default)
+    {
+        return await _context.InterviewInvitations
+            .AsNoTracking()
+            .CountAsync(
+                x => x.CreatedAt >= startUtc
+                     && x.CreatedAt <= endUtc
+                     && x.Status != InterviewInvitationStatus.Cancelled,
+                cancellationToken);
+    }
+
     public async Task<IReadOnlyDictionary<DateTime, int>> GetCreatedCountsByBucketAsync(
         DateTime startUtc,
         DateTime endUtc,
