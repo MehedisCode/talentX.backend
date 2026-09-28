@@ -181,6 +181,8 @@ public sealed class GetAdminDashboardQueryHandlerTests
         result.Metrics.TotalJobs.Should().Be(20);
         result.Metrics.PublishedJobs.Should().Be(10);
         result.Metrics.ClosedOrExpiredJobs.Should().Be(7);
+        result.Metrics.DeactivatedJobs.Should().Be(2);
+        result.Metrics.UnderReviewJobs.Should().Be(1);
     }
 
     [Fact]
@@ -261,6 +263,8 @@ public sealed class GetAdminDashboardQueryHandlerTests
         result.Totals.TotalJobs.Should().Be(48);
         result.Totals.PublishedJobs.Should().Be(30);
         result.Totals.ClosedOrExpiredJobs.Should().Be(15);
+        result.Totals.DeactivatedJobs.Should().Be(2);
+        result.Totals.UnderReviewJobs.Should().Be(1);
         result.Totals.TotalApplications.Should().Be(80);
         result.Totals.TotalInterviews.Should().Be(40);
         result.Totals.TotalHires.Should().Be(9);
