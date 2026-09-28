@@ -11,12 +11,14 @@ namespace TalentX.Application.Features.InterviewPreparation;
 public static class InterviewPreparationContextFactory
 {
     public static InterviewPreparationContext CreateContext(
-        Job job,
-        Talent talent,
-        InterviewInvitation invitation,
-        IReadOnlyList<WorkExperience> workExperiences,
-        IReadOnlyList<Education> educations)
+        InterviewPreparationContextPayload payload)
     {
+        var job = payload.Job;
+        var talent = payload.Talent;
+        var invitation = payload.Invitation;
+        var workExperiences = payload.WorkExperiences;
+        var educations = payload.Educations;
+
         return new InterviewPreparationContext
         {
             JobTitle = job.Title,

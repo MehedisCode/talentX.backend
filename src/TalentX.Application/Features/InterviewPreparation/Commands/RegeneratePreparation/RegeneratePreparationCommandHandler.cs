@@ -1,10 +1,12 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Features.InterviewPreparation.DTOs;
 using TalentX.Application.Features.InterviewPreparation.Mappers;
 using TalentX.Application.Identity.Services;
+using TalentX.Domain.Entities;
 
 namespace TalentX.Application.Features.InterviewPreparation.Commands.RegeneratePreparation;
 
@@ -14,17 +16,20 @@ public sealed class RegeneratePreparationCommandHandler
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUser;
     private readonly IInterviewPreparationAiService _aiService;
+    private readonly InterviewPreparationSettings _settings;
     private readonly ILogger<RegeneratePreparationCommandHandler> _logger;
 
     public RegeneratePreparationCommandHandler(
         IUnitOfWork unitOfWork,
         ICurrentUserService currentUser,
         IInterviewPreparationAiService aiService,
+        IOptions<InterviewPreparationSettings> settings,
         ILogger<RegeneratePreparationCommandHandler> logger)
     {
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
         _aiService = aiService;
+        _settings = settings.Value;
         _logger = logger;
     }
 
@@ -38,12 +43,13 @@ public sealed class RegeneratePreparationCommandHandler
         EnsureUserCanAccess(existing, userId);
         EnsurePreparationIsAccessible(existing);
 
-        if (existing.GenerationCount >= 3)
-            throw new BadRequestException("Maximum regeneration limit reached (3 times).");
+        if (existing.GenerationCount >= _settings.MaxRegenerationCount)
+            throw new BadRequestException(
+                $"Maximum regeneration limit reached ({_settings.MaxRegenerationCount} times).");
 
         var todayCount = await _unitOfWork.InterviewPreparations
             .CountTodayByTalentAsync(userId, ct);
-        if (todayCount >= 10)
+        if (todayCount >= _settings.DailyGenerationLimit)
             throw new BadRequestException("Daily interview preparation generation limit reached.");
 
         var invitation = await _unitOfWork.InterviewInvitations
@@ -63,23 +69,26 @@ public sealed class RegeneratePreparationCommandHandler
             .GetByUserIdAsync(userId, ct);
 
         var context = InterviewPreparationContextFactory.CreateContext(
-            job, talent, invitation, workExperiences, educations);
+            new InterviewPreparationContextPayload(
+                job, talent, invitation, workExperiences, educations));
 
         var aiResult = await GenerateWithAiAsync(context, request.InvitationId, ct);
 
         existing.Regenerate(
-            aiResult.TechnicalQuestions,
-            aiResult.BehavioralQuestions,
-            aiResult.ExperienceBasedQuestions,
-            aiResult.RoleSpecificQuestions,
-            aiResult.KeyTopicsToPrepare,
-            aiResult.SuggestedRevisionAreas
+            new RegenerateInterviewPreparationPayload(
+                TechnicalQuestions: aiResult.TechnicalQuestions,
+                BehavioralQuestions: aiResult.BehavioralQuestions,
+                ExperienceBasedQuestions: aiResult.ExperienceBasedQuestions,
+                RoleSpecificQuestions: aiResult.RoleSpecificQuestions,
+                KeyTopicsToPrepare: aiResult.KeyTopicsToPrepare,
+                SuggestedRevisionAreas: aiResult.SuggestedRevisionAreas)
         );
 
         _unitOfWork.InterviewPreparations.Update(existing);
         await _unitOfWork.SaveChangesAsync(ct);
 
-        return InterviewPreparationMapper.ToDto(existing);
+        return InterviewPreparationMapper.ToDto(
+            existing, _settings.AccessWindowAfterInterview);
     }
 
     private async Task<Domain.Entities.InterviewPreparation> GetPreparationAsync(
@@ -97,10 +106,10 @@ public sealed class RegeneratePreparationCommandHandler
             throw new ForbiddenException("You do not have access to this interview preparation.");
     }
 
-    private static void EnsurePreparationIsAccessible(
+    private void EnsurePreparationIsAccessible(
         Domain.Entities.InterviewPreparation preparation)
     {
-        if (!preparation.IsAccessible())
+        if (!preparation.IsAccessible(_settings.AccessWindowAfterInterview))
             throw new ForbiddenException("Preparation is no longer accessible as the interview has already taken place.");
     }
 

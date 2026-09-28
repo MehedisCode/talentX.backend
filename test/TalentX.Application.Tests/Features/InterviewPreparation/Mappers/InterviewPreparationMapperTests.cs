@@ -1,6 +1,7 @@
 using FluentAssertions;
 using TalentX.Application.Features.InterviewPreparation.DTOs;
 using TalentX.Application.Features.InterviewPreparation.Mappers;
+using TalentX.Domain.Entities;
 using Xunit;
 using InterviewPreparationEntity = TalentX.Domain.Entities.InterviewPreparation;
 
@@ -8,6 +9,8 @@ namespace TalentX.Application.Tests.Features.InterviewPreparation.Mappers;
 
 public class InterviewPreparationMapperTests
 {
+    private static readonly TimeSpan AccessWindow = TimeSpan.FromMinutes(30);
+
     private static InterviewPreparationEntity NewPreparation(
         string technicalQuestions = """[{"question":"What is a closure?","category":"Technical","tip":"Scope"}]""",
         string behavioralQuestions = """[{"question":"Tell me about a conflict","category":"Behavioral","tip":"STAR"}]""",
@@ -18,19 +21,20 @@ public class InterviewPreparationMapperTests
         DateTime? scheduledAt = null)
     {
         var preparation = InterviewPreparationEntity.Create(
-            interviewInvitationId: Guid.NewGuid(),
-            talentUserId: "talent-1",
-            jobId: Guid.NewGuid(),
-            jobTitle: "Backend Engineer",
-            companyName: "Acme",
-            interviewType: "OnCall",
-            scheduledAt: scheduledAt ?? DateTime.UtcNow.AddHours(2),
-            technicalQuestions: technicalQuestions,
-            behavioralQuestions: behavioralQuestions,
-            experienceBasedQuestions: experienceBasedQuestions,
-            roleSpecificQuestions: roleSpecificQuestions,
-            keyTopicsToPrepare: keyTopicsToPrepare,
-            suggestedRevisionAreas: suggestedRevisionAreas);
+            new CreateInterviewPreparationPayload(
+                InterviewInvitationId: Guid.NewGuid(),
+                TalentUserId: "talent-1",
+                JobId: Guid.NewGuid(),
+                JobTitle: "Backend Engineer",
+                CompanyName: "Acme",
+                InterviewType: "OnCall",
+                ScheduledAt: scheduledAt ?? DateTime.UtcNow.AddHours(2),
+                TechnicalQuestions: technicalQuestions,
+                BehavioralQuestions: behavioralQuestions,
+                ExperienceBasedQuestions: experienceBasedQuestions,
+                RoleSpecificQuestions: roleSpecificQuestions,
+                KeyTopicsToPrepare: keyTopicsToPrepare,
+                SuggestedRevisionAreas: suggestedRevisionAreas));
 
         return preparation;
     }
@@ -42,7 +46,7 @@ public class InterviewPreparationMapperTests
         var preparation = NewPreparation();
 
         // Act
-        var dto = InterviewPreparationMapper.ToDto(preparation);
+        var dto = InterviewPreparationMapper.ToDto(preparation, AccessWindow);
 
         // Assert
         dto.TechnicalQuestions.Should().ContainSingle()
@@ -66,7 +70,7 @@ public class InterviewPreparationMapperTests
             suggestedRevisionAreas: "");
 
         // Act — a throw here fails the test; corrupt fields must degrade to empty lists
-        var dto = InterviewPreparationMapper.ToDto(preparation);
+        var dto = InterviewPreparationMapper.ToDto(preparation, AccessWindow);
 
         // Assert
         dto.TechnicalQuestions.Should().BeEmpty();
@@ -86,7 +90,7 @@ public class InterviewPreparationMapperTests
             suggestedRevisionAreas: "");
 
         // Act
-        var dto = InterviewPreparationMapper.ToDto(preparation);
+        var dto = InterviewPreparationMapper.ToDto(preparation, AccessWindow);
 
         // Assert
         dto.TechnicalQuestions.Should().BeEmpty();
@@ -102,7 +106,7 @@ public class InterviewPreparationMapperTests
         var preparation = NewPreparation();
 
         // Act
-        var dto = InterviewPreparationMapper.ToDto(preparation);
+        var dto = InterviewPreparationMapper.ToDto(preparation, AccessWindow);
 
         // Assert — uniform fallback policy: absent data maps to [], never null
         dto.AdditionalQuestions.Should().NotBeNull().And.BeEmpty();
@@ -117,7 +121,7 @@ public class InterviewPreparationMapperTests
             """[{"question":"What is DI?","category":"Technical","tip":"Containers"}]""");
 
         // Act
-        var dto = InterviewPreparationMapper.ToDto(preparation);
+        var dto = InterviewPreparationMapper.ToDto(preparation, AccessWindow);
 
         // Assert
         dto.AdditionalQuestions.Should().ContainSingle()
@@ -131,7 +135,7 @@ public class InterviewPreparationMapperTests
         var preparation = NewPreparation();
 
         // Act
-        var dto = InterviewPreparationMapper.ToDto(preparation);
+        var dto = InterviewPreparationMapper.ToDto(preparation, AccessWindow);
 
         // Assert
         dto.Id.Should().Be(preparation.Id);
@@ -154,7 +158,7 @@ public class InterviewPreparationMapperTests
         var preparation = NewPreparation(scheduledAt: DateTime.UtcNow.AddHours(3));
 
         // Act
-        var dto = InterviewPreparationMapper.ToDto(preparation);
+        var dto = InterviewPreparationMapper.ToDto(preparation, AccessWindow);
 
         // Assert
         dto.IsAccessible.Should().BeTrue();
@@ -167,7 +171,7 @@ public class InterviewPreparationMapperTests
         var preparation = NewPreparation(scheduledAt: DateTime.UtcNow.AddHours(-2));
 
         // Act
-        var dto = InterviewPreparationMapper.ToDto(preparation);
+        var dto = InterviewPreparationMapper.ToDto(preparation, AccessWindow);
 
         // Assert
         dto.IsAccessible.Should().BeFalse();

@@ -15,7 +15,13 @@ public static class InterviewPreparationMapper
     private static readonly JsonSerializerOptions SerializerOptions =
         new() { PropertyNameCaseInsensitive = true };
 
-    public static InterviewPreparationDto ToDto(Domain.Entities.InterviewPreparation preparation)
+    /// <param name="accessWindow">
+    /// How long after the scheduled interview time the preparation stays
+    /// accessible — supplied from <see cref="InterviewPreparationSettings"/>.
+    /// </param>
+    public static InterviewPreparationDto ToDto(
+        Domain.Entities.InterviewPreparation preparation,
+        TimeSpan accessWindow)
     {
         return new InterviewPreparationDto
         {
@@ -36,7 +42,7 @@ public static class InterviewPreparationMapper
             AdditionalQuestions = DeserializeList<PrepQuestion>(preparation.AdditionalQuestions),
             GenerationCount = preparation.GenerationCount,
             GeneratedAt = preparation.CreatedAt,
-            IsAccessible = preparation.IsAccessible()
+            IsAccessible = preparation.IsAccessible(accessWindow)
         };
     }
 

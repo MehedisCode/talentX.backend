@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Features.InterviewPreparation.DTOs;
@@ -16,17 +17,20 @@ public sealed class GeneratePreparationCommandHandler
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUser;
     private readonly IInterviewPreparationAiService _aiService;
+    private readonly InterviewPreparationSettings _settings;
     private readonly ILogger<GeneratePreparationCommandHandler> _logger;
 
     public GeneratePreparationCommandHandler(
         IUnitOfWork unitOfWork,
         ICurrentUserService currentUser,
         IInterviewPreparationAiService aiService,
+        IOptions<InterviewPreparationSettings> settings,
         ILogger<GeneratePreparationCommandHandler> logger)
     {
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
         _aiService = aiService;
+        _settings = settings.Value;
         _logger = logger;
     }
 
@@ -51,8 +55,9 @@ public sealed class GeneratePreparationCommandHandler
 
         var todayCount = await _unitOfWork.InterviewPreparations
             .CountTodayByTalentAsync(userId, ct);
-        if (todayCount >= 5)
-            throw new BadRequestException("Daily interview preparation limit reached (5/day).");
+        if (todayCount >= _settings.DailyGenerateLimit)
+            throw new BadRequestException(
+                $"Daily interview preparation limit reached ({_settings.DailyGenerateLimit}/day).");
 
         var job = await _unitOfWork.Jobs.GetByIdAsync(invitation.JobId, ct)
             ?? throw new NotFoundException("Job not found.");
@@ -67,29 +72,32 @@ public sealed class GeneratePreparationCommandHandler
             .GetByUserIdAsync(userId, ct);
 
         var context = InterviewPreparationContextFactory.CreateContext(
-            job, talent, invitation, workExperiences, educations);
+            new InterviewPreparationContextPayload(
+                job, talent, invitation, workExperiences, educations));
 
         var aiResult = await GenerateWithAiAsync(context, request.InvitationId, ct);
 
         var preparation = Domain.Entities.InterviewPreparation.Create(
-            interviewInvitationId: invitation.Id,
-            talentUserId: userId,
-            jobId: job.Id,
-            jobTitle: job.Title,
-            companyName: job.CompanyName,
-            interviewType: invitation.Type.ToString(),
-            scheduledAt: invitation.ScheduledAt,
-            technicalQuestions: aiResult.TechnicalQuestions,
-            behavioralQuestions: aiResult.BehavioralQuestions,
-            experienceBasedQuestions: aiResult.ExperienceBasedQuestions,
-            roleSpecificQuestions: aiResult.RoleSpecificQuestions,
-            keyTopicsToPrepare: aiResult.KeyTopicsToPrepare,
-            suggestedRevisionAreas: aiResult.SuggestedRevisionAreas);
+            new CreateInterviewPreparationPayload(
+                InterviewInvitationId: invitation.Id,
+                TalentUserId: userId,
+                JobId: job.Id,
+                JobTitle: job.Title,
+                CompanyName: job.CompanyName,
+                InterviewType: invitation.Type.ToString(),
+                ScheduledAt: invitation.ScheduledAt,
+                TechnicalQuestions: aiResult.TechnicalQuestions,
+                BehavioralQuestions: aiResult.BehavioralQuestions,
+                ExperienceBasedQuestions: aiResult.ExperienceBasedQuestions,
+                RoleSpecificQuestions: aiResult.RoleSpecificQuestions,
+                KeyTopicsToPrepare: aiResult.KeyTopicsToPrepare,
+                SuggestedRevisionAreas: aiResult.SuggestedRevisionAreas));
 
         await _unitOfWork.InterviewPreparations.AddAsync(preparation, ct);
         await _unitOfWork.SaveChangesAsync(ct);
 
-        return InterviewPreparationMapper.ToDto(preparation);
+        return InterviewPreparationMapper.ToDto(
+            preparation, _settings.AccessWindowAfterInterview);
     }
 
     private static void EnsureUserCanAccess(InterviewInvitation invitation, string userId)

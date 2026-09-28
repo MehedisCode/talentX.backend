@@ -1,10 +1,13 @@
 using FluentAssertions;
+using Microsoft.Extensions.Options;
 using Moq;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Common.Interfaces.Repositories;
+using TalentX.Application.Features.InterviewPreparation;
 using TalentX.Application.Features.InterviewPreparation.Queries.GetPreparation;
 using TalentX.Application.Identity.Services;
+using TalentX.Domain.Entities;
 using Xunit;
 using InterviewPreparationEntity = TalentX.Domain.Entities.InterviewPreparation;
 
@@ -24,25 +27,29 @@ public class GetPreparationQueryHandlerTests
         _unitOfWork.SetupGet(u => u.InterviewPreparations).Returns(_preparationRepository.Object);
         _currentUserService.SetupGet(u => u.UserId).Returns(TalentUserId);
 
-        _handler = new GetPreparationQueryHandler(_unitOfWork.Object, _currentUserService.Object);
+        _handler = new GetPreparationQueryHandler(
+            _unitOfWork.Object,
+            _currentUserService.Object,
+            Options.Create(new InterviewPreparationSettings()));
     }
 
     private static InterviewPreparationEntity CreatePreparation(string? talentUserId = null)
     {
         return InterviewPreparationEntity.Create(
-            interviewInvitationId: Guid.NewGuid(),
-            talentUserId: talentUserId ?? TalentUserId,
-            jobId: Guid.NewGuid(),
-            jobTitle: "Backend Engineer",
-            companyName: "Acme",
-            interviewType: "OnCall",
-            scheduledAt: DateTime.UtcNow.AddHours(2),
-            technicalQuestions: """[{"question":"What is a closure?","category":"Technical","tip":"Scope"}]""",
-            behavioralQuestions: "[]",
-            experienceBasedQuestions: "[]",
-            roleSpecificQuestions: "[]",
-            keyTopicsToPrepare: """["Idempotency"]""",
-            suggestedRevisionAreas: """["SQL tuning"]""");
+            new CreateInterviewPreparationPayload(
+                InterviewInvitationId: Guid.NewGuid(),
+                TalentUserId: talentUserId ?? TalentUserId,
+                JobId: Guid.NewGuid(),
+                JobTitle: "Backend Engineer",
+                CompanyName: "Acme",
+                InterviewType: "OnCall",
+                ScheduledAt: DateTime.UtcNow.AddHours(2),
+                TechnicalQuestions: """[{"question":"What is a closure?","category":"Technical","tip":"Scope"}]""",
+                BehavioralQuestions: "[]",
+                ExperienceBasedQuestions: "[]",
+                RoleSpecificQuestions: "[]",
+                KeyTopicsToPrepare: """["Idempotency"]""",
+                SuggestedRevisionAreas: """["SQL tuning"]"""));
     }
 
     [Fact]

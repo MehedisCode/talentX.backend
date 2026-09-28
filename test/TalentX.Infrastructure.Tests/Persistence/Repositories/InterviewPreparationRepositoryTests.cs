@@ -23,19 +23,20 @@ public sealed class InterviewPreparationRepositoryTests
         Guid? interviewInvitationId = null)
     {
         return InterviewPreparation.Create(
-            interviewInvitationId ?? Guid.NewGuid(),
-            talentUserId,
-            Guid.NewGuid(),
-            "Backend Engineer",
-            "Acme Corp",
-            "Technical",
-            DateTime.UtcNow.AddDays(1),
-            "[\"What is REST?\"]",
-            "[\"Tell me about yourself\"]",
-            "[\"Describe a tough project\"]",
-            "[\"How do you scale a database?\"]",
-            "[\"HTTP\",\"SQL\"]",
-            "[\"Indexing\"]");
+            new CreateInterviewPreparationPayload(
+                InterviewInvitationId: interviewInvitationId ?? Guid.NewGuid(),
+                TalentUserId: talentUserId,
+                JobId: Guid.NewGuid(),
+                JobTitle: "Backend Engineer",
+                CompanyName: "Acme Corp",
+                InterviewType: "Technical",
+                ScheduledAt: DateTime.UtcNow.AddDays(1),
+                TechnicalQuestions: "[\"What is REST?\"]",
+                BehavioralQuestions: "[\"Tell me about yourself\"]",
+                ExperienceBasedQuestions: "[\"Describe a tough project\"]",
+                RoleSpecificQuestions: "[\"How do you scale a database?\"]",
+                KeyTopicsToPrepare: "[\"HTTP\",\"SQL\"]",
+                SuggestedRevisionAreas: "[\"Indexing\"]"));
     }
 
     [Fact]
@@ -145,12 +146,13 @@ public sealed class InterviewPreparationRepositoryTests
         await context.SaveChangesAsync();
 
         preparation.Regenerate(
-            "[\"What is a thread pool?\"]",
-            "[\"How do you handle pressure?\"]",
-            "[\"Failure you learned from?\"]",
-            "[\"Explain CAP theorem\"]",
-            "[\"Concurrency\"]",
-            "[\"Distributed locks\"]");
+            new RegenerateInterviewPreparationPayload(
+                TechnicalQuestions: "[\"What is a thread pool?\"]",
+                BehavioralQuestions: "[\"How do you handle pressure?\"]",
+                ExperienceBasedQuestions: "[\"Failure you learned from?\"]",
+                RoleSpecificQuestions: "[\"Explain CAP theorem\"]",
+                KeyTopicsToPrepare: "[\"Concurrency\"]",
+                SuggestedRevisionAreas: "[\"Distributed locks\"]"));
         repository.Update(preparation);
         await context.SaveChangesAsync();
 
@@ -173,7 +175,8 @@ public sealed class InterviewPreparationRepositoryTests
         var yesterday = NewPreparation();
         var otherTalent = NewPreparation(talentUserId: "talent-2");
         regenerated.Regenerate(
-            "[\"n1\"]", "[\"n2\"]", "[\"n3\"]", "[\"n4\"]", "[\"n5\"]", "[\"n6\"]");
+            new RegenerateInterviewPreparationPayload(
+                "[\"n1\"]", "[\"n2\"]", "[\"n3\"]", "[\"n4\"]", "[\"n5\"]", "[\"n6\"]"));
         context.InterviewPreparations.AddRange(first, regenerated, yesterday, otherTalent);
 
         context.Entry(yesterday).Property(x => x.CreatedAt).CurrentValue = DateTime.UtcNow.AddDays(-1);

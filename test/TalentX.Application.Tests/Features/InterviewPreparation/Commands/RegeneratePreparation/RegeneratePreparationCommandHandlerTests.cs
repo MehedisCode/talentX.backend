@@ -1,9 +1,11 @@
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Moq;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Common.Interfaces.Repositories;
+using TalentX.Application.Features.InterviewPreparation;
 using TalentX.Application.Features.InterviewPreparation.Commands.RegeneratePreparation;
 using TalentX.Application.Features.InterviewPreparation.DTOs;
 using TalentX.Application.Identity.Services;
@@ -45,6 +47,7 @@ public class RegeneratePreparationCommandHandlerTests
             _unitOfWork.Object,
             _currentUserService.Object,
             _aiService.Object,
+            Options.Create(new InterviewPreparationSettings()),
             _logger.Object);
     }
 
@@ -76,19 +79,20 @@ public class RegeneratePreparationCommandHandlerTests
         Guid invitationId, DateTime? scheduledAt = null, string? talentUserId = null)
     {
         return InterviewPreparationEntity.Create(
-            interviewInvitationId: invitationId,
-            talentUserId: talentUserId ?? TalentUserId,
-            jobId: Guid.NewGuid(),
-            jobTitle: "Backend Engineer",
-            companyName: "Acme",
-            interviewType: "OnCall",
-            scheduledAt: scheduledAt ?? DateTime.UtcNow.AddHours(2),
-            technicalQuestions: """[{"question":"Old question","category":"Technical","tip":null}]""",
-            behavioralQuestions: "[]",
-            experienceBasedQuestions: "[]",
-            roleSpecificQuestions: "[]",
-            keyTopicsToPrepare: """["Old topic"]""",
-            suggestedRevisionAreas: "[]");
+            new CreateInterviewPreparationPayload(
+                InterviewInvitationId: invitationId,
+                TalentUserId: talentUserId ?? TalentUserId,
+                JobId: Guid.NewGuid(),
+                JobTitle: "Backend Engineer",
+                CompanyName: "Acme",
+                InterviewType: "OnCall",
+                ScheduledAt: scheduledAt ?? DateTime.UtcNow.AddHours(2),
+                TechnicalQuestions: """[{"question":"Old question","category":"Technical","tip":null}]""",
+                BehavioralQuestions: "[]",
+                ExperienceBasedQuestions: "[]",
+                RoleSpecificQuestions: "[]",
+                KeyTopicsToPrepare: """["Old topic"]""",
+                SuggestedRevisionAreas: "[]"));
     }
 
     private static InterviewPreparationResult AiResult()
@@ -229,8 +233,8 @@ public class RegeneratePreparationCommandHandlerTests
     public async Task Handle_WhenRegenerationLimitIsReached_ThrowsBadRequestException()
     {
         var existing = CreatePreparation(Guid.NewGuid());
-        existing.Regenerate("[]", "[]", "[]", "[]", "[]", "[]");
-        existing.Regenerate("[]", "[]", "[]", "[]", "[]", "[]");
+        existing.Regenerate(new RegenerateInterviewPreparationPayload("[]", "[]", "[]", "[]", "[]", "[]"));
+        existing.Regenerate(new RegenerateInterviewPreparationPayload("[]", "[]", "[]", "[]", "[]", "[]"));
         existing.GenerationCount.Should().Be(3);
         _preparationRepository
             .Setup(r => r.GetByInvitationIdAsync(existing.InterviewInvitationId, It.IsAny<CancellationToken>()))

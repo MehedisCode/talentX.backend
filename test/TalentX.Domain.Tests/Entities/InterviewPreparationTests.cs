@@ -10,19 +10,20 @@ public class InterviewPreparationTests
     private static InterviewPreparation NewPreparation(DateTime? scheduledAt = null)
     {
         var preparation = InterviewPreparation.Create(
-            interviewInvitationId: Guid.NewGuid(),
-            talentUserId: "talent-1",
-            jobId: Guid.NewGuid(),
-            jobTitle: "Backend Engineer",
-            companyName: "Acme Corp",
-            interviewType: "Technical",
-            scheduledAt: scheduledAt ?? DateTime.UtcNow.AddHours(2),
-            technicalQuestions: "[\"What is REST?\"]",
-            behavioralQuestions: "[\"Tell me about yourself\"]",
-            experienceBasedQuestions: "[\"Describe a tough project\"]",
-            roleSpecificQuestions: "[\"How do you scale a database?\"]",
-            keyTopicsToPrepare: "[\"HTTP\",\"SQL\"]",
-            suggestedRevisionAreas: "[\"Indexing\"]");
+            new CreateInterviewPreparationPayload(
+                InterviewInvitationId: Guid.NewGuid(),
+                TalentUserId: "talent-1",
+                JobId: Guid.NewGuid(),
+                JobTitle: "Backend Engineer",
+                CompanyName: "Acme Corp",
+                InterviewType: "Technical",
+                ScheduledAt: scheduledAt ?? DateTime.UtcNow.AddHours(2),
+                TechnicalQuestions: "[\"What is REST?\"]",
+                BehavioralQuestions: "[\"Tell me about yourself\"]",
+                ExperienceBasedQuestions: "[\"Describe a tough project\"]",
+                RoleSpecificQuestions: "[\"How do you scale a database?\"]",
+                KeyTopicsToPrepare: "[\"HTTP\",\"SQL\"]",
+                SuggestedRevisionAreas: "[\"Indexing\"]"));
 
         return preparation;
     }
@@ -37,19 +38,20 @@ public class InterviewPreparationTests
 
         // Act
         var preparation = InterviewPreparation.Create(
-            invitationId,
-            "talent-42",
-            jobId,
-            "Frontend Engineer",
-            "Globex",
-            "System Design",
-            scheduledAt,
-            "[\"What is CORS?\"]",
-            "[\"Describe conflict with a coworker\"]",
-            "[\"Biggest career challenge?\"]",
-            "[\"How do you optimize React renders?\"]",
-            "[\"Virtual DOM\",\"Memoization\"]",
-            "[\"Accessibility\"]");
+            new CreateInterviewPreparationPayload(
+                InterviewInvitationId: invitationId,
+                TalentUserId: "talent-42",
+                JobId: jobId,
+                JobTitle: "Frontend Engineer",
+                CompanyName: "Globex",
+                InterviewType: "System Design",
+                ScheduledAt: scheduledAt,
+                TechnicalQuestions: "[\"What is CORS?\"]",
+                BehavioralQuestions: "[\"Describe conflict with a coworker\"]",
+                ExperienceBasedQuestions: "[\"Biggest career challenge?\"]",
+                RoleSpecificQuestions: "[\"How do you optimize React renders?\"]",
+                KeyTopicsToPrepare: "[\"Virtual DOM\",\"Memoization\"]",
+                SuggestedRevisionAreas: "[\"Accessibility\"]"));
 
         // Assert
         preparation.InterviewInvitationId.Should().Be(invitationId);
@@ -90,12 +92,13 @@ public class InterviewPreparationTests
 
         // Act
         preparation.Regenerate(
-            "[\"What is a thread pool?\"]",
-            "[\"How do you handle pressure?\"]",
-            "[\"Failure you learned from?\"]",
-            "[\"Explain CAP theorem\"]",
-            "[\"Concurrency\",\"Queues\"]",
-            "[\"Distributed locks\"]");
+            new RegenerateInterviewPreparationPayload(
+                TechnicalQuestions: "[\"What is a thread pool?\"]",
+                BehavioralQuestions: "[\"How do you handle pressure?\"]",
+                ExperienceBasedQuestions: "[\"Failure you learned from?\"]",
+                RoleSpecificQuestions: "[\"Explain CAP theorem\"]",
+                KeyTopicsToPrepare: "[\"Concurrency\",\"Queues\"]",
+                SuggestedRevisionAreas: "[\"Distributed locks\"]"));
 
         // Assert
         preparation.Status.Should().Be(InterviewPreparationStatus.Regenerated);
@@ -119,7 +122,13 @@ public class InterviewPreparationTests
 
         // Act
         preparation.Regenerate(
-            "[\"q1\"]", "[\"q2\"]", "[\"q3\"]", "[\"q4\"]", "[\"q5\"]", "[\"q6\"]");
+            new RegenerateInterviewPreparationPayload(
+                TechnicalQuestions: "[\"q1\"]",
+                BehavioralQuestions: "[\"q2\"]",
+                ExperienceBasedQuestions: "[\"q3\"]",
+                RoleSpecificQuestions: "[\"q4\"]",
+                KeyTopicsToPrepare: "[\"q5\"]",
+                SuggestedRevisionAreas: "[\"q6\"]"));
 
         // Assert
         preparation.AdditionalQuestions.Should().BeNull();
@@ -146,7 +155,7 @@ public class InterviewPreparationTests
         var preparation = NewPreparation(scheduledAt: null);
 
         // Act
-        var accessible = preparation.IsAccessible();
+        var accessible = preparation.IsAccessible(TimeSpan.FromMinutes(30));
 
         // Assert
         accessible.Should().BeTrue();
@@ -159,20 +168,20 @@ public class InterviewPreparationTests
         var preparation = NewPreparation(scheduledAt: DateTime.UtcNow.AddMinutes(-10));
 
         // Act
-        var accessible = preparation.IsAccessible();
+        var accessible = preparation.IsAccessible(TimeSpan.FromMinutes(30));
 
         // Assert
         accessible.Should().BeTrue();
     }
 
     [Fact]
-    public void IsAccessible_AfterDefaultWindowExpires_ReturnsFalse()
+    public void IsAccessible_AfterWindowExpires_ReturnsFalse()
     {
         // Arrange
         var preparation = NewPreparation(scheduledAt: DateTime.UtcNow.AddMinutes(-45));
 
         // Act
-        var accessible = preparation.IsAccessible();
+        var accessible = preparation.IsAccessible(TimeSpan.FromMinutes(30));
 
         // Assert
         accessible.Should().BeFalse();

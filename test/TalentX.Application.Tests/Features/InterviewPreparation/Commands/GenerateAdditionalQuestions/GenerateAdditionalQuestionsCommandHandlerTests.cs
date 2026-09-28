@@ -1,13 +1,16 @@
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Moq;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Common.Interfaces.Repositories;
+using TalentX.Application.Features.InterviewPreparation;
 using TalentX.Application.Features.InterviewPreparation.Commands.GenerateAdditionalQuestions;
 using TalentX.Application.Features.InterviewPreparation.DTOs;
 using TalentX.Application.Identity.Services;
 using TalentX.Domain;
+using TalentX.Domain.Entities;
 using Xunit;
 using InterviewPreparationEntity = TalentX.Domain.Entities.InterviewPreparation;
 
@@ -35,6 +38,7 @@ public class GenerateAdditionalQuestionsCommandHandlerTests
             _unitOfWork.Object,
             _currentUserService.Object,
             _aiService.Object,
+            Options.Create(new InterviewPreparationSettings()),
             _logger.Object);
     }
 
@@ -42,19 +46,20 @@ public class GenerateAdditionalQuestionsCommandHandlerTests
         DateTime? scheduledAt = null, string? talentUserId = null)
     {
         return InterviewPreparationEntity.Create(
-            interviewInvitationId: Guid.NewGuid(),
-            talentUserId: talentUserId ?? TalentUserId,
-            jobId: Guid.NewGuid(),
-            jobTitle: "Backend Engineer",
-            companyName: "Acme",
-            interviewType: "OnCall",
-            scheduledAt: scheduledAt ?? DateTime.UtcNow.AddHours(2),
-            technicalQuestions: """[{"question":"Existing technical","category":"Technical","tip":null}]""",
-            behavioralQuestions: """[{"question":"Existing behavioral","category":"Behavioral","tip":null}]""",
-            experienceBasedQuestions: "[]",
-            roleSpecificQuestions: """[{"question":"Existing role","category":"Role-Specific","tip":null}]""",
-            keyTopicsToPrepare: "[]",
-            suggestedRevisionAreas: "[]");
+            new CreateInterviewPreparationPayload(
+                InterviewInvitationId: Guid.NewGuid(),
+                TalentUserId: talentUserId ?? TalentUserId,
+                JobId: Guid.NewGuid(),
+                JobTitle: "Backend Engineer",
+                CompanyName: "Acme",
+                InterviewType: "OnCall",
+                ScheduledAt: scheduledAt ?? DateTime.UtcNow.AddHours(2),
+                TechnicalQuestions: """[{"question":"Existing technical","category":"Technical","tip":null}]""",
+                BehavioralQuestions: """[{"question":"Existing behavioral","category":"Behavioral","tip":null}]""",
+                ExperienceBasedQuestions: "[]",
+                RoleSpecificQuestions: """[{"question":"Existing role","category":"Role-Specific","tip":null}]""",
+                KeyTopicsToPrepare: "[]",
+                SuggestedRevisionAreas: "[]"));
     }
 
     private static AdditionalQuestionsResult AiResult()

@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using TalentX.API.Swagger;
 using TalentX.Application;
+using TalentX.Application.Features.InterviewPreparation;
 using TalentX.Application.Identity.Services;
 using TalentX.Infrastructure;
 using TalentX.Infrastructure.Identity.Seed;
@@ -69,6 +70,8 @@ builder.Services.AddCors(options =>
 
 // 4. Modular Service Registrations
 builder.Services.AddApplication();
+builder.Services.Configure<InterviewPreparationSettings>(
+    builder.Configuration.GetSection(InterviewPreparationSettings.SectionName));
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerDocumentation();

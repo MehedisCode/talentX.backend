@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Features.InterviewPreparation.DTOs;
@@ -14,17 +15,20 @@ public sealed class GenerateAdditionalQuestionsCommandHandler
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUser;
     private readonly IInterviewPreparationAiService _aiService;
+    private readonly InterviewPreparationSettings _settings;
     private readonly ILogger<GenerateAdditionalQuestionsCommandHandler> _logger;
 
     public GenerateAdditionalQuestionsCommandHandler(
         IUnitOfWork unitOfWork,
         ICurrentUserService currentUser,
         IInterviewPreparationAiService aiService,
+        IOptions<InterviewPreparationSettings> settings,
         ILogger<GenerateAdditionalQuestionsCommandHandler> logger)
     {
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
         _aiService = aiService;
+        _settings = settings.Value;
         _logger = logger;
     }
 
@@ -49,7 +53,8 @@ public sealed class GenerateAdditionalQuestionsCommandHandler
         _unitOfWork.InterviewPreparations.Update(preparation);
         await _unitOfWork.SaveChangesAsync(ct);
 
-        return InterviewPreparationMapper.ToDto(preparation);
+        return InterviewPreparationMapper.ToDto(
+            preparation, _settings.AccessWindowAfterInterview);
     }
 
     private async Task<Domain.Entities.InterviewPreparation> GetPreparationAsync(
@@ -67,10 +72,10 @@ public sealed class GenerateAdditionalQuestionsCommandHandler
             throw new ForbiddenException("You do not have access to this interview preparation.");
     }
 
-    private static void EnsurePreparationIsAccessible(
+    private void EnsurePreparationIsAccessible(
         Domain.Entities.InterviewPreparation preparation)
     {
-        if (!preparation.IsAccessible())
+        if (!preparation.IsAccessible(_settings.AccessWindowAfterInterview))
             throw new ForbiddenException("Preparation is no longer accessible as the interview has already taken place.");
     }
 

@@ -32,56 +32,37 @@ public sealed class InterviewPreparation : BaseEntity
 
     private InterviewPreparation() { }
 
-    public static InterviewPreparation Create(
-        Guid interviewInvitationId,
-        string talentUserId,
-        Guid jobId,
-        string jobTitle,
-        string companyName,
-        string interviewType,
-        DateTime? scheduledAt,
-        string technicalQuestions,
-        string behavioralQuestions,
-        string experienceBasedQuestions,
-        string roleSpecificQuestions,
-        string keyTopicsToPrepare,
-        string suggestedRevisionAreas)
+    public static InterviewPreparation Create(CreateInterviewPreparationPayload payload)
     {
         return new InterviewPreparation
         {
-            InterviewInvitationId = interviewInvitationId,
-            TalentUserId = talentUserId,
-            JobId = jobId,
-            JobTitle = jobTitle,
-            CompanyName = companyName,
-            InterviewType = interviewType,
-            ScheduledAt = scheduledAt,
+            InterviewInvitationId = payload.InterviewInvitationId,
+            TalentUserId = payload.TalentUserId,
+            JobId = payload.JobId,
+            JobTitle = payload.JobTitle,
+            CompanyName = payload.CompanyName,
+            InterviewType = payload.InterviewType,
+            ScheduledAt = payload.ScheduledAt,
             Status = InterviewPreparationStatus.Generated,
-            TechnicalQuestions = technicalQuestions,
-            BehavioralQuestions = behavioralQuestions,
-            ExperienceBasedQuestions = experienceBasedQuestions,
-            RoleSpecificQuestions = roleSpecificQuestions,
-            KeyTopicsToPrepare = keyTopicsToPrepare,
-            SuggestedRevisionAreas = suggestedRevisionAreas,
+            TechnicalQuestions = payload.TechnicalQuestions,
+            BehavioralQuestions = payload.BehavioralQuestions,
+            ExperienceBasedQuestions = payload.ExperienceBasedQuestions,
+            RoleSpecificQuestions = payload.RoleSpecificQuestions,
+            KeyTopicsToPrepare = payload.KeyTopicsToPrepare,
+            SuggestedRevisionAreas = payload.SuggestedRevisionAreas,
             GenerationCount = 1,
             CreatedAt = DateTime.UtcNow
         };
     }
 
-    public void Regenerate(
-        string technicalQuestions,
-        string behavioralQuestions,
-        string experienceBasedQuestions,
-        string roleSpecificQuestions,
-        string keyTopicsToPrepare,
-        string suggestedRevisionAreas)
+    public void Regenerate(RegenerateInterviewPreparationPayload payload)
     {
-        TechnicalQuestions = technicalQuestions;
-        BehavioralQuestions = behavioralQuestions;
-        ExperienceBasedQuestions = experienceBasedQuestions;
-        RoleSpecificQuestions = roleSpecificQuestions;
-        KeyTopicsToPrepare = keyTopicsToPrepare;
-        SuggestedRevisionAreas = suggestedRevisionAreas;
+        TechnicalQuestions = payload.TechnicalQuestions;
+        BehavioralQuestions = payload.BehavioralQuestions;
+        ExperienceBasedQuestions = payload.ExperienceBasedQuestions;
+        RoleSpecificQuestions = payload.RoleSpecificQuestions;
+        KeyTopicsToPrepare = payload.KeyTopicsToPrepare;
+        SuggestedRevisionAreas = payload.SuggestedRevisionAreas;
         AdditionalQuestions = null; // Clear previous additional questions
         Status = InterviewPreparationStatus.Regenerated;
         GenerationCount++;
@@ -96,12 +77,14 @@ public sealed class InterviewPreparation : BaseEntity
 
     /// <summary>
     /// Check if the preparation is still accessible based on the interview schedule.
-    /// Default: accessible until 30 minutes after the scheduled interview time.
+    /// The caller supplies the access window (configured per environment).
     /// </summary>
-    public bool IsAccessible(TimeSpan? accessWindowAfterInterview = null)
+    /// <param name="accessWindowAfterInterview">
+    /// How long after the scheduled interview time the preparation stays accessible.
+    /// </param>
+    public bool IsAccessible(TimeSpan accessWindowAfterInterview)
     {
         if (ScheduledAt is null) return true; // No schedule = always accessible
-        var window = accessWindowAfterInterview ?? TimeSpan.FromMinutes(30);
-        return DateTime.UtcNow <= ScheduledAt.Value.Add(window);
+        return DateTime.UtcNow <= ScheduledAt.Value.Add(accessWindowAfterInterview);
     }
 }

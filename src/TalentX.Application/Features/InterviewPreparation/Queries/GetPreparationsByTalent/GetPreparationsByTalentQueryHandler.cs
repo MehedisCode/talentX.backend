@@ -1,4 +1,5 @@
 using MediatR;
+using Microsoft.Extensions.Options;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Features.InterviewPreparation.DTOs;
 using TalentX.Application.Features.InterviewPreparation.Mappers;
@@ -11,13 +12,16 @@ public sealed class GetPreparationsByTalentQueryHandler
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUser;
+    private readonly InterviewPreparationSettings _settings;
 
     public GetPreparationsByTalentQueryHandler(
         IUnitOfWork unitOfWork,
-        ICurrentUserService currentUser)
+        ICurrentUserService currentUser,
+        IOptions<InterviewPreparationSettings> settings)
     {
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
+        _settings = settings.Value;
     }
 
     public async Task<IReadOnlyList<InterviewPreparationDto>> Handle(
@@ -28,6 +32,10 @@ public sealed class GetPreparationsByTalentQueryHandler
         var preparations = await _unitOfWork.InterviewPreparations
             .GetByTalentUserIdAsync(userId, ct);
 
-        return preparations.Select(InterviewPreparationMapper.ToDto).ToList();
+        var accessWindow = _settings.AccessWindowAfterInterview;
+
+        return preparations
+            .Select(p => InterviewPreparationMapper.ToDto(p, accessWindow))
+            .ToList();
     }
 }

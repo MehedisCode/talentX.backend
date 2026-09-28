@@ -2,18 +2,22 @@ using System.Security.Claims;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using TalentX.Application.Common.Models;
 using TalentX.Infrastructure.RateLimiting.Policies;
 
 namespace TalentX.Infrastructure.RateLimiting;
 
 public static class RateLimitingStartup
 {
-    public static IServiceCollection AddRateLimiting(this IServiceCollection services)
+    public static IServiceCollection AddRateLimiting(
+        this IServiceCollection services,
+        IConfiguration configuration)
     {
         services.AddRateLimiter(options =>
         {
-            // ── Custom 429 JSON response ──
+            // ── Custom 429 JSON response (standard error structure) ──
             options.OnRejected = async (context, cancellationToken) =>
             {
                 context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
@@ -27,23 +31,21 @@ public static class RateLimitingStartup
                 context.HttpContext.Response.Headers.RetryAfter =
                     ((int)retryAfter.TotalSeconds).ToString();
 
-                await context.HttpContext.Response.WriteAsJsonAsync(new
-                {
-                    User = new { Message = "Too many requests. Please try again later." },
-                    Dev = new
-                    {
-                        Message = "Rate limit exceeded.",
-                        Details = $"Retry after {(int)retryAfter.TotalSeconds} seconds.",
-                        ExceptionType = "RateLimitExceeded"
-                    }
-                }, cancellationToken);
+                await context.HttpContext.Response.WriteAsJsonAsync(
+                    new ErrorResponseDto(
+                        new UserResponse("Too many requests. Please try again later."),
+                        new DevResponse(
+                            "Rate limit exceeded.",
+                            Details: $"Retry after {(int)retryAfter.TotalSeconds} seconds.",
+                            ExceptionType: "RateLimitExceeded")),
+                    cancellationToken);
             };
 
             // ── Register domain-specific policies ──
             AuthRateLimitPolicies.Register(options);
             JobRateLimitPolicies.Register(options);
             EmployerRateLimitPolicies.Register(options);
-            InterviewPrepRateLimitPolicies.Register(options);
+            InterviewPrepRateLimitPolicies.Register(options, configuration);
         });
 
         return services;

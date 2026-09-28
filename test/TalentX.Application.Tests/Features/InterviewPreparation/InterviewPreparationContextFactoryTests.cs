@@ -65,8 +65,9 @@ public class InterviewPreparationContextFactoryTests
 
         // Act
         var context = InterviewPreparationContextFactory.CreateContext(
-            job, CreateTalent(), CreateInvitation(job.Id),
-            new List<WorkExperience>(), new List<Education>());
+            new InterviewPreparationContextPayload(
+                job, CreateTalent(), CreateInvitation(job.Id),
+                new List<WorkExperience>(), new List<Education>()));
 
         // Assert
         context.JobTitle.Should().Be("Backend Engineer");
@@ -86,8 +87,9 @@ public class InterviewPreparationContextFactoryTests
 
         // Act
         var context = InterviewPreparationContextFactory.CreateContext(
-            job, CreateTalent(), CreateInvitation(job.Id),
-            new List<WorkExperience>(), new List<Education>());
+            new InterviewPreparationContextPayload(
+                job, CreateTalent(), CreateInvitation(job.Id),
+                new List<WorkExperience>(), new List<Education>()));
 
         // Assert
         context.TalentName.Should().Be("Ada Lovelace");
@@ -116,7 +118,8 @@ public class InterviewPreparationContextFactoryTests
 
         // Act
         var context = InterviewPreparationContextFactory.CreateContext(
-            job, CreateTalent(), CreateInvitation(job.Id), workExperiences, educations);
+            new InterviewPreparationContextPayload(
+                job, CreateTalent(), CreateInvitation(job.Id), workExperiences, educations));
 
         // Assert
         context.WorkExperiences.Should().HaveCount(2);
@@ -136,8 +139,9 @@ public class InterviewPreparationContextFactoryTests
 
         // Act
         var context = InterviewPreparationContextFactory.CreateContext(
-            job, CreateTalent(), invitation,
-            new List<WorkExperience>(), new List<Education>());
+            new InterviewPreparationContextPayload(
+                job, CreateTalent(), invitation,
+                new List<WorkExperience>(), new List<Education>()));
 
         // Assert
         context.InterviewType.Should().Be("OnCall");
@@ -152,8 +156,9 @@ public class InterviewPreparationContextFactoryTests
 
         // Act
         var context = InterviewPreparationContextFactory.CreateContext(
-            job, CreateTalent(), CreateInvitation(job.Id),
-            new List<WorkExperience>(), new List<Education>());
+            new InterviewPreparationContextPayload(
+                job, CreateTalent(), CreateInvitation(job.Id),
+                new List<WorkExperience>(), new List<Education>()));
 
         // Assert
         context.WorkExperiences.Should().BeEmpty();

@@ -16,6 +16,9 @@ public sealed class GeminiInterviewPreparationService : IInterviewPreparationAiS
 
     private readonly string _apiKey;
     private readonly string _modelName;
+    private readonly double _temperature;
+    private readonly double _topP;
+    private readonly int _maxOutputTokens;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -42,6 +45,15 @@ public sealed class GeminiInterviewPreparationService : IInterviewPreparationAiS
         _modelName = configuration["GEMINI_MODEL_NAME"]
             ?? configuration["Gemini:ModelName"]
             ?? "gemini-3.7-flash";
+
+        var tempStr = configuration["GEMINI_TEMPERATURE"] ?? configuration["Gemini:Temperature"];
+        _temperature = double.TryParse(tempStr, out var tempVal) ? tempVal : 0.7;
+
+        var topPStr = configuration["GEMINI_TOP_P"] ?? configuration["Gemini:TopP"];
+        _topP = double.TryParse(topPStr, out var topPVal) ? topPVal : 0.95;
+
+        var maxTokensStr = configuration["GEMINI_MAX_OUTPUT_TOKENS"] ?? configuration["Gemini:MaxOutputTokens"];
+        _maxOutputTokens = int.TryParse(maxTokensStr, out var maxTokensVal) ? maxTokensVal : 4096;
     }
 
     public async Task<InterviewPreparationResult> GeneratePreparationAsync(
@@ -69,7 +81,9 @@ public sealed class GeminiInterviewPreparationService : IInterviewPreparationAiS
             },
             generationConfig = new
             {
-                temperature = 0.7,
+                temperature = _temperature,
+                top_p = _topP,
+                max_output_tokens = _maxOutputTokens,
                 response_mime_type = "application/json"
             }
         };
@@ -122,7 +136,9 @@ public sealed class GeminiInterviewPreparationService : IInterviewPreparationAiS
             },
             generationConfig = new
             {
-                temperature = 0.7,
+                temperature = _temperature,
+                top_p = _topP,
+                max_output_tokens = _maxOutputTokens,
                 response_mime_type = "application/json"
             }
         };

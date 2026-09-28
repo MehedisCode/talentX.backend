@@ -21,7 +21,7 @@ public static class InfrastructureStartup
         services.AddFileStorage(configuration);
         services.AddExtractionServices(configuration);
         services.AddRealtime();
-        services.AddRateLimiting();
+        services.AddRateLimiting(configuration);
 
         return services;
     }

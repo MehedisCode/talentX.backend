@@ -1,9 +1,11 @@
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Moq;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Common.Interfaces.Repositories;
+using TalentX.Application.Features.InterviewPreparation;
 using TalentX.Application.Features.InterviewPreparation.Commands.GeneratePreparation;
 using TalentX.Application.Features.InterviewPreparation.DTOs;
 using TalentX.Application.Identity.Services;
@@ -45,6 +47,7 @@ public class GeneratePreparationCommandHandlerTests
             _unitOfWork.Object,
             _currentUserService.Object,
             _aiService.Object,
+            Options.Create(new InterviewPreparationSettings()),
             _logger.Object);
     }
 
@@ -252,8 +255,20 @@ public class GeneratePreparationCommandHandlerTests
     {
         var invitation = CreateAcceptedInvitation(Guid.NewGuid(), TalentUserId);
         var existing = InterviewPreparationEntity.Create(
-            invitation.Id, TalentUserId, Guid.NewGuid(), "Backend Engineer", "Acme",
-            "OnCall", null, "[]", "[]", "[]", "[]", "[]", "[]");
+            new CreateInterviewPreparationPayload(
+                InterviewInvitationId: invitation.Id,
+                TalentUserId: TalentUserId,
+                JobId: Guid.NewGuid(),
+                JobTitle: "Backend Engineer",
+                CompanyName: "Acme",
+                InterviewType: "OnCall",
+                ScheduledAt: null,
+                TechnicalQuestions: "[]",
+                BehavioralQuestions: "[]",
+                ExperienceBasedQuestions: "[]",
+                RoleSpecificQuestions: "[]",
+                KeyTopicsToPrepare: "[]",
+                SuggestedRevisionAreas: "[]"));
         SetUpAcceptedInvitationFlow(invitation, existing);
 
         var act = () => _handler.Handle(

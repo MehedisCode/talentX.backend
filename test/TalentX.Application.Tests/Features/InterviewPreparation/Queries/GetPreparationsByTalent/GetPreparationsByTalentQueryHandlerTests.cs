@@ -1,9 +1,12 @@
 using FluentAssertions;
+using Microsoft.Extensions.Options;
 using Moq;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Common.Interfaces.Repositories;
+using TalentX.Application.Features.InterviewPreparation;
 using TalentX.Application.Features.InterviewPreparation.Queries.GetPreparationsByTalent;
 using TalentX.Application.Identity.Services;
+using TalentX.Domain.Entities;
 using Xunit;
 using InterviewPreparationEntity = TalentX.Domain.Entities.InterviewPreparation;
 
@@ -24,25 +27,28 @@ public class GetPreparationsByTalentQueryHandlerTests
         _currentUserService.SetupGet(u => u.UserId).Returns(TalentUserId);
 
         _handler = new GetPreparationsByTalentQueryHandler(
-            _unitOfWork.Object, _currentUserService.Object);
+            _unitOfWork.Object,
+            _currentUserService.Object,
+            Options.Create(new InterviewPreparationSettings()));
     }
 
     private static InterviewPreparationEntity CreatePreparation(string jobTitle)
     {
         return InterviewPreparationEntity.Create(
-            interviewInvitationId: Guid.NewGuid(),
-            talentUserId: TalentUserId,
-            jobId: Guid.NewGuid(),
-            jobTitle: jobTitle,
-            companyName: "Acme",
-            interviewType: "OnCall",
-            scheduledAt: null,
-            technicalQuestions: "[]",
-            behavioralQuestions: "[]",
-            experienceBasedQuestions: "[]",
-            roleSpecificQuestions: "[]",
-            keyTopicsToPrepare: "[]",
-            suggestedRevisionAreas: "[]");
+            new CreateInterviewPreparationPayload(
+                InterviewInvitationId: Guid.NewGuid(),
+                TalentUserId: TalentUserId,
+                JobId: Guid.NewGuid(),
+                JobTitle: jobTitle,
+                CompanyName: "Acme",
+                InterviewType: "OnCall",
+                ScheduledAt: null,
+                TechnicalQuestions: "[]",
+                BehavioralQuestions: "[]",
+                ExperienceBasedQuestions: "[]",
+                RoleSpecificQuestions: "[]",
+                KeyTopicsToPrepare: "[]",
+                SuggestedRevisionAreas: "[]"));
     }
 
     [Fact]
