@@ -2,8 +2,6 @@ using TalentX.Domain.Enums;
 
 namespace TalentX.Application.Features.CompanyReviews;
 
-// One source of truth for how a moderation reason is worded, so the audit log line always
-// matches what the reason enum actually means.
 public static class ReviewModerationReasonLabels
 {
     public static string ToLabel(ReviewModerationReason reason) => reason switch

@@ -14,14 +14,10 @@ public sealed record AdminCompanyReviewListItemDto
     public string CompanyName { get; init; } = string.Empty;
     public string JobTitle { get; init; } = string.Empty;
 
-    // Nobody but an admin ever sees these - resolved from the talent user record, or
-    // "Deleted user" / null when that account no longer exists.
     public string ReviewerName { get; init; } = string.Empty;
     public string ReviewerEmail { get; init; } = string.Empty;
     public Guid? ReviewerUserId { get; init; }
 
-    // Not part of the admin API contract - kept so the query handler can batch-resolve
-    // ReviewerName/Email/ReviewerUserId via a single Users lookup instead of an N+1 join.
     [JsonIgnore]
     public string TalentUserId { get; init; } = string.Empty;
 

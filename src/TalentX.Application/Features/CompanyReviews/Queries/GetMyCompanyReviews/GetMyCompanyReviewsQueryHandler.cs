@@ -38,7 +38,6 @@ public sealed class GetMyCompanyReviewsQueryHandler
         var accepted = await _unitOfWork.InterviewInvitations
             .GetAcceptedByTalentUserIdAsync(userId, cancellationToken);
 
-        // One row per application: several accepted rounds still mean a single review.
         var applications = accepted
             .GroupBy(invitation => invitation.JobApplicationId)
             .ToList();
@@ -62,12 +61,10 @@ public sealed class GetMyCompanyReviewsQueryHandler
                 reviews.TryGetValue(group.Key, out var review);
                 return ToItem(group.ToList(), review, companiesByEmployerId, now);
             })
-            // Locked rows with no derivable unlock time go last; otherwise newest unlock first.
             .OrderByDescending(item => item.ReviewUnlocksAt.HasValue)
             .ThenByDescending(item => item.ReviewUnlocksAt)
             .ToList();
 
-        // A talent has only a handful of accepted interviews, so paging in memory is cheap.
         var pageItems = items
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
@@ -85,7 +82,6 @@ public sealed class GetMyCompanyReviewsQueryHandler
         var delayDays = _settings.AssessmentReviewDelayDays;
         var unlockAt = CompanyReviewRules.TryGetApplicationUnlockAt(rounds, delayDays);
 
-        // The round that decides the unlock time is the one shown; without one, the first sent.
         var shownRound = rounds
             .Where(round => CompanyReviewRules.TryGetUnlockAt(round, delayDays) == unlockAt && unlockAt.HasValue)
             .FirstOrDefault()
@@ -113,8 +109,6 @@ public sealed class GetMyCompanyReviewsQueryHandler
 
     private static MyCompanyReviewDto ToReviewDto(CompanyReview review)
     {
-        // The moderator's note is only meaningful (and only shown) while the review is
-        // Rejected or Hidden; a withdrawn review can still carry an old one.
         var showModeration = review.Status is CompanyReviewStatus.Rejected or CompanyReviewStatus.Hidden;
 
         return new MyCompanyReviewDto(

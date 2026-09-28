@@ -21,8 +21,5 @@ public sealed record AdminCompanyReviewDetailsDto
     public ReviewModerationReason? ModerationReason { get; init; }
     public string? ModerationDetails { get; init; }
     public DateTime? ModeratedAt { get; init; }
-
-    // The entity only stores ModeratedByUserId; the list doesn't need this so it's
-    // resolved here alone via Users.GetByUserIdAsync.
     public string? ModeratedByEmail { get; init; }
 }

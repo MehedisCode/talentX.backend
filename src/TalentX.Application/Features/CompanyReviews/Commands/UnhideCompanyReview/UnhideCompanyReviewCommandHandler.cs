@@ -20,10 +20,8 @@ public sealed class UnhideCompanyReviewCommandHandler : IRequestHandler<UnhideCo
 
     public async Task<StatusUpdateResponseDto> Handle(UnhideCompanyReviewCommand request, CancellationToken cancellationToken)
     {
-        var actorUserId = _currentUserService.UserId
-            ?? throw new UnauthorizedException("You must be signed in to unhide a review.");
-        var actorEmail = _currentUserService.Email
-            ?? throw new UnauthorizedException("You must be signed in to unhide a review.");
+        var actorUserId = _currentUserService.UserId!;
+        var actorEmail = _currentUserService.Email!;
 
         var review = await _unitOfWork.CompanyReviews.GetByIdAsync(request.ReviewId, cancellationToken)
             ?? throw new NotFoundException("CompanyReview", request.ReviewId);

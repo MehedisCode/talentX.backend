@@ -56,14 +56,12 @@ public sealed class SubmitCompanyReviewCommandHandler : IRequestHandler<SubmitCo
                 : $"You can review this company after your interview ends, from {unlockAt.Value:MMM d, yyyy HH:mm} UTC.");
         }
 
-        // Reviews belong to the company, so the job's status/expiry/soft-delete are irrelevant here.
         var job = await _unitOfWork.Jobs.GetByIdIncludingDeletedAsync(application.JobId, cancellationToken)
             ?? throw new NotFoundException(nameof(Job), application.JobId);
 
         var company = await _unitOfWork.Companies.GetByEmployerIdAsync(job.EmployerId, cancellationToken);
         if (company is null)
         {
-            // Company rows are created lazily; same fallback as GetMyCompanyProfileQueryHandler.
             company = new Company(job.EmployerId, job.CompanyName);
             await _unitOfWork.Companies.AddAsync(company, cancellationToken);
         }

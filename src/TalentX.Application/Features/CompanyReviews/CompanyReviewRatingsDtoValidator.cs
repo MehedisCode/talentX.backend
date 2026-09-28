@@ -4,7 +4,6 @@ using TalentX.Domain.Entities;
 
 namespace TalentX.Application.Features.CompanyReviews;
 
-// Shared by the submit and update validators so both enforce the same rating range.
 public sealed class CompanyReviewRatingsDtoValidator : AbstractValidator<CompanyReviewRatingsDto>
 {
     public CompanyReviewRatingsDtoValidator()

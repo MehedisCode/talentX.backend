@@ -20,10 +20,8 @@ public sealed class ApproveCompanyReviewCommandHandler : IRequestHandler<Approve
 
     public async Task<StatusUpdateResponseDto> Handle(ApproveCompanyReviewCommand request, CancellationToken cancellationToken)
     {
-        var actorUserId = _currentUserService.UserId
-            ?? throw new UnauthorizedException("You must be signed in to approve a review.");
-        var actorEmail = _currentUserService.Email
-            ?? throw new UnauthorizedException("You must be signed in to approve a review.");
+        var actorUserId = _currentUserService.UserId!;
+        var actorEmail = _currentUserService.Email!;
 
         var review = await _unitOfWork.CompanyReviews.GetByIdAsync(request.ReviewId, cancellationToken)
             ?? throw new NotFoundException("CompanyReview", request.ReviewId);
@@ -39,8 +37,6 @@ public sealed class ApproveCompanyReviewCommandHandler : IRequestHandler<Approve
 
         var company = await _unitOfWork.Companies.GetByIdAsync(review.CompanyId, cancellationToken);
 
-        // Mentions the company and job title + review id so the line is traceable without a
-        // per-review moderation-history table; never the reviewer's name.
         await _unitOfWork.AuditLogs.AddAsync(
             new AuditLog(actorEmail, $"Approved review {review.Id} for '{company?.Name}' ({review.JobTitle})"),
             cancellationToken);

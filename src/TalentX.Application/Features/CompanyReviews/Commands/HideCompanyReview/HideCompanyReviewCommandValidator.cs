@@ -17,10 +17,6 @@ public sealed class HideCompanyReviewCommandValidator : AbstractValidator<HideCo
             .IsInEnum()
             .WithMessage("Invalid hide reason.");
 
-        // Details are user-facing (shown to the talent on the hidden review), so a fixed
-        // reason alone is never enough explanation.
-        // Stop cascade: the length checks only run once NotEmpty has passed, so they never
-        // see a null value. (A .When() here would wrap NotEmpty too and let blanks through.)
         RuleFor(command => command.Details)
             .Cascade(CascadeMode.Stop)
             .NotEmpty()

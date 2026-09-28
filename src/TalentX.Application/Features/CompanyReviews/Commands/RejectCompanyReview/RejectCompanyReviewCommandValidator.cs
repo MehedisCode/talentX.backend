@@ -17,10 +17,6 @@ public sealed class RejectCompanyReviewCommandValidator : AbstractValidator<Reje
             .IsInEnum()
             .WithMessage("Invalid rejection reason.");
 
-        // Details are user-facing (shown to the talent on the rejected review), so a fixed
-        // reason alone is never enough explanation.
-        // Stop cascade: the length checks only run once NotEmpty has passed, so they never
-        // see a null value. (A .When() here would wrap NotEmpty too and let blanks through.)
         RuleFor(command => command.Details)
             .Cascade(CascadeMode.Stop)
             .NotEmpty()
