@@ -386,10 +386,16 @@ public sealed class JobRepository : RepositoryBase<Job>, IJobRepository
         DateTime endUtc,
         CancellationToken cancellationToken = default)
     {
+        // Expiry is derived, not stored: nothing rewrites a job's status when its deadline passes, so a job that is
+        // still Published after its ExpireAt date counts as Expired here, the same rule the employer dashboard uses.
+        var currentDate = DateTime.UtcNow.Date;
+
         return await Context.Jobs
             .AsNoTracking()
             .Where(j => j.CreatedAt >= startUtc && j.CreatedAt <= endUtc && j.Status != JobStatus.Draft)
-            .GroupBy(j => j.Status)
+            .GroupBy(j => j.Status == JobStatus.Published && j.ExpireAt.Date < currentDate
+                ? JobStatus.Expired
+                : j.Status)
             .Select(g => new { Status = g.Key, Count = g.Count() })
             .ToDictionaryAsync(x => x.Status, x => x.Count, cancellationToken);
     }

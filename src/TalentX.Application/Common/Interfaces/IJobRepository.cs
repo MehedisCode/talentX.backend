@@ -50,8 +50,8 @@ public interface IJobRepository
         AdminJobQueryParams queryParams,
         CancellationToken cancellationToken = default);
 
-    // Returns how many jobs were created in the range, grouped by status. Drafts are left out. Soft-deleted jobs are excluded by the
-    // default query filter.
+    // Returns how many jobs were created in the range, grouped by effective status: a Published job past its deadline counts as
+    // Expired, because expiry is not stored. Drafts are left out. Soft-deleted jobs are excluded by the default query filter.
     Task<IReadOnlyDictionary<JobStatus, int>> GetStatusCountsCreatedBetweenAsync(
         DateTime startUtc,
         DateTime endUtc,
