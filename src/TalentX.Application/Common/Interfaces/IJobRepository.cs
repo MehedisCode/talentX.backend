@@ -50,19 +50,21 @@ public interface IJobRepository
         AdminJobQueryParams queryParams,
         CancellationToken cancellationToken = default);
 
-    // Admin dashboard. Bounds are UTC instants, inclusive. Soft-deleted jobs are excluded by the default query filter.
+    // Returns how many jobs were created in the range, grouped by status. Drafts are left out. Soft-deleted jobs are excluded by the
+    // default query filter.
     Task<IReadOnlyDictionary<JobStatus, int>> GetStatusCountsCreatedBetweenAsync(
         DateTime startUtc,
         DateTime endUtc,
         CancellationToken cancellationToken = default);
 
-    // Keyed by the UTC hour (groupByHour) or UTC day start, on PublishedAt.
+    // Returns how many jobs were published in the range per UTC hour (groupByHour) or UTC day; empty buckets are absent.
     Task<IReadOnlyDictionary<DateTime, int>> GetPublishedCountsByBucketAsync(
         DateTime startUtc,
         DateTime endUtc,
         bool groupByHour,
         CancellationToken cancellationToken = default);
 
+    // Returns the newest jobs published in the range, newest first, up to `take`.
     Task<IReadOnlyList<Job>> GetRecentPublishedBetweenAsync(
         DateTime startUtc,
         DateTime endUtc,
