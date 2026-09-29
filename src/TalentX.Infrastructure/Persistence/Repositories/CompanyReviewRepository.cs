@@ -194,4 +194,48 @@ public sealed class CompanyReviewRepository : ICompanyReviewRepository
             .Select(group => new { Status = group.Key, Count = group.Count() })
             .ToDictionaryAsync(x => x.Status, x => x.Count, cancellationToken);
     }
+
+    public async Task<PaginatedList<CompanyReview>> GetByCompanyIdPagedAsync(
+        Guid companyId,
+        CompanyReviewStatus? status,
+        ReviewSentiment? sentiment,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _context.CompanyReviews
+            .AsNoTracking()
+            .Where(review => review.CompanyId == companyId);
+
+        if (status.HasValue)
+        {
+            query = query.Where(review => review.Status == status.Value);
+        }
+
+        if (sentiment.HasValue)
+        {
+            query = query.Where(review => review.Sentiment == sentiment.Value);
+        }
+
+        var totalCount = await query.CountAsync(cancellationToken);
+
+        var items = await query
+            .OrderByDescending(review => review.SubmittedAt)
+            .ThenByDescending(review => review.Id)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return new PaginatedList<CompanyReview>(items, page, pageSize, totalCount);
+    }
+
+    public async Task<IReadOnlyDictionary<CompanyReviewStatus, int>> GetStatusCountsByCompanyAsync(Guid companyId, CancellationToken cancellationToken = default)
+    {
+        return await _context.CompanyReviews
+            .AsNoTracking()
+            .Where(review => review.CompanyId == companyId)
+            .GroupBy(review => review.Status)
+            .Select(group => new { Status = group.Key, Count = group.Count() })
+            .ToDictionaryAsync(x => x.Status, x => x.Count, cancellationToken);
+    }
 }
