@@ -24,6 +24,7 @@ public static class DatabaseInitializer
         {
             await db.Database.MigrateAsync();
             await IdentitySeeder.SeedAsync(services);
+            await Seeders.InterviewPreparationConfigSeeder.SeedAsync(services);
             return;
         }
 
@@ -32,6 +33,7 @@ public static class DatabaseInitializer
             await db.Database.MigrateAsync();
             await SeedJobsAsync(db);
             await IdentitySeeder.SeedAsync(services);
+            await Seeders.InterviewPreparationConfigSeeder.SeedAsync(services);
         }
         catch (PostgresException ex) when (ex.SqlState is "42P07" or "42P01")
         {
@@ -42,6 +44,7 @@ public static class DatabaseInitializer
             await db.Database.MigrateAsync();
             await SeedJobsAsync(db);
             await IdentitySeeder.SeedAsync(services);
+            await Seeders.InterviewPreparationConfigSeeder.SeedAsync(services);
         }
     }
 
