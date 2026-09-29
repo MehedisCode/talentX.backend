@@ -12,7 +12,7 @@ using TalentX.Infrastructure.Persistence.Contexts;
 namespace TalentX.Migrations.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260929040326_AddJobApplicationStatusHistory")]
+    [Migration("20260929085923_AddJobApplicationStatusHistory")]
     partial class AddJobApplicationStatusHistory
     {
         /// <inheritdoc />

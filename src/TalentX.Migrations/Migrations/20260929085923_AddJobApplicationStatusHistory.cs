@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -28,7 +28,7 @@ namespace TalentX.Migrations.Migrations
                 {
                     table.PrimaryKey("PK_JobApplicationStatusHistories", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_JobApplicationStatusHistories_JobApplications_JobApplicatio~",
+                        name: "FK_JobApplicationStatusHistories_JobApplications_JobApplicationId",
                         column: x => x.JobApplicationId,
                         principalTable: "JobApplications",
                         principalColumn: "Id",
