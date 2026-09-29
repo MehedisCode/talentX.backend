@@ -113,6 +113,9 @@ public class ApplyToJobCommandHandler : IRequestHandler<ApplyToJobCommand, Apply
             extractedEducationJson: request.ExtractedEducationJson);
 
         await _jobApplicationRepository.AddAsync(application, cancellationToken);
+        await _unitOfWork.JobApplicationStatusHistories.AddAsync(
+            JobApplicationStatusHistory.Create(application.Id, null, application.Status, email),
+            cancellationToken);
 
         var verificationToken = GenerateSecureToken();
         var tokenEntity = new EmailVerificationToken(

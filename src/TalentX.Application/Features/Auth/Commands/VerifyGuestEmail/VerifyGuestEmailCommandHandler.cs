@@ -228,7 +228,11 @@ public sealed class VerifyGuestEmailCommandHandler : IRequestHandler<VerifyGuest
         CancellationToken cancellationToken)
     {
         application.LinkTalentUser(talentUserId);
+        var previousStatus = application.Status;
         application.UpdateStatus(ApplicationStatus.Applied);
+        await _unitOfWork.JobApplicationStatusHistories.AddAsync(
+            JobApplicationStatusHistory.Create(application.Id, previousStatus, ApplicationStatus.Applied, talentUserId),
+            cancellationToken);
 
         var talent = await _talentRepository.GetByUserIdAsync(talentUserId, cancellationToken);
         if (talent is not null)
@@ -282,7 +286,11 @@ public sealed class VerifyGuestEmailCommandHandler : IRequestHandler<VerifyGuest
             if (pending.Id != application.Id)
             {
                 pending.LinkTalentUser(talentUserId);
+                var pendingPreviousStatus = pending.Status;
                 pending.UpdateStatus(ApplicationStatus.Applied);
+                await _unitOfWork.JobApplicationStatusHistories.AddAsync(
+                    JobApplicationStatusHistory.Create(pending.Id, pendingPreviousStatus, ApplicationStatus.Applied, talentUserId),
+                    cancellationToken);
             }
         }
     }
