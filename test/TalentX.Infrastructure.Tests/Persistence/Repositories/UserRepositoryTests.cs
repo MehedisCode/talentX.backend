@@ -173,6 +173,35 @@ public sealed class UserRepositoryTests
     }
 
     [Fact]
+    public async Task GetByUserIdsAsync_ReturnsOnlyRequestedUsers()
+    {
+        await using var context = CreateInMemoryContext();
+        var repository = new UserRepository(context);
+
+        await repository.AddAsync(new Talent("talent-batch-1", "Talent Batch One", "talent-batch-1@ait.com"));
+        await repository.AddAsync(new Talent("talent-batch-2", "Talent Batch Two", "talent-batch-2@ait.com"));
+        await repository.AddAsync(new Talent("talent-batch-3", "Talent Batch Three", "talent-batch-3@ait.com"));
+        await context.SaveChangesAsync();
+
+        var result = await repository.GetByUserIdsAsync(["talent-batch-1", "talent-batch-3", "non-existent-id"]);
+
+        result.Select(u => u.UserId).Should().BeEquivalentTo(["talent-batch-1", "talent-batch-3"]);
+    }
+
+    [Fact]
+    public async Task GetByUserIdsAsync_EmptyInput_ReturnsEmpty()
+    {
+        await using var context = CreateInMemoryContext();
+        var repository = new UserRepository(context);
+        await repository.AddAsync(new Talent("talent-batch-4", "Talent Batch Four", "talent-batch-4@ait.com"));
+        await context.SaveChangesAsync();
+
+        var result = await repository.GetByUserIdsAsync([]);
+
+        result.Should().BeEmpty();
+    }
+
+    [Fact]
     public async Task GetRoleAndStatusCountsAsync_ExcludesAdminsAndGroupsCorrectly()
     {
         await using var context = CreateInMemoryContext();

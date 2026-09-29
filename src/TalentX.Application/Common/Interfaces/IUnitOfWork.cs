@@ -28,6 +28,7 @@ public interface IUnitOfWork : IDisposable, IAsyncDisposable
     INotificationRepository Notifications { get; }
     IJobModerationHistoryRepository JobModerationHistories { get; }
     IInterviewPreparationRepository InterviewPreparations { get; }
+    ICompanyReviewRepository CompanyReviews { get; }
     IJobReportRepository JobReports { get; }
 
     /// <summary>
