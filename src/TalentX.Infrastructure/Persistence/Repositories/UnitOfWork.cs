@@ -15,6 +15,7 @@ public sealed class UnitOfWork : IUnitOfWork
 
     public IJobRepository Jobs { get; }
     public IJobApplicationRepository JobApplications { get; }
+    public IJobApplicationStatusHistoryRepository JobApplicationStatusHistories { get; }
     public IUserRepository Users { get; }
     public IEmployerRepository Employers { get; }
     public ICompanyRepository Companies { get; }
@@ -41,6 +42,7 @@ public sealed class UnitOfWork : IUnitOfWork
         _context = context;
         Jobs = new JobRepository(_context);
         JobApplications = new JobApplicationRepository(_context);
+        JobApplicationStatusHistories = new JobApplicationStatusHistoryRepository(_context);
         Users = new UserRepository(_context);
         Employers = new EmployerRepository(_context);
         Companies = new CompanyRepository(_context);

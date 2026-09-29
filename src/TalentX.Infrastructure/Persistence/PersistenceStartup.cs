@@ -31,6 +31,7 @@ public static class PersistenceStartup
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<IJobRepository, JobRepository>();
         services.AddScoped<IJobApplicationRepository, JobApplicationRepository>();
+        services.AddScoped<IJobApplicationStatusHistoryRepository, JobApplicationStatusHistoryRepository>();
         services.AddScoped<IEmployerRepository, EmployerRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<ITalentRepository, TalentRepository>();
