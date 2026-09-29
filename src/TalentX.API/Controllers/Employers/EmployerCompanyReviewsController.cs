@@ -27,9 +27,6 @@ public sealed class EmployerCompanyReviewsController : BaseApiController
     /// <returns>A paginated list of anonymized review items.</returns>
     [HttpGet]
     [ProducesResponseType(typeof(PaginatedList<EmployerCompanyReviewDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> GetCompanyReviews(
         [FromQuery] GetEmployerCompanyReviewsQuery? query = null,
         CancellationToken cancellationToken = default)
@@ -46,8 +43,6 @@ public sealed class EmployerCompanyReviewsController : BaseApiController
     /// <returns>The published-reviews summary and per-status counts.</returns>
     [HttpGet("summary")]
     [ProducesResponseType(typeof(EmployerCompanyReviewSummaryDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> GetCompanyReviewSummary(CancellationToken cancellationToken)
     {
         var result = await Sender.Send(new GetEmployerCompanyReviewSummaryQuery(), cancellationToken);
