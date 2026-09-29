@@ -9,6 +9,7 @@ public interface IUnitOfWork : IDisposable, IAsyncDisposable
 {
     IJobRepository Jobs { get; }
     IJobApplicationRepository JobApplications { get; }
+    IJobApplicationStatusHistoryRepository JobApplicationStatusHistories { get; }
     IUserRepository Users { get; }
     IEmployerRepository Employers { get; }
     ICompanyRepository Companies { get; }
