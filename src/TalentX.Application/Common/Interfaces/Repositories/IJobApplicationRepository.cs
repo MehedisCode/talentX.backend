@@ -1,4 +1,5 @@
 using TalentX.Application.Common.Models;
+using TalentX.Application.Features.Employers.DTOs;
 using TalentX.Domain.Entities;
 using TalentX.Domain.Enums;
 
@@ -41,4 +42,5 @@ public interface IJobApplicationRepository
         int pageSize,
         CancellationToken cancellationToken = default);
     Task<int> CountHiredByEmployerIdAsync(string employerId, CancellationToken cancellationToken = default);
+    Task<CandidatePipelineStatsDto> GetCandidatePipelineStatsByEmployerIdAsync(string employerId, CancellationToken cancellationToken = default);
 }

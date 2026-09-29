@@ -32,7 +32,7 @@ public sealed class GetEmployerDashboardQueryHandler : IRequestHandler<GetEmploy
             ?? throw new UnauthorizedException("You must be signed in to view employer dashboard.");
 
         var jobStats = await _jobRepository.GetEmployerStatsAsync(employerId, cancellationToken);
-        var totalHires = await _jobApplicationRepository.CountHiredByEmployerIdAsync(employerId, cancellationToken);
+        var candidatePipelineStats = await _jobApplicationRepository.GetCandidatePipelineStatsByEmployerIdAsync(employerId, cancellationToken);
         var recentJobs = await _jobRepository.GetRecentJobsByEmployerIdAsync(
             employerId,
             EmployerDashboardConstants.RecentJobsLimit,
@@ -40,13 +40,14 @@ public sealed class GetEmployerDashboardQueryHandler : IRequestHandler<GetEmploy
 
         return new EmployerDashboardDto(
             jobStats.TotalPostedJobs,
-            totalHires,
+            candidatePipelineStats.HiredCount,
             jobStats.ActiveJobsCount,
             jobStats.DraftJobsCount,
             jobStats.ClosedJobsCount,
             jobStats.ExpiredJobsCount,
             jobStats.DeactivatedJobsCount,
             jobStats.PendingReviewJobsCount,
+            candidatePipelineStats,
             recentJobs);
     }
 }
