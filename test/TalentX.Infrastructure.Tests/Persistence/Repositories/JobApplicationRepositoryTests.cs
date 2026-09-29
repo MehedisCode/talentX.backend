@@ -1,5 +1,6 @@
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
+using TalentX.Application.Features.Employers.DTOs;
 using TalentX.Domain.Entities;
 using TalentX.Domain.Enums;
 using TalentX.Infrastructure.Persistence.Contexts;
@@ -158,6 +159,85 @@ public sealed class JobApplicationRepositoryTests
         employerOneCount.Should().Be(3);
         employerTwoCount.Should().Be(1);
         unknownEmployerCount.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task GetCandidatePipelineStatsByEmployerIdAsync_WhenApplicationsExist_ReturnsCorrectStageCountsIncludingSoftDeletedJobs()
+    {
+        await using var context = NewContext();
+        var repository = new JobApplicationRepository(context);
+
+        var employerOneJobOne = MakeJob("employer-1");
+        var employerOneDeletedJob = MakeJob("employer-1");
+        employerOneDeletedJob.SoftDelete();
+
+        var employerTwoJob = MakeJob("employer-2");
+
+        context.Jobs.AddRange(employerOneJobOne, employerOneDeletedJob, employerTwoJob);
+
+        var appliedApplication = NewApplication(jobId: employerOneJobOne.Id, talentUserId: "talent-applied");
+        appliedApplication.UpdateStatus(ApplicationStatus.Applied);
+
+        var shortlistedApplication = NewApplication(jobId: employerOneJobOne.Id, talentUserId: "talent-shortlisted");
+        shortlistedApplication.UpdateStatus(ApplicationStatus.Shortlisted);
+
+        var invitedApplication = NewApplication(jobId: employerOneJobOne.Id, talentUserId: "talent-invited");
+        invitedApplication.UpdateStatus(ApplicationStatus.Invited);
+
+        var rejectedApplication = NewApplication(jobId: employerOneJobOne.Id, talentUserId: "talent-rejected");
+        rejectedApplication.UpdateStatus(ApplicationStatus.Rejected);
+
+        var hiredApplication = NewApplication(jobId: employerOneJobOne.Id, talentUserId: "talent-hired");
+        hiredApplication.UpdateStatus(ApplicationStatus.Hired);
+
+        var hiredOnDeletedJob = NewApplication(jobId: employerOneDeletedJob.Id, talentUserId: "talent-deleted-hired");
+        hiredOnDeletedJob.UpdateStatus(ApplicationStatus.Hired);
+
+        var otherStatusApplication = NewApplication(jobId: employerOneJobOne.Id, talentUserId: "talent-reviewed");
+        otherStatusApplication.UpdateStatus(ApplicationStatus.Reviewed);
+
+        var employerTwoApplied = NewApplication(jobId: employerTwoJob.Id, talentUserId: "talent-emp2");
+        employerTwoApplied.UpdateStatus(ApplicationStatus.Applied);
+
+        context.JobApplications.AddRange(
+            appliedApplication,
+            shortlistedApplication,
+            invitedApplication,
+            rejectedApplication,
+            hiredApplication,
+            hiredOnDeletedJob,
+            otherStatusApplication,
+            employerTwoApplied);
+        await context.SaveChangesAsync();
+
+        var pipelineStats = await repository.GetCandidatePipelineStatsByEmployerIdAsync("employer-1");
+
+        pipelineStats.Should().NotBeNull();
+        pipelineStats.AppliedCount.Should().Be(1);
+        pipelineStats.ShortlistedCount.Should().Be(1);
+        pipelineStats.InvitedCount.Should().Be(1);
+        pipelineStats.RejectedCount.Should().Be(1);
+        pipelineStats.HiredCount.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task GetCandidatePipelineStatsByEmployerIdAsync_WhenNoApplicationsExist_ReturnsZeroCounts()
+    {
+        await using var context = NewContext();
+        var repository = new JobApplicationRepository(context);
+
+        var job = MakeJob("employer-empty");
+        context.Jobs.Add(job);
+        await context.SaveChangesAsync();
+
+        var pipelineStats = await repository.GetCandidatePipelineStatsByEmployerIdAsync("employer-empty");
+
+        pipelineStats.Should().NotBeNull();
+        pipelineStats.AppliedCount.Should().Be(0);
+        pipelineStats.ShortlistedCount.Should().Be(0);
+        pipelineStats.InvitedCount.Should().Be(0);
+        pipelineStats.RejectedCount.Should().Be(0);
+        pipelineStats.HiredCount.Should().Be(0);
     }
 
     private static Job MakeJob(string employerId = "employer-1")

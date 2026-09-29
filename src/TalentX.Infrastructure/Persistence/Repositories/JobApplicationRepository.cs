@@ -1,7 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using TalentX.Application.Common.Interfaces.Repositories;
 using TalentX.Application.Common.Models;
+using TalentX.Application.Features.Employers.DTOs;
 using TalentX.Domain.Entities;
+using TalentX.Domain.Enums;
 using TalentX.Infrastructure.Persistence.Contexts;
 
 namespace TalentX.Infrastructure.Persistence.Repositories;
@@ -208,6 +210,32 @@ public sealed class JobApplicationRepository : IJobApplicationRepository
             .Where(application => application.Status == ApplicationStatus.Hired &&
                                   _context.Jobs.IgnoreQueryFilters().Any(job => job.Id == application.JobId && job.EmployerId == employerId))
             .CountAsync(cancellationToken);
+    }
+
+    public async Task<CandidatePipelineStatsDto> GetCandidatePipelineStatsByEmployerIdAsync(
+        string employerId,
+        CancellationToken cancellationToken = default)
+    {
+        var candidatePipelineStatistics = await _context.JobApplications
+            .AsNoTracking()
+            .Where(application => _context.Jobs.IgnoreQueryFilters().Any(job => job.Id == application.JobId && job.EmployerId == employerId))
+            .GroupBy(application => 1)
+            .Select(group => new
+            {
+                AppliedCount = group.Count(application => application.Status == ApplicationStatus.Applied),
+                ShortlistedCount = group.Count(application => application.Status == ApplicationStatus.Shortlisted),
+                InvitedCount = group.Count(application => application.Status == ApplicationStatus.Invited),
+                RejectedCount = group.Count(application => application.Status == ApplicationStatus.Rejected),
+                HiredCount = group.Count(application => application.Status == ApplicationStatus.Hired)
+            })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return new CandidatePipelineStatsDto(
+            candidatePipelineStatistics?.AppliedCount ?? 0,
+            candidatePipelineStatistics?.ShortlistedCount ?? 0,
+            candidatePipelineStatistics?.InvitedCount ?? 0,
+            candidatePipelineStatistics?.RejectedCount ?? 0,
+            candidatePipelineStatistics?.HiredCount ?? 0);
     }
 
     public void Update(JobApplication jobApplication)

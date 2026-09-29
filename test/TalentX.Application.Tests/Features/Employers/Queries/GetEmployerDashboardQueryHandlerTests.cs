@@ -36,7 +36,7 @@ public sealed class GetEmployerDashboardQueryHandlerTests
         await handleAction.Should().ThrowAsync<UnauthorizedException>()
             .WithMessage("You must be signed in to view employer dashboard.");
         _jobRepository.Verify(repository => repository.GetEmployerStatsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
-        _jobApplicationRepository.Verify(repository => repository.CountHiredByEmployerIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        _jobApplicationRepository.Verify(repository => repository.GetCandidatePipelineStatsByEmployerIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -54,6 +54,13 @@ public sealed class GetEmployerDashboardQueryHandlerTests
             DeactivatedJobsCount: 1,
             PendingReviewJobsCount: 1);
 
+        var expectedPipelineStats = new CandidatePipelineStatsDto(
+            AppliedCount: 10,
+            ShortlistedCount: 5,
+            InvitedCount: 3,
+            RejectedCount: 2,
+            HiredCount: 4);
+
         var recentJobsList = new List<EmployerRecentJobDto>
         {
             new(
@@ -69,8 +76,8 @@ public sealed class GetEmployerDashboardQueryHandlerTests
         _jobRepository.Setup(repository => repository.GetEmployerStatsAsync(currentEmployerUserId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(expectedJobStats);
 
-        _jobApplicationRepository.Setup(repository => repository.CountHiredByEmployerIdAsync(currentEmployerUserId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(4);
+        _jobApplicationRepository.Setup(repository => repository.GetCandidatePipelineStatsByEmployerIdAsync(currentEmployerUserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expectedPipelineStats);
 
         _jobRepository.Setup(repository => repository.GetRecentJobsByEmployerIdAsync(
                 currentEmployerUserId,
@@ -89,6 +96,7 @@ public sealed class GetEmployerDashboardQueryHandlerTests
         dashboardResult.ExpiredJobsCount.Should().Be(1);
         dashboardResult.DeactivatedJobsCount.Should().Be(1);
         dashboardResult.PendingReviewJobsCount.Should().Be(1);
+        dashboardResult.CandidatePipeline.Should().Be(expectedPipelineStats);
         dashboardResult.RecentJobs.Should().HaveCount(1);
         dashboardResult.RecentJobs[0].Title.Should().Be("Senior .NET Engineer");
         dashboardResult.RecentJobs[0].ApplicantCount.Should().Be(7);

@@ -68,6 +68,7 @@ public sealed class EmployersControllerTests
             ExpiredJobsCount: 0,
             DeactivatedJobsCount: 0,
             PendingReviewJobsCount: 0,
+            CandidatePipeline: new CandidatePipelineStatsDto(5, 3, 2, 1, 2),
             RecentJobs: []);
 
         _sender
