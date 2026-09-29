@@ -233,7 +233,7 @@ public class RegeneratePreparationCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WhenRegenerationLimitIsReached_ThrowsBadRequestException()
+    public async Task Handle_WhenRegenerationLimitIsReached_ThrowsTooManyRequestsException()
     {
         var existing = CreatePreparation(Guid.NewGuid());
         existing.Regenerate(new RegenerateInterviewPreparationPayload("[]", "[]", "[]", "[]", "[]", "[]"));
@@ -246,7 +246,7 @@ public class RegeneratePreparationCommandHandlerTests
         var act = () => _handler.Handle(
             new RegeneratePreparationCommand(existing.InterviewInvitationId), CancellationToken.None);
 
-        await act.Should().ThrowAsync<BadRequestException>()
+        await act.Should().ThrowAsync<TooManyRequestsException>()
             .WithMessage("Maximum regeneration limit reached (3 times).");
         _aiService.Verify(
             s => s.GeneratePreparationAsync(
@@ -255,7 +255,7 @@ public class RegeneratePreparationCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WhenDailyGenerationLimitIsReached_ThrowsBadRequestException()
+    public async Task Handle_WhenDailyGenerationLimitIsReached_ThrowsTooManyRequestsException()
     {
         var existing = CreatePreparation(Guid.NewGuid());
         SetUpFlow(existing, todayCount: 10);
@@ -263,7 +263,7 @@ public class RegeneratePreparationCommandHandlerTests
         var act = () => _handler.Handle(
             new RegeneratePreparationCommand(existing.InterviewInvitationId), CancellationToken.None);
 
-        await act.Should().ThrowAsync<BadRequestException>()
+        await act.Should().ThrowAsync<TooManyRequestsException>()
             .WithMessage("Daily interview preparation generation limit reached.");
     }
 

@@ -3,8 +3,11 @@ using Microsoft.Extensions.Logging;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Features.InterviewPreparation.DTOs;
+using TalentX.Application.Features.InterviewPreparation.Helpers;
 using TalentX.Application.Features.InterviewPreparation.Mappers;
 using TalentX.Application.Identity.Services;
+using TalentX.Domain.Entities;
+using InterviewPreparationEntity = TalentX.Domain.Entities.InterviewPreparation;
 
 namespace TalentX.Application.Features.InterviewPreparation.Commands.GenerateAdditionalQuestions;
 
@@ -39,8 +42,8 @@ public sealed class GenerateAdditionalQuestionsCommandHandler
 
         var preparation = await GetPreparationAsync(request.InvitationId, ct);
 
-        EnsureUserCanAccess(preparation, userId);
-        EnsurePreparationIsAccessible(preparation, config.AccessWindowAfterInterview);
+        InterviewPreparationAccessValidator.EnsureUserCanAccess(preparation, userId);
+        InterviewPreparationAccessValidator.EnsurePreparationIsAccessible(preparation, config.AccessWindowAfterInterview);
 
         var talent = await _unitOfWork.Talents.GetByUserIdAsync(userId, ct);
 
@@ -57,7 +60,7 @@ public sealed class GenerateAdditionalQuestionsCommandHandler
             preparation, config.AccessWindowAfterInterview);
     }
 
-    private async Task<Domain.Entities.InterviewPreparation> GetPreparationAsync(
+    private async Task<InterviewPreparationEntity> GetPreparationAsync(
         Guid invitationId, CancellationToken ct)
     {
         return await _unitOfWork.InterviewPreparations
@@ -65,22 +68,8 @@ public sealed class GenerateAdditionalQuestionsCommandHandler
             ?? throw new NotFoundException("Interview preparation not found.");
     }
 
-    private static void EnsureUserCanAccess(
-        Domain.Entities.InterviewPreparation preparation, string userId)
-    {
-        if (preparation.TalentUserId != userId)
-            throw new ForbiddenException("You do not have access to this interview preparation.");
-    }
-
-    private static void EnsurePreparationIsAccessible(
-        Domain.Entities.InterviewPreparation preparation, TimeSpan accessWindow)
-    {
-        if (!preparation.IsAccessible(accessWindow))
-            throw new ForbiddenException("Preparation is no longer accessible as the interview has already taken place.");
-    }
-
     private static AdditionalQuestionsContext CreateContext(
-        Domain.Entities.InterviewPreparation preparation, string? talentName)
+        InterviewPreparationEntity preparation, string? talentName)
     {
         return new AdditionalQuestionsContext
         {

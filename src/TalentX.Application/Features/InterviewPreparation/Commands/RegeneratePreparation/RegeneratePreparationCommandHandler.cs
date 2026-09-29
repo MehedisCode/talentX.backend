@@ -3,9 +3,11 @@ using Microsoft.Extensions.Logging;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Features.InterviewPreparation.DTOs;
+using TalentX.Application.Features.InterviewPreparation.Helpers;
 using TalentX.Application.Features.InterviewPreparation.Mappers;
 using TalentX.Application.Identity.Services;
 using TalentX.Domain.Entities;
+using InterviewPreparationEntity = TalentX.Domain.Entities.InterviewPreparation;
 
 namespace TalentX.Application.Features.InterviewPreparation.Commands.RegeneratePreparation;
 
@@ -40,17 +42,17 @@ public sealed class RegeneratePreparationCommandHandler
 
         var existing = await GetPreparationAsync(request.InvitationId, ct);
 
-        EnsureUserCanAccess(existing, userId);
-        EnsurePreparationIsAccessible(existing, config.AccessWindowAfterInterview);
+        InterviewPreparationAccessValidator.EnsureUserCanAccess(existing, userId);
+        InterviewPreparationAccessValidator.EnsurePreparationIsAccessible(existing, config.AccessWindowAfterInterview);
 
         if (existing.GenerationCount >= config.MaxRegenerationCount)
-            throw new BadRequestException(
+            throw new TooManyRequestsException(
                 $"Maximum regeneration limit reached ({config.MaxRegenerationCount} times).");
 
         var todayCount = await _unitOfWork.InterviewPreparations
             .CountTodayByTalentAsync(userId, ct);
         if (todayCount >= config.DailyGenerationLimit)
-            throw new BadRequestException("Daily interview preparation generation limit reached.");
+            throw new TooManyRequestsException("Daily interview preparation generation limit reached.");
 
         var invitation = await _unitOfWork.InterviewInvitations
             .GetByIdAsync(request.InvitationId, ct)
@@ -91,26 +93,12 @@ public sealed class RegeneratePreparationCommandHandler
             existing, config.AccessWindowAfterInterview);
     }
 
-    private async Task<Domain.Entities.InterviewPreparation> GetPreparationAsync(
+    private async Task<InterviewPreparationEntity> GetPreparationAsync(
         Guid invitationId, CancellationToken ct)
     {
         return await _unitOfWork.InterviewPreparations
             .GetByInvitationIdAsync(invitationId, ct)
             ?? throw new NotFoundException("Interview preparation not found.");
-    }
-
-    private static void EnsureUserCanAccess(
-        Domain.Entities.InterviewPreparation preparation, string userId)
-    {
-        if (preparation.TalentUserId != userId)
-            throw new ForbiddenException("You do not have access to this interview preparation.");
-    }
-
-    private static void EnsurePreparationIsAccessible(
-        Domain.Entities.InterviewPreparation preparation, TimeSpan accessWindow)
-    {
-        if (!preparation.IsAccessible(accessWindow))
-            throw new ForbiddenException("Preparation is no longer accessible as the interview has already taken place.");
     }
 
     private async Task<InterviewPreparationResult> GenerateWithAiAsync(

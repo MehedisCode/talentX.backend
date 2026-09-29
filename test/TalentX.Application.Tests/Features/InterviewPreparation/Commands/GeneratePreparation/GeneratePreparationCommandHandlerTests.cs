@@ -285,7 +285,7 @@ public class GeneratePreparationCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WhenDailyLimitIsReached_ThrowsBadRequestException()
+    public async Task Handle_WhenDailyLimitIsReached_ThrowsTooManyRequestsException()
     {
         var invitation = CreateAcceptedInvitation(Guid.NewGuid(), TalentUserId);
         SetUpAcceptedInvitationFlow(invitation, todayCount: 5);
@@ -293,7 +293,7 @@ public class GeneratePreparationCommandHandlerTests
         var act = () => _handler.Handle(
             new GeneratePreparationCommand(invitation.Id), CancellationToken.None);
 
-        await act.Should().ThrowAsync<BadRequestException>()
+        await act.Should().ThrowAsync<TooManyRequestsException>()
             .WithMessage("Daily interview preparation limit reached (5/day).");
         _aiService.Verify(
             s => s.GeneratePreparationAsync(

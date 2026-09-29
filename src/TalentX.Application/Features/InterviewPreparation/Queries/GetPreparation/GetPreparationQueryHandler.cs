@@ -2,6 +2,7 @@ using MediatR;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Features.InterviewPreparation.DTOs;
+using TalentX.Application.Features.InterviewPreparation.Helpers;
 using TalentX.Application.Features.InterviewPreparation.Mappers;
 using TalentX.Application.Identity.Services;
 
@@ -34,8 +35,7 @@ public sealed class GetPreparationQueryHandler
             .GetByInvitationIdAsync(request.InvitationId, ct)
             ?? throw new NotFoundException("Interview preparation not found.");
 
-        if (preparation.TalentUserId != userId)
-            throw new ForbiddenException("You do not have access to this interview preparation.");
+        InterviewPreparationAccessValidator.EnsureUserCanAccess(preparation, userId);
 
         return InterviewPreparationMapper.ToDto(
             preparation, config.AccessWindowAfterInterview);
