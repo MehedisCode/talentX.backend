@@ -1422,6 +1422,35 @@ namespace TalentX.Migrations.Migrations
                     b.ToTable("WorkExperiences", (string)null);
                 });
 
+            modelBuilder.Entity("TalentX.Domain.InterviewPreparationConfig", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("AccessWindowAfterInterviewMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("DailyGenerateLimit")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("DailyGenerationLimit")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("MaxRegenerationCount")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("InterviewPreparationConfigs");
+                });
+
             modelBuilder.Entity("TalentX.Domain.User", b =>
                 {
                     b.Property<Guid>("Id")

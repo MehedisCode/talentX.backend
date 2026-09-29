@@ -94,16 +94,17 @@ public class InterviewPreparationPromptBuilderTests
     }
 
     [Fact]
-    public void BuildPreparationPrompt_RequestsEveryQuestionCategoryPlusTopicsAndRevisionAreas()
+    public void BuildPreparationSchema_DefinesAllRequiredQuestionCategoriesAndTopics()
     {
-        var prompt = InterviewPreparationPromptBuilder.BuildPreparationPrompt(BuildContext());
+        var schema = InterviewPreparationPromptBuilder.BuildPreparationSchema();
+        var json = System.Text.Json.JsonSerializer.Serialize(schema);
 
-        prompt.Should().Contain("\"technicalQuestions\"");
-        prompt.Should().Contain("\"behavioralQuestions\"");
-        prompt.Should().Contain("\"experienceBasedQuestions\"");
-        prompt.Should().Contain("\"roleSpecificQuestions\"");
-        prompt.Should().Contain("\"keyTopicsToPrepare\"");
-        prompt.Should().Contain("\"suggestedRevisionAreas\"");
+        json.Should().Contain("technicalQuestions");
+        json.Should().Contain("behavioralQuestions");
+        json.Should().Contain("experienceBasedQuestions");
+        json.Should().Contain("roleSpecificQuestions");
+        json.Should().Contain("keyTopicsToPrepare");
+        json.Should().Contain("suggestedRevisionAreas");
     }
 
     [Fact]
@@ -151,12 +152,12 @@ public class InterviewPreparationPromptBuilderTests
     }
 
     [Fact]
-    public void BuildAdditionalQuestionsPrompt_RequestsAdditionalQuestionsSchema()
+    public void BuildAdditionalQuestionsSchema_RequestsAdditionalQuestionsSchema()
     {
-        var prompt = InterviewPreparationPromptBuilder.BuildAdditionalQuestionsPrompt(
-            BuildAdditionalContext());
+        var schema = InterviewPreparationPromptBuilder.BuildAdditionalQuestionsSchema();
+        var json = System.Text.Json.JsonSerializer.Serialize(schema);
 
-        prompt.Should().Contain("\"additionalQuestions\"");
+        json.Should().Contain("additionalQuestions");
     }
 
     [Fact]

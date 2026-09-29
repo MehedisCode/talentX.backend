@@ -6,6 +6,7 @@ using TalentX.Application.Common.Interfaces.Repositories;
 using TalentX.Application.Features.InterviewPreparation;
 using TalentX.Application.Features.InterviewPreparation.Queries.GetPreparationsByTalent;
 using TalentX.Application.Identity.Services;
+using TalentX.Domain;
 using TalentX.Domain.Entities;
 using Xunit;
 using InterviewPreparationEntity = TalentX.Domain.Entities.InterviewPreparation;
@@ -19,17 +20,20 @@ public class GetPreparationsByTalentQueryHandlerTests
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
     private readonly Mock<IInterviewPreparationRepository> _preparationRepository = new();
     private readonly Mock<ICurrentUserService> _currentUserService = new();
+    private readonly Mock<IInterviewPreparationConfigProvider> _configProvider = new();
     private readonly GetPreparationsByTalentQueryHandler _handler;
 
     public GetPreparationsByTalentQueryHandlerTests()
     {
         _unitOfWork.SetupGet(u => u.InterviewPreparations).Returns(_preparationRepository.Object);
         _currentUserService.SetupGet(u => u.UserId).Returns(TalentUserId);
+        _configProvider.Setup(c => c.GetConfigAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(InterviewPreparationConfig.CreateDefault());
 
         _handler = new GetPreparationsByTalentQueryHandler(
             _unitOfWork.Object,
             _currentUserService.Object,
-            Options.Create(new InterviewPreparationSettings()));
+            _configProvider.Object);
     }
 
     private static InterviewPreparationEntity CreatePreparation(string jobTitle)

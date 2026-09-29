@@ -1,6 +1,5 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Features.InterviewPreparation.DTOs;
@@ -15,20 +14,20 @@ public sealed class GenerateAdditionalQuestionsCommandHandler
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUser;
     private readonly IInterviewPreparationAiService _aiService;
-    private readonly InterviewPreparationSettings _settings;
+    private readonly IInterviewPreparationConfigProvider _configProvider;
     private readonly ILogger<GenerateAdditionalQuestionsCommandHandler> _logger;
 
     public GenerateAdditionalQuestionsCommandHandler(
         IUnitOfWork unitOfWork,
         ICurrentUserService currentUser,
         IInterviewPreparationAiService aiService,
-        IOptions<InterviewPreparationSettings> settings,
+        IInterviewPreparationConfigProvider configProvider,
         ILogger<GenerateAdditionalQuestionsCommandHandler> logger)
     {
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
         _aiService = aiService;
-        _settings = settings.Value;
+        _configProvider = configProvider;
         _logger = logger;
     }
 
@@ -36,11 +35,12 @@ public sealed class GenerateAdditionalQuestionsCommandHandler
         GenerateAdditionalQuestionsCommand request, CancellationToken ct)
     {
         var userId = _currentUser.UserId!;
+        var config = await _configProvider.GetConfigAsync(ct);
 
         var preparation = await GetPreparationAsync(request.InvitationId, ct);
 
         EnsureUserCanAccess(preparation, userId);
-        EnsurePreparationIsAccessible(preparation);
+        EnsurePreparationIsAccessible(preparation, config.AccessWindowAfterInterview);
 
         var talent = await _unitOfWork.Talents.GetByUserIdAsync(userId, ct);
 
@@ -54,7 +54,7 @@ public sealed class GenerateAdditionalQuestionsCommandHandler
         await _unitOfWork.SaveChangesAsync(ct);
 
         return InterviewPreparationMapper.ToDto(
-            preparation, _settings.AccessWindowAfterInterview);
+            preparation, config.AccessWindowAfterInterview);
     }
 
     private async Task<Domain.Entities.InterviewPreparation> GetPreparationAsync(
@@ -72,10 +72,10 @@ public sealed class GenerateAdditionalQuestionsCommandHandler
             throw new ForbiddenException("You do not have access to this interview preparation.");
     }
 
-    private void EnsurePreparationIsAccessible(
-        Domain.Entities.InterviewPreparation preparation)
+    private static void EnsurePreparationIsAccessible(
+        Domain.Entities.InterviewPreparation preparation, TimeSpan accessWindow)
     {
-        if (!preparation.IsAccessible(_settings.AccessWindowAfterInterview))
+        if (!preparation.IsAccessible(accessWindow))
             throw new ForbiddenException("Preparation is no longer accessible as the interview has already taken place.");
     }
 

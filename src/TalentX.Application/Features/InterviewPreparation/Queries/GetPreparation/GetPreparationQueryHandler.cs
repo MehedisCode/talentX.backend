@@ -1,5 +1,4 @@
 using MediatR;
-using Microsoft.Extensions.Options;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Features.InterviewPreparation.DTOs;
@@ -13,22 +12,23 @@ public sealed class GetPreparationQueryHandler
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUser;
-    private readonly InterviewPreparationSettings _settings;
+    private readonly IInterviewPreparationConfigProvider _configProvider;
 
     public GetPreparationQueryHandler(
         IUnitOfWork unitOfWork,
         ICurrentUserService currentUser,
-        IOptions<InterviewPreparationSettings> settings)
+        IInterviewPreparationConfigProvider configProvider)
     {
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
-        _settings = settings.Value;
+        _configProvider = configProvider;
     }
 
     public async Task<InterviewPreparationDto> Handle(
         GetPreparationQuery request, CancellationToken ct)
     {
         var userId = _currentUser.UserId!;
+        var config = await _configProvider.GetConfigAsync(ct);
 
         var preparation = await _unitOfWork.InterviewPreparations
             .GetByInvitationIdAsync(request.InvitationId, ct)
@@ -38,6 +38,6 @@ public sealed class GetPreparationQueryHandler
             throw new ForbiddenException("You do not have access to this interview preparation.");
 
         return InterviewPreparationMapper.ToDto(
-            preparation, _settings.AccessWindowAfterInterview);
+            preparation, config.AccessWindowAfterInterview);
     }
 }

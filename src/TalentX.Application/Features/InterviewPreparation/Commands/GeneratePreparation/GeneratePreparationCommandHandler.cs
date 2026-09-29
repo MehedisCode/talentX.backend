@@ -1,6 +1,5 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Features.InterviewPreparation.DTOs;
@@ -17,20 +16,20 @@ public sealed class GeneratePreparationCommandHandler
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUser;
     private readonly IInterviewPreparationAiService _aiService;
-    private readonly InterviewPreparationSettings _settings;
+    private readonly IInterviewPreparationConfigProvider _configProvider;
     private readonly ILogger<GeneratePreparationCommandHandler> _logger;
 
     public GeneratePreparationCommandHandler(
         IUnitOfWork unitOfWork,
         ICurrentUserService currentUser,
         IInterviewPreparationAiService aiService,
-        IOptions<InterviewPreparationSettings> settings,
+        IInterviewPreparationConfigProvider configProvider,
         ILogger<GeneratePreparationCommandHandler> logger)
     {
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
         _aiService = aiService;
-        _settings = settings.Value;
+        _configProvider = configProvider;
         _logger = logger;
     }
 
@@ -38,6 +37,7 @@ public sealed class GeneratePreparationCommandHandler
         GeneratePreparationCommand request, CancellationToken ct)
     {
         var userId = _currentUser.UserId!;
+        var config = await _configProvider.GetConfigAsync(ct);
 
         var invitation = await _unitOfWork.InterviewInvitations
             .GetByIdAsync(request.InvitationId, ct)
@@ -55,9 +55,9 @@ public sealed class GeneratePreparationCommandHandler
 
         var todayCount = await _unitOfWork.InterviewPreparations
             .CountTodayByTalentAsync(userId, ct);
-        if (todayCount >= _settings.DailyGenerateLimit)
+        if (todayCount >= config.DailyGenerateLimit)
             throw new BadRequestException(
-                $"Daily interview preparation limit reached ({_settings.DailyGenerateLimit}/day).");
+                $"Daily interview preparation limit reached ({config.DailyGenerateLimit}/day).");
 
         var job = await _unitOfWork.Jobs.GetByIdAsync(invitation.JobId, ct)
             ?? throw new NotFoundException("Job not found.");
@@ -97,7 +97,7 @@ public sealed class GeneratePreparationCommandHandler
         await _unitOfWork.SaveChangesAsync(ct);
 
         return InterviewPreparationMapper.ToDto(
-            preparation, _settings.AccessWindowAfterInterview);
+            preparation, config.AccessWindowAfterInterview);
     }
 
     private static void EnsureUserCanAccess(InterviewInvitation invitation, string userId)

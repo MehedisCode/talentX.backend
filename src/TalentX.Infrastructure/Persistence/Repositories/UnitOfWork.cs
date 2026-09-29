@@ -34,6 +34,7 @@ public sealed class UnitOfWork : IUnitOfWork
     public INotificationRepository Notifications { get; }
     public IJobModerationHistoryRepository JobModerationHistories { get; }
     public IInterviewPreparationRepository InterviewPreparations { get; }
+    public IInterviewPreparationConfigRepository InterviewPreparationConfigs { get; }
     public ICompanyReviewRepository CompanyReviews { get; }
     public IJobReportRepository JobReports { get; }
 
@@ -61,6 +62,7 @@ public sealed class UnitOfWork : IUnitOfWork
         Notifications = new NotificationRepository(_context);
         JobModerationHistories = new JobModerationHistoryRepository(_context);
         InterviewPreparations = new InterviewPreparationRepository(_context);
+        InterviewPreparationConfigs = new InterviewPreparationConfigRepository(_context);
         CompanyReviews = new CompanyReviewRepository(_context);
         JobReports = new JobReportRepository(_context);
     }
