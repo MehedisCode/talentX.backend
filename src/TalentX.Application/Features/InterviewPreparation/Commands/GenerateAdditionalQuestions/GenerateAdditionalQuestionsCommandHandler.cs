@@ -53,8 +53,13 @@ public sealed class GenerateAdditionalQuestionsCommandHandler
         _unitOfWork.InterviewPreparations.Update(preparation);
         await _unitOfWork.SaveChangesAsync(ct);
 
+        var answers = await _unitOfWork.InterviewPreparations
+            .GetAnswersByPreparationIdAsync(preparation.Id, ct);
+        var evaluation = await _unitOfWork.InterviewPreparations
+            .GetEvaluationByPreparationIdAsync(preparation.Id, ct);
+
         return InterviewPreparationMapper.ToDto(
-            preparation, _settings.AccessWindowAfterInterview);
+            preparation, _settings.AccessWindowAfterInterview, answers, evaluation);
     }
 
     private async Task<Domain.Entities.InterviewPreparation> GetPreparationAsync(

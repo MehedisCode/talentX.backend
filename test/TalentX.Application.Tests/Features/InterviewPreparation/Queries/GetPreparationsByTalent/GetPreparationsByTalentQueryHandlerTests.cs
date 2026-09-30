@@ -25,6 +25,14 @@ public class GetPreparationsByTalentQueryHandlerTests
     {
         _unitOfWork.SetupGet(u => u.InterviewPreparations).Returns(_preparationRepository.Object);
         _currentUserService.SetupGet(u => u.UserId).Returns(TalentUserId);
+        _preparationRepository
+            .Setup(r => r.GetAnswersByPreparationIdsAsync(
+                It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<PreparationAnswer>());
+        _preparationRepository
+            .Setup(r => r.GetEvaluationsByPreparationIdsAsync(
+                It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<InterviewPreparationEvaluation>());
 
         _handler = new GetPreparationsByTalentQueryHandler(
             _unitOfWork.Object,

@@ -88,4 +88,60 @@ Generate 5-10 completely new questions across any relevant category.
 Each question should include a helpful tip for the candidate.
 ";
     }
+
+    public static string BuildEvaluationPrompt(AnswersEvaluationContext context)
+    {
+        var answeredQuestions = string.Join("\n", context.AnsweredQuestions.Select(a =>
+            $@"[{a.Category}] (index {a.QuestionIndex}) {a.Question}
+Answer: {a.Answer}"));
+
+        return $@"
+You are an expert interview coach. Evaluate the candidate's practice answers to interview questions and produce a formative evaluation report.
+
+IMPORTANT RULES:
+- This is FORMATIVE FEEDBACK for practice only. Never make hiring decisions or guarantees.
+- Judge ONLY the answer content provided below, not the candidate's profile or other candidates.
+- Be constructive and specific; generic praise or generic criticism is not useful.
+- Evaluate only the answered questions listed. Do not invent questions or answers.
+
+JOB:
+- Title: {context.JobTitle}
+- Company: {context.CompanyName}
+- Interview Type: {context.InterviewType}
+
+CANDIDATE: {context.TalentName}
+
+ANSWERED QUESTIONS ({context.AnsweredQuestions.Count} of {context.TotalQuestionCount} total):
+{answeredQuestions}
+
+SCORING RUBRIC (overallScore 0-100):
+- Relevance (40): directly addresses what the question asks.
+- Structure (25): clear organization; behavioral answers should follow STAR (Situation, Task, Action, Result) where applicable.
+- Specificity (20): concrete examples, numbers, names of tools or outcomes instead of vague claims.
+- Depth (15): shows reasoning, trade-offs, or learning rather than surface-level statements.
+
+Return a JSON object with this exact structure:
+{{
+  ""overallScore"": 0,
+  ""summary"": ""2-3 sentence overall assessment of the candidate's answers"",
+  ""strengths"": [""strength1"", ""strength2""],
+  ""areasToImprove"": [""improvement1"", ""improvement2""],
+  ""questionFeedback"": [
+    {{
+      ""category"": ""..."",
+      ""questionIndex"": 0,
+      ""score"": 0,
+      ""feedback"": ""1-2 sentences on what worked and what to change"",
+      ""suggestedAnswer"": ""short improved answer sketch, or an empty string if the answer is already strong""
+    }}
+  ]
+}}
+
+Rules for questionFeedback:
+- Include exactly one entry for every answered question above, keeping the same ""category"" and ""questionIndex"".
+- Do not include entries for unanswered questions.
+- Keep each feedback entry concise (max ~60 words).
+- scores must be integers from 0 to 100; overallScore should reflect the weighted quality of the answers.
+";
+    }
 }

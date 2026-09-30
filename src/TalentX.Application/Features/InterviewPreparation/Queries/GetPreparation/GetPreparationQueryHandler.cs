@@ -37,7 +37,12 @@ public sealed class GetPreparationQueryHandler
         if (preparation.TalentUserId != userId)
             throw new ForbiddenException("You do not have access to this interview preparation.");
 
+        var answers = await _unitOfWork.InterviewPreparations
+            .GetAnswersByPreparationIdAsync(preparation.Id, ct);
+        var evaluation = await _unitOfWork.InterviewPreparations
+            .GetEvaluationByPreparationIdAsync(preparation.Id, ct);
+
         return InterviewPreparationMapper.ToDto(
-            preparation, _settings.AccessWindowAfterInterview);
+            preparation, _settings.AccessWindowAfterInterview, answers, evaluation);
     }
 }

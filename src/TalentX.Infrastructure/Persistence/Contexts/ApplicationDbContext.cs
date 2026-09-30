@@ -39,6 +39,8 @@ public class ApplicationDbContext
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<JobModerationHistory> JobModerationHistories => Set<JobModerationHistory>();
     public DbSet<InterviewPreparation> InterviewPreparations => Set<InterviewPreparation>();
+    public DbSet<PreparationAnswer> PreparationAnswers => Set<PreparationAnswer>();
+    public DbSet<InterviewPreparationEvaluation> InterviewPreparationEvaluations => Set<InterviewPreparationEvaluation>();
     public DbSet<CompanyReview> CompanyReviews => Set<CompanyReview>();
     public DbSet<JobReport> JobReports => Set<JobReport>();
 

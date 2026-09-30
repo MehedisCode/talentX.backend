@@ -23,6 +23,9 @@ public sealed record InterviewPreparationDto
     public DateTime GeneratedAt { get; init; }
     public bool IsAccessible { get; init; }
 
+    public List<PrepAnswerDto> Answers { get; init; } = new();
+    public EvaluationDto? Evaluation { get; init; }
+
     public string Disclaimer { get; init; } =
         "This content is AI-generated preparation guidance and does not guarantee interview outcomes.";
 }

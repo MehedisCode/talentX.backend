@@ -167,4 +167,73 @@ public class InterviewPreparationPromptBuilderTests
 
         prompt.Should().Contain("Generate 5-10 completely new questions");
     }
+
+    private static AnswersEvaluationContext BuildEvaluationContext()
+    {
+        return new AnswersEvaluationContext
+        {
+            JobTitle = "Backend Engineer",
+            CompanyName = "Acme",
+            TalentName = "Ada Lovelace",
+            InterviewType = "OnCall",
+            TotalQuestionCount = 7,
+            AnsweredQuestions = new List<AnsweredQuestion>
+            {
+                new("Technical", 0, "What is a closure?",
+                    "A closure is a function that captures its lexical scope."),
+                new("Behavioral", 0, "Tell me about a conflict?",
+                    "Situation: deadline slip. Task: mediate. Action: aligned scope. Result: shipped on time."),
+            },
+        };
+    }
+
+    [Fact]
+    public void BuildEvaluationPrompt_IncludesJobAndCandidateContext()
+    {
+        var prompt = InterviewPreparationPromptBuilder.BuildEvaluationPrompt(BuildEvaluationContext());
+
+        prompt.Should().Contain("- Title: Backend Engineer");
+        prompt.Should().Contain("- Company: Acme");
+        prompt.Should().Contain("CANDIDATE: Ada Lovelace");
+        prompt.Should().Contain("- Interview Type: OnCall");
+    }
+
+    [Fact]
+    public void BuildEvaluationPrompt_IncludesEveryAnsweredQuestionAndAnswer()
+    {
+        var prompt = InterviewPreparationPromptBuilder.BuildEvaluationPrompt(BuildEvaluationContext());
+
+        prompt.Should().Contain("ANSWERED QUESTIONS (2 of 7 total):");
+        prompt.Should().Contain("What is a closure?");
+        prompt.Should().Contain("A closure is a function that captures its lexical scope.");
+        prompt.Should().Contain("Tell me about a conflict?");
+        prompt.Should().Contain("Result: shipped on time.");
+    }
+
+    [Fact]
+    public void BuildEvaluationPrompt_RequestsEvaluationSchemaWithPerQuestionFeedback()
+    {
+        var prompt = InterviewPreparationPromptBuilder.BuildEvaluationPrompt(BuildEvaluationContext());
+
+        prompt.Should().Contain("\"overallScore\"");
+        prompt.Should().Contain("\"summary\"");
+        prompt.Should().Contain("\"strengths\"");
+        prompt.Should().Contain("\"areasToImprove\"");
+        prompt.Should().Contain("\"questionFeedback\"");
+        prompt.Should().Contain("\"questionIndex\"");
+        prompt.Should().Contain("\"suggestedAnswer\"");
+        prompt.Should().Contain("exactly one entry for every answered question");
+    }
+
+    [Fact]
+    public void BuildEvaluationPrompt_SpecifiesRubricAndGuardrails()
+    {
+        var prompt = InterviewPreparationPromptBuilder.BuildEvaluationPrompt(BuildEvaluationContext());
+
+        prompt.Should().Contain("SCORING RUBRIC (overallScore 0-100):");
+        prompt.Should().Contain("STAR");
+        prompt.Should().Contain("Never make hiring decisions or guarantees");
+        prompt.Should().Contain("Judge ONLY the answer content provided");
+        prompt.Should().Contain("Do not include entries for unanswered questions");
+    }
 }

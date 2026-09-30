@@ -179,6 +179,23 @@ public class RegeneratePreparationCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_WhenRegenerationIsAllowed_RemovesSavedAnswersAndEvaluation()
+    {
+        var existing = CreatePreparation(Guid.NewGuid());
+        SetUpFlow(existing);
+
+        await _handler.Handle(
+            new RegeneratePreparationCommand(existing.InterviewInvitationId), CancellationToken.None);
+
+        _preparationRepository.Verify(
+            r => r.RemoveAnswersByPreparationIdAsync(existing.Id, It.IsAny<CancellationToken>()),
+            Times.Once);
+        _preparationRepository.Verify(
+            r => r.RemoveEvaluationByPreparationIdAsync(existing.Id, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
     public async Task Handle_WhenPreparationDoesNotExist_ThrowsNotFoundException()
     {
         var invitationId = Guid.NewGuid();

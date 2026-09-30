@@ -16,5 +16,7 @@ public sealed class InterviewPreparationSettings
 
     public int RateLimitWindowHours { get; set; } = 24;
 
+    public int EvaluateRateLimitPermits { get; set; } = 15;
+
     public TimeSpan AccessWindowAfterInterview => TimeSpan.FromMinutes(AccessWindowAfterInterviewMinutes);
 }

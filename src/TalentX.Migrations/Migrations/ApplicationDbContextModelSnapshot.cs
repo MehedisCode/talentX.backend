@@ -669,6 +669,60 @@ namespace TalentX.Migrations.Migrations
                     b.ToTable("InterviewPreparations", (string)null);
                 });
 
+            modelBuilder.Entity("TalentX.Domain.Entities.InterviewPreparationEvaluation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("AnsweredCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("AreasToImprove")
+                        .IsRequired()
+                        .HasMaxLength(8000)
+                        .HasColumnType("character varying(8000)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("EvaluatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("InterviewPreparationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("OverallScore")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("QuestionFeedback")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Strengths")
+                        .IsRequired()
+                        .HasMaxLength(8000)
+                        .HasColumnType("character varying(8000)");
+
+                    b.Property<string>("Summary")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<int>("TotalCount")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InterviewPreparationId")
+                        .IsUnique();
+
+                    b.ToTable("InterviewPreparationEvaluations", (string)null);
+                });
+
             modelBuilder.Entity("TalentX.Domain.Entities.InterviewTimeslot", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1271,6 +1325,50 @@ namespace TalentX.Migrations.Migrations
                     b.ToTable("Notifications", (string)null);
                 });
 
+            modelBuilder.Entity("TalentX.Domain.Entities.PreparationAnswer", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AnswerText")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("InterviewPreparationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsPracticed")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("QuestionIndex")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("QuestionText")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InterviewPreparationId", "Category", "QuestionIndex")
+                        .IsUnique();
+
+                    b.ToTable("PreparationAnswers", (string)null);
+                });
+
             modelBuilder.Entity("TalentX.Domain.Entities.Resume", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1773,6 +1871,15 @@ namespace TalentX.Migrations.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("TalentX.Domain.Entities.InterviewPreparationEvaluation", b =>
+                {
+                    b.HasOne("TalentX.Domain.Entities.InterviewPreparation", null)
+                        .WithMany()
+                        .HasForeignKey("InterviewPreparationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("TalentX.Domain.Entities.InterviewTimeslot", b =>
                 {
                     b.HasOne("TalentX.Domain.Entities.InterviewInvitation", null)
@@ -1840,6 +1947,15 @@ namespace TalentX.Migrations.Migrations
                     b.HasOne("TalentX.Domain.Entities.Job", null)
                         .WithMany()
                         .HasForeignKey("JobId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("TalentX.Domain.Entities.PreparationAnswer", b =>
+                {
+                    b.HasOne("TalentX.Domain.Entities.InterviewPreparation", null)
+                        .WithMany()
+                        .HasForeignKey("InterviewPreparationId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
