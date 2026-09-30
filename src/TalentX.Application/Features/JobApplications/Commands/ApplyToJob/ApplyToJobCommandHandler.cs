@@ -52,6 +52,29 @@ public sealed class ApplyToJobCommandHandler
             JobApplicationRules.NormalizeOptional(request.Location));
 
         await _unitOfWork.JobApplications.AddAsync(application, cancellationToken);
+
+        if (_unitOfWork.Resumes is not null)
+        {
+            var existingResume = await _unitOfWork.Resumes.GetByUserIdAsync(talentUserId, cancellationToken);
+            if (existingResume is null && !string.IsNullOrWhiteSpace(application.ResumeStorageKey))
+            {
+                var fileNameSegment = Path.GetFileName(application.ResumeStorageKey);
+                var firstUnderscore = fileNameSegment.IndexOf('_');
+                var originalFileName = firstUnderscore > 0 && firstUnderscore < fileNameSegment.Length - 1 && Guid.TryParse(fileNameSegment[..firstUnderscore], out _)
+                    ? fileNameSegment[(firstUnderscore + 1)..]
+                    : fileNameSegment;
+
+                await _unitOfWork.Resumes.AddAsync(
+                    new Resume(
+                        talentUserId,
+                        application.ResumeStorageKey,
+                        originalFileName,
+                        "application/pdf",
+                        0),
+                    cancellationToken);
+            }
+        }
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         await CleanupPendingGuestApplicationsAsync(job.Id, request.ApplicantEmail, cancellationToken);
