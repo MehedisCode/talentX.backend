@@ -12,8 +12,8 @@ using TalentX.Infrastructure.Persistence.Contexts;
 namespace TalentX.Migrations.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260929040326_AddJobApplicationStatusHistory")]
-    partial class AddJobApplicationStatusHistory
+    [Migration("20260923101931_AddInterviewPreparation")]
+    partial class AddInterviewPreparation
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -292,101 +292,6 @@ namespace TalentX.Migrations.Migrations
                     b.ToTable("AuditLogs", (string)null);
                 });
 
-            modelBuilder.Entity("TalentX.Domain.Entities.CompanyReview", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Comment")
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)");
-
-                    b.Property<int?>("CommunicationRating")
-                        .HasColumnType("integer");
-
-                    b.Property<Guid>("CompanyId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int?>("InterviewExperienceRating")
-                        .HasColumnType("integer");
-
-                    b.Property<Guid>("JobApplicationId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("JobId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("JobTitle")
-                        .IsRequired()
-                        .HasMaxLength(300)
-                        .HasColumnType("character varying(300)");
-
-                    b.Property<DateTime?>("ModeratedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("ModeratedByUserId")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<string>("ModerationDetails")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<string>("ModerationReason")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<int?>("ProfessionalismRating")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime?>("PublishedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int?>("RecruitmentProcessRating")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Sentiment")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<DateTime>("SubmittedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("TalentUserId")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime?>("WithdrawnAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("JobApplicationId")
-                        .IsUnique();
-
-                    b.HasIndex("TalentUserId");
-
-                    b.HasIndex("CompanyId", "Status");
-
-                    b.HasIndex("Status", "SubmittedAt");
-
-                    b.ToTable("CompanyReviews", (string)null);
-                });
-
             modelBuilder.Entity("TalentX.Domain.Entities.Education", b =>
                 {
                     b.Property<Guid>("Id")
@@ -575,6 +480,101 @@ namespace TalentX.Migrations.Migrations
                     b.HasIndex("JobApplicationId", "Status");
 
                     b.ToTable("InterviewInvitations", (string)null);
+                });
+
+            modelBuilder.Entity("TalentX.Domain.Entities.InterviewPreparation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AdditionalQuestions")
+                        .HasMaxLength(8000)
+                        .HasColumnType("character varying(8000)");
+
+                    b.Property<string>("BehavioralQuestions")
+                        .IsRequired()
+                        .HasMaxLength(8000)
+                        .HasColumnType("character varying(8000)");
+
+                    b.Property<string>("CompanyName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ExperienceBasedQuestions")
+                        .IsRequired()
+                        .HasMaxLength(8000)
+                        .HasColumnType("character varying(8000)");
+
+                    b.Property<int>("GenerationCount")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("InterviewInvitationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("InterviewType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<Guid>("JobId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("JobTitle")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("KeyTopicsToPrepare")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<string>("RoleSpecificQuestions")
+                        .IsRequired()
+                        .HasMaxLength(8000)
+                        .HasColumnType("character varying(8000)");
+
+                    b.Property<DateTime?>("ScheduledAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("SuggestedRevisionAreas")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<string>("TalentUserId")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("TechnicalQuestions")
+                        .IsRequired()
+                        .HasMaxLength(8000)
+                        .HasColumnType("character varying(8000)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InterviewInvitationId")
+                        .IsUnique();
+
+                    b.HasIndex("JobId");
+
+                    b.HasIndex("TalentUserId");
+
+                    b.HasIndex("TalentUserId", "JobId");
+
+                    b.ToTable("InterviewPreparations", (string)null);
                 });
 
             modelBuilder.Entity("TalentX.Domain.Entities.InterviewTimeslot", b =>
@@ -981,45 +981,6 @@ namespace TalentX.Migrations.Migrations
                     b.ToTable("JobApplications", (string)null);
                 });
 
-            modelBuilder.Entity("TalentX.Domain.Entities.JobApplicationStatusHistory", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("ChangedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("ChangedByUserId")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("FromStatus")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<Guid>("JobApplicationId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("ToStatus")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("JobApplicationId", "ChangedAt");
-
-                    b.ToTable("JobApplicationStatusHistories", (string)null);
-                });
-
             modelBuilder.Entity("TalentX.Domain.Entities.JobModerationHistory", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1069,63 +1030,6 @@ namespace TalentX.Migrations.Migrations
                     b.HasIndex("JobId", "CreatedAt");
 
                     b.ToTable("JobModerationHistories", (string)null);
-                });
-
-            modelBuilder.Entity("TalentX.Domain.Entities.JobReport", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("AdditionalDetails")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<string>("AdminNotes")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("JobId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Reason")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("ReporterUserId")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<DateTime?>("ResolvedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("ResolvedByUserId")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ReporterUserId");
-
-                    b.HasIndex("Status");
-
-                    b.HasIndex("JobId", "ReporterUserId")
-                        .IsUnique();
-
-                    b.HasIndex("Status", "CreatedAt");
-
-                    b.ToTable("JobReports", (string)null);
                 });
 
             modelBuilder.Entity("TalentX.Domain.Entities.JobTalentMatch", b =>
@@ -1671,21 +1575,6 @@ namespace TalentX.Migrations.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("TalentX.Domain.Entities.CompanyReview", b =>
-                {
-                    b.HasOne("TalentX.Domain.Company", null)
-                        .WithMany()
-                        .HasForeignKey("CompanyId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("TalentX.Domain.Entities.JobApplication", null)
-                        .WithMany()
-                        .HasForeignKey("JobApplicationId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
             modelBuilder.Entity("TalentX.Domain.Entities.InterviewInvitation", b =>
                 {
                     b.HasOne("TalentX.Domain.Entities.JobApplication", "JobApplication")
@@ -1703,6 +1592,21 @@ namespace TalentX.Migrations.Migrations
                     b.Navigation("Job");
 
                     b.Navigation("JobApplication");
+                });
+
+            modelBuilder.Entity("TalentX.Domain.Entities.InterviewPreparation", b =>
+                {
+                    b.HasOne("TalentX.Domain.Entities.InterviewInvitation", null)
+                        .WithMany()
+                        .HasForeignKey("InterviewInvitationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("TalentX.Domain.Entities.Job", null)
+                        .WithMany()
+                        .HasForeignKey("JobId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("TalentX.Domain.Entities.InterviewTimeslot", b =>
@@ -1747,15 +1651,6 @@ namespace TalentX.Migrations.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("TalentX.Domain.Entities.JobApplicationStatusHistory", b =>
-                {
-                    b.HasOne("TalentX.Domain.Entities.JobApplication", null)
-                        .WithMany()
-                        .HasForeignKey("JobApplicationId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
             modelBuilder.Entity("TalentX.Domain.Entities.JobModerationHistory", b =>
                 {
                     b.HasOne("TalentX.Domain.Entities.Job", null)
@@ -1763,17 +1658,6 @@ namespace TalentX.Migrations.Migrations
                         .HasForeignKey("JobId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
-                });
-
-            modelBuilder.Entity("TalentX.Domain.Entities.JobReport", b =>
-                {
-                    b.HasOne("TalentX.Domain.Entities.Job", "Job")
-                        .WithMany()
-                        .HasForeignKey("JobId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Job");
                 });
 
             modelBuilder.Entity("TalentX.Domain.Entities.JobTalentMatch", b =>

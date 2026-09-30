@@ -23,7 +23,7 @@ public static class InfrastructureStartup
         services.AddExtractionServices(configuration);
         services.AddCompanyReviews(configuration);
         services.AddRealtime();
-        services.AddRateLimiting();
+        services.AddRateLimiting(configuration);
 
         return services;
     }

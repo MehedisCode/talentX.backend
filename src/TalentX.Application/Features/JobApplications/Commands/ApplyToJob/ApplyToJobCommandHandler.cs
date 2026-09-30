@@ -52,6 +52,9 @@ public sealed class ApplyToJobCommandHandler
             JobApplicationRules.NormalizeOptional(request.Location));
 
         await _unitOfWork.JobApplications.AddAsync(application, cancellationToken);
+        await _unitOfWork.JobApplicationStatusHistories.AddAsync(
+            JobApplicationStatusHistory.Create(application.Id, null, application.Status, talentUserId),
+            cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         await CleanupPendingGuestApplicationsAsync(job.Id, request.ApplicantEmail, cancellationToken);
