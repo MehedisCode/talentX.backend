@@ -4,7 +4,7 @@ namespace TalentX.Application.Features.Talents;
 
 public static class TalentMediaStorageKeyGuard
 {
-    public static readonly string[] Categories = ["profile-pictures", "video-intros", "resumes", "company-logos"];
+    public static readonly string[] Categories = ["profile-pictures", "video-intros", "resumes", "company-logos", "job-applications"];
 
     public static string BuildStorageKey(string category, string userId, string fileName)
     {

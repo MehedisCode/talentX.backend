@@ -226,6 +226,6 @@ public class GetTalentProfileForEmployerQueryHandlerTests
         result.Location.Should().Be(application.Location);
         result.TotalYearsExperience.Should().Be(application.TotalYearsExperience);
         result.ExpectedSalary.Should().Be(application.ExpectedSalary);
-        result.ResumeOriginalFileName.Should().Be("Resume.pdf");
+        result.ResumeOriginalFileName.Should().Be("app_resume.pdf");
     }
 }
