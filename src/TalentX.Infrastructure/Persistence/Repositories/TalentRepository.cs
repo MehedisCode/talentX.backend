@@ -39,6 +39,30 @@ public sealed class TalentRepository : ITalentRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<int> CountCreatedBetweenAsync(
+        DateTime startUtc,
+        DateTime endUtc,
+        CancellationToken cancellationToken = default)
+    {
+        return await _context.Talents
+            .AsNoTracking()
+            .CountAsync(talent => talent.CreatedAt >= startUtc && talent.CreatedAt <= endUtc, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<Talent>> GetRecentCreatedBetweenAsync(
+        DateTime startUtc,
+        DateTime endUtc,
+        int take,
+        CancellationToken cancellationToken = default)
+    {
+        return await _context.Talents
+            .AsNoTracking()
+            .Where(talent => talent.CreatedAt >= startUtc && talent.CreatedAt <= endUtc)
+            .OrderByDescending(talent => talent.CreatedAt)
+            .Take(take)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task AddAsync(Talent talent, CancellationToken cancellationToken = default)
     {
         await _context.Talents.AddAsync(talent, cancellationToken);

@@ -58,4 +58,17 @@ public interface IEmployerRepository
         int page,
         int pageSize,
         CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyDictionary<EmployerVerificationStatus, int>> GetVerificationStatusCountsCreatedBetweenAsync(
+        DateTime startUtc,
+        DateTime endUtc,
+        CancellationToken cancellationToken = default);
+    
+    Task<DateTime?> GetOldestPendingCreatedAtAsync(CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<Employer>> GetRecentCreatedBetweenAsync(
+        DateTime startUtc,
+        DateTime endUtc,
+        int take,
+        CancellationToken cancellationToken = default);
 }

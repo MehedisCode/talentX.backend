@@ -42,6 +42,22 @@ public interface IJobApplicationRepository
         int pageSize,
         CancellationToken cancellationToken = default);
     Task<int> CountHiredByEmployerIdAsync(string employerId, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyDictionary<ApplicationStatus, int>> GetStatusCountsAppliedBetweenAsync(
+        DateTime startUtc,
+        DateTime endUtc,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyDictionary<DateTime, int>> GetAppliedCountsByBucketAsync(
+        DateTime startUtc,
+        DateTime endUtc,
+        bool groupByHour,
+        CancellationToken cancellationToken = default);
+    Task<IReadOnlyDictionary<DateTime, int>> GetHiredCountsByBucketAsync(
+        DateTime startUtc,
+        DateTime endUtc,
+        bool groupByHour,
+        CancellationToken cancellationToken = default);
     Task<CandidatePipelineStatsDto> GetCandidatePipelineStatsByEmployerIdAsync(string employerId, CancellationToken cancellationToken = default);
     Task<CandidatePipelineStatsDto> GetCandidatePipelineStatsByJobIdAsync(Guid jobId, CancellationToken cancellationToken = default);
 }
