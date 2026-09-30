@@ -75,6 +75,9 @@ public sealed class ApplyToJobCommandHandler
             }
         }
 
+        await _unitOfWork.JobApplicationStatusHistories.AddAsync(
+            JobApplicationStatusHistory.Create(application.Id, null, application.Status, talentUserId),
+            cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         await CleanupPendingGuestApplicationsAsync(job.Id, request.ApplicantEmail, cancellationToken);

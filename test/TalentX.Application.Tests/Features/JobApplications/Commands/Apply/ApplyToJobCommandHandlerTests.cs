@@ -19,6 +19,7 @@ public class ApplyToJobCommandHandlerTests
     private readonly Mock<IEmailService> _emailService = new();
     private readonly Mock<IFileStorageService> _fileStorageService = new();
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
+    private readonly Mock<IJobApplicationStatusHistoryRepository> _historyRepository = new();
     private readonly Mock<IUserRepository> _userRepository = new();
     private readonly Mock<Microsoft.Extensions.Logging.ILogger<ApplyToJobCommandHandler>> _logger = new();
     private readonly ApplyToJobCommandHandler _handler;
@@ -32,6 +33,10 @@ public class ApplyToJobCommandHandlerTests
         _unitOfWork
             .Setup(u => u.Users)
             .Returns(_userRepository.Object);
+
+        _unitOfWork
+            .SetupGet(u => u.JobApplicationStatusHistories)
+            .Returns(_historyRepository.Object);
 
         _handler = new ApplyToJobCommandHandler(
             _jobRepository.Object,

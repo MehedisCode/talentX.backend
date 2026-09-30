@@ -17,6 +17,7 @@ public class ApplicationDbContext
 
     public DbSet<Job> Jobs => Set<Job>();
     public DbSet<JobApplication> JobApplications => Set<JobApplication>();
+    public DbSet<JobApplicationStatusHistory> JobApplicationStatusHistories => Set<JobApplicationStatusHistory>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<User> DomainUsers => Set<User>();
     public DbSet<Employer> Employers => Set<Employer>();
@@ -38,6 +39,8 @@ public class ApplicationDbContext
     public DbSet<JobAlertNotificationHistory> JobAlertNotificationHistories => Set<JobAlertNotificationHistory>();
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<JobModerationHistory> JobModerationHistories => Set<JobModerationHistory>();
+    public DbSet<InterviewPreparation> InterviewPreparations => Set<InterviewPreparation>();
+    public DbSet<InterviewPreparationConfig> InterviewPreparationConfigs => Set<InterviewPreparationConfig>();
     public DbSet<CompanyReview> CompanyReviews => Set<CompanyReview>();
     public DbSet<JobReport> JobReports => Set<JobReport>();
 

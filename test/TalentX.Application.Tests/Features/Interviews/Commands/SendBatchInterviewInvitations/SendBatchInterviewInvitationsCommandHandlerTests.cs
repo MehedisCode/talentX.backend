@@ -17,6 +17,7 @@ public class SendBatchInterviewInvitationsCommandHandlerTests
     private readonly Mock<IJobApplicationRepository> _jobApplicationRepository = new();
     private readonly Mock<IInterviewInvitationRepository> _interviewInvitationRepository = new();
     private readonly Mock<IEmailDispatchLogRepository> _emailDispatchLogRepository = new();
+    private readonly Mock<IJobApplicationStatusHistoryRepository> _historyRepository = new();
     private readonly Mock<ICurrentUserService> _currentUserService = new();
     private readonly Mock<IEmailService> _emailService = new();
     private readonly SendBatchInterviewInvitationsCommandHandler _handler;
@@ -27,6 +28,7 @@ public class SendBatchInterviewInvitationsCommandHandlerTests
         _unitOfWork.SetupGet(u => u.JobApplications).Returns(_jobApplicationRepository.Object);
         _unitOfWork.SetupGet(u => u.InterviewInvitations).Returns(_interviewInvitationRepository.Object);
         _unitOfWork.SetupGet(u => u.EmailDispatchLogs).Returns(_emailDispatchLogRepository.Object);
+        _unitOfWork.SetupGet(u => u.JobApplicationStatusHistories).Returns(_historyRepository.Object);
         _currentUserService.SetupGet(u => u.UserId).Returns("employer-1");
 
         _handler = new SendBatchInterviewInvitationsCommandHandler(

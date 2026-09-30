@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TalentX.Application.Features.JobApplications.Commands.ScoreJobApplicants;
 using TalentX.Application.Features.JobApplications.Queries.GetJobApplicants;
+using TalentX.Application.Features.JobApplications.Queries.GetJobPipelineSummary;
 using TalentX.Domain.Enums;
 
 namespace TalentX.API.Controllers.JobApplications;
@@ -26,6 +27,18 @@ public sealed class EmployerJobApplicationsController : BaseApiController
         CancellationToken cancellationToken = default)
     {
         var result = await Sender.Send(new GetJobApplicantsQuery(jobId, search, status, sortBy, sortOrder, page, pageSize), cancellationToken);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Gets the candidate pipeline summary for a specific job owned by the current employer.
+    /// </summary>
+    [HttpGet("{jobId:guid}/pipeline-summary")]
+    public async Task<IActionResult> GetJobPipelineSummary(
+        Guid jobId,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await Sender.Send(new GetJobPipelineSummaryQuery(jobId), cancellationToken);
         return Ok(result);
     }
 
