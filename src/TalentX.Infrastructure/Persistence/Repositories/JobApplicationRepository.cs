@@ -238,6 +238,32 @@ public sealed class JobApplicationRepository : IJobApplicationRepository
             candidatePipelineStatistics?.HiredCount ?? 0);
     }
 
+    public async Task<CandidatePipelineStatsDto> GetCandidatePipelineStatsByJobIdAsync(
+        Guid jobId,
+        CancellationToken cancellationToken = default)
+    {
+        var candidatePipelineStatistics = await _context.JobApplications
+            .AsNoTracking()
+            .Where(application => application.JobId == jobId)
+            .GroupBy(application => 1)
+            .Select(group => new
+            {
+                AppliedCount = group.Count(application => application.Status == ApplicationStatus.Applied),
+                ShortlistedCount = group.Count(application => application.Status == ApplicationStatus.Shortlisted),
+                InvitedCount = group.Count(application => application.Status == ApplicationStatus.Invited),
+                RejectedCount = group.Count(application => application.Status == ApplicationStatus.Rejected),
+                HiredCount = group.Count(application => application.Status == ApplicationStatus.Hired)
+            })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return new CandidatePipelineStatsDto(
+            candidatePipelineStatistics?.AppliedCount ?? 0,
+            candidatePipelineStatistics?.ShortlistedCount ?? 0,
+            candidatePipelineStatistics?.InvitedCount ?? 0,
+            candidatePipelineStatistics?.RejectedCount ?? 0,
+            candidatePipelineStatistics?.HiredCount ?? 0);
+    }
+
     public void Update(JobApplication jobApplication)
     {
         _context.JobApplications.Update(jobApplication);

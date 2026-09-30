@@ -240,6 +240,76 @@ public sealed class JobApplicationRepositoryTests
         pipelineStats.HiredCount.Should().Be(0);
     }
 
+    [Fact]
+    public async Task GetCandidatePipelineStatsByJobIdAsync_WhenApplicationsExist_ReturnsCorrectStageCounts()
+    {
+        await using var context = NewContext();
+        var repository = new JobApplicationRepository(context);
+
+        var targetJobId = Guid.NewGuid();
+        var otherJobId = Guid.NewGuid();
+
+        var appliedApplicationOne = NewApplication(jobId: targetJobId, talentUserId: "talent-applied-1");
+        appliedApplicationOne.UpdateStatus(ApplicationStatus.Applied);
+
+        var appliedApplicationTwo = NewApplication(jobId: targetJobId, talentUserId: "talent-applied-2");
+        appliedApplicationTwo.UpdateStatus(ApplicationStatus.Applied);
+
+        var shortlistedApplication = NewApplication(jobId: targetJobId, talentUserId: "talent-shortlisted");
+        shortlistedApplication.UpdateStatus(ApplicationStatus.Shortlisted);
+
+        var invitedApplication = NewApplication(jobId: targetJobId, talentUserId: "talent-invited");
+        invitedApplication.UpdateStatus(ApplicationStatus.Invited);
+
+        var rejectedApplication = NewApplication(jobId: targetJobId, talentUserId: "talent-rejected");
+        rejectedApplication.UpdateStatus(ApplicationStatus.Rejected);
+
+        var hiredApplication = NewApplication(jobId: targetJobId, talentUserId: "talent-hired");
+        hiredApplication.UpdateStatus(ApplicationStatus.Hired);
+
+        var otherStatusApplication = NewApplication(jobId: targetJobId, talentUserId: "talent-reviewed");
+        otherStatusApplication.UpdateStatus(ApplicationStatus.Reviewed);
+
+        var otherJobApplication = NewApplication(jobId: otherJobId, talentUserId: "talent-other-job");
+        otherJobApplication.UpdateStatus(ApplicationStatus.Applied);
+
+        context.JobApplications.AddRange(
+            appliedApplicationOne,
+            appliedApplicationTwo,
+            shortlistedApplication,
+            invitedApplication,
+            rejectedApplication,
+            hiredApplication,
+            otherStatusApplication,
+            otherJobApplication);
+        await context.SaveChangesAsync();
+
+        var candidatePipelineStatistics = await repository.GetCandidatePipelineStatsByJobIdAsync(targetJobId);
+
+        candidatePipelineStatistics.Should().NotBeNull();
+        candidatePipelineStatistics.AppliedCount.Should().Be(2);
+        candidatePipelineStatistics.ShortlistedCount.Should().Be(1);
+        candidatePipelineStatistics.InvitedCount.Should().Be(1);
+        candidatePipelineStatistics.RejectedCount.Should().Be(1);
+        candidatePipelineStatistics.HiredCount.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task GetCandidatePipelineStatsByJobIdAsync_WhenNoApplicationsExist_ReturnsZeroCounts()
+    {
+        await using var context = NewContext();
+        var repository = new JobApplicationRepository(context);
+
+        var candidatePipelineStatistics = await repository.GetCandidatePipelineStatsByJobIdAsync(Guid.NewGuid());
+
+        candidatePipelineStatistics.Should().NotBeNull();
+        candidatePipelineStatistics.AppliedCount.Should().Be(0);
+        candidatePipelineStatistics.ShortlistedCount.Should().Be(0);
+        candidatePipelineStatistics.InvitedCount.Should().Be(0);
+        candidatePipelineStatistics.RejectedCount.Should().Be(0);
+        candidatePipelineStatistics.HiredCount.Should().Be(0);
+    }
+
     private static Job MakeJob(string employerId = "employer-1")
     {
         var job = Job.Create(
