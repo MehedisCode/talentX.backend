@@ -43,4 +43,5 @@ public interface IJobApplicationRepository
         CancellationToken cancellationToken = default);
     Task<int> CountHiredByEmployerIdAsync(string employerId, CancellationToken cancellationToken = default);
     Task<CandidatePipelineStatsDto> GetCandidatePipelineStatsByEmployerIdAsync(string employerId, CancellationToken cancellationToken = default);
+    Task<CandidatePipelineStatsDto> GetCandidatePipelineStatsByJobIdAsync(Guid jobId, CancellationToken cancellationToken = default);
 }
