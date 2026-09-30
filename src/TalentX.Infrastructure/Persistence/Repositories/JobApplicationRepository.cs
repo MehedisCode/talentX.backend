@@ -226,6 +226,7 @@ public sealed class JobApplicationRepository : IJobApplicationRepository
                 AppliedCount = group.Count(application => application.Status == ApplicationStatus.Applied),
                 ShortlistedCount = group.Count(application => application.Status == ApplicationStatus.Shortlisted),
                 InvitedCount = group.Count(application => application.Status == ApplicationStatus.Invited),
+                InterviewCount = group.Count(application => application.Status == ApplicationStatus.Interview),
                 RejectedCount = group.Count(application => application.Status == ApplicationStatus.Rejected),
                 HiredCount = group.Count(application => application.Status == ApplicationStatus.Hired)
             })
@@ -235,6 +236,7 @@ public sealed class JobApplicationRepository : IJobApplicationRepository
             candidatePipelineStatistics?.AppliedCount ?? 0,
             candidatePipelineStatistics?.ShortlistedCount ?? 0,
             candidatePipelineStatistics?.InvitedCount ?? 0,
+            candidatePipelineStatistics?.InterviewCount ?? 0,
             candidatePipelineStatistics?.RejectedCount ?? 0,
             candidatePipelineStatistics?.HiredCount ?? 0);
     }
@@ -252,6 +254,7 @@ public sealed class JobApplicationRepository : IJobApplicationRepository
                 AppliedCount = group.Count(application => application.Status == ApplicationStatus.Applied),
                 ShortlistedCount = group.Count(application => application.Status == ApplicationStatus.Shortlisted),
                 InvitedCount = group.Count(application => application.Status == ApplicationStatus.Invited),
+                InterviewCount = group.Count(application => application.Status == ApplicationStatus.Interview),
                 RejectedCount = group.Count(application => application.Status == ApplicationStatus.Rejected),
                 HiredCount = group.Count(application => application.Status == ApplicationStatus.Hired)
             })
@@ -261,6 +264,7 @@ public sealed class JobApplicationRepository : IJobApplicationRepository
             candidatePipelineStatistics?.AppliedCount ?? 0,
             candidatePipelineStatistics?.ShortlistedCount ?? 0,
             candidatePipelineStatistics?.InvitedCount ?? 0,
+            candidatePipelineStatistics?.InterviewCount ?? 0,
             candidatePipelineStatistics?.RejectedCount ?? 0,
             candidatePipelineStatistics?.HiredCount ?? 0);
     }

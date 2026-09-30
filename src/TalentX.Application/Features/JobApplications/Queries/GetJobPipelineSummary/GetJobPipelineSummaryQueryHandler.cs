@@ -42,6 +42,7 @@ public sealed class GetJobPipelineSummaryQueryHandler
         var totalApplicants = pipelineStatistics.AppliedCount +
                               pipelineStatistics.ShortlistedCount +
                               pipelineStatistics.InvitedCount +
+                              pipelineStatistics.InterviewCount +
                               pipelineStatistics.RejectedCount +
                               pipelineStatistics.HiredCount;
 
