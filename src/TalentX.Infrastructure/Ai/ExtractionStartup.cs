@@ -27,6 +27,9 @@ public static class ExtractionStartup
         // AI talent matching service
         services.AddHttpClient<ITalentMatchingService, GeminiTalentMatchingService>();
 
+        // AI interview preparation service
+        services.AddHttpClient<IInterviewPreparationAiService, GeminiInterviewPreparationService>();
+
         return services;
     }
 }
