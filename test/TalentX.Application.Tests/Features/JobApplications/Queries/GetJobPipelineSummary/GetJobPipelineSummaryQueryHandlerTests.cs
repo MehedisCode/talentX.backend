@@ -102,6 +102,7 @@ public sealed class GetJobPipelineSummaryQueryHandlerTests
             AppliedCount: 5,
             ShortlistedCount: 3,
             InvitedCount: 2,
+            InterviewCount: 4,
             RejectedCount: 1,
             HiredCount: 1);
 
@@ -124,8 +125,9 @@ public sealed class GetJobPipelineSummaryQueryHandlerTests
         result.JobStatus.Should().Be("Published");
         result.Vacancies.Should().Be(2);
         result.PostedDate.Should().Be(job.PublishedAt!.Value);
-        result.TotalApplicants.Should().Be(12);
+        result.TotalApplicants.Should().Be(16);
         result.PipelineStats.Should().Be(expectedPipelineStats);
+        result.PipelineStats.InterviewCount.Should().Be(4);
     }
 
     [Fact]
@@ -137,6 +139,7 @@ public sealed class GetJobPipelineSummaryQueryHandlerTests
             AppliedCount: 0,
             ShortlistedCount: 0,
             InvitedCount: 0,
+            InterviewCount: 0,
             RejectedCount: 0,
             HiredCount: 0);
 
@@ -158,6 +161,7 @@ public sealed class GetJobPipelineSummaryQueryHandlerTests
         result.PipelineStats.AppliedCount.Should().Be(0);
         result.PipelineStats.ShortlistedCount.Should().Be(0);
         result.PipelineStats.InvitedCount.Should().Be(0);
+        result.PipelineStats.InterviewCount.Should().Be(0);
         result.PipelineStats.RejectedCount.Should().Be(0);
         result.PipelineStats.HiredCount.Should().Be(0);
     }

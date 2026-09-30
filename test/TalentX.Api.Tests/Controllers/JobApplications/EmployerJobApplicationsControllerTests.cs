@@ -87,6 +87,7 @@ public class EmployerJobApplicationsControllerTests
             AppliedCount: 10,
             ShortlistedCount: 4,
             InvitedCount: 2,
+            InterviewCount: 1,
             RejectedCount: 2,
             HiredCount: 1);
 
