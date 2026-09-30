@@ -58,6 +58,7 @@ public sealed class GetEmployerDashboardQueryHandlerTests
             AppliedCount: 10,
             ShortlistedCount: 5,
             InvitedCount: 3,
+            InterviewCount: 4,
             RejectedCount: 2,
             HiredCount: 4);
 
