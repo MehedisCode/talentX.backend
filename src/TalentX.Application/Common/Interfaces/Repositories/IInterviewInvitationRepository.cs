@@ -38,7 +38,6 @@ public interface IInterviewInvitationRepository
     void Update(InterviewInvitation invitation);
     Task DeleteByTalentUserIdAsync(string talentUserId, CancellationToken cancellationToken = default);
 
-    // Returns how many interview invitations were created in the range, as one count (cheap for all-time totals). Cancelled invitations are excluded.
     Task<int> CountCreatedBetweenAsync(
         DateTime startUtc,
         DateTime endUtc,

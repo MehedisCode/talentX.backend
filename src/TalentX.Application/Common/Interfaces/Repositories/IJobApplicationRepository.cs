@@ -43,8 +43,6 @@ public interface IJobApplicationRepository
         CancellationToken cancellationToken = default);
     Task<int> CountHiredByEmployerIdAsync(string employerId, CancellationToken cancellationToken = default);
 
-    // Returns how many applications were submitted in the range, grouped by status.  PendingVerification (unverified guest
-    // applications) is excluded from the application counts.
     Task<IReadOnlyDictionary<ApplicationStatus, int>> GetStatusCountsAppliedBetweenAsync(
         DateTime startUtc,
         DateTime endUtc,
@@ -55,9 +53,6 @@ public interface IJobApplicationRepository
         DateTime endUtc,
         bool groupByHour,
         CancellationToken cancellationToken = default);
-
-    // Returns how many candidates were hired in the range per UTC hour (groupByHour) or UTC day. There is no HiredAt
-    // column, so a hire is dated by UpdatedAt on applications whose status is Hired.
     Task<IReadOnlyDictionary<DateTime, int>> GetHiredCountsByBucketAsync(
         DateTime startUtc,
         DateTime endUtc,
