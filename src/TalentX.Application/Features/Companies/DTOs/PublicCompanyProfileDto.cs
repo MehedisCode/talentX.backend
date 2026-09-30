@@ -1,3 +1,5 @@
+using TalentX.Application.Features.CompanyReviews.DTOs;
+
 namespace TalentX.Application.Features.Companies.DTOs;
 
 public sealed record PublicCompanyProfileDto(
@@ -13,5 +15,6 @@ public sealed record PublicCompanyProfileDto(
     string? Twitter,
     string? Facebook,
     int ActiveJobsCount,
-    IReadOnlyList<PublicCompanyJobDto> PublishedJobs
+    IReadOnlyList<PublicCompanyJobDto> PublishedJobs,
+    CompanyReviewSummaryDto ReviewSummary
 );

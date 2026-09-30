@@ -6,6 +6,8 @@ using Moq;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Common.Interfaces.Repositories;
+using TalentX.Application.Features.CompanyReviews;
+using TalentX.Application.Features.CompanyReviews.DTOs;
 using TalentX.Application.Features.Companies.Queries.GetPublicCompanyProfile;
 using TalentX.Domain;
 using TalentX.Domain.Entities;
@@ -19,12 +21,17 @@ public sealed class GetPublicCompanyProfileQueryHandlerTests
     private readonly Mock<IUnitOfWork> _unitOfWorkMock = new();
     private readonly Mock<ICompanyRepository> _companyRepositoryMock = new();
     private readonly Mock<IJobRepository> _jobRepositoryMock = new();
+    private readonly Mock<ICompanyReviewRepository> _companyReviewRepositoryMock = new();
     private readonly Mock<IPresignedUrlService> _presignedUrlServiceMock = new();
 
     public GetPublicCompanyProfileQueryHandlerTests()
     {
         _unitOfWorkMock.Setup(u => u.Companies).Returns(_companyRepositoryMock.Object);
         _unitOfWorkMock.Setup(u => u.Jobs).Returns(_jobRepositoryMock.Object);
+        _unitOfWorkMock.Setup(u => u.CompanyReviews).Returns(_companyReviewRepositoryMock.Object);
+        _companyReviewRepositoryMock
+            .Setup(r => r.GetPublishedSummaryAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CompanyReviewSummaryCalculator.Empty);
     }
 
     [Fact]
@@ -76,6 +83,67 @@ public sealed class GetPublicCompanyProfileQueryHandlerTests
         Assert.Equal(1, result.ActiveJobsCount);
         Assert.Single(result.PublishedJobs);
         Assert.Equal("Senior Backend Engineer", result.PublishedJobs[0].Title);
+        Assert.Equal(CompanyReviewSummaryCalculator.Empty, result.ReviewSummary);
+    }
+
+    [Fact]
+    public async Task Handle_PassesThroughTheReviewSummaryFromTheRepository()
+    {
+        var companyId = Guid.NewGuid();
+        var company = new Company("employer-user-123", "Acme Global");
+
+        _companyRepositoryMock.Setup(r => r.GetByIdAsync(companyId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(company);
+        _jobRepositoryMock.Setup(r => r.GetActivePublishedJobsByEmployerIdAsync("employer-user-123", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Job>());
+
+        var summary = CompanyReviewSummaryCalculator.Create(new CompanyReviewAggregates(
+            3, 2,
+            new RatingAggregate(3, 12),
+            new RatingAggregate(3, 9),
+            new RatingAggregate(3, 15),
+            new RatingAggregate(3, 6)));
+        _companyReviewRepositoryMock
+            .Setup(r => r.GetPublishedSummaryAsync(company.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(summary);
+
+        var handler = new GetPublicCompanyProfileQueryHandler(
+            _unitOfWorkMock.Object,
+            _presignedUrlServiceMock.Object
+        );
+
+        var result = await handler.Handle(new GetPublicCompanyProfileQuery(companyId), CancellationToken.None);
+
+        Assert.Equal(summary, result.ReviewSummary);
+    }
+
+    [Fact]
+    public async Task Handle_ZeroReviewCompany_YieldsZerosAndNullsNotAnException()
+    {
+        var companyId = Guid.NewGuid();
+        var company = new Company("employer-user-123", "Acme Global");
+
+        _companyRepositoryMock.Setup(r => r.GetByIdAsync(companyId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(company);
+        _jobRepositoryMock.Setup(r => r.GetActivePublishedJobsByEmployerIdAsync("employer-user-123", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Job>());
+        _companyReviewRepositoryMock
+            .Setup(r => r.GetPublishedSummaryAsync(company.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CompanyReviewSummaryCalculator.Empty);
+
+        var handler = new GetPublicCompanyProfileQueryHandler(
+            _unitOfWorkMock.Object,
+            _presignedUrlServiceMock.Object
+        );
+
+        var result = await handler.Handle(new GetPublicCompanyProfileQuery(companyId), CancellationToken.None);
+
+        Assert.Equal(0, result.ReviewSummary.TotalCount);
+        Assert.Equal(0m, result.ReviewSummary.PositivePercent);
+        Assert.Null(result.ReviewSummary.RecruitmentProcess.Average);
+        Assert.Null(result.ReviewSummary.Communication.Average);
+        Assert.Null(result.ReviewSummary.InterviewExperience.Average);
+        Assert.Null(result.ReviewSummary.Professionalism.Average);
     }
 
     [Fact]
