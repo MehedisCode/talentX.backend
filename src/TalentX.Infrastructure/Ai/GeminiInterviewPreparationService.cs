@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Features.InterviewPreparation.DTOs;
+using TalentX.Infrastructure.Ai.Constants;
 using TalentX.Infrastructure.Ai.Helpers;
 using TalentX.Infrastructure.Ai.Models;
 
@@ -25,6 +26,17 @@ public sealed class GeminiInterviewPreparationService : IInterviewPreparationAiS
         PropertyNameCaseInsensitive = true
     };
 
+    private static string GetConfigValue(IConfiguration config, string envKey, string jsonKey, string defaultValue = "")
+    {
+        var val = config[envKey];
+        if (!string.IsNullOrWhiteSpace(val)) return val;
+        
+        val = config[jsonKey];
+        if (!string.IsNullOrWhiteSpace(val)) return val;
+        
+        return defaultValue;
+    }
+
     public GeminiInterviewPreparationService(
         HttpClient httpClient,
         IConfiguration configuration,
@@ -33,26 +45,20 @@ public sealed class GeminiInterviewPreparationService : IInterviewPreparationAiS
         _httpClient = httpClient;
         _logger = logger;
 
-        var baseUrl = configuration["GEMINI_BASE_URL"]
-            ?? configuration["Gemini:BaseUrl"]
-            ?? "https://generativelanguage.googleapis.com";
+        var baseUrl = GetConfigValue(configuration, "GEMINI_BASE_URL", "Gemini:BaseUrl", GeminiConstants.DefaultBaseUrl);
         _httpClient.BaseAddress = new Uri(baseUrl);
 
-        _apiKey = configuration["GEMINI_API_KEY"]
-            ?? configuration["Gemini:ApiKey"]
-            ?? string.Empty;
+        _apiKey = GetConfigValue(configuration, "GEMINI_API_KEY", "Gemini:ApiKey");
 
-        _modelName = configuration["GEMINI_MODEL_NAME"]
-            ?? configuration["Gemini:ModelName"]
-            ?? "gemini-3.7-flash";
+        _modelName = GetConfigValue(configuration, "GEMINI_MODEL_NAME", "Gemini:ModelName", GeminiConstants.DefaultModelName);
 
-        var tempStr = configuration["GEMINI_TEMPERATURE"] ?? configuration["Gemini:Temperature"];
+        var tempStr = GetConfigValue(configuration, "GEMINI_TEMPERATURE", "Gemini:Temperature");
         _temperature = double.TryParse(tempStr, out var tempVal) ? tempVal : 0.7;
 
-        var topPStr = configuration["GEMINI_TOP_P"] ?? configuration["Gemini:TopP"];
+        var topPStr = GetConfigValue(configuration, "GEMINI_TOP_P", "Gemini:TopP");
         _topP = double.TryParse(topPStr, out var topPVal) ? topPVal : 0.95;
 
-        var maxTokensStr = configuration["GEMINI_MAX_OUTPUT_TOKENS"] ?? configuration["Gemini:MaxOutputTokens"];
+        var maxTokensStr = GetConfigValue(configuration, "GEMINI_MAX_OUTPUT_TOKENS", "Gemini:MaxOutputTokens");
         _maxOutputTokens = int.TryParse(maxTokensStr, out var maxTokensVal) ? maxTokensVal : 4096;
     }
 
@@ -84,7 +90,8 @@ public sealed class GeminiInterviewPreparationService : IInterviewPreparationAiS
                 temperature = _temperature,
                 top_p = _topP,
                 max_output_tokens = _maxOutputTokens,
-                response_mime_type = "application/json"
+                response_mime_type = "application/json",
+                response_schema = InterviewPreparationPromptBuilder.BuildPreparationSchema()
             }
         };
 
@@ -139,7 +146,8 @@ public sealed class GeminiInterviewPreparationService : IInterviewPreparationAiS
                 temperature = _temperature,
                 top_p = _topP,
                 max_output_tokens = _maxOutputTokens,
-                response_mime_type = "application/json"
+                response_mime_type = "application/json",
+                response_schema = InterviewPreparationPromptBuilder.BuildAdditionalQuestionsSchema()
             }
         };
 

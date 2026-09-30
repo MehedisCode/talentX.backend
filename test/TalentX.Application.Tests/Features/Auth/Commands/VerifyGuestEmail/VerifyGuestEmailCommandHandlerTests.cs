@@ -27,6 +27,7 @@ public class VerifyGuestEmailCommandHandlerTests
     private readonly Mock<IResumeRepository> _resumeRepository = new();
     private readonly Mock<IWorkExperienceRepository> _workExperienceRepository = new();
     private readonly Mock<IEducationRepository> _educationRepository = new();
+    private readonly Mock<IJobApplicationStatusHistoryRepository> _historyRepository = new();
     private readonly Mock<ILogger<VerifyGuestEmailCommandHandler>> _logger = new();
 
     private readonly VerifyGuestEmailCommandHandler _handler;
@@ -37,6 +38,7 @@ public class VerifyGuestEmailCommandHandlerTests
         _unitOfWork.Setup(u => u.Resumes).Returns(_resumeRepository.Object);
         _unitOfWork.Setup(u => u.WorkExperiences).Returns(_workExperienceRepository.Object);
         _unitOfWork.Setup(u => u.Educations).Returns(_educationRepository.Object);
+        _unitOfWork.Setup(u => u.JobApplicationStatusHistories).Returns(_historyRepository.Object);
 
         _resumeRepository
             .Setup(r => r.GetByUserIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))

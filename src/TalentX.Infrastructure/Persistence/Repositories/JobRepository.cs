@@ -8,6 +8,7 @@ using TalentX.Application.Features.Jobs.DTOs;
 using TalentX.Application.Features.Jobs.Moderation;
 using TalentX.Domain.Entities;
 using TalentX.Domain.Enums;
+using TalentX.Infrastructure.Persistence;
 using TalentX.Infrastructure.Persistence.Contexts;
 
 namespace TalentX.Infrastructure.Persistence.Repositories;
@@ -379,5 +380,52 @@ public sealed class JobRepository : RepositoryBase<Job>, IJobRepository
     public void RemoveRange(IEnumerable<Job> jobs)
     {
         Context.Jobs.RemoveRange(jobs);
+    }
+
+    public async Task<IReadOnlyDictionary<JobStatus, int>> GetStatusCountsCreatedBetweenAsync(
+        DateTime startUtc,
+        DateTime endUtc,
+        CancellationToken cancellationToken = default)
+    {
+        // Expiry is derived, not stored: nothing rewrites a job's status when its deadline passes, so a job that is
+        // still Published after its ExpireAt date counts as Expired here, the same rule the employer dashboard uses.
+        var currentDate = DateTime.UtcNow.Date;
+
+        return await Context.Jobs
+            .AsNoTracking()
+            .Where(j => j.CreatedAt >= startUtc && j.CreatedAt <= endUtc && j.Status != JobStatus.Draft)
+            .GroupBy(j => j.Status == JobStatus.Published && j.ExpireAt.Date < currentDate
+                ? JobStatus.Expired
+                : j.Status)
+            .Select(g => new { Status = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.Status, x => x.Count, cancellationToken);
+    }
+
+    public async Task<IReadOnlyDictionary<DateTime, int>> GetPublishedCountsByBucketAsync(
+        DateTime startUtc,
+        DateTime endUtc,
+        bool groupByHour,
+        CancellationToken cancellationToken = default)
+    {
+        var publishedAt = Context.Jobs
+            .AsNoTracking()
+            .Where(j => j.PublishedAt != null && j.PublishedAt >= startUtc && j.PublishedAt <= endUtc)
+            .Select(j => j.PublishedAt!.Value);
+
+        return await TimeBucketCounter.CountAsync(publishedAt, groupByHour, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<Job>> GetRecentPublishedBetweenAsync(
+        DateTime startUtc,
+        DateTime endUtc,
+        int take,
+        CancellationToken cancellationToken = default)
+    {
+        return await Context.Jobs
+            .AsNoTracking()
+            .Where(j => j.PublishedAt != null && j.PublishedAt >= startUtc && j.PublishedAt <= endUtc)
+            .OrderByDescending(j => j.PublishedAt)
+            .Take(take)
+            .ToListAsync(cancellationToken);
     }
 }

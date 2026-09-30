@@ -9,4 +9,5 @@ public sealed record EmployerDashboardDto(
     int ExpiredJobsCount,
     int DeactivatedJobsCount,
     int PendingReviewJobsCount,
+    CandidatePipelineStatsDto CandidatePipeline,
     IReadOnlyList<EmployerRecentJobDto> RecentJobs);

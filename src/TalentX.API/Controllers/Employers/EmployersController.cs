@@ -15,6 +15,7 @@ using TalentX.Application.Features.Employers.Queries.GetEmployerDashboard;
 using TalentX.Application.Features.Employers.Queries.GetEmployerJobs;
 using TalentX.Application.Features.Companies.Commands.UpdateCompanyProfile;
 using TalentX.Application.Features.Companies.Commands.UploadCompanyLogo;
+using TalentX.Application.Features.Companies.Commands.DeleteCompanyLogo;
 using TalentX.Application.Features.Companies.Queries.GetMyCompanyProfile;
 using TalentX.Application.Identity.Services;
 using TalentX.Domain.Enums;
@@ -184,5 +185,18 @@ public sealed class EmployersController : BaseApiController
         var command = new UploadCompanyLogoCommand(new FormFileUploadedFile(file));
         var result = await Sender.Send(command, cancellationToken);
         return Ok(result);
+    }
+
+    /// <summary>
+    /// Removes the company logo of the authenticated employer.
+    /// The employer falls back to the default brand logo.
+    /// </summary>
+    [HttpDelete("company/logo")]
+    [Authorize(Roles = $"{nameof(UserRole.Employer)}")]
+    public async Task<IActionResult> DeleteCompanyLogo(
+        CancellationToken cancellationToken)
+    {
+        await Sender.Send(new DeleteCompanyLogoCommand(), cancellationToken);
+        return NoContent();
     }
 }

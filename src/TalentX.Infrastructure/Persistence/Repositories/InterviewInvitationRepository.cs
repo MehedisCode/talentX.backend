@@ -3,6 +3,7 @@ using TalentX.Application.Common.Interfaces.Repositories;
 using TalentX.Application.Common.Models;
 using TalentX.Domain.Entities;
 using TalentX.Domain.Enums;
+using TalentX.Infrastructure.Persistence;
 using TalentX.Infrastructure.Persistence.Contexts;
 
 namespace TalentX.Infrastructure.Persistence.Repositories;
@@ -137,5 +138,35 @@ public sealed class InterviewInvitationRepository : IInterviewInvitationReposito
         {
             _context.InterviewInvitations.RemoveRange(invitations);
         }
+    }
+
+    public async Task<int> CountCreatedBetweenAsync(
+        DateTime startUtc,
+        DateTime endUtc,
+        CancellationToken cancellationToken = default)
+    {
+        return await _context.InterviewInvitations
+            .AsNoTracking()
+            .CountAsync(
+                x => x.CreatedAt >= startUtc
+                     && x.CreatedAt <= endUtc
+                     && x.Status != InterviewInvitationStatus.Cancelled,
+                cancellationToken);
+    }
+
+    public async Task<IReadOnlyDictionary<DateTime, int>> GetCreatedCountsByBucketAsync(
+        DateTime startUtc,
+        DateTime endUtc,
+        bool groupByHour,
+        CancellationToken cancellationToken = default)
+    {
+        var createdAt = _context.InterviewInvitations
+            .AsNoTracking()
+            .Where(x => x.CreatedAt >= startUtc
+                        && x.CreatedAt <= endUtc
+                        && x.Status != InterviewInvitationStatus.Cancelled)
+            .Select(x => x.CreatedAt);
+
+        return await TimeBucketCounter.CountAsync(createdAt, groupByHour, cancellationToken);
     }
 }

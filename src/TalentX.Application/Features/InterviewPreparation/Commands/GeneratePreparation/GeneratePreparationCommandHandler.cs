@@ -1,13 +1,14 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Features.InterviewPreparation.DTOs;
+using TalentX.Application.Features.InterviewPreparation.Helpers;
 using TalentX.Application.Features.InterviewPreparation.Mappers;
-using TalentX.Domain.Entities;
-using TalentX.Domain.Enums;
 using TalentX.Application.Identity.Services;
+using TalentX.Domain.Entities;
+using InterviewPreparationEntity = TalentX.Domain.Entities.InterviewPreparation;
+using TalentX.Domain.Enums;
 
 namespace TalentX.Application.Features.InterviewPreparation.Commands.GeneratePreparation;
 
@@ -17,20 +18,20 @@ public sealed class GeneratePreparationCommandHandler
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUser;
     private readonly IInterviewPreparationAiService _aiService;
-    private readonly InterviewPreparationSettings _settings;
+    private readonly IInterviewPreparationConfigProvider _configProvider;
     private readonly ILogger<GeneratePreparationCommandHandler> _logger;
 
     public GeneratePreparationCommandHandler(
         IUnitOfWork unitOfWork,
         ICurrentUserService currentUser,
         IInterviewPreparationAiService aiService,
-        IOptions<InterviewPreparationSettings> settings,
+        IInterviewPreparationConfigProvider configProvider,
         ILogger<GeneratePreparationCommandHandler> logger)
     {
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
         _aiService = aiService;
-        _settings = settings.Value;
+        _configProvider = configProvider;
         _logger = logger;
     }
 
@@ -38,12 +39,13 @@ public sealed class GeneratePreparationCommandHandler
         GeneratePreparationCommand request, CancellationToken ct)
     {
         var userId = _currentUser.UserId!;
+        var config = await _configProvider.GetConfigAsync(ct);
 
         var invitation = await _unitOfWork.InterviewInvitations
             .GetByIdAsync(request.InvitationId, ct)
             ?? throw new NotFoundException("Interview invitation not found.", request.InvitationId.ToString());
 
-        EnsureUserCanAccess(invitation, userId);
+        InterviewPreparationAccessValidator.EnsureUserCanAccess(invitation, userId);
 
         if (invitation.Status != InterviewInvitationStatus.Accepted)
             throw new BadRequestException("Interview preparation is only available for accepted interviews.");
@@ -55,9 +57,9 @@ public sealed class GeneratePreparationCommandHandler
 
         var todayCount = await _unitOfWork.InterviewPreparations
             .CountTodayByTalentAsync(userId, ct);
-        if (todayCount >= _settings.DailyGenerateLimit)
-            throw new BadRequestException(
-                $"Daily interview preparation limit reached ({_settings.DailyGenerateLimit}/day).");
+        if (todayCount >= config.DailyGenerateLimit)
+            throw new TooManyRequestsException(
+                $"Daily interview preparation limit reached ({config.DailyGenerateLimit}/day).");
 
         var job = await _unitOfWork.Jobs.GetByIdAsync(invitation.JobId, ct)
             ?? throw new NotFoundException("Job not found.");
@@ -77,7 +79,7 @@ public sealed class GeneratePreparationCommandHandler
 
         var aiResult = await GenerateWithAiAsync(context, request.InvitationId, ct);
 
-        var preparation = Domain.Entities.InterviewPreparation.Create(
+        var preparation = InterviewPreparationEntity.Create(
             new CreateInterviewPreparationPayload(
                 InterviewInvitationId: invitation.Id,
                 TalentUserId: userId,
@@ -97,13 +99,7 @@ public sealed class GeneratePreparationCommandHandler
         await _unitOfWork.SaveChangesAsync(ct);
 
         return InterviewPreparationMapper.ToDto(
-            preparation, _settings.AccessWindowAfterInterview);
-    }
-
-    private static void EnsureUserCanAccess(InterviewInvitation invitation, string userId)
-    {
-        if (invitation.TalentUserId != userId)
-            throw new ForbiddenException("You do not have access to this interview.");
+            preparation, config.AccessWindowAfterInterview);
     }
 
     private async Task<InterviewPreparationResult> GenerateWithAiAsync(

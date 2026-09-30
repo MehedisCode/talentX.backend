@@ -1,11 +1,13 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Features.InterviewPreparation.DTOs;
+using TalentX.Application.Features.InterviewPreparation.Helpers;
 using TalentX.Application.Features.InterviewPreparation.Mappers;
 using TalentX.Application.Identity.Services;
+using TalentX.Domain.Entities;
+using InterviewPreparationEntity = TalentX.Domain.Entities.InterviewPreparation;
 
 namespace TalentX.Application.Features.InterviewPreparation.Commands.GenerateAdditionalQuestions;
 
@@ -15,20 +17,20 @@ public sealed class GenerateAdditionalQuestionsCommandHandler
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUser;
     private readonly IInterviewPreparationAiService _aiService;
-    private readonly InterviewPreparationSettings _settings;
+    private readonly IInterviewPreparationConfigProvider _configProvider;
     private readonly ILogger<GenerateAdditionalQuestionsCommandHandler> _logger;
 
     public GenerateAdditionalQuestionsCommandHandler(
         IUnitOfWork unitOfWork,
         ICurrentUserService currentUser,
         IInterviewPreparationAiService aiService,
-        IOptions<InterviewPreparationSettings> settings,
+        IInterviewPreparationConfigProvider configProvider,
         ILogger<GenerateAdditionalQuestionsCommandHandler> logger)
     {
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
         _aiService = aiService;
-        _settings = settings.Value;
+        _configProvider = configProvider;
         _logger = logger;
     }
 
@@ -36,11 +38,12 @@ public sealed class GenerateAdditionalQuestionsCommandHandler
         GenerateAdditionalQuestionsCommand request, CancellationToken ct)
     {
         var userId = _currentUser.UserId!;
+        var config = await _configProvider.GetConfigAsync(ct);
 
         var preparation = await GetPreparationAsync(request.InvitationId, ct);
 
-        EnsureUserCanAccess(preparation, userId);
-        EnsurePreparationIsAccessible(preparation);
+        InterviewPreparationAccessValidator.EnsureUserCanAccess(preparation, userId);
+        InterviewPreparationAccessValidator.EnsurePreparationIsAccessible(preparation, config.AccessWindowAfterInterview);
 
         var talent = await _unitOfWork.Talents.GetByUserIdAsync(userId, ct);
 
@@ -59,10 +62,10 @@ public sealed class GenerateAdditionalQuestionsCommandHandler
             .GetEvaluationByPreparationIdAsync(preparation.Id, ct);
 
         return InterviewPreparationMapper.ToDto(
-            preparation, _settings.AccessWindowAfterInterview, answers, evaluation);
+            preparation, config.AccessWindowAfterInterview, answers, evaluation);
     }
 
-    private async Task<Domain.Entities.InterviewPreparation> GetPreparationAsync(
+    private async Task<InterviewPreparationEntity> GetPreparationAsync(
         Guid invitationId, CancellationToken ct)
     {
         return await _unitOfWork.InterviewPreparations
@@ -70,22 +73,8 @@ public sealed class GenerateAdditionalQuestionsCommandHandler
             ?? throw new NotFoundException("Interview preparation not found.");
     }
 
-    private static void EnsureUserCanAccess(
-        Domain.Entities.InterviewPreparation preparation, string userId)
-    {
-        if (preparation.TalentUserId != userId)
-            throw new ForbiddenException("You do not have access to this interview preparation.");
-    }
-
-    private void EnsurePreparationIsAccessible(
-        Domain.Entities.InterviewPreparation preparation)
-    {
-        if (!preparation.IsAccessible(_settings.AccessWindowAfterInterview))
-            throw new ForbiddenException("Preparation is no longer accessible as the interview has already taken place.");
-    }
-
     private static AdditionalQuestionsContext CreateContext(
-        Domain.Entities.InterviewPreparation preparation, string? talentName)
+        InterviewPreparationEntity preparation, string? talentName)
     {
         return new AdditionalQuestionsContext
         {

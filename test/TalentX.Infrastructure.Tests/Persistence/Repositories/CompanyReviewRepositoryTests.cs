@@ -478,4 +478,233 @@ public class CompanyReviewRepositoryTests
         counts[CompanyReviewStatus.Published].Should().Be(1);
         counts.Should().NotContainKey(CompanyReviewStatus.Hidden);
     }
+
+    // ---- GetByCompanyIdPagedAsync ----
+
+    [Fact]
+    public async Task GetByCompanyIdPagedAsync_ReturnsOnlyThatCompanysReviews()
+    {
+        await using var context = NewContext();
+        var repository = new CompanyReviewRepository(context);
+        var companyId = Guid.NewGuid();
+        var mine = MakeReview(companyId);
+        var elsewhere = MakeReview();
+        await SeedAsync(context, mine, elsewhere);
+
+        var result = await repository.GetByCompanyIdPagedAsync(companyId, status: null, sentiment: null, page: 1, pageSize: 20);
+
+        result.TotalCount.Should().Be(1);
+        result.Items[0].Id.Should().Be(mine.Id);
+    }
+
+    [Fact]
+    public async Task GetByCompanyIdPagedAsync_ReturnsAllFiveStatuses()
+    {
+        await using var context = NewContext();
+        var repository = new CompanyReviewRepository(context);
+        var companyId = Guid.NewGuid();
+
+        var pending = MakeReview(companyId);
+        var published = MakePublished(companyId);
+
+        var rejected = MakeReview(companyId);
+        rejected.Reject(ReviewModerationReason.Spam, "spam", "admin-1");
+
+        var hidden = MakePublished(companyId);
+        hidden.Hide(ReviewModerationReason.Other, "hidden", "admin-1");
+
+        var withdrawn = MakeReview(companyId);
+        withdrawn.Withdraw();
+
+        await SeedAsync(context, pending, published, rejected, hidden, withdrawn);
+
+        var result = await repository.GetByCompanyIdPagedAsync(companyId, status: null, sentiment: null, page: 1, pageSize: 20);
+
+        result.Items.Select(i => i.Id).Should().BeEquivalentTo(
+            new[] { pending.Id, published.Id, rejected.Id, hidden.Id, withdrawn.Id });
+    }
+
+    [Fact]
+    public async Task GetByCompanyIdPagedAsync_OrdersBySubmittedAtNewestFirst()
+    {
+        await using var context = NewContext();
+        var repository = new CompanyReviewRepository(context);
+        var companyId = Guid.NewGuid();
+        var older = MakeReview(companyId);
+        var newer = MakeReview(companyId);
+        await SeedAsync(context, older, newer);
+
+        context.Entry(older).Property(r => r.SubmittedAt).CurrentValue = DateTime.UtcNow.AddDays(-5);
+        context.Entry(newer).Property(r => r.SubmittedAt).CurrentValue = DateTime.UtcNow.AddDays(-1);
+        await context.SaveChangesAsync();
+
+        var result = await repository.GetByCompanyIdPagedAsync(companyId, status: null, sentiment: null, page: 1, pageSize: 20);
+
+        result.Items.Select(i => i.Id).Should().Equal(newer.Id, older.Id);
+    }
+
+    [Fact]
+    public async Task GetByCompanyIdPagedAsync_FiltersByStatus()
+    {
+        await using var context = NewContext();
+        var repository = new CompanyReviewRepository(context);
+        var companyId = Guid.NewGuid();
+        var pending = MakeReview(companyId);
+        var published = MakePublished(companyId);
+        await SeedAsync(context, pending, published);
+
+        var result = await repository.GetByCompanyIdPagedAsync(companyId, status: CompanyReviewStatus.Published, sentiment: null, page: 1, pageSize: 20);
+
+        result.TotalCount.Should().Be(1);
+        result.Items[0].Id.Should().Be(published.Id);
+    }
+
+    [Fact]
+    public async Task GetByCompanyIdPagedAsync_FiltersBySentiment()
+    {
+        await using var context = NewContext();
+        var repository = new CompanyReviewRepository(context);
+        var companyId = Guid.NewGuid();
+        var positive = MakeReview(companyId, sentiment: ReviewSentiment.Positive);
+        var negative = MakeReview(companyId, sentiment: ReviewSentiment.Negative);
+        await SeedAsync(context, positive, negative);
+
+        var result = await repository.GetByCompanyIdPagedAsync(companyId, status: null, sentiment: ReviewSentiment.Negative, page: 1, pageSize: 20);
+
+        result.TotalCount.Should().Be(1);
+        result.Items[0].Id.Should().Be(negative.Id);
+    }
+
+    [Fact]
+    public async Task GetByCompanyIdPagedAsync_AppliesPaging()
+    {
+        await using var context = NewContext();
+        var repository = new CompanyReviewRepository(context);
+        var companyId = Guid.NewGuid();
+        await SeedAsync(
+            context,
+            MakeReview(companyId, jobTitle: "Job One"),
+            MakeReview(companyId, jobTitle: "Job Two"),
+            MakeReview(companyId, jobTitle: "Job Three"));
+
+        var result = await repository.GetByCompanyIdPagedAsync(companyId, status: null, sentiment: null, page: 2, pageSize: 2);
+
+        result.TotalCount.Should().Be(3);
+        result.Page.Should().Be(2);
+        result.PageSize.Should().Be(2);
+        result.Items.Should().HaveCount(1);
+    }
+
+    // ---- GetStatusCountsByCompanyAsync ----
+
+    [Fact]
+    public async Task GetStatusCountsByCompanyAsync_GroupsByStatus_OnlyThatCompany()
+    {
+        await using var context = NewContext();
+        var repository = new CompanyReviewRepository(context);
+        var companyId = Guid.NewGuid();
+
+        var rejected = MakeReview(companyId);
+        rejected.Reject(ReviewModerationReason.Spam, "spam content", "admin-1");
+
+        await SeedAsync(
+            context,
+            MakeReview(companyId),
+            MakeReview(companyId),
+            rejected,
+            MakePublished(companyId),
+            MakePublished(Guid.NewGuid()));
+
+        var counts = await repository.GetStatusCountsByCompanyAsync(companyId);
+
+        counts[CompanyReviewStatus.Pending].Should().Be(2);
+        counts[CompanyReviewStatus.Rejected].Should().Be(1);
+        counts[CompanyReviewStatus.Published].Should().Be(1);
+        counts.Should().NotContainKey(CompanyReviewStatus.Hidden);
+    }
+
+    // ---- GetPublishedByCompanyIdPagedAsync ----
+
+    [Fact]
+    public async Task GetPublishedByCompanyIdPagedAsync_ExcludesEveryNonPublishedStatus()
+    {
+        await using var context = NewContext();
+        var repository = new CompanyReviewRepository(context);
+        var companyId = Guid.NewGuid();
+
+        var pending = MakeReview(companyId);
+
+        var rejected = MakeReview(companyId);
+        rejected.Reject(ReviewModerationReason.Spam, "spam", "admin-1");
+
+        var hidden = MakePublished(companyId);
+        hidden.Hide(ReviewModerationReason.Other, "hidden", "admin-1");
+
+        var withdrawn = MakeReview(companyId);
+        withdrawn.Withdraw();
+
+        var published = MakePublished(companyId);
+
+        await SeedAsync(context, pending, rejected, hidden, withdrawn, published);
+
+        var result = await repository.GetPublishedByCompanyIdPagedAsync(companyId, page: 1, pageSize: 20);
+
+        result.TotalCount.Should().Be(1);
+        result.Items[0].Id.Should().Be(published.Id);
+    }
+
+    [Fact]
+    public async Task GetPublishedByCompanyIdPagedAsync_OrdersByPublishedAtNewestFirst()
+    {
+        await using var context = NewContext();
+        var repository = new CompanyReviewRepository(context);
+        var companyId = Guid.NewGuid();
+        var older = MakePublished(companyId);
+        var newer = MakePublished(companyId);
+        await SeedAsync(context, older, newer);
+
+        context.Entry(older).Property(r => r.PublishedAt).CurrentValue = DateTime.UtcNow.AddDays(-5);
+        context.Entry(newer).Property(r => r.PublishedAt).CurrentValue = DateTime.UtcNow.AddDays(-1);
+        await context.SaveChangesAsync();
+
+        var result = await repository.GetPublishedByCompanyIdPagedAsync(companyId, page: 1, pageSize: 20);
+
+        result.Items.Select(i => i.Id).Should().Equal(newer.Id, older.Id);
+    }
+
+    [Fact]
+    public async Task GetPublishedByCompanyIdPagedAsync_AppliesPaging()
+    {
+        await using var context = NewContext();
+        var repository = new CompanyReviewRepository(context);
+        var companyId = Guid.NewGuid();
+        await SeedAsync(
+            context,
+            MakePublished(companyId),
+            MakePublished(companyId),
+            MakePublished(companyId));
+
+        var result = await repository.GetPublishedByCompanyIdPagedAsync(companyId, page: 2, pageSize: 2);
+
+        result.TotalCount.Should().Be(3);
+        result.Page.Should().Be(2);
+        result.PageSize.Should().Be(2);
+        result.Items.Should().HaveCount(1);
+    }
+
+    [Fact]
+    public async Task GetPublishedByCompanyIdPagedAsync_ExcludesOtherCompaniesReviews()
+    {
+        await using var context = NewContext();
+        var repository = new CompanyReviewRepository(context);
+        var companyId = Guid.NewGuid();
+        var mine = MakePublished(companyId);
+        var elsewhere = MakePublished(Guid.NewGuid());
+        await SeedAsync(context, mine, elsewhere);
+
+        var result = await repository.GetPublishedByCompanyIdPagedAsync(companyId, page: 1, pageSize: 20);
+
+        result.TotalCount.Should().Be(1);
+        result.Items[0].Id.Should().Be(mine.Id);
+    }
 }

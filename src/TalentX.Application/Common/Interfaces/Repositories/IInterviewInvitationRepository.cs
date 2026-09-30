@@ -37,4 +37,15 @@ public interface IInterviewInvitationRepository
     Task AddAsync(InterviewInvitation invitation, CancellationToken cancellationToken = default);
     void Update(InterviewInvitation invitation);
     Task DeleteByTalentUserIdAsync(string talentUserId, CancellationToken cancellationToken = default);
+
+    Task<int> CountCreatedBetweenAsync(
+        DateTime startUtc,
+        DateTime endUtc,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyDictionary<DateTime, int>> GetCreatedCountsByBucketAsync(
+        DateTime startUtc,
+        DateTime endUtc,
+        bool groupByHour,
+        CancellationToken cancellationToken = default);
 }

@@ -1,7 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using TalentX.Application.Common.Interfaces.Repositories;
 using TalentX.Application.Common.Models;
+using TalentX.Application.Features.Employers.DTOs;
 using TalentX.Domain.Entities;
+using TalentX.Domain.Enums;
+using TalentX.Infrastructure.Persistence;
 using TalentX.Infrastructure.Persistence.Contexts;
 
 namespace TalentX.Infrastructure.Persistence.Repositories;
@@ -210,6 +213,58 @@ public sealed class JobApplicationRepository : IJobApplicationRepository
             .CountAsync(cancellationToken);
     }
 
+    public async Task<CandidatePipelineStatsDto> GetCandidatePipelineStatsByEmployerIdAsync(
+        string employerId,
+        CancellationToken cancellationToken = default)
+    {
+        var candidatePipelineStatistics = await _context.JobApplications
+            .AsNoTracking()
+            .Where(application => _context.Jobs.IgnoreQueryFilters().Any(job => job.Id == application.JobId && job.EmployerId == employerId))
+            .GroupBy(application => 1)
+            .Select(group => new
+            {
+                AppliedCount = group.Count(application => application.Status == ApplicationStatus.Applied),
+                ShortlistedCount = group.Count(application => application.Status == ApplicationStatus.Shortlisted),
+                InvitedCount = group.Count(application => application.Status == ApplicationStatus.Invited),
+                RejectedCount = group.Count(application => application.Status == ApplicationStatus.Rejected),
+                HiredCount = group.Count(application => application.Status == ApplicationStatus.Hired)
+            })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return new CandidatePipelineStatsDto(
+            candidatePipelineStatistics?.AppliedCount ?? 0,
+            candidatePipelineStatistics?.ShortlistedCount ?? 0,
+            candidatePipelineStatistics?.InvitedCount ?? 0,
+            candidatePipelineStatistics?.RejectedCount ?? 0,
+            candidatePipelineStatistics?.HiredCount ?? 0);
+    }
+
+    public async Task<CandidatePipelineStatsDto> GetCandidatePipelineStatsByJobIdAsync(
+        Guid jobId,
+        CancellationToken cancellationToken = default)
+    {
+        var candidatePipelineStatistics = await _context.JobApplications
+            .AsNoTracking()
+            .Where(application => application.JobId == jobId)
+            .GroupBy(application => 1)
+            .Select(group => new
+            {
+                AppliedCount = group.Count(application => application.Status == ApplicationStatus.Applied),
+                ShortlistedCount = group.Count(application => application.Status == ApplicationStatus.Shortlisted),
+                InvitedCount = group.Count(application => application.Status == ApplicationStatus.Invited),
+                RejectedCount = group.Count(application => application.Status == ApplicationStatus.Rejected),
+                HiredCount = group.Count(application => application.Status == ApplicationStatus.Hired)
+            })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return new CandidatePipelineStatsDto(
+            candidatePipelineStatistics?.AppliedCount ?? 0,
+            candidatePipelineStatistics?.ShortlistedCount ?? 0,
+            candidatePipelineStatistics?.InvitedCount ?? 0,
+            candidatePipelineStatistics?.RejectedCount ?? 0,
+            candidatePipelineStatistics?.HiredCount ?? 0);
+    }
+
     public void Update(JobApplication jobApplication)
     {
         _context.JobApplications.Update(jobApplication);
@@ -231,5 +286,53 @@ public sealed class JobApplicationRepository : IJobApplicationRepository
     public void Delete(JobApplication jobApplication)
     {
         _context.JobApplications.Remove(jobApplication);
+    }
+
+    public async Task<IReadOnlyDictionary<ApplicationStatus, int>> GetStatusCountsAppliedBetweenAsync(
+        DateTime startUtc,
+        DateTime endUtc,
+        CancellationToken cancellationToken = default)
+    {
+        return await _context.JobApplications
+            .AsNoTracking()
+            .Where(a => a.AppliedAt >= startUtc
+                        && a.AppliedAt <= endUtc
+                        && a.Status != ApplicationStatus.PendingVerification)
+            .GroupBy(a => a.Status)
+            .Select(g => new { Status = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.Status, x => x.Count, cancellationToken);
+    }
+
+    public async Task<IReadOnlyDictionary<DateTime, int>> GetAppliedCountsByBucketAsync(
+        DateTime startUtc,
+        DateTime endUtc,
+        bool groupByHour,
+        CancellationToken cancellationToken = default)
+    {
+        var appliedAt = _context.JobApplications
+            .AsNoTracking()
+            .Where(a => a.AppliedAt >= startUtc
+                        && a.AppliedAt <= endUtc
+                        && a.Status != ApplicationStatus.PendingVerification)
+            .Select(a => a.AppliedAt);
+
+        return await TimeBucketCounter.CountAsync(appliedAt, groupByHour, cancellationToken);
+    }
+
+    public async Task<IReadOnlyDictionary<DateTime, int>> GetHiredCountsByBucketAsync(
+        DateTime startUtc,
+        DateTime endUtc,
+        bool groupByHour,
+        CancellationToken cancellationToken = default)
+    {
+        var hiredAt = _context.JobApplications
+            .AsNoTracking()
+            .Where(a => a.Status == ApplicationStatus.Hired
+                        && a.UpdatedAt != null
+                        && a.UpdatedAt >= startUtc
+                        && a.UpdatedAt <= endUtc)
+            .Select(a => a.UpdatedAt!.Value);
+
+        return await TimeBucketCounter.CountAsync(hiredAt, groupByHour, cancellationToken);
     }
 }

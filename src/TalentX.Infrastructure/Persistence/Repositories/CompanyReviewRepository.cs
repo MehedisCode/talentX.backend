@@ -23,7 +23,6 @@ public sealed class CompanyReviewRepository : ICompanyReviewRepository
         await _context.CompanyReviews.AddAsync(review, cancellationToken);
     }
 
-    // Tracked: handlers mutate the entity through its behaviour methods and save.
     public async Task<CompanyReview?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
         return await _context.CompanyReviews
@@ -36,7 +35,6 @@ public sealed class CompanyReviewRepository : ICompanyReviewRepository
             .FirstOrDefaultAsync(review => review.JobApplicationId == jobApplicationId, cancellationToken);
     }
 
-    // Batch lookup (one query) so callers listing many applications avoid N+1.
     public async Task<IReadOnlyList<CompanyReview>> GetByJobApplicationIdsAsync(IEnumerable<Guid> jobApplicationIds, CancellationToken cancellationToken = default)
     {
         var ids = jobApplicationIds.Distinct().ToList();
@@ -75,8 +73,6 @@ public sealed class CompanyReviewRepository : ICompanyReviewRepository
         }
     }
 
-    // One grouped query over Published reviews only. Averages are derived from sum/count
-    // of the non-null ratings, and rounded in CompanyReviewSummaryCalculator alone.
     public async Task<CompanyReviewSummaryDto> GetPublishedSummaryAsync(Guid companyId, CancellationToken cancellationToken = default)
     {
         var row = await _context.CompanyReviews
@@ -193,5 +189,71 @@ public sealed class CompanyReviewRepository : ICompanyReviewRepository
             .GroupBy(review => review.Status)
             .Select(group => new { Status = group.Key, Count = group.Count() })
             .ToDictionaryAsync(x => x.Status, x => x.Count, cancellationToken);
+    }
+
+    public async Task<PaginatedList<CompanyReview>> GetByCompanyIdPagedAsync(
+        Guid companyId,
+        CompanyReviewStatus? status,
+        ReviewSentiment? sentiment,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _context.CompanyReviews
+            .AsNoTracking()
+            .Where(review => review.CompanyId == companyId);
+
+        if (status.HasValue)
+        {
+            query = query.Where(review => review.Status == status.Value);
+        }
+
+        if (sentiment.HasValue)
+        {
+            query = query.Where(review => review.Sentiment == sentiment.Value);
+        }
+
+        var totalCount = await query.CountAsync(cancellationToken);
+
+        var items = await query
+            .OrderByDescending(review => review.SubmittedAt)
+            .ThenByDescending(review => review.Id)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return new PaginatedList<CompanyReview>(items, page, pageSize, totalCount);
+    }
+
+    public async Task<IReadOnlyDictionary<CompanyReviewStatus, int>> GetStatusCountsByCompanyAsync(Guid companyId, CancellationToken cancellationToken = default)
+    {
+        return await _context.CompanyReviews
+            .AsNoTracking()
+            .Where(review => review.CompanyId == companyId)
+            .GroupBy(review => review.Status)
+            .Select(group => new { Status = group.Key, Count = group.Count() })
+            .ToDictionaryAsync(x => x.Status, x => x.Count, cancellationToken);
+    }
+
+    public async Task<PaginatedList<CompanyReview>> GetPublishedByCompanyIdPagedAsync(
+        Guid companyId,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _context.CompanyReviews
+            .AsNoTracking()
+            .Where(review => review.CompanyId == companyId && review.Status == CompanyReviewStatus.Published);
+
+        var totalCount = await query.CountAsync(cancellationToken);
+
+        var items = await query
+            .OrderByDescending(review => review.PublishedAt)
+            .ThenByDescending(review => review.Id)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return new PaginatedList<CompanyReview>(items, page, pageSize, totalCount);
     }
 }

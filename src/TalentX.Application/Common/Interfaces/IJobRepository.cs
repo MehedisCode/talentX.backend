@@ -49,4 +49,21 @@ public interface IJobRepository
     Task<PaginatedList<AdminJobListItemDto>> GetAdminJobsPagedAsync(
         AdminJobQueryParams queryParams,
         CancellationToken cancellationToken = default);
+
+      Task<IReadOnlyDictionary<JobStatus, int>> GetStatusCountsCreatedBetweenAsync(
+        DateTime startUtc,
+        DateTime endUtc,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyDictionary<DateTime, int>> GetPublishedCountsByBucketAsync(
+        DateTime startUtc,
+        DateTime endUtc,
+        bool groupByHour,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<Job>> GetRecentPublishedBetweenAsync(
+        DateTime startUtc,
+        DateTime endUtc,
+        int take,
+        CancellationToken cancellationToken = default);
 }

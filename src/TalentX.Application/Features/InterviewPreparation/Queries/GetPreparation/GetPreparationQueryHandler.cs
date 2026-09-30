@@ -1,8 +1,8 @@
 using MediatR;
-using Microsoft.Extensions.Options;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Features.InterviewPreparation.DTOs;
+using TalentX.Application.Features.InterviewPreparation.Helpers;
 using TalentX.Application.Features.InterviewPreparation.Mappers;
 using TalentX.Application.Identity.Services;
 
@@ -13,29 +13,29 @@ public sealed class GetPreparationQueryHandler
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUser;
-    private readonly InterviewPreparationSettings _settings;
+    private readonly IInterviewPreparationConfigProvider _configProvider;
 
     public GetPreparationQueryHandler(
         IUnitOfWork unitOfWork,
         ICurrentUserService currentUser,
-        IOptions<InterviewPreparationSettings> settings)
+        IInterviewPreparationConfigProvider configProvider)
     {
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
-        _settings = settings.Value;
+        _configProvider = configProvider;
     }
 
     public async Task<InterviewPreparationDto> Handle(
         GetPreparationQuery request, CancellationToken ct)
     {
         var userId = _currentUser.UserId!;
+        var config = await _configProvider.GetConfigAsync(ct);
 
         var preparation = await _unitOfWork.InterviewPreparations
             .GetByInvitationIdAsync(request.InvitationId, ct)
             ?? throw new NotFoundException("Interview preparation not found.");
 
-        if (preparation.TalentUserId != userId)
-            throw new ForbiddenException("You do not have access to this interview preparation.");
+        InterviewPreparationAccessValidator.EnsureUserCanAccess(preparation, userId);
 
         var answers = await _unitOfWork.InterviewPreparations
             .GetAnswersByPreparationIdAsync(preparation.Id, ct);
@@ -43,6 +43,6 @@ public sealed class GetPreparationQueryHandler
             .GetEvaluationByPreparationIdAsync(preparation.Id, ct);
 
         return InterviewPreparationMapper.ToDto(
-            preparation, _settings.AccessWindowAfterInterview, answers, evaluation);
+            preparation, config.AccessWindowAfterInterview, answers, evaluation);
     }
 }

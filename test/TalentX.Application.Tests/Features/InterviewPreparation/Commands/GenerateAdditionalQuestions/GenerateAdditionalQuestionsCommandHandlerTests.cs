@@ -25,6 +25,7 @@ public class GenerateAdditionalQuestionsCommandHandlerTests
     private readonly Mock<ITalentRepository> _talentRepository = new();
     private readonly Mock<ICurrentUserService> _currentUserService = new();
     private readonly Mock<IInterviewPreparationAiService> _aiService = new();
+    private readonly Mock<IInterviewPreparationConfigProvider> _configProvider = new();
     private readonly Mock<ILogger<GenerateAdditionalQuestionsCommandHandler>> _logger = new();
     private readonly GenerateAdditionalQuestionsCommandHandler _handler;
 
@@ -33,12 +34,14 @@ public class GenerateAdditionalQuestionsCommandHandlerTests
         _unitOfWork.SetupGet(u => u.InterviewPreparations).Returns(_preparationRepository.Object);
         _unitOfWork.SetupGet(u => u.Talents).Returns(_talentRepository.Object);
         _currentUserService.SetupGet(u => u.UserId).Returns(TalentUserId);
+        _configProvider.Setup(c => c.GetConfigAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(InterviewPreparationConfig.CreateDefault());
 
         _handler = new GenerateAdditionalQuestionsCommandHandler(
             _unitOfWork.Object,
             _currentUserService.Object,
             _aiService.Object,
-            Options.Create(new InterviewPreparationSettings()),
+            _configProvider.Object,
             _logger.Object);
     }
 

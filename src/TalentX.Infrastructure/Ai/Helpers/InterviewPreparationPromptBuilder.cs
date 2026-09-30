@@ -41,16 +41,6 @@ INTERVIEW CONTEXT:
 - Type: {context.InterviewType}
 - Scheduled: {context.ScheduledAt}
 
-Return a JSON object with this exact structure:
-{{
-  ""technicalQuestions"": [{{""question"": ""..."", ""category"": ""..."", ""tip"": ""...""}}],
-  ""behavioralQuestions"": [{{""question"": ""..."", ""category"": ""..."", ""tip"": ""...""}}],
-  ""experienceBasedQuestions"": [{{""question"": ""..."", ""category"": ""..."", ""tip"": ""...""}}],
-  ""roleSpecificQuestions"": [{{""question"": ""..."", ""category"": ""..."", ""tip"": ""...""}}],
-  ""keyTopicsToPrepare"": [""topic1"", ""topic2""],
-  ""suggestedRevisionAreas"": [""area1"", ""area2""]
-}}
-
 Generate 5-7 questions per category. Each question should include a helpful tip
 for the candidate on how to approach it based on THEIR specific experience.
 Focus topics and revision areas on gaps between the candidate's profile
@@ -78,11 +68,6 @@ EXISTING QUESTIONS (DO NOT DUPLICATE THESE):
 - Behavioral: {context.ExistingBehavioralQuestions}
 - Experience-Based: {context.ExistingExperienceBasedQuestions}
 - Role-Specific: {context.ExistingRoleSpecificQuestions}
-
-Return a JSON object with this exact structure:
-{{
-  ""additionalQuestions"": [{{""question"": ""..."", ""category"": ""..."", ""tip"": ""...""}}]
-}}
 
 Generate 5-10 completely new questions across any relevant category. 
 Each question should include a helpful tip for the candidate.
@@ -143,5 +128,72 @@ Rules for questionFeedback:
 - Keep each feedback entry concise (max ~60 words).
 - scores must be integers from 0 to 100; overallScore should reflect the weighted quality of the answers.
 ";
+    }
+
+    public static object BuildPreparationSchema()
+    {
+        var questionItemSchema = new
+        {
+            type = "OBJECT",
+            properties = new
+            {
+                question = new { type = "STRING" },
+                category = new { type = "STRING" },
+                tip = new { type = "STRING" }
+            },
+            required = new[] { "question", "category", "tip" }
+        };
+
+        return new
+        {
+            type = "OBJECT",
+            properties = new
+            {
+                technicalQuestions = new { type = "ARRAY", items = questionItemSchema },
+                behavioralQuestions = new { type = "ARRAY", items = questionItemSchema },
+                experienceBasedQuestions = new { type = "ARRAY", items = questionItemSchema },
+                roleSpecificQuestions = new { type = "ARRAY", items = questionItemSchema },
+                keyTopicsToPrepare = new { type = "ARRAY", items = new { type = "STRING" } },
+                suggestedRevisionAreas = new { type = "ARRAY", items = new { type = "STRING" } }
+            },
+            required = new[] 
+            { 
+                "technicalQuestions", 
+                "behavioralQuestions", 
+                "experienceBasedQuestions", 
+                "roleSpecificQuestions", 
+                "keyTopicsToPrepare", 
+                "suggestedRevisionAreas" 
+            }
+        };
+    }
+
+    public static object BuildAdditionalQuestionsSchema()
+    {
+        var questionItemSchema = new
+        {
+            type = "OBJECT",
+            properties = new
+            {
+                question = new { type = "STRING" },
+                category = new { type = "STRING" },
+                tip = new { type = "STRING" }
+            },
+            required = new[] { "question", "category", "tip" }
+        };
+
+        return new
+        {
+            type = "OBJECT",
+            properties = new
+            {
+                additionalQuestions = new
+                {
+                    type = "ARRAY",
+                    items = questionItemSchema
+                }
+            },
+            required = new[] { "additionalQuestions" }
+        };
     }
 }

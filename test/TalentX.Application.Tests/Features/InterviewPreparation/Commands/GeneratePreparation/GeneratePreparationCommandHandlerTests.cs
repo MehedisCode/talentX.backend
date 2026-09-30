@@ -30,6 +30,7 @@ public class GeneratePreparationCommandHandlerTests
     private readonly Mock<IEducationRepository> _educationRepository = new();
     private readonly Mock<ICurrentUserService> _currentUserService = new();
     private readonly Mock<IInterviewPreparationAiService> _aiService = new();
+    private readonly Mock<IInterviewPreparationConfigProvider> _configProvider = new();
     private readonly Mock<ILogger<GeneratePreparationCommandHandler>> _logger = new();
     private readonly GeneratePreparationCommandHandler _handler;
 
@@ -42,12 +43,14 @@ public class GeneratePreparationCommandHandlerTests
         _unitOfWork.SetupGet(u => u.WorkExperiences).Returns(_workExperienceRepository.Object);
         _unitOfWork.SetupGet(u => u.Educations).Returns(_educationRepository.Object);
         _currentUserService.SetupGet(u => u.UserId).Returns(TalentUserId);
+        _configProvider.Setup(c => c.GetConfigAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(InterviewPreparationConfig.CreateDefault());
 
         _handler = new GeneratePreparationCommandHandler(
             _unitOfWork.Object,
             _currentUserService.Object,
             _aiService.Object,
-            Options.Create(new InterviewPreparationSettings()),
+            _configProvider.Object,
             _logger.Object);
     }
 
@@ -282,7 +285,7 @@ public class GeneratePreparationCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WhenDailyLimitIsReached_ThrowsBadRequestException()
+    public async Task Handle_WhenDailyLimitIsReached_ThrowsTooManyRequestsException()
     {
         var invitation = CreateAcceptedInvitation(Guid.NewGuid(), TalentUserId);
         SetUpAcceptedInvitationFlow(invitation, todayCount: 5);
@@ -290,7 +293,7 @@ public class GeneratePreparationCommandHandlerTests
         var act = () => _handler.Handle(
             new GeneratePreparationCommand(invitation.Id), CancellationToken.None);
 
-        await act.Should().ThrowAsync<BadRequestException>()
+        await act.Should().ThrowAsync<TooManyRequestsException>()
             .WithMessage("Daily interview preparation limit reached (5/day).");
         _aiService.Verify(
             s => s.GeneratePreparationAsync(
