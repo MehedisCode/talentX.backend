@@ -35,6 +35,28 @@ public sealed class GetLocalFileStreamQueryHandler : IRequestHandler<GetLocalFil
 
         if (!File.Exists(fullPath))
         {
+            if (request.StorageKey.StartsWith("resumes/job-applications/", StringComparison.OrdinalIgnoreCase))
+            {
+                var strippedKey = request.StorageKey["resumes/".Length..];
+                var fallbackPath = Path.GetFullPath(Path.Combine(basePath, strippedKey));
+                if (File.Exists(fallbackPath))
+                {
+                    fullPath = fallbackPath;
+                }
+            }
+            else if (request.StorageKey.StartsWith("job-applications/", StringComparison.OrdinalIgnoreCase))
+            {
+                var prependedKey = $"resumes/{request.StorageKey}";
+                var fallbackPath = Path.GetFullPath(Path.Combine(basePath, prependedKey));
+                if (File.Exists(fallbackPath))
+                {
+                    fullPath = fallbackPath;
+                }
+            }
+        }
+
+        if (!File.Exists(fullPath))
+        {
             throw new NotFoundException("File not found.");
         }
 
