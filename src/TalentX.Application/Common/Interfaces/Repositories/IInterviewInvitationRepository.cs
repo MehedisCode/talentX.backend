@@ -44,7 +44,6 @@ public interface IInterviewInvitationRepository
         DateTime endUtc,
         CancellationToken cancellationToken = default);
 
-    // Returns how many interview invitations were created in the range per UTC hour (groupByHour) or UTC day; empty buckets are absent.
     Task<IReadOnlyDictionary<DateTime, int>> GetCreatedCountsByBucketAsync(
         DateTime startUtc,
         DateTime endUtc,

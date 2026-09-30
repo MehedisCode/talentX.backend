@@ -50,21 +50,17 @@ public interface IJobRepository
         AdminJobQueryParams queryParams,
         CancellationToken cancellationToken = default);
 
-    // Returns how many jobs were created in the range, grouped by effective status: a Published job past its deadline counts as
-    // Expired, because expiry is not stored. Drafts are left out. Soft-deleted jobs are excluded by the default query filter.
-    Task<IReadOnlyDictionary<JobStatus, int>> GetStatusCountsCreatedBetweenAsync(
+      Task<IReadOnlyDictionary<JobStatus, int>> GetStatusCountsCreatedBetweenAsync(
         DateTime startUtc,
         DateTime endUtc,
         CancellationToken cancellationToken = default);
 
-    // Returns how many jobs were published in the range per UTC hour (groupByHour) or UTC day; empty buckets are absent.
     Task<IReadOnlyDictionary<DateTime, int>> GetPublishedCountsByBucketAsync(
         DateTime startUtc,
         DateTime endUtc,
         bool groupByHour,
         CancellationToken cancellationToken = default);
 
-    // Returns the newest jobs published in the range, newest first, up to `take`.
     Task<IReadOnlyList<Job>> GetRecentPublishedBetweenAsync(
         DateTime startUtc,
         DateTime endUtc,

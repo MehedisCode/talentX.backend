@@ -50,7 +50,6 @@ public interface IJobApplicationRepository
         DateTime endUtc,
         CancellationToken cancellationToken = default);
 
-    // Returns how many applications were submitted in the range per UTC hour (groupByHour) or UTC day; empty buckets are absent.
     Task<IReadOnlyDictionary<DateTime, int>> GetAppliedCountsByBucketAsync(
         DateTime startUtc,
         DateTime endUtc,

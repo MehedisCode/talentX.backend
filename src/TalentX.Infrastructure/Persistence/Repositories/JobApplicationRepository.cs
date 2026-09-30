@@ -4,6 +4,7 @@ using TalentX.Application.Common.Models;
 using TalentX.Application.Features.Employers.DTOs;
 using TalentX.Domain.Entities;
 using TalentX.Domain.Enums;
+using TalentX.Infrastructure.Persistence;
 using TalentX.Infrastructure.Persistence.Contexts;
 
 namespace TalentX.Infrastructure.Persistence.Repositories;

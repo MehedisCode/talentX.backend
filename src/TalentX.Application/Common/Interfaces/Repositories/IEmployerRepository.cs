@@ -59,16 +59,13 @@ public interface IEmployerRepository
         int pageSize,
         CancellationToken cancellationToken = default);
 
-    // Returns how many employers registered in the range, grouped by verification status.
     Task<IReadOnlyDictionary<EmployerVerificationStatus, int>> GetVerificationStatusCountsCreatedBetweenAsync(
         DateTime startUtc,
         DateTime endUtc,
         CancellationToken cancellationToken = default);
-
-    // Returns when the oldest still-pending employer registered, ignoring any range. Null when nothing is pending.
+    
     Task<DateTime?> GetOldestPendingCreatedAtAsync(CancellationToken cancellationToken = default);
 
-    // Returns the newest employers registered in the range, newest first, up to `take`.
     Task<IReadOnlyList<Employer>> GetRecentCreatedBetweenAsync(
         DateTime startUtc,
         DateTime endUtc,
