@@ -32,4 +32,10 @@ public interface ICompanyReviewRepository
         CancellationToken cancellationToken = default);
 
     Task<IReadOnlyDictionary<CompanyReviewStatus, int>> GetStatusCountsByCompanyAsync(Guid companyId, CancellationToken cancellationToken = default);
+
+    Task<PaginatedList<CompanyReview>> GetPublishedByCompanyIdPagedAsync(
+        Guid companyId,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default);
 }
