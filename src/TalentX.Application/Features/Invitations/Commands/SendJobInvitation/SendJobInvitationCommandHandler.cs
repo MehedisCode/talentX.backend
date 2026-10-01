@@ -39,9 +39,10 @@ public sealed class SendJobInvitationCommandHandler
             throw new ForbiddenException("You do not have permission to send invitations for this job.");
         }
 
-        if (job.Status != JobStatus.Published)
+        var effectiveStatus = job.GetEffectiveStatus();
+        if (effectiveStatus is not (JobStatus.Published or JobStatus.Expired))
         {
-            throw new BadRequestException("Invitations can only be sent for published jobs.");
+            throw new BadRequestException("Invitations can only be sent for active or expired jobs.");
         }
 
         var talent = await _unitOfWork.Talents.GetByUserIdAsync(request.TalentUserId, cancellationToken)

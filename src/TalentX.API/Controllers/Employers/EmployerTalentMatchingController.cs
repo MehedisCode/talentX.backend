@@ -20,7 +20,7 @@ public sealed record SendInvitationRequestDto(string TalentUserId);
 public sealed class EmployerTalentMatchingController : BaseApiController
 {
     /// <summary>
-    /// Triggers AI candidate evaluation and scoring for a published job.
+    /// Triggers AI candidate evaluation and scoring for an active or expired job.
     /// </summary>
     [HttpPost("jobs/{jobId:guid}/match")]
     [EnableRateLimiting("RunMatching")]
