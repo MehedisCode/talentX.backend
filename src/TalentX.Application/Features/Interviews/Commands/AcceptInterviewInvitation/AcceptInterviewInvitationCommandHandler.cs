@@ -60,7 +60,14 @@ public sealed class AcceptInterviewInvitationCommandHandler
         invitation.Accept(request.SelectedTimeslotId, scheduledAt);
 
         var application = await _unitOfWork.JobApplications.GetByIdAsync(invitation.JobApplicationId, cancellationToken);
-        application?.UpdateStatus(ApplicationStatus.Interview);
+        if (application is not null)
+        {
+            var previousStatus = application.Status;
+            application.UpdateStatus(ApplicationStatus.Interview);
+            await _unitOfWork.JobApplicationStatusHistories.AddAsync(
+                JobApplicationStatusHistory.Create(application.Id, previousStatus, ApplicationStatus.Interview, userId),
+                cancellationToken);
+        }
 
         await StageConfirmationEmailAsync(invitation, application, scheduledAt, bookedMeetingUrl, cancellationToken);
 

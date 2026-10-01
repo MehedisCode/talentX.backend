@@ -6,8 +6,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using TalentX.API.Controllers.JobApplications;
 using TalentX.Application.Common.Models;
+using TalentX.Application.Features.Employers.DTOs;
 using TalentX.Application.Features.JobApplications.DTOs;
 using TalentX.Application.Features.JobApplications.Queries.GetJobApplicants;
+using TalentX.Application.Features.JobApplications.Queries.GetJobPipelineSummary;
 using TalentX.Domain.Enums;
 using Xunit;
 
@@ -75,5 +77,39 @@ public class EmployerJobApplicationsControllerTests
 
         var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
         okResult.Value.Should().Be(paginatedResult);
+    }
+
+    [Fact]
+    public async Task GetJobPipelineSummary_SendsQueryToMediator_ReturnsOkWithPipelineSummaryResult()
+    {
+        var jobId = Guid.NewGuid();
+        var pipelineStats = new CandidatePipelineStatsDto(
+            AppliedCount: 10,
+            ShortlistedCount: 4,
+            InvitedCount: 2,
+            InterviewCount: 1,
+            RejectedCount: 2,
+            HiredCount: 1);
+
+        var expectedSummary = new JobPipelineSummaryDto(
+            JobId: jobId,
+            JobTitle: "Senior .NET Developer",
+            CompanyName: "Acme Corp",
+            JobStatus: "Published",
+            Vacancies: 2,
+            PostedDate: DateTime.UtcNow,
+            TotalApplicants: 10,
+            PipelineStats: pipelineStats);
+
+        _sender
+            .Setup(s => s.Send(
+                It.Is<GetJobPipelineSummaryQuery>(query => query.JobId == jobId),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expectedSummary);
+
+        var result = await _controller.GetJobPipelineSummary(jobId, CancellationToken.None);
+
+        var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
+        okResult.Value.Should().Be(expectedSummary);
     }
 }

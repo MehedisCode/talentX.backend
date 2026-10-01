@@ -19,7 +19,10 @@ public sealed record AdminDashboardDto
 {
     public DateTime StartDate { get; init; }
     public DateTime EndDate { get; init; }
+    // Counts inside the selected range.
     public AdminDashboardMetricsDto Metrics { get; init; } = new();
+    // The same counts over all time, so the admin can see the platform's running totals whatever the range.
+    public AdminDashboardMetricsDto Totals { get; init; } = new();
     // Invited is counted under Interview; PendingVerification (unverified guest applications) is left out.
     public IReadOnlyList<AdminDashboardApplicationStatusCountDto> ApplicationStatuses { get; init; } = [];
     // Draft jobs are left out.
@@ -40,6 +43,9 @@ public sealed record AdminDashboardMetricsDto
     public int TotalJobs { get; init; }
     public int PublishedJobs { get; init; }
     public int ClosedOrExpiredJobs { get; init; }
+    public int DeactivatedJobs { get; init; }
+    // Jobs an employer resubmitted after a deactivation and that now wait for an admin decision.
+    public int UnderReviewJobs { get; init; }
     public int TotalApplications { get; init; }
     public int TotalInterviews { get; init; }
     public int TotalHires { get; init; }

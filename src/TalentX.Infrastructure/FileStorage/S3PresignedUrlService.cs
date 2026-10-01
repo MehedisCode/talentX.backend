@@ -47,21 +47,57 @@ public sealed class S3PresignedUrlService : IPresignedUrlService
         return Task.FromResult(uploadTarget);
     }
 
-    public Task<string> CreateDownloadUrlAsync(
+    public async Task<string> CreateDownloadUrlAsync(
         string storageKey,
         TimeSpan expiry,
         CancellationToken cancellationToken = default)
     {
+        var resolvedKey = await ResolveS3ObjectKeyAsync(storageKey, cancellationToken);
+
         var presignedRequest = new GetPreSignedUrlRequest
         {
             BucketName = _settings.BucketName,
-            Key = storageKey,
+            Key = resolvedKey,
             Verb = HttpVerb.GET,
             Expires = DateTime.UtcNow.Add(expiry)
         };
 
-        var downloadUrl = _s3Client.GetPreSignedURL(presignedRequest);
+        return _s3Client.GetPreSignedURL(presignedRequest);
+    }
 
-        return Task.FromResult(downloadUrl);
+    private async Task<string> ResolveS3ObjectKeyAsync(string storageKey, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(storageKey))
+            return storageKey;
+
+        if (storageKey.StartsWith("job-applications/", StringComparison.OrdinalIgnoreCase) &&
+            !string.IsNullOrWhiteSpace(_settings.FolderPrefix) &&
+            !storageKey.StartsWith(_settings.FolderPrefix.TrimEnd('/') + "/", StringComparison.OrdinalIgnoreCase))
+        {
+            var prefixedKey = $"{_settings.FolderPrefix.TrimEnd('/')}/{storageKey}";
+            try
+            {
+                await _s3Client.GetObjectMetadataAsync(_settings.BucketName, storageKey, cancellationToken);
+                return storageKey;
+            }
+            catch (AmazonS3Exception ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound || ex.ErrorCode == "NoSuchKey")
+            {
+                try
+                {
+                    await _s3Client.GetObjectMetadataAsync(_settings.BucketName, prefixedKey, cancellationToken);
+                    return prefixedKey;
+                }
+                catch (AmazonS3Exception)
+                {
+                    return storageKey;
+                }
+            }
+            catch (Exception)
+            {
+                return storageKey;
+            }
+        }
+
+        return storageKey;
     }
 }

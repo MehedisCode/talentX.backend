@@ -89,7 +89,11 @@ public sealed class SendBatchInterviewInvitationsCommandHandler
             }
 
             await _unitOfWork.InterviewInvitations.AddAsync(invitation, cancellationToken);
+            var previousStatus = application.Status;
             application.UpdateStatus(ApplicationStatus.Invited);
+            await _unitOfWork.JobApplicationStatusHistories.AddAsync(
+                JobApplicationStatusHistory.Create(application.Id, previousStatus, ApplicationStatus.Invited, userId),
+                cancellationToken);
             createdInvitationIds.Add(invitation.Id);
 
             if (!string.IsNullOrWhiteSpace(application.ApplicantEmail))

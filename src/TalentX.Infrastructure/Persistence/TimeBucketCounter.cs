@@ -1,7 +1,7 @@
 
 using Microsoft.EntityFrameworkCore;
 
-namespace TalentX.Infrastructure.Persistence.Repositories;
+namespace TalentX.Infrastructure.Persistence;
 
 internal static class TimeBucketCounter
 {

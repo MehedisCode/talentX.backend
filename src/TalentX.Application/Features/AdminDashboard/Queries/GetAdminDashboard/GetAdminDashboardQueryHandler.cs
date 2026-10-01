@@ -64,56 +64,18 @@ public sealed class GetAdminDashboardQueryHandler : IRequestHandler<GetAdminDash
         var recentJobs = await _unitOfWork.Jobs
             .GetRecentPublishedBetweenAsync(start, end, AdminDashboardConstants.RecentActivityPerType, cancellationToken);
 
-        var jobStatuses = JobStatusOrder
-            .Select(status => new AdminDashboardJobStatusCountDto
-            {
-                Status = status,
-                Count = jobCounts.GetValueOrDefault(status)
-            })
-            .ToList();
-
-        // Invited (interview invitation sent) is shown under Interview; PendingVerification never reaches here.
-        var applicationStatuses = ApplicationStatusOrder
-            .Select(status => new AdminDashboardApplicationStatusCountDto
-            {
-                Status = status,
-                Count = status == ApplicationStatus.Interview
-                    ? applicationCounts.GetValueOrDefault(ApplicationStatus.Interview)
-                      + applicationCounts.GetValueOrDefault(ApplicationStatus.Invited)
-                    : applicationCounts.GetValueOrDefault(status)
-            })
-            .ToList();
-
-        var verificationStatuses = VerificationStatusOrder
-            .Select(status => new AdminDashboardVerificationCountDto
-            {
-                Status = status,
-                Count = verificationCounts.GetValueOrDefault(status)
-            })
-            .ToList();
-
-        var metrics = new AdminDashboardMetricsDto
-        {
-            TotalTalents = talentCount,
-            TotalEmployers = verificationStatuses.Sum(s => s.Count),
-            VerifiedEmployers = verificationCounts.GetValueOrDefault(EmployerVerificationStatus.Verified),
-            PendingEmployerVerifications = verificationCounts.GetValueOrDefault(EmployerVerificationStatus.PendingVerification),
-            TotalJobs = jobStatuses.Sum(s => s.Count),
-            PublishedJobs = jobCounts.GetValueOrDefault(JobStatus.Published),
-            ClosedOrExpiredJobs = jobCounts.GetValueOrDefault(JobStatus.Closed) + jobCounts.GetValueOrDefault(JobStatus.Expired),
-            TotalApplications = applicationStatuses.Sum(s => s.Count),
-            TotalInterviews = interviewsByBucket.Values.Sum(),
-            TotalHires = applicationStatuses.Single(s => s.Status == ApplicationStatus.Hired).Count
-        };
+        var totals = await LoadTotalsAsync(now, cancellationToken);
 
         return new AdminDashboardDto
         {
             StartDate = start,
             EndDate = end,
-            Metrics = metrics,
-            ApplicationStatuses = applicationStatuses,
-            JobStatuses = jobStatuses,
-            VerificationStatuses = verificationStatuses,
+            Metrics = BuildMetrics(
+                talentCount, verificationCounts, jobCounts, applicationCounts, interviewsByBucket.Values.Sum()),
+            Totals = totals,
+            ApplicationStatuses = ToApplicationStatuses(applicationCounts),
+            JobStatuses = ToJobStatuses(jobCounts),
+            VerificationStatuses = ToVerificationStatuses(verificationCounts),
             OldestPendingDays = oldestPending.HasValue
                 ? Math.Max(0, (int)(now - oldestPending.Value).TotalDays)
                 : null,
@@ -128,6 +90,85 @@ public sealed class GetAdminDashboardQueryHandler : IRequestHandler<GetAdminDash
             Activities = BuildActivities(recentTalents, recentEmployers, recentJobs)
         };
     }
+
+    // The same counts as the range block, over all time. Kind=Utc because Npgsql rejects other kinds for timestamptz.
+    private async Task<AdminDashboardMetricsDto> LoadTotalsAsync(DateTime now, CancellationToken cancellationToken)
+    {
+        var allTimeStart = DateTime.SpecifyKind(DateTime.MinValue, DateTimeKind.Utc);
+
+        var talentCount = await _unitOfWork.Talents.CountCreatedBetweenAsync(allTimeStart, now, cancellationToken);
+        var verificationCounts = await _unitOfWork.Employers
+            .GetVerificationStatusCountsCreatedBetweenAsync(allTimeStart, now, cancellationToken);
+        var jobCounts = await _unitOfWork.Jobs
+            .GetStatusCountsCreatedBetweenAsync(allTimeStart, now, cancellationToken);
+        var applicationCounts = await _unitOfWork.JobApplications
+            .GetStatusCountsAppliedBetweenAsync(allTimeStart, now, cancellationToken);
+        var interviewCount = await _unitOfWork.InterviewInvitations
+            .CountCreatedBetweenAsync(allTimeStart, now, cancellationToken);
+
+        return BuildMetrics(talentCount, verificationCounts, jobCounts, applicationCounts, interviewCount);
+    }
+
+    // One set of rules for the range and all-time blocks: drafts and PendingVerification applications are
+    // left out, and Invited counts under Interview.
+    private static AdminDashboardMetricsDto BuildMetrics(
+        int talentCount,
+        IReadOnlyDictionary<EmployerVerificationStatus, int> verificationCounts,
+        IReadOnlyDictionary<JobStatus, int> jobCounts,
+        IReadOnlyDictionary<ApplicationStatus, int> applicationCounts,
+        int interviewCount)
+    {
+        var applicationStatuses = ToApplicationStatuses(applicationCounts);
+
+        return new AdminDashboardMetricsDto
+        {
+            TotalTalents = talentCount,
+            TotalEmployers = ToVerificationStatuses(verificationCounts).Sum(s => s.Count),
+            VerifiedEmployers = verificationCounts.GetValueOrDefault(EmployerVerificationStatus.Verified),
+            PendingEmployerVerifications = verificationCounts.GetValueOrDefault(EmployerVerificationStatus.PendingVerification),
+            TotalJobs = ToJobStatuses(jobCounts).Sum(s => s.Count),
+            PublishedJobs = jobCounts.GetValueOrDefault(JobStatus.Published),
+            ClosedOrExpiredJobs = jobCounts.GetValueOrDefault(JobStatus.Closed) + jobCounts.GetValueOrDefault(JobStatus.Expired),
+            DeactivatedJobs = jobCounts.GetValueOrDefault(JobStatus.Deactivated),
+            UnderReviewJobs = jobCounts.GetValueOrDefault(JobStatus.PendingReview),
+            TotalApplications = applicationStatuses.Sum(s => s.Count),
+            TotalInterviews = interviewCount,
+            TotalHires = applicationStatuses.Single(s => s.Status == ApplicationStatus.Hired).Count
+        };
+    }
+
+    private static List<AdminDashboardJobStatusCountDto> ToJobStatuses(IReadOnlyDictionary<JobStatus, int> counts) =>
+        JobStatusOrder
+            .Select(status => new AdminDashboardJobStatusCountDto
+            {
+                Status = status,
+                Count = counts.GetValueOrDefault(status)
+            })
+            .ToList();
+
+    // Invited (interview invitation sent) is shown under Interview; PendingVerification never reaches here.
+    private static List<AdminDashboardApplicationStatusCountDto> ToApplicationStatuses(
+        IReadOnlyDictionary<ApplicationStatus, int> counts) =>
+        ApplicationStatusOrder
+            .Select(status => new AdminDashboardApplicationStatusCountDto
+            {
+                Status = status,
+                Count = status == ApplicationStatus.Interview
+                    ? counts.GetValueOrDefault(ApplicationStatus.Interview)
+                      + counts.GetValueOrDefault(ApplicationStatus.Invited)
+                    : counts.GetValueOrDefault(status)
+            })
+            .ToList();
+
+    private static List<AdminDashboardVerificationCountDto> ToVerificationStatuses(
+        IReadOnlyDictionary<EmployerVerificationStatus, int> counts) =>
+        VerificationStatusOrder
+            .Select(status => new AdminDashboardVerificationCountDto
+            {
+                Status = status,
+                Count = counts.GetValueOrDefault(status)
+            })
+            .ToList();
 
     // Instants are used as sent. A missing end means now; a missing start means 30 days before the end.
     // A start further back than the maximum range is pulled forward so a lone StartDate cannot scan everything.

@@ -26,7 +26,8 @@ public sealed class JobRepositoryDashboardTests
         JobStatus status,
         DateTime createdAt,
         DateTime? publishedAt = null,
-        string title = "Backend Engineer")
+        string title = "Backend Engineer",
+        DateTime? expireAt = null)
     {
         var job = Job.Create(
             "employer-1",
@@ -39,7 +40,8 @@ public sealed class JobRepositoryDashboardTests
             WorkArrangement.RemoteButAccessible,
             ["C#"],
             2,
-            Base.AddDays(60));
+            // Relative to now, not to the fixed test dates: expiry is judged against the real clock.
+            DateTime.UtcNow.AddDays(60));
 
         switch (status)
         {
@@ -61,6 +63,12 @@ public sealed class JobRepositoryDashboardTests
         if (publishedAt.HasValue)
         {
             context.Entry(job).Property(j => j.PublishedAt).CurrentValue = publishedAt;
+        }
+
+        // Set after publishing, because publishing refuses a deadline that has already passed.
+        if (expireAt.HasValue)
+        {
+            context.Entry(job).Property(j => j.ExpireAt).CurrentValue = expireAt.Value;
         }
 
         return job;
@@ -87,6 +95,54 @@ public sealed class JobRepositoryDashboardTests
         counts[JobStatus.Closed].Should().Be(1);
         counts[JobStatus.Deactivated].Should().Be(1);
         counts.Should().NotContainKey(JobStatus.Draft);
+    }
+
+    [Fact]
+    public async Task GetStatusCountsCreatedBetweenAsync_CountsAPublishedJobPastItsDeadlineAsExpired()
+    {
+        await using var context = NewContext();
+        AddJob(context, JobStatus.Published, Base.AddHours(-1));
+        AddJob(context, JobStatus.Published, Base.AddHours(-2), expireAt: DateTime.UtcNow.AddDays(-3));
+        AddJob(context, JobStatus.Published, Base.AddHours(-3), expireAt: DateTime.UtcNow.AddDays(-10));
+        await context.SaveChangesAsync();
+        var repository = new JobRepository(context);
+
+        var counts = await repository.GetStatusCountsCreatedBetweenAsync(Base.AddDays(-1), Base);
+
+        counts[JobStatus.Published].Should().Be(1);
+        counts[JobStatus.Expired].Should().Be(2);
+    }
+
+    [Fact]
+    public async Task GetStatusCountsCreatedBetweenAsync_AddsExplicitlyExpiredJobsToThoseDerivedFromTheDeadline()
+    {
+        await using var context = NewContext();
+        var stored = AddJob(context, JobStatus.Published, Base.AddHours(-1));
+        stored.MarkAsExpired();
+        AddJob(context, JobStatus.Published, Base.AddHours(-2), expireAt: DateTime.UtcNow.AddDays(-1));
+        await context.SaveChangesAsync();
+        var repository = new JobRepository(context);
+
+        var counts = await repository.GetStatusCountsCreatedBetweenAsync(Base.AddDays(-1), Base);
+
+        counts[JobStatus.Expired].Should().Be(2);
+        counts.Should().NotContainKey(JobStatus.Published);
+    }
+
+    [Fact]
+    public async Task GetStatusCountsCreatedBetweenAsync_DoesNotTurnOtherStatusesIntoExpiredJustBecauseTheDeadlinePassed()
+    {
+        await using var context = NewContext();
+        AddJob(context, JobStatus.Closed, Base.AddHours(-1), expireAt: DateTime.UtcNow.AddDays(-5));
+        AddJob(context, JobStatus.Deactivated, Base.AddHours(-2), expireAt: DateTime.UtcNow.AddDays(-5));
+        await context.SaveChangesAsync();
+        var repository = new JobRepository(context);
+
+        var counts = await repository.GetStatusCountsCreatedBetweenAsync(Base.AddDays(-1), Base);
+
+        counts[JobStatus.Closed].Should().Be(1);
+        counts[JobStatus.Deactivated].Should().Be(1);
+        counts.Should().NotContainKey(JobStatus.Expired);
     }
 
     [Fact]

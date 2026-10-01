@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using TalentX.Application.Features.JobApplications.Queries.GetApplicationStatusHistory;
 using TalentX.Application.Features.Talents.Queries.GetTalentApplications;
 using TalentX.Application.Features.Talents.Queries.GetTalentInvitations;
 using TalentX.Application.Features.Talents.Queries.GetTalentMatches;
@@ -30,6 +31,22 @@ public sealed class TalentDashboardController : BaseApiController
     {
         var result = await Sender.Send(
             new GetTalentApplicationsQuery(status, page, pageSize),
+            cancellationToken);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Returns the status-change timeline of a single job application owned by
+    /// the authenticated talent, oldest first. Empty when the application has
+    /// never changed status since it was created.
+    /// </summary>
+    [HttpGet("applications/{applicationId:guid}/status-history")]
+    public async Task<IActionResult> GetApplicationStatusHistory(
+        Guid applicationId,
+        CancellationToken cancellationToken)
+    {
+        var result = await Sender.Send(
+            new GetApplicationStatusHistoryQuery(applicationId),
             cancellationToken);
         return Ok(result);
     }

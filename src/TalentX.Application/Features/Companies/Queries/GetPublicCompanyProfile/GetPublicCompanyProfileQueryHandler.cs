@@ -32,6 +32,7 @@ public sealed class GetPublicCompanyProfileQueryHandler : IRequestHandler<GetPub
         }
 
         var activeJobs = await _unitOfWork.Jobs.GetActivePublishedJobsByEmployerIdAsync(company.EmployerId, cancellationToken);
+        var reviewSummary = await _unitOfWork.CompanyReviews.GetPublishedSummaryAsync(company.Id, cancellationToken);
 
         string? logoUrl = null;
         if (!string.IsNullOrWhiteSpace(company.LogoStorageKey))
@@ -66,7 +67,8 @@ public sealed class GetPublicCompanyProfileQueryHandler : IRequestHandler<GetPub
             company.TwitterUrl,
             company.FacebookUrl,
             publishedJobDtos.Count,
-            publishedJobDtos
+            publishedJobDtos,
+            reviewSummary
         );
     }
 }

@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using TalentX.Infrastructure.Ai;
+using TalentX.Infrastructure.CompanyReviews;
 using TalentX.Infrastructure.FileStorage;
 using TalentX.Infrastructure.Identity;
 using TalentX.Infrastructure.Persistence;
@@ -20,8 +21,9 @@ public static class InfrastructureStartup
         services.AddIdentityServices(configuration);
         services.AddFileStorage(configuration);
         services.AddExtractionServices(configuration);
+        services.AddCompanyReviews(configuration);
         services.AddRealtime();
-        services.AddRateLimiting();
+        services.AddRateLimiting(configuration);
 
         return services;
     }

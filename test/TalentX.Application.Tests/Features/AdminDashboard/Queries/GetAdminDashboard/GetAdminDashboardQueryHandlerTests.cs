@@ -15,6 +15,7 @@ namespace TalentX.Application.Tests.Features.AdminDashboard.Queries.GetAdminDash
 public sealed class GetAdminDashboardQueryHandlerTests
 {
     private static readonly IReadOnlyDictionary<DateTime, int> NoBuckets = new Dictionary<DateTime, int>();
+    private static readonly DateTime AllTimeStart = DateTime.SpecifyKind(DateTime.MinValue, DateTimeKind.Utc);
 
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
     private readonly Mock<ITalentRepository> _talents = new();
@@ -60,6 +61,8 @@ public sealed class GetAdminDashboardQueryHandlerTests
 
         _interviews.Setup(r => r.GetCreatedCountsByBucketAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(NoBuckets);
+        _interviews.Setup(r => r.CountCreatedBetweenAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(0);
 
         _handler = new GetAdminDashboardQueryHandler(_unitOfWork.Object);
     }
@@ -110,6 +113,7 @@ public sealed class GetAdminDashboardQueryHandlerTests
             CancellationToken.None);
 
         result.Metrics.Should().BeEquivalentTo(new AdminDashboardMetricsDto());
+        result.Totals.Should().BeEquivalentTo(new AdminDashboardMetricsDto());
         result.ApplicationStatuses.Select(s => s.Status).Should().Equal(
             ApplicationStatus.Applied, ApplicationStatus.Reviewed, ApplicationStatus.Shortlisted,
             ApplicationStatus.Interview, ApplicationStatus.Hired, ApplicationStatus.Rejected);
@@ -177,6 +181,8 @@ public sealed class GetAdminDashboardQueryHandlerTests
         result.Metrics.TotalJobs.Should().Be(20);
         result.Metrics.PublishedJobs.Should().Be(10);
         result.Metrics.ClosedOrExpiredJobs.Should().Be(7);
+        result.Metrics.DeactivatedJobs.Should().Be(2);
+        result.Metrics.UnderReviewJobs.Should().Be(1);
     }
 
     [Fact]
@@ -190,6 +196,98 @@ public sealed class GetAdminDashboardQueryHandlerTests
             CancellationToken.None);
 
         result.Metrics.TotalInterviews.Should().Be(7);
+    }
+
+    [Fact]
+    public async Task Handle_ReturnsAllTimeTotalsThatDoNotDependOnTheRequestedRange()
+    {
+        var rangeStart = Utc(2026, 9, 1);
+        var rangeEnd = Utc(2026, 9, 10);
+
+        // In range.
+        _talents.Setup(r => r.CountCreatedBetweenAsync(rangeStart, rangeEnd, It.IsAny<CancellationToken>())).ReturnsAsync(5);
+        _employers.Setup(r => r.GetVerificationStatusCountsCreatedBetweenAsync(rangeStart, rangeEnd, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<EmployerVerificationStatus, int> { [EmployerVerificationStatus.Verified] = 2 });
+        _jobs.Setup(r => r.GetStatusCountsCreatedBetweenAsync(rangeStart, rangeEnd, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<JobStatus, int> { [JobStatus.Published] = 3 });
+        _applications.Setup(r => r.GetStatusCountsAppliedBetweenAsync(rangeStart, rangeEnd, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<ApplicationStatus, int> { [ApplicationStatus.Applied] = 7 });
+        _interviews.Setup(r => r.GetCreatedCountsByBucketAsync(rangeStart, rangeEnd, It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<DateTime, int> { [Utc(2026, 9, 2)] = 3 });
+
+        // All time.
+        _talents.Setup(r => r.CountCreatedBetweenAsync(AllTimeStart, It.IsAny<DateTime>(), It.IsAny<CancellationToken>())).ReturnsAsync(100);
+        _employers.Setup(r => r.GetVerificationStatusCountsCreatedBetweenAsync(AllTimeStart, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<EmployerVerificationStatus, int>
+            {
+                [EmployerVerificationStatus.Verified] = 20,
+                [EmployerVerificationStatus.PendingVerification] = 4,
+                [EmployerVerificationStatus.Rejected] = 1
+            });
+        _jobs.Setup(r => r.GetStatusCountsCreatedBetweenAsync(AllTimeStart, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<JobStatus, int>
+            {
+                [JobStatus.Published] = 30,
+                [JobStatus.Closed] = 10,
+                [JobStatus.Expired] = 5,
+                [JobStatus.Deactivated] = 2,
+                [JobStatus.PendingReview] = 1
+            });
+        _applications.Setup(r => r.GetStatusCountsAppliedBetweenAsync(AllTimeStart, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<ApplicationStatus, int>
+            {
+                [ApplicationStatus.Applied] = 50,
+                [ApplicationStatus.Interview] = 6,
+                [ApplicationStatus.Invited] = 4,
+                [ApplicationStatus.Hired] = 9,
+                [ApplicationStatus.Rejected] = 11
+            });
+        _interviews.Setup(r => r.CountCreatedBetweenAsync(AllTimeStart, It.IsAny<DateTime>(), It.IsAny<CancellationToken>())).ReturnsAsync(40);
+
+        var result = await _handler.Handle(
+            new GetAdminDashboardQuery { StartDate = rangeStart, EndDate = rangeEnd },
+            CancellationToken.None);
+
+        // The range block is unchanged.
+        result.Metrics.TotalTalents.Should().Be(5);
+        result.Metrics.TotalEmployers.Should().Be(2);
+        result.Metrics.TotalJobs.Should().Be(3);
+        result.Metrics.TotalApplications.Should().Be(7);
+        result.Metrics.TotalInterviews.Should().Be(3);
+
+        // The totals cover everything, with the same rules (Invited under Interview, drafts left out).
+        result.Totals.TotalTalents.Should().Be(100);
+        result.Totals.TotalEmployers.Should().Be(25);
+        result.Totals.VerifiedEmployers.Should().Be(20);
+        result.Totals.PendingEmployerVerifications.Should().Be(4);
+        result.Totals.TotalJobs.Should().Be(48);
+        result.Totals.PublishedJobs.Should().Be(30);
+        result.Totals.ClosedOrExpiredJobs.Should().Be(15);
+        result.Totals.DeactivatedJobs.Should().Be(2);
+        result.Totals.UnderReviewJobs.Should().Be(1);
+        result.Totals.TotalApplications.Should().Be(80);
+        result.Totals.TotalInterviews.Should().Be(40);
+        result.Totals.TotalHires.Should().Be(9);
+    }
+
+    [Fact]
+    public async Task Handle_QueriesTheAllTimeTotalsFromAUtcStartUntilNow()
+    {
+        var before = DateTime.UtcNow;
+
+        await _handler.Handle(
+            new GetAdminDashboardQuery { StartDate = Utc(2026, 9, 1), EndDate = Utc(2026, 9, 10) },
+            CancellationToken.None);
+
+        _talents.Verify(
+            r => r.CountCreatedBetweenAsync(
+                It.Is<DateTime>(start => start == AllTimeStart && start.Kind == DateTimeKind.Utc),
+                It.Is<DateTime>(end => end >= before && end <= DateTime.UtcNow),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        _interviews.Verify(
+            r => r.CountCreatedBetweenAsync(AllTimeStart, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]

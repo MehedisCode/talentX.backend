@@ -15,6 +15,7 @@ public class ApplyToJobCommandHandlerTests
 {
     private readonly Mock<IJobRepository> _jobRepository = new();
     private readonly Mock<IJobApplicationRepository> _jobApplicationRepository = new();
+    private readonly Mock<IJobApplicationStatusHistoryRepository> _historyRepository = new();
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
     private readonly Mock<ICurrentUserService> _currentUserService = new();
     private readonly Mock<IFileStorageService> _fileStorageService = new();
@@ -25,6 +26,7 @@ public class ApplyToJobCommandHandlerTests
     {
         _unitOfWork.Setup(u => u.Jobs).Returns(_jobRepository.Object);
         _unitOfWork.Setup(u => u.JobApplications).Returns(_jobApplicationRepository.Object);
+        _unitOfWork.Setup(u => u.JobApplicationStatusHistories).Returns(_historyRepository.Object);
         _currentUserService.SetupGet(u => u.UserId).Returns("talent-1");
         _handler = new ApplyToJobCommandHandler(_unitOfWork.Object, _currentUserService.Object, _fileStorageService.Object, _logger.Object);
     }

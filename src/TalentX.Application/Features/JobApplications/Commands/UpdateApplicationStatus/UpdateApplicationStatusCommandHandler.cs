@@ -3,6 +3,7 @@ using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Features.JobApplications.DTOs;
 using TalentX.Application.Identity.Services;
+using TalentX.Domain.Entities;
 
 namespace TalentX.Application.Features.JobApplications.Commands.UpdateApplicationStatus;
 
@@ -33,7 +34,16 @@ public sealed class UpdateApplicationStatusCommandHandler : IRequestHandler<Upda
             throw new ForbiddenException("You do not have permission to update status for this job application.");
         }
 
+        if (application.Status == request.NewStatus)
+        {
+            return new StatusUpdateResponseDto($"Application status updated to {request.NewStatus}.");
+        }
+
+        var fromStatus = application.Status;
         application.UpdateStatus(request.NewStatus);
+        await _unitOfWork.JobApplicationStatusHistories.AddAsync(
+            JobApplicationStatusHistory.Create(application.Id, fromStatus, request.NewStatus, currentUserId),
+            cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return new StatusUpdateResponseDto($"Application status updated to {request.NewStatus}.");

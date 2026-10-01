@@ -16,6 +16,7 @@ public class UpdateApplicationStatusCommandHandlerTests
 {
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
     private readonly Mock<IJobApplicationRepository> _jobApplicationRepository = new();
+    private readonly Mock<IJobApplicationStatusHistoryRepository> _historyRepository = new();
     private readonly Mock<IJobRepository> _jobRepository = new();
     private readonly Mock<ICurrentUserService> _currentUserService = new();
     private readonly UpdateApplicationStatusCommandHandler _handler;
@@ -23,6 +24,7 @@ public class UpdateApplicationStatusCommandHandlerTests
     public UpdateApplicationStatusCommandHandlerTests()
     {
         _unitOfWork.SetupGet(u => u.JobApplications).Returns(_jobApplicationRepository.Object);
+        _unitOfWork.SetupGet(u => u.JobApplicationStatusHistories).Returns(_historyRepository.Object);
         _unitOfWork.SetupGet(u => u.Jobs).Returns(_jobRepository.Object);
         _currentUserService.SetupGet(u => u.UserId).Returns("employer-1");
 
@@ -79,6 +81,60 @@ public class UpdateApplicationStatusCommandHandlerTests
         _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
         result.Should().BeOfType<StatusUpdateResponseDto>();
         result.Message.Should().Be("Application status updated to Interview.");
+    }
+
+    [Fact]
+    public async Task Handle_WhenCallerOwnsJob_RecordsStatusHistory()
+    {
+        var job = CreateJob("employer-1");
+        var application = CreateApplication(job.Id, "talent-1");
+
+        _jobApplicationRepository
+            .Setup(r => r.GetByIdAsync(application.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(application);
+
+        _jobRepository
+            .Setup(r => r.GetByIdAsync(job.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(job);
+
+        var command = new UpdateApplicationStatusCommand(application.Id, ApplicationStatus.Shortlisted);
+
+        await _handler.Handle(command, CancellationToken.None);
+
+        _historyRepository.Verify(
+            r => r.AddAsync(
+                It.Is<JobApplicationStatusHistory>(h =>
+                    h.JobApplicationId == application.Id &&
+                    h.FromStatus == ApplicationStatus.Applied &&
+                    h.ToStatus == ApplicationStatus.Shortlisted &&
+                    h.ChangedByUserId == "employer-1"),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_WhenNewStatusEqualsCurrentStatus_SkipsHistoryAndSave()
+    {
+        var job = CreateJob("employer-1");
+        var application = CreateApplication(job.Id, "talent-1");
+
+        _jobApplicationRepository
+            .Setup(r => r.GetByIdAsync(application.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(application);
+
+        _jobRepository
+            .Setup(r => r.GetByIdAsync(job.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(job);
+
+        var command = new UpdateApplicationStatusCommand(application.Id, ApplicationStatus.Applied);
+
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        result.Message.Should().Be("Application status updated to Applied.");
+        _historyRepository.Verify(
+            r => r.AddAsync(It.IsAny<JobApplicationStatusHistory>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]

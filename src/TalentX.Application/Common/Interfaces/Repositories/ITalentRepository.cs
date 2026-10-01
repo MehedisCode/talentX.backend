@@ -9,8 +9,8 @@ public interface ITalentRepository
     Task<Talent?> GetByEmailAsync(string email, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Talent>> GetAllAsync(CancellationToken cancellationToken = default);
 
-    // Admin dashboard. Bounds are UTC instants, inclusive.
     Task<int> CountCreatedBetweenAsync(DateTime startUtc, DateTime endUtc, CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<Talent>> GetRecentCreatedBetweenAsync(DateTime startUtc, DateTime endUtc, int take, CancellationToken cancellationToken = default);
     Task AddAsync(Talent talent, CancellationToken cancellationToken = default);
     void Update(Talent talent);

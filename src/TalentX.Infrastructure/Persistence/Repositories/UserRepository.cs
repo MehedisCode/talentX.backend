@@ -75,6 +75,21 @@ public class UserRepository : IUserRepository
         return (items, totalCount);
     }
 
+    // Batch lookup (one query) so callers resolving many reviewer/actor identities avoid N+1.
+    public async Task<IReadOnlyList<User>> GetByUserIdsAsync(IEnumerable<string> userIds, CancellationToken cancellationToken = default)
+    {
+        var ids = userIds.Where(id => !string.IsNullOrWhiteSpace(id)).Distinct().ToList();
+        if (ids.Count == 0)
+        {
+            return Array.Empty<User>();
+        }
+
+        return await _context.DomainUsers
+            .AsNoTracking()
+            .Where(u => ids.Contains(u.UserId))
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<(IReadOnlyDictionary<UserRole, int> RoleCounts, IReadOnlyDictionary<AccountStatus, int> StatusCounts)> GetRoleAndStatusCountsAsync(
         CancellationToken cancellationToken = default)
     {
