@@ -173,7 +173,7 @@ public class InterviewPreparationControllerTests
             .ReturnsAsync(expected);
 
         var command = new SaveAnswerCommand(
-            Guid.NewGuid(), "Technical", 0, "What is a closure?", "An answer", true);
+            Guid.NewGuid(), "Technical", 0, "An answer", true);
         var actionResult = await _controller.SaveAnswer(invitationId, command, CancellationToken.None);
 
         var okResult = actionResult.Should().BeOfType<OkObjectResult>().Subject;

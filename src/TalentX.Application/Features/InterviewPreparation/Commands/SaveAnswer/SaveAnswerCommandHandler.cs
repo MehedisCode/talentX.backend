@@ -1,11 +1,12 @@
 using MediatR;
-using Microsoft.Extensions.Options;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Features.InterviewPreparation.DTOs;
+using TalentX.Application.Features.InterviewPreparation.Helpers;
 using TalentX.Application.Features.InterviewPreparation.Mappers;
 using TalentX.Application.Identity.Services;
 using TalentX.Domain.Entities;
+using InterviewPreparationEntity = TalentX.Domain.Entities.InterviewPreparation;
 
 namespace TalentX.Application.Features.InterviewPreparation.Commands.SaveAnswer;
 
@@ -14,29 +15,29 @@ public sealed class SaveAnswerCommandHandler
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUser;
-    private readonly InterviewPreparationSettings _settings;
+    private readonly IInterviewPreparationConfigProvider _configProvider;
 
     public SaveAnswerCommandHandler(
         IUnitOfWork unitOfWork,
         ICurrentUserService currentUser,
-        IOptions<InterviewPreparationSettings> settings)
+        IInterviewPreparationConfigProvider configProvider)
     {
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
-        _settings = settings.Value;
+        _configProvider = configProvider;
     }
 
     public async Task<InterviewPreparationDto> Handle(
         SaveAnswerCommand request, CancellationToken ct)
     {
         var userId = _currentUser.UserId!;
+        var config = await _configProvider.GetConfigAsync(ct);
 
-        var preparation = await _unitOfWork.InterviewPreparations
-            .GetByInvitationIdAsync(request.InvitationId, ct)
-            ?? throw new NotFoundException("Interview preparation not found.");
+        var preparation = await GetPreparationAsync(request.InvitationId, ct);
 
-        EnsureUserCanAccess(preparation, userId);
-        EnsurePreparationIsAccessible(preparation);
+        InterviewPreparationAccessValidator.EnsureUserCanAccess(preparation, userId);
+        InterviewPreparationAccessValidator.EnsurePreparationIsAccessible(
+            preparation, config.AccessWindowAfterInterview);
 
         var question = InterviewPreparationMapper.FindQuestion(
                 preparation, request.Category, request.QuestionIndex)
@@ -47,7 +48,7 @@ public sealed class SaveAnswerCommandHandler
         var existing = await _unitOfWork.InterviewPreparations.GetAnswerAsync(
             preparation.Id, request.Category, request.QuestionIndex, ct);
 
-        var evaluationInvalidated = false;
+        bool evaluationInvalidated;
 
         if (existing is null)
         {
@@ -81,32 +82,15 @@ public sealed class SaveAnswerCommandHandler
 
         await _unitOfWork.SaveChangesAsync(ct);
 
-        return await BuildDtoAsync(preparation, ct);
+        return await InterviewPreparationDtoLoader.LoadAsync(
+            _unitOfWork, preparation, config.AccessWindowAfterInterview, ct);
     }
 
-    private async Task<InterviewPreparationDto> BuildDtoAsync(
-        Domain.Entities.InterviewPreparation preparation, CancellationToken ct)
+    private async Task<InterviewPreparationEntity> GetPreparationAsync(
+        Guid invitationId, CancellationToken ct)
     {
-        var answers = await _unitOfWork.InterviewPreparations
-            .GetAnswersByPreparationIdAsync(preparation.Id, ct);
-        var evaluation = await _unitOfWork.InterviewPreparations
-            .GetEvaluationByPreparationIdAsync(preparation.Id, ct);
-
-        return InterviewPreparationMapper.ToDto(
-            preparation, _settings.AccessWindowAfterInterview, answers, evaluation);
-    }
-
-    private static void EnsureUserCanAccess(
-        Domain.Entities.InterviewPreparation preparation, string userId)
-    {
-        if (preparation.TalentUserId != userId)
-            throw new ForbiddenException("You do not have access to this interview preparation.");
-    }
-
-    private void EnsurePreparationIsAccessible(
-        Domain.Entities.InterviewPreparation preparation)
-    {
-        if (!preparation.IsAccessible(_settings.AccessWindowAfterInterview))
-            throw new ForbiddenException("Preparation is no longer accessible as the interview has already taken place.");
+        return await _unitOfWork.InterviewPreparations
+            .GetByInvitationIdAsync(invitationId, ct)
+            ?? throw new NotFoundException("Interview preparation not found.");
     }
 }

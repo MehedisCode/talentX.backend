@@ -1,11 +1,9 @@
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Moq;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Common.Interfaces.Repositories;
-using TalentX.Application.Features.InterviewPreparation;
 using TalentX.Application.Features.InterviewPreparation.Commands.EvaluateAnswers;
 using TalentX.Application.Features.InterviewPreparation.DTOs;
 using TalentX.Application.Identity.Services;
@@ -27,6 +25,7 @@ public class EvaluateAnswersCommandHandlerTests
     private readonly Mock<ITalentRepository> _talentRepository = new();
     private readonly Mock<ICurrentUserService> _currentUserService = new();
     private readonly Mock<IInterviewPreparationAiService> _aiService = new();
+    private readonly Mock<IInterviewPreparationConfigProvider> _configProvider = new();
     private readonly Mock<ILogger<EvaluateAnswersCommandHandler>> _logger = new();
     private readonly EvaluateAnswersCommandHandler _handler;
 
@@ -35,6 +34,8 @@ public class EvaluateAnswersCommandHandlerTests
         _unitOfWork.SetupGet(u => u.InterviewPreparations).Returns(_preparationRepository.Object);
         _unitOfWork.SetupGet(u => u.Talents).Returns(_talentRepository.Object);
         _currentUserService.SetupGet(u => u.UserId).Returns(TalentUserId);
+        _configProvider.Setup(c => c.GetConfigAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(InterviewPreparationConfig.CreateDefault());
         _talentRepository
             .Setup(r => r.GetByUserIdAsync(TalentUserId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new Talent(TalentUserId, "Ada Lovelace", "ada@example.com"));
@@ -43,7 +44,7 @@ public class EvaluateAnswersCommandHandlerTests
             _unitOfWork.Object,
             _currentUserService.Object,
             _aiService.Object,
-            Options.Create(new InterviewPreparationSettings()),
+            _configProvider.Object,
             _logger.Object);
     }
 

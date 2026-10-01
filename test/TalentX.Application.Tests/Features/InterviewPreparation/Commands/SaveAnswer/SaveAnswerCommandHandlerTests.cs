@@ -1,13 +1,12 @@
 using FluentAssertions;
-using Microsoft.Extensions.Options;
 using Moq;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Common.Interfaces.Repositories;
-using TalentX.Application.Features.InterviewPreparation;
 using TalentX.Application.Features.InterviewPreparation.Commands.SaveAnswer;
 using TalentX.Application.Features.InterviewPreparation.DTOs;
 using TalentX.Application.Identity.Services;
+using TalentX.Domain;
 using TalentX.Domain.Entities;
 using Xunit;
 using InterviewPreparationEntity = TalentX.Domain.Entities.InterviewPreparation;
@@ -23,17 +22,20 @@ public class SaveAnswerCommandHandlerTests
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
     private readonly Mock<IInterviewPreparationRepository> _preparationRepository = new();
     private readonly Mock<ICurrentUserService> _currentUserService = new();
+    private readonly Mock<IInterviewPreparationConfigProvider> _configProvider = new();
     private readonly SaveAnswerCommandHandler _handler;
 
     public SaveAnswerCommandHandlerTests()
     {
         _unitOfWork.SetupGet(u => u.InterviewPreparations).Returns(_preparationRepository.Object);
         _currentUserService.SetupGet(u => u.UserId).Returns(TalentUserId);
+        _configProvider.Setup(c => c.GetConfigAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(InterviewPreparationConfig.CreateDefault());
 
         _handler = new SaveAnswerCommandHandler(
             _unitOfWork.Object,
             _currentUserService.Object,
-            Options.Create(new InterviewPreparationSettings()));
+            _configProvider.Object);
     }
 
     private static InterviewPreparationEntity CreatePreparation(
@@ -88,7 +90,7 @@ public class SaveAnswerCommandHandlerTests
         Guid invitationId, string answer = "A closure is a function over its lexical scope.")
     {
         return new SaveAnswerCommand(
-            invitationId, "Technical", 0, "Client supplied question text", answer, Practiced: true);
+            invitationId, "Technical", 0, answer, Practiced: true);
     }
 
     [Fact]

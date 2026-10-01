@@ -1,12 +1,13 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Features.InterviewPreparation.DTOs;
+using TalentX.Application.Features.InterviewPreparation.Helpers;
 using TalentX.Application.Features.InterviewPreparation.Mappers;
 using TalentX.Application.Identity.Services;
 using TalentX.Domain.Entities;
+using InterviewPreparationEntity = TalentX.Domain.Entities.InterviewPreparation;
 
 namespace TalentX.Application.Features.InterviewPreparation.Commands.EvaluateAnswers;
 
@@ -16,20 +17,20 @@ public sealed class EvaluateAnswersCommandHandler
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUser;
     private readonly IInterviewPreparationAiService _aiService;
-    private readonly InterviewPreparationSettings _settings;
+    private readonly IInterviewPreparationConfigProvider _configProvider;
     private readonly ILogger<EvaluateAnswersCommandHandler> _logger;
 
     public EvaluateAnswersCommandHandler(
         IUnitOfWork unitOfWork,
         ICurrentUserService currentUser,
         IInterviewPreparationAiService aiService,
-        IOptions<InterviewPreparationSettings> settings,
+        IInterviewPreparationConfigProvider configProvider,
         ILogger<EvaluateAnswersCommandHandler> logger)
     {
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
         _aiService = aiService;
-        _settings = settings.Value;
+        _configProvider = configProvider;
         _logger = logger;
     }
 
@@ -37,13 +38,13 @@ public sealed class EvaluateAnswersCommandHandler
         EvaluateAnswersCommand request, CancellationToken ct)
     {
         var userId = _currentUser.UserId!;
+        var config = await _configProvider.GetConfigAsync(ct);
 
-        var preparation = await _unitOfWork.InterviewPreparations
-            .GetByInvitationIdAsync(request.InvitationId, ct)
-            ?? throw new NotFoundException("Interview preparation not found.");
+        var preparation = await GetPreparationAsync(request.InvitationId, ct);
 
-        EnsureUserCanAccess(preparation, userId);
-        EnsurePreparationIsAccessible(preparation);
+        InterviewPreparationAccessValidator.EnsureUserCanAccess(preparation, userId);
+        InterviewPreparationAccessValidator.EnsurePreparationIsAccessible(
+            preparation, config.AccessWindowAfterInterview);
 
         var answers = await _unitOfWork.InterviewPreparations
             .GetAnswersByPreparationIdAsync(preparation.Id, ct);
@@ -54,22 +55,31 @@ public sealed class EvaluateAnswersCommandHandler
                 "Answer at least one question before requesting an AI evaluation.");
 
         var talent = await _unitOfWork.Talents.GetByUserIdAsync(userId, ct);
-        var totalCount = InterviewPreparationMapper.CountQuestions(preparation);
-
-        var context = new AnswersEvaluationContext
-        {
-            JobTitle = preparation.JobTitle,
-            CompanyName = preparation.CompanyName,
-            TalentName = talent?.Name ?? "Candidate",
-            InterviewType = preparation.InterviewType,
-            TotalQuestionCount = totalCount,
-            AnsweredQuestions = answered
-                .Select(a => new AnsweredQuestion(a.Category, a.QuestionIndex, a.QuestionText, a.AnswerText))
-                .ToList()
-        };
+        var context = AnswersEvaluationContextFactory.CreateContext(
+            preparation, talent?.Name, answered);
 
         var result = await EvaluateWithAiAsync(context, request.InvitationId, ct);
 
+        var evaluation = await UpsertEvaluationAsync(preparation, context, result, ct);
+
+        return InterviewPreparationMapper.ToDto(
+            preparation, config.AccessWindowAfterInterview, answers, evaluation);
+    }
+
+    private async Task<InterviewPreparationEntity> GetPreparationAsync(
+        Guid invitationId, CancellationToken ct)
+    {
+        return await _unitOfWork.InterviewPreparations
+            .GetByInvitationIdAsync(invitationId, ct)
+            ?? throw new NotFoundException("Interview preparation not found.");
+    }
+
+    private async Task<InterviewPreparationEvaluation> UpsertEvaluationAsync(
+        InterviewPreparationEntity preparation,
+        AnswersEvaluationContext context,
+        AnswersEvaluationResult result,
+        CancellationToken ct)
+    {
         var payload = new CreateEvaluationPayload(
             InterviewPreparationId: preparation.Id,
             OverallScore: result.OverallScore,
@@ -77,8 +87,8 @@ public sealed class EvaluateAnswersCommandHandler
             Strengths: result.Strengths,
             AreasToImprove: result.AreasToImprove,
             QuestionFeedback: result.QuestionFeedback,
-            AnsweredCount: answered.Count,
-            TotalCount: totalCount);
+            AnsweredCount: context.AnsweredQuestions.Count,
+            TotalCount: context.TotalQuestionCount);
 
         var evaluation = await _unitOfWork.InterviewPreparations
             .GetEvaluationByPreparationIdAsync(preparation.Id, ct);
@@ -96,22 +106,7 @@ public sealed class EvaluateAnswersCommandHandler
 
         await _unitOfWork.SaveChangesAsync(ct);
 
-        return InterviewPreparationMapper.ToDto(
-            preparation, _settings.AccessWindowAfterInterview, answers, evaluation);
-    }
-
-    private static void EnsureUserCanAccess(
-        Domain.Entities.InterviewPreparation preparation, string userId)
-    {
-        if (preparation.TalentUserId != userId)
-            throw new ForbiddenException("You do not have access to this interview preparation.");
-    }
-
-    private void EnsurePreparationIsAccessible(
-        Domain.Entities.InterviewPreparation preparation)
-    {
-        if (!preparation.IsAccessible(_settings.AccessWindowAfterInterview))
-            throw new ForbiddenException("Preparation is no longer accessible as the interview has already taken place.");
+        return evaluation;
     }
 
     private async Task<AnswersEvaluationResult> EvaluateWithAiAsync(

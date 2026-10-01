@@ -66,54 +66,14 @@ public sealed class GeminiInterviewPreparationService : IInterviewPreparationAiS
         InterviewPreparationContext context,
         CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(_apiKey))
-        {
-            throw new InvalidOperationException("Gemini API key is not configured.");
-        }
-
         var prompt = InterviewPreparationPromptBuilder.BuildPreparationPrompt(context);
 
-        var requestBody = new
-        {
-            contents = new[]
-            {
-                new
-                {
-                    parts = new object[]
-                    {
-                        new { text = prompt }
-                    }
-                }
-            },
-            generationConfig = new
-            {
-                temperature = _temperature,
-                top_p = _topP,
-                max_output_tokens = _maxOutputTokens,
-                response_mime_type = "application/json",
-                response_schema = InterviewPreparationPromptBuilder.BuildPreparationSchema()
-            }
-        };
-
-        var response = await _httpClient.PostAsJsonAsync(
-            $"/v1beta/models/{_modelName}:generateContent?key={_apiKey}",
-            requestBody,
+        var text = await GenerateJsonTextAsync(
+            prompt,
+            _temperature,
+            _maxOutputTokens,
+            InterviewPreparationPromptBuilder.BuildPreparationSchema(),
             cancellationToken);
-
-        if (!response.IsSuccessStatusCode)
-        {
-            var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
-            _logger.LogError("Gemini API call failed with status code {StatusCode}. Error: {ErrorContent}", response.StatusCode, errorContent);
-            throw new Exception($"Gemini API error: {response.StatusCode}");
-        }
-
-        var geminiResponse = await response.Content.ReadFromJsonAsync<GeminiResponse>(JsonOptions, cancellationToken);
-        var text = geminiResponse?.Candidates?.FirstOrDefault()?.Content?.Parts?.FirstOrDefault()?.Text;
-
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            throw new Exception("Gemini API returned empty content.");
-        }
 
         return ParsePreparationResponse(text);
     }
@@ -122,54 +82,14 @@ public sealed class GeminiInterviewPreparationService : IInterviewPreparationAiS
         AdditionalQuestionsContext context,
         CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(_apiKey))
-        {
-            throw new InvalidOperationException("Gemini API key is not configured.");
-        }
-
         var prompt = InterviewPreparationPromptBuilder.BuildAdditionalQuestionsPrompt(context);
 
-        var requestBody = new
-        {
-            contents = new[]
-            {
-                new
-                {
-                    parts = new object[]
-                    {
-                        new { text = prompt }
-                    }
-                }
-            },
-            generationConfig = new
-            {
-                temperature = _temperature,
-                top_p = _topP,
-                max_output_tokens = _maxOutputTokens,
-                response_mime_type = "application/json",
-                response_schema = InterviewPreparationPromptBuilder.BuildAdditionalQuestionsSchema()
-            }
-        };
-
-        var response = await _httpClient.PostAsJsonAsync(
-            $"/v1beta/models/{_modelName}:generateContent?key={_apiKey}",
-            requestBody,
+        var text = await GenerateJsonTextAsync(
+            prompt,
+            _temperature,
+            _maxOutputTokens,
+            InterviewPreparationPromptBuilder.BuildAdditionalQuestionsSchema(),
             cancellationToken);
-
-        if (!response.IsSuccessStatusCode)
-        {
-            var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
-            _logger.LogError("Gemini API call failed with status code {StatusCode}. Error: {ErrorContent}", response.StatusCode, errorContent);
-            throw new Exception($"Gemini API error: {response.StatusCode}");
-        }
-
-        var geminiResponse = await response.Content.ReadFromJsonAsync<GeminiResponse>(JsonOptions, cancellationToken);
-        var text = geminiResponse?.Candidates?.FirstOrDefault()?.Content?.Parts?.FirstOrDefault()?.Text;
-
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            throw new Exception("Gemini API returned empty content.");
-        }
 
         return ParseAdditionalQuestionsResponse(text);
     }
@@ -178,15 +98,42 @@ public sealed class GeminiInterviewPreparationService : IInterviewPreparationAiS
         AnswersEvaluationContext context,
         CancellationToken cancellationToken = default)
     {
+        var prompt = InterviewPreparationPromptBuilder.BuildEvaluationPrompt(context);
+
+        var text = await GenerateJsonTextAsync(
+            prompt,
+            GeminiConstants.EvaluationTemperature,
+            Math.Max(_maxOutputTokens, GeminiConstants.EvaluationMinOutputTokens),
+            responseSchema: null,
+            cancellationToken);
+
+        return ParseEvaluationResponse(text);
+    }
+
+    private async Task<string> GenerateJsonTextAsync(
+        string prompt,
+        double temperature,
+        int maxOutputTokens,
+        object? responseSchema,
+        CancellationToken cancellationToken)
+    {
         if (string.IsNullOrWhiteSpace(_apiKey))
         {
             throw new InvalidOperationException("Gemini API key is not configured.");
         }
 
-        var prompt = InterviewPreparationPromptBuilder.BuildEvaluationPrompt(context);
+        var generationConfig = new Dictionary<string, object>
+        {
+            ["temperature"] = temperature,
+            ["top_p"] = _topP,
+            ["max_output_tokens"] = maxOutputTokens,
+            ["response_mime_type"] = "application/json"
+        };
+        if (responseSchema is not null)
+        {
+            generationConfig["response_schema"] = responseSchema;
+        }
 
-        // Evaluation is judgment-heavy: low temperature for consistent scoring, and a
-        // higher output budget because per-question feedback scales with answered count.
         var requestBody = new
         {
             contents = new[]
@@ -199,13 +146,7 @@ public sealed class GeminiInterviewPreparationService : IInterviewPreparationAiS
                     }
                 }
             },
-            generationConfig = new
-            {
-                temperature = 0.3,
-                top_p = _topP,
-                max_output_tokens = Math.Max(_maxOutputTokens, 8192),
-                response_mime_type = "application/json"
-            }
+            generationConfig
         };
 
         var response = await _httpClient.PostAsJsonAsync(
@@ -228,7 +169,7 @@ public sealed class GeminiInterviewPreparationService : IInterviewPreparationAiS
             throw new Exception("Gemini API returned empty content.");
         }
 
-        return ParseEvaluationResponse(text);
+        return text;
     }
 
     private InterviewPreparationResult ParsePreparationResponse(string rawText)

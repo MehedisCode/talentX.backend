@@ -1,4 +1,5 @@
 using System.Text.Json;
+using TalentX.Application.Features.InterviewPreparation.Constants;
 using TalentX.Application.Features.InterviewPreparation.DTOs;
 using TalentX.Domain.Entities;
 
@@ -68,11 +69,11 @@ public static class InterviewPreparationMapper
     {
         var questions = category switch
         {
-            "Technical" => DeserializeList<PrepQuestion>(preparation.TechnicalQuestions),
-            "Behavioral" => DeserializeList<PrepQuestion>(preparation.BehavioralQuestions),
-            "Experience-Based" => DeserializeList<PrepQuestion>(preparation.ExperienceBasedQuestions),
-            "Role-Specific" => DeserializeList<PrepQuestion>(preparation.RoleSpecificQuestions),
-            "Additional" => DeserializeList<PrepQuestion>(preparation.AdditionalQuestions),
+            InterviewPreparationCategories.Technical => DeserializeList<PrepQuestion>(preparation.TechnicalQuestions),
+            InterviewPreparationCategories.Behavioral => DeserializeList<PrepQuestion>(preparation.BehavioralQuestions),
+            InterviewPreparationCategories.ExperienceBased => DeserializeList<PrepQuestion>(preparation.ExperienceBasedQuestions),
+            InterviewPreparationCategories.RoleSpecific => DeserializeList<PrepQuestion>(preparation.RoleSpecificQuestions),
+            InterviewPreparationCategories.Additional => DeserializeList<PrepQuestion>(preparation.AdditionalQuestions),
             _ => null
         };
 
