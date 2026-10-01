@@ -12,10 +12,11 @@ namespace TalentX.Infrastructure.Tests.Persistence.Interceptors;
 
 public sealed class AuditLogSaveChangesInterceptorTests
 {
-    private static ApplicationDbContext CreateContext(string? userEmail = null)
+    private static ApplicationDbContext CreateContext(string? userEmail = null, string? ipAddress = null)
     {
         var currentUserServiceMock = new Mock<ICurrentUserService>();
         currentUserServiceMock.SetupGet(service => service.Email).Returns(userEmail);
+        currentUserServiceMock.SetupGet(service => service.IpAddress).Returns(ipAddress);
 
         var interceptor = new AuditLogSaveChangesInterceptor(currentUserServiceMock.Object);
 
@@ -209,5 +210,44 @@ public sealed class AuditLogSaveChangesInterceptorTests
         auditLog.Action.Should().Be("Insert · Job");
         auditLog.Actor.Should().Be("sync-user@talentx.com");
         auditLog.IsSystem.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task SavingChangesAsync_WhenIpAddressAvailable_CapturesIpAddressInAuditLog()
+    {
+        // Arrange
+        const string expectedIp = "203.0.113.195";
+        await using var context = CreateContext("author@talentx.com", expectedIp);
+        var job = CreateSampleJob();
+
+        // Act
+        await context.Jobs.AddAsync(job);
+        await context.SaveChangesAsync();
+
+        // Assert
+        var auditLogs = await context.AuditLogs.ToListAsync();
+        auditLogs.Should().ContainSingle();
+
+        var auditLog = auditLogs.Single();
+        auditLog.IpAddress.Should().Be(expectedIp);
+    }
+
+    [Fact]
+    public async Task SavingChangesAsync_WhenIpAddressNull_AuditLogInDatabaseHasNullIpAddress()
+    {
+        // Arrange
+        await using var context = CreateContext("author@talentx.com", ipAddress: null);
+        var job = CreateSampleJob();
+
+        // Act
+        await context.Jobs.AddAsync(job);
+        await context.SaveChangesAsync();
+
+        // Assert
+        var auditLogs = await context.AuditLogs.ToListAsync();
+        auditLogs.Should().ContainSingle();
+
+        var auditLog = auditLogs.Single();
+        auditLog.IpAddress.Should().BeNull();
     }
 }

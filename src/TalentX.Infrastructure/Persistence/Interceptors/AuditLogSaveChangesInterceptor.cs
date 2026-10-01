@@ -86,7 +86,7 @@ public sealed class AuditLogSaveChangesInterceptor : SaveChangesInterceptor
             var actor = string.IsNullOrWhiteSpace(currentUserEmail) ? "System" : currentUserEmail;
             var isSystem = string.IsNullOrWhiteSpace(currentUserEmail) || currentUserEmail == "System";
 
-            auditLogs.Add(new AuditLog(actor, action, isSystem));
+            auditLogs.Add(new AuditLog(actor, action, isSystem, _currentUserService.IpAddress));
         }
 
         if (auditLogs.Count > 0)
