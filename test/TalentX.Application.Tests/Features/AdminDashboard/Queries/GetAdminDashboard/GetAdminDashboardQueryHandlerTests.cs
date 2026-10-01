@@ -496,7 +496,7 @@ public sealed class GetAdminDashboardQueryHandlerTests
     }
 
     [Fact]
-    public async Task Handle_TrimsTheMergedActivitiesToTheNewestUpToTheLimit()
+    public async Task Handle_TrimsTheMergedActivitiesToTheRecentActivityLimit()
     {
         // Each repository returns at most RecentActivityPerType items, so the mocks do the same.
         var perType = AdminDashboardConstants.RecentActivityPerType;
@@ -513,10 +513,12 @@ public sealed class GetAdminDashboardQueryHandlerTests
 
         var result = await _handler.Handle(new GetAdminDashboardQuery(), CancellationToken.None);
 
-        result.Activities.Should().HaveCount(6);
+        result.Activities.Should().HaveCount(AdminDashboardConstants.RecentActivityLimit);
         result.Activities.Should().BeInDescendingOrder(a => a.OccurredAt);
-        result.Activities.Count(a => a.Type == AdminDashboardActivityType.Job).Should().Be(3);
-        result.Activities.Count(a => a.Type == AdminDashboardActivityType.Employer).Should().Be(3);
+        // Jobs are newest, then employers, then talents, so the limit takes every job and fills the rest with employers.
+        result.Activities.Count(a => a.Type == AdminDashboardActivityType.Job).Should().Be(perType);
+        result.Activities.Count(a => a.Type == AdminDashboardActivityType.Employer)
+            .Should().Be(AdminDashboardConstants.RecentActivityLimit - perType);
         result.Activities.Should().NotContain(a => a.Type == AdminDashboardActivityType.Talent);
     }
 }

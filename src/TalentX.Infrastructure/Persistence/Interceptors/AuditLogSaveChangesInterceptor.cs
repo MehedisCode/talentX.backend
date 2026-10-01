@@ -45,8 +45,12 @@ public sealed class AuditLogSaveChangesInterceptor : SaveChangesInterceptor
 
         foreach (var entry in entries)
         {
-            if (entry.Entity is AuditLog)
+            if (entry.Entity is AuditLog auditLog)
             {
+                if (entry.State == EntityState.Added && string.IsNullOrWhiteSpace(auditLog.IpAddress) && !string.IsNullOrWhiteSpace(_currentUserService.IpAddress))
+                {
+                    auditLog.SetIpAddress(_currentUserService.IpAddress);
+                }
                 continue;
             }
 
@@ -86,7 +90,7 @@ public sealed class AuditLogSaveChangesInterceptor : SaveChangesInterceptor
             var actor = string.IsNullOrWhiteSpace(currentUserEmail) ? "System" : currentUserEmail;
             var isSystem = string.IsNullOrWhiteSpace(currentUserEmail) || currentUserEmail == "System";
 
-            auditLogs.Add(new AuditLog(actor, action, isSystem));
+            auditLogs.Add(new AuditLog(actor, action, isSystem, _currentUserService.IpAddress));
         }
 
         if (auditLogs.Count > 0)
