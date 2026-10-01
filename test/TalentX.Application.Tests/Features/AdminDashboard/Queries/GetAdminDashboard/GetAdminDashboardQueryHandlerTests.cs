@@ -3,6 +3,7 @@ using FluentAssertions;
 using Moq;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Common.Interfaces.Repositories;
+using TalentX.Application.Features.AdminDashboard.Constants;
 using TalentX.Application.Features.AdminDashboard.DTOs;
 using TalentX.Application.Features.AdminDashboard.Queries.GetAdminDashboard;
 using TalentX.Domain;
@@ -495,25 +496,32 @@ public sealed class GetAdminDashboardQueryHandlerTests
     }
 
     [Fact]
-    public async Task Handle_TrimsTheMergedActivitiesToTheSixteenNewest()
+    public async Task Handle_TrimsTheMergedActivitiesToTheRecentActivityLimit()
     {
-        var talents = Enumerable.Range(0, 8).Select(i => NewTalent($"Talent {i}", Utc(2026, 9, 10, 0, i))).ToList();
-        var employers = Enumerable.Range(0, 8).Select(i => NewEmployer($"Company {i}", $"Owner {i}", Utc(2026, 9, 10, 1, i))).ToList();
-        var jobs = Enumerable.Range(0, 8).Select(i => NewJob($"Job {i}", "Acme", "Dhaka", Utc(2026, 9, 10, 2, i))).ToList();
+        var perType = AdminDashboardConstants.RecentActivityPerType;
+        var limit = AdminDashboardConstants.RecentActivityLimit;
+
+        var talents = Enumerable.Range(0, perType + 2).Select(i => NewTalent($"Talent {i}", Utc(2026, 9, 10, 0, i))).ToList();
+        var employers = Enumerable.Range(0, perType + 2).Select(i => NewEmployer($"Company {i}", $"Owner {i}", Utc(2026, 9, 10, 1, i))).ToList();
+        var jobs = Enumerable.Range(0, perType + 2).Select(i => NewJob($"Job {i}", "Acme", "Dhaka", Utc(2026, 9, 10, 2, i))).ToList();
 
         _talents.Setup(r => r.GetRecentCreatedBetweenAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(talents);
+            .ReturnsAsync((DateTime start, DateTime end, int take, CancellationToken token) => talents.Take(take).ToList());
         _employers.Setup(r => r.GetRecentCreatedBetweenAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(employers);
+            .ReturnsAsync((DateTime start, DateTime end, int take, CancellationToken token) => employers.Take(take).ToList());
         _jobs.Setup(r => r.GetRecentPublishedBetweenAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(jobs);
+            .ReturnsAsync((DateTime start, DateTime end, int take, CancellationToken token) => jobs.Take(take).ToList());
 
         var result = await _handler.Handle(new GetAdminDashboardQuery(), CancellationToken.None);
 
-        result.Activities.Should().HaveCount(16);
+        result.Activities.Should().HaveCount(limit);
         result.Activities.Should().BeInDescendingOrder(a => a.OccurredAt);
-        result.Activities.Count(a => a.Type == AdminDashboardActivityType.Job).Should().Be(8);
-        result.Activities.Count(a => a.Type == AdminDashboardActivityType.Employer).Should().Be(8);
+        result.Activities.Count(a => a.Type == AdminDashboardActivityType.Job).Should().Be(perType);
+        result.Activities.Count(a => a.Type == AdminDashboardActivityType.Employer).Should().Be(perType);
         result.Activities.Should().NotContain(a => a.Type == AdminDashboardActivityType.Talent);
+
+        _talents.Verify(r => r.GetRecentCreatedBetweenAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>(), perType, It.IsAny<CancellationToken>()), Times.Once);
+        _employers.Verify(r => r.GetRecentCreatedBetweenAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>(), perType, It.IsAny<CancellationToken>()), Times.Once);
+        _jobs.Verify(r => r.GetRecentPublishedBetweenAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>(), perType, It.IsAny<CancellationToken>()), Times.Once);
     }
 }
