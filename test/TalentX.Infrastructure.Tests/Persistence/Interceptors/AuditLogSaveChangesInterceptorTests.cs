@@ -147,6 +147,42 @@ public sealed class AuditLogSaveChangesInterceptorTests
         auditLogs.Should().NotContain(log => log.Action.Contains("AuditLog"));
     }
 
+    [Fact]
+    public async Task SavingChangesAsync_WhenDirectAuditLogHasNoIpAddress_PopulatesCurrentUserServiceIpAddress()
+    {
+        // Arrange
+        const string expectedIp = "198.51.100.42";
+        await using var context = CreateContext("system@talentx.com", expectedIp);
+        var directAuditLog = new AuditLog("system@talentx.com", "Manual Operation", isSystem: false);
+
+        // Act
+        await context.AuditLogs.AddAsync(directAuditLog);
+        await context.SaveChangesAsync();
+
+        // Assert
+        var auditLogs = await context.AuditLogs.ToListAsync();
+        auditLogs.Should().ContainSingle();
+        auditLogs.Single().IpAddress.Should().Be(expectedIp);
+    }
+
+    [Fact]
+    public async Task SavingChangesAsync_WhenDirectAuditLogAlreadyHasIpAddress_PreservesExplicitIpAddress()
+    {
+        // Arrange
+        const string explicitIp = "203.0.113.10";
+        await using var context = CreateContext("system@talentx.com", "198.51.100.42");
+        var directAuditLog = new AuditLog("system@talentx.com", "Manual Operation", isSystem: false, ipAddress: explicitIp);
+
+        // Act
+        await context.AuditLogs.AddAsync(directAuditLog);
+        await context.SaveChangesAsync();
+
+        // Assert
+        var auditLogs = await context.AuditLogs.ToListAsync();
+        auditLogs.Should().ContainSingle();
+        auditLogs.Single().IpAddress.Should().Be(explicitIp);
+    }
+
     [Theory]
     [InlineData(null)]
     [InlineData("")]

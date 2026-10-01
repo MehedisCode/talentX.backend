@@ -45,8 +45,12 @@ public sealed class AuditLogSaveChangesInterceptor : SaveChangesInterceptor
 
         foreach (var entry in entries)
         {
-            if (entry.Entity is AuditLog)
+            if (entry.Entity is AuditLog auditLog)
             {
+                if (entry.State == EntityState.Added && string.IsNullOrWhiteSpace(auditLog.IpAddress) && !string.IsNullOrWhiteSpace(_currentUserService.IpAddress))
+                {
+                    auditLog.SetIpAddress(_currentUserService.IpAddress);
+                }
                 continue;
             }
 

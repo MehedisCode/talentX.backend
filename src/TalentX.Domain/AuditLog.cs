@@ -21,4 +21,9 @@ public sealed class AuditLog : BaseEntity
         IpAddress = ipAddress;
         CreatedAt = DateTime.UtcNow;
     }
+
+    public void SetIpAddress(string? ipAddress)
+    {
+        IpAddress = ipAddress;
+    }
 }
