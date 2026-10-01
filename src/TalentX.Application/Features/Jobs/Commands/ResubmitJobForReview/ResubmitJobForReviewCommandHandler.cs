@@ -1,6 +1,9 @@
+using System.Text.Json;
 using MediatR;
+using Microsoft.Extensions.Logging;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
+using TalentX.Application.Common.Models;
 using TalentX.Application.Identity.Services;
 using TalentX.Domain.Entities;
 using TalentX.Domain.Enums;
@@ -11,11 +14,19 @@ public sealed class ResubmitJobForReviewCommandHandler : IRequestHandler<Resubmi
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUserService;
+    private readonly INotificationService _notificationService;
+    private readonly ILogger<ResubmitJobForReviewCommandHandler> _logger;
 
-    public ResubmitJobForReviewCommandHandler(IUnitOfWork unitOfWork, ICurrentUserService currentUserService)
+    public ResubmitJobForReviewCommandHandler(
+        IUnitOfWork unitOfWork,
+        ICurrentUserService currentUserService,
+        INotificationService notificationService,
+        ILogger<ResubmitJobForReviewCommandHandler> logger)
     {
         _unitOfWork = unitOfWork;
         _currentUserService = currentUserService;
+        _notificationService = notificationService;
+        _logger = logger;
     }
 
     public async Task<Unit> Handle(ResubmitJobForReviewCommand request, CancellationToken cancellationToken)
@@ -72,6 +83,49 @@ public sealed class ResubmitJobForReviewCommandHandler : IRequestHandler<Resubmi
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
+        await PublishAdminNotificationsAsync(job, cancellationToken);
+
         return Unit.Value;
+    }
+
+    // After the save, and best-effort: each PublishAsync commits on its own, and the
+    // resubmission has already been recorded. A failure for one admin must not skip the rest.
+    private async Task PublishAdminNotificationsAsync(Job job, CancellationToken cancellationToken)
+    {
+        IReadOnlyList<string> adminUserIds;
+        try
+        {
+            adminUserIds = await _unitOfWork.Users.GetAdminUserIdsAsync(cancellationToken);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogWarning(exception, "Failed to load admins to notify about resubmitted job {JobId}", job.Id);
+            return;
+        }
+
+        var metadata = JsonSerializer.Serialize(new { jobId = job.Id, jobTitle = job.Title });
+
+        foreach (var adminUserId in adminUserIds)
+        {
+            try
+            {
+                await _notificationService.PublishAsync(
+                    new PublishNotificationParameters(
+                        adminUserId,
+                        NotificationType.JobResubmittedForReview,
+                        "Job Resubmitted for Review",
+                        $"'{job.Title}' was resubmitted and needs a decision.",
+                        metadata),
+                    cancellationToken);
+            }
+            catch (Exception exception)
+            {
+                _logger.LogWarning(
+                    exception,
+                    "Failed to publish in-app notification for resubmitted job {JobId} to admin {AdminUserId}",
+                    job.Id,
+                    adminUserId);
+            }
+        }
     }
 }

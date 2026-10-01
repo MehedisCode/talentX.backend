@@ -1,7 +1,9 @@
+using System.Text.Json;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
+using TalentX.Application.Common.Models;
 using TalentX.Application.Features.JobApplications.DTOs;
 using TalentX.Application.Features.Jobs.Moderation;
 using TalentX.Application.Identity.Services;
@@ -16,6 +18,7 @@ public sealed class ReactivateJobCommandHandler : IRequestHandler<ReactivateJobC
     private readonly ICurrentUserService _currentUserService;
     private readonly IEmailService _emailService;
     private readonly IJobAlertQueue _jobAlertQueue;
+    private readonly INotificationService _notificationService;
     private readonly ILogger<ReactivateJobCommandHandler> _logger;
 
     public ReactivateJobCommandHandler(
@@ -23,12 +26,14 @@ public sealed class ReactivateJobCommandHandler : IRequestHandler<ReactivateJobC
         ICurrentUserService currentUserService,
         IEmailService emailService,
         IJobAlertQueue jobAlertQueue,
+        INotificationService notificationService,
         ILogger<ReactivateJobCommandHandler> logger)
     {
         _unitOfWork = unitOfWork;
         _currentUserService = currentUserService;
         _emailService = emailService;
         _jobAlertQueue = jobAlertQueue;
+        _notificationService = notificationService;
         _logger = logger;
     }
 
@@ -73,6 +78,8 @@ public sealed class ReactivateJobCommandHandler : IRequestHandler<ReactivateJobC
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
+        await PublishEmployerNotificationAsync(job, cancellationToken);
+
         // After the save, and best-effort: the job is public again so matching talents should
         // be alerted, but a queue failure must not fail an action that already committed.
         // JobAlertNotificationHistories prevents re-notifying anyone alerted before.
@@ -86,6 +93,29 @@ public sealed class ReactivateJobCommandHandler : IRequestHandler<ReactivateJobC
         }
 
         return new StatusUpdateResponseDto("Job reactivated.");
+    }
+
+    // Best-effort, like the alert queue: the reactivation has already committed.
+    private async Task PublishEmployerNotificationAsync(Job job, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _notificationService.PublishAsync(
+                new PublishNotificationParameters(
+                    job.EmployerId,
+                    NotificationType.JobReactivated,
+                    "Job Reactivated",
+                    $"Your job '{job.Title}' is live again.",
+                    JsonSerializer.Serialize(new { jobId = job.Id, jobTitle = job.Title })),
+                cancellationToken);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogWarning(
+                exception,
+                "Failed to publish in-app notification for reactivated job {JobId}",
+                job.Id);
+        }
     }
 
     private async Task QueueEmployerEmailAsync(Job job, CancellationToken cancellationToken)

@@ -498,9 +498,11 @@ public sealed class GetAdminDashboardQueryHandlerTests
     [Fact]
     public async Task Handle_TrimsTheMergedActivitiesToTheRecentActivityLimit()
     {
-        var talents = Enumerable.Range(0, 8).Select(i => NewTalent($"Talent {i}", Utc(2026, 9, 10, 0, i))).ToList();
-        var employers = Enumerable.Range(0, 8).Select(i => NewEmployer($"Company {i}", $"Owner {i}", Utc(2026, 9, 10, 1, i))).ToList();
-        var jobs = Enumerable.Range(0, 8).Select(i => NewJob($"Job {i}", "Acme", "Dhaka", Utc(2026, 9, 10, 2, i))).ToList();
+        // Each repository returns at most RecentActivityPerType items, so the mocks do the same.
+        var perType = AdminDashboardConstants.RecentActivityPerType;
+        var talents = Enumerable.Range(0, perType).Select(i => NewTalent($"Talent {i}", Utc(2026, 9, 10, 0, i))).ToList();
+        var employers = Enumerable.Range(0, perType).Select(i => NewEmployer($"Company {i}", $"Owner {i}", Utc(2026, 9, 10, 1, i))).ToList();
+        var jobs = Enumerable.Range(0, perType).Select(i => NewJob($"Job {i}", "Acme", "Dhaka", Utc(2026, 9, 10, 2, i))).ToList();
 
         _talents.Setup(r => r.GetRecentCreatedBetweenAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(talents);
@@ -513,8 +515,10 @@ public sealed class GetAdminDashboardQueryHandlerTests
 
         result.Activities.Should().HaveCount(AdminDashboardConstants.RecentActivityLimit);
         result.Activities.Should().BeInDescendingOrder(a => a.OccurredAt);
-        result.Activities.Count(a => a.Type == AdminDashboardActivityType.Job).Should().Be(AdminDashboardConstants.RecentActivityLimit);
-        result.Activities.Should().NotContain(a => a.Type == AdminDashboardActivityType.Employer);
+        // Jobs are newest, then employers, then talents, so the limit takes every job and fills the rest with employers.
+        result.Activities.Count(a => a.Type == AdminDashboardActivityType.Job).Should().Be(perType);
+        result.Activities.Count(a => a.Type == AdminDashboardActivityType.Employer)
+            .Should().Be(AdminDashboardConstants.RecentActivityLimit - perType);
         result.Activities.Should().NotContain(a => a.Type == AdminDashboardActivityType.Talent);
     }
 }
