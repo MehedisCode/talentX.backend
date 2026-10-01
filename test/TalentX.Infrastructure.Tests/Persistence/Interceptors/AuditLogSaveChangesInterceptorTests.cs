@@ -12,10 +12,11 @@ namespace TalentX.Infrastructure.Tests.Persistence.Interceptors;
 
 public sealed class AuditLogSaveChangesInterceptorTests
 {
-    private static ApplicationDbContext CreateContext(string? userEmail = null)
+    private static ApplicationDbContext CreateContext(string? userEmail = null, string? ipAddress = null)
     {
         var currentUserServiceMock = new Mock<ICurrentUserService>();
         currentUserServiceMock.SetupGet(service => service.Email).Returns(userEmail);
+        currentUserServiceMock.SetupGet(service => service.IpAddress).Returns(ipAddress);
 
         var interceptor = new AuditLogSaveChangesInterceptor(currentUserServiceMock.Object);
 
@@ -146,6 +147,42 @@ public sealed class AuditLogSaveChangesInterceptorTests
         auditLogs.Should().NotContain(log => log.Action.Contains("AuditLog"));
     }
 
+    [Fact]
+    public async Task SavingChangesAsync_WhenDirectAuditLogHasNoIpAddress_PopulatesCurrentUserServiceIpAddress()
+    {
+        // Arrange
+        const string expectedIp = "198.51.100.42";
+        await using var context = CreateContext("system@talentx.com", expectedIp);
+        var directAuditLog = new AuditLog("system@talentx.com", "Manual Operation", isSystem: false);
+
+        // Act
+        await context.AuditLogs.AddAsync(directAuditLog);
+        await context.SaveChangesAsync();
+
+        // Assert
+        var auditLogs = await context.AuditLogs.ToListAsync();
+        auditLogs.Should().ContainSingle();
+        auditLogs.Single().IpAddress.Should().Be(expectedIp);
+    }
+
+    [Fact]
+    public async Task SavingChangesAsync_WhenDirectAuditLogAlreadyHasIpAddress_PreservesExplicitIpAddress()
+    {
+        // Arrange
+        const string explicitIp = "203.0.113.10";
+        await using var context = CreateContext("system@talentx.com", "198.51.100.42");
+        var directAuditLog = new AuditLog("system@talentx.com", "Manual Operation", isSystem: false, ipAddress: explicitIp);
+
+        // Act
+        await context.AuditLogs.AddAsync(directAuditLog);
+        await context.SaveChangesAsync();
+
+        // Assert
+        var auditLogs = await context.AuditLogs.ToListAsync();
+        auditLogs.Should().ContainSingle();
+        auditLogs.Single().IpAddress.Should().Be(explicitIp);
+    }
+
     [Theory]
     [InlineData(null)]
     [InlineData("")]
@@ -209,5 +246,44 @@ public sealed class AuditLogSaveChangesInterceptorTests
         auditLog.Action.Should().Be("Insert · Job");
         auditLog.Actor.Should().Be("sync-user@talentx.com");
         auditLog.IsSystem.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task SavingChangesAsync_WhenIpAddressAvailable_CapturesIpAddressInAuditLog()
+    {
+        // Arrange
+        const string expectedIp = "203.0.113.195";
+        await using var context = CreateContext("author@talentx.com", expectedIp);
+        var job = CreateSampleJob();
+
+        // Act
+        await context.Jobs.AddAsync(job);
+        await context.SaveChangesAsync();
+
+        // Assert
+        var auditLogs = await context.AuditLogs.ToListAsync();
+        auditLogs.Should().ContainSingle();
+
+        var auditLog = auditLogs.Single();
+        auditLog.IpAddress.Should().Be(expectedIp);
+    }
+
+    [Fact]
+    public async Task SavingChangesAsync_WhenIpAddressNull_AuditLogInDatabaseHasNullIpAddress()
+    {
+        // Arrange
+        await using var context = CreateContext("author@talentx.com", ipAddress: null);
+        var job = CreateSampleJob();
+
+        // Act
+        await context.Jobs.AddAsync(job);
+        await context.SaveChangesAsync();
+
+        // Assert
+        var auditLogs = await context.AuditLogs.ToListAsync();
+        auditLogs.Should().ContainSingle();
+
+        var auditLog = auditLogs.Single();
+        auditLog.IpAddress.Should().BeNull();
     }
 }
