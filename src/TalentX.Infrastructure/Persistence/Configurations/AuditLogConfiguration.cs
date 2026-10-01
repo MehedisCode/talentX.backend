@@ -23,6 +23,9 @@ public sealed class AuditLogConfiguration : IEntityTypeConfiguration<AuditLog>
         builder.Property(auditLog => auditLog.IsSystem)
             .IsRequired();
 
+        builder.Property(auditLog => auditLog.IpAddress)
+            .HasMaxLength(45);
+
         builder.HasIndex(auditLog => auditLog.CreatedAt);
         builder.HasIndex(auditLog => auditLog.Actor);
     }

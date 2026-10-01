@@ -1,3 +1,4 @@
+using System.Text.Json;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using TalentX.Application.Common.Exceptions;
@@ -16,17 +17,20 @@ public sealed class DeactivateJobCommandHandler : IRequestHandler<DeactivateJobC
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUserService;
     private readonly IEmailService _emailService;
+    private readonly INotificationService _notificationService;
     private readonly ILogger<DeactivateJobCommandHandler> _logger;
 
     public DeactivateJobCommandHandler(
         IUnitOfWork unitOfWork,
         ICurrentUserService currentUserService,
         IEmailService emailService,
+        INotificationService notificationService,
         ILogger<DeactivateJobCommandHandler> logger)
     {
         _unitOfWork = unitOfWork;
         _currentUserService = currentUserService;
         _emailService = emailService;
+        _notificationService = notificationService;
         _logger = logger;
     }
 
@@ -78,7 +82,36 @@ public sealed class DeactivateJobCommandHandler : IRequestHandler<DeactivateJobC
         // can never end up deactivated without its employer being notified, or vice versa.
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
+        await PublishEmployerNotificationAsync(job, reasonLabel, cancellationToken);
+
         return new StatusUpdateResponseDto("Job deactivated.");
+    }
+
+    // After the save, and best-effort: PublishAsync commits on its own, so a failure here must
+    // not fail a deactivation that already went through. The email still reaches the employer.
+    private async Task PublishEmployerNotificationAsync(
+        Job job,
+        string reasonLabel,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _notificationService.PublishAsync(
+                new PublishNotificationParameters(
+                    job.EmployerId,
+                    NotificationType.JobDeactivated,
+                    "Job Deactivated",
+                    $"Your job '{job.Title}' was deactivated. Reason: {reasonLabel}.",
+                    JsonSerializer.Serialize(new { jobId = job.Id, jobTitle = job.Title })),
+                cancellationToken);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogWarning(
+                exception,
+                "Failed to publish in-app notification for deactivated job {JobId}",
+                job.Id);
+        }
     }
 
     private async Task QueueEmployerEmailAsync(
