@@ -75,6 +75,37 @@ public class SendJobInvitationCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_WhenJobIsExpired_CreatesInvitation()
+    {
+        var job = Job.Create(
+            CurrentEmployerId, "Backend Engineer", "Acme", "Desc",
+            EmploymentType.FullTime, ExperienceLevel.SeniorLevel, "Remote",
+            WorkArrangement.FullRemote, new List<string> { "C#" }, 2,
+            DateTime.UtcNow.AddDays(30));
+        job.MarkAsPublished();
+        job.MarkAsExpired();
+
+        _jobRepo.Setup(r => r.GetByIdAsync(_jobId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(job);
+
+        var talent = new Talent(TalentUserId, "Bob", "bob@example.com");
+        _talentRepo.Setup(r => r.GetByUserIdAsync(TalentUserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(talent);
+
+        _invitationRepo.Setup(r => r.ExistsActiveAsync(_jobId, TalentUserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        var result = await _handler.Handle(new SendJobInvitationCommand(_jobId, TalentUserId), CancellationToken.None);
+
+        result.Should().NotBeNull();
+        result.JobId.Should().Be(job.Id);
+        result.IsActive.Should().BeTrue();
+
+        _invitationRepo.Verify(r => r.AddAsync(It.IsAny<Invitation>(), It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
     public async Task Handle_WhenAlreadyInvited_ThrowsConflictException()
     {
         var job = Job.Create(

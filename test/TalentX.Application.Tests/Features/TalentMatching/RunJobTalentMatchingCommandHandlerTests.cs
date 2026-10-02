@@ -110,7 +110,7 @@ public class RunJobTalentMatchingCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WhenJobNotPublished_ThrowsBadRequestException()
+    public async Task Handle_WhenJobIsDraft_ThrowsBadRequestException()
     {
         var draftJob = Job.Create(
             CurrentEmployerId,
@@ -131,7 +131,48 @@ public class RunJobTalentMatchingCommandHandlerTests
         var act = () => _handler.Handle(new RunJobTalentMatchingCommand(_jobId), CancellationToken.None);
 
         await act.Should().ThrowAsync<BadRequestException>()
-            .WithMessage("*published*");
+            .WithMessage("*active or expired*");
+    }
+
+    [Fact]
+    public async Task Handle_WhenJobIsExpired_RunsMatching()
+    {
+        var job = CreatePublishedJob();
+        job.MarkAsExpired();
+        _jobRepo.Setup(r => r.GetByIdAsync(_jobId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(job);
+
+        var talent = new Talent("talent-user-1", "Alice Smith", "alice@example.com");
+        talent.UpdateSkills(new List<string> { "C#" }, new(), new());
+        _talentRepo.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Talent> { talent });
+
+        _workExpRepo.Setup(r => r.GetByUserIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<WorkExperience>());
+        _educationRepo.Setup(r => r.GetByUserIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Education>());
+
+        _matchingService.Setup(s => s.MatchAsync(It.IsAny<TalentMatchingRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new TalentMatchingResult
+            {
+                Matches = new List<CandidateMatchResult>
+                {
+                    new() { TalentUserId = "talent-user-1", Score = 88.0m, Explanation = "Solid C# match." }
+                }
+            });
+
+        _matchRepo.Setup(r => r.GetByJobIdAsync(job.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<JobTalentMatch>());
+        _invitationRepo.Setup(r => r.GetByJobIdAsync(job.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Invitation>());
+
+        var response = await _handler.Handle(new RunJobTalentMatchingCommand(_jobId), CancellationToken.None);
+
+        response.MatchedCount.Should().Be(1);
+        response.Candidates[0].TalentUserId.Should().Be("talent-user-1");
+
+        _matchRepo.Verify(r => r.AddAsync(It.IsAny<JobTalentMatch>(), It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]

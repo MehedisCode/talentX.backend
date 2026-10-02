@@ -4,7 +4,9 @@ using Moq;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Common.Interfaces.Repositories;
+using TalentX.Application.Common.Models;
 using TalentX.Application.Features.Jobs.Commands.ReactivateJob;
+using TalentX.Application.Features.Notifications.DTOs;
 using TalentX.Application.Identity.Services;
 using TalentX.Domain;
 using TalentX.Domain.Entities;
@@ -24,6 +26,7 @@ public sealed class ReactivateJobCommandHandlerTests
     private readonly Mock<ICurrentUserService> _currentUserService = new();
     private readonly Mock<IEmailService> _emailService = new();
     private readonly Mock<IJobAlertQueue> _jobAlertQueue = new();
+    private readonly Mock<INotificationService> _notificationService = new();
     private readonly ReactivateJobCommandHandler _handler;
 
     public ReactivateJobCommandHandlerTests()
@@ -45,6 +48,7 @@ public sealed class ReactivateJobCommandHandlerTests
             _currentUserService.Object,
             _emailService.Object,
             _jobAlertQueue.Object,
+            _notificationService.Object,
             Mock.Of<ILogger<ReactivateJobCommandHandler>>());
     }
 
@@ -156,6 +160,57 @@ public sealed class ReactivateJobCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_PublishesAJobReactivatedNotificationToTheEmployerAfterTheSave()
+    {
+        var job = CreateDeactivatedJob();
+        SetupJob(job);
+        SetupEmployer();
+        var callOrder = new List<string>();
+        _unitOfWork
+            .Setup(unitOfWork => unitOfWork.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .Callback(() => callOrder.Add("save"))
+            .ReturnsAsync(1);
+        _notificationService
+            .Setup(service => service.PublishAsync(It.IsAny<PublishNotificationParameters>(), It.IsAny<CancellationToken>()))
+            .Callback(() => callOrder.Add("notify"))
+            .ReturnsAsync(default(NotificationDto)!);
+
+        await _handler.Handle(new ReactivateJobCommand(job.Id), CancellationToken.None);
+
+        _notificationService.Verify(
+            service => service.PublishAsync(
+                It.Is<PublishNotificationParameters>(parameters =>
+                    parameters.RecipientUserId == "employer-1" &&
+                    parameters.Type == NotificationType.JobReactivated &&
+                    parameters.Title == "Job Reactivated" &&
+                    parameters.Body == "Your job 'Senior Backend Engineer' is live again." &&
+                    parameters.Metadata!.Contains(job.Id.ToString())),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        // PublishAsync commits on its own, so it must never run inside the moderation save.
+        callOrder.Should().Equal("save", "notify");
+    }
+
+    [Fact]
+    public async Task Handle_WhenPublishingTheNotificationFails_StillReportsSuccessAndEnqueuesAlerts()
+    {
+        var job = CreateDeactivatedJob();
+        SetupJob(job);
+        SetupEmployer();
+        _notificationService
+            .Setup(service => service.PublishAsync(It.IsAny<PublishNotificationParameters>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("database unavailable"));
+
+        var result = await _handler.Handle(new ReactivateJobCommand(job.Id), CancellationToken.None);
+
+        result.Message.Should().Be("Job reactivated.");
+        job.Status.Should().Be(JobStatus.Published);
+        _jobAlertQueue.Verify(
+            queue => queue.EnqueuePublishedJobAsync(job.Id, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
     public async Task Handle_EnqueuesJobAlertsOnlyAfterTheSaveSucceeds()
     {
         var job = CreateDeactivatedJob();
@@ -206,6 +261,9 @@ public sealed class ReactivateJobCommandHandlerTests
         job.Status.Should().Be(JobStatus.Deactivated);
         _historyRepository.Verify(
             repository => repository.AddAsync(It.IsAny<JobModerationHistory>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        _notificationService.Verify(
+            service => service.PublishAsync(It.IsAny<PublishNotificationParameters>(), It.IsAny<CancellationToken>()),
             Times.Never);
         _unitOfWork.Verify(unitOfWork => unitOfWork.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
         _jobAlertQueue.Verify(

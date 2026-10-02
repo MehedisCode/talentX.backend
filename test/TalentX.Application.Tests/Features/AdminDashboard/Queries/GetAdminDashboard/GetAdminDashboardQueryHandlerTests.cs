@@ -517,7 +517,9 @@ public sealed class GetAdminDashboardQueryHandlerTests
         result.Activities.Should().HaveCount(limit);
         result.Activities.Should().BeInDescendingOrder(a => a.OccurredAt);
         result.Activities.Count(a => a.Type == AdminDashboardActivityType.Job).Should().Be(perType);
-        result.Activities.Count(a => a.Type == AdminDashboardActivityType.Employer).Should().Be(perType);
+        // Jobs are newest, then employers, then talents, so the limit takes every job and fills the rest with employers.
+        result.Activities.Count(a => a.Type == AdminDashboardActivityType.Employer)
+            .Should().Be(limit - perType);
         result.Activities.Should().NotContain(a => a.Type == AdminDashboardActivityType.Talent);
 
         _talents.Verify(r => r.GetRecentCreatedBetweenAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>(), perType, It.IsAny<CancellationToken>()), Times.Once);
