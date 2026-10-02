@@ -4,7 +4,6 @@ using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Features.InterviewPreparation.DTOs;
 using TalentX.Application.Features.InterviewPreparation.Helpers;
-using TalentX.Application.Features.InterviewPreparation.Mappers;
 using TalentX.Application.Identity.Services;
 using TalentX.Domain.Entities;
 using InterviewPreparationEntity = TalentX.Domain.Entities.InterviewPreparation;
@@ -56,8 +55,8 @@ public sealed class GenerateAdditionalQuestionsCommandHandler
         _unitOfWork.InterviewPreparations.Update(preparation);
         await _unitOfWork.SaveChangesAsync(ct);
 
-        return InterviewPreparationMapper.ToDto(
-            preparation, config.AccessWindowAfterInterview);
+        return await InterviewPreparationDtoLoader.LoadAsync(
+            _unitOfWork, preparation, config.AccessWindowAfterInterview, ct);
     }
 
     private async Task<InterviewPreparationEntity> GetPreparationAsync(

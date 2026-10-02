@@ -8,9 +8,11 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using TalentX.API.Controllers.Talents;
+using TalentX.Application.Features.InterviewPreparation.Commands.EvaluateAnswers;
 using TalentX.Application.Features.InterviewPreparation.Commands.GenerateAdditionalQuestions;
 using TalentX.Application.Features.InterviewPreparation.Commands.GeneratePreparation;
 using TalentX.Application.Features.InterviewPreparation.Commands.RegeneratePreparation;
+using TalentX.Application.Features.InterviewPreparation.Commands.SaveAnswer;
 using TalentX.Application.Features.InterviewPreparation.DTOs;
 using TalentX.Application.Features.InterviewPreparation.Queries.GetPreparation;
 using TalentX.Application.Features.InterviewPreparation.Queries.GetPreparationsByTalent;
@@ -159,6 +161,66 @@ public class InterviewPreparationControllerTests
 
         authorize.Should().NotBeNull();
         authorize!.Roles.Should().Be("Talent");
+    }
+
+    [Fact]
+    public async Task SaveAnswer_OverridesInvitationIdFromRouteAndReturnsOk()
+    {
+        var invitationId = Guid.NewGuid();
+        var expected = Preparation();
+        _sender
+            .Setup(s => s.Send(It.IsAny<SaveAnswerCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expected);
+
+        var command = new SaveAnswerCommand(
+            Guid.NewGuid(), "Technical", 0, "An answer", true);
+        var actionResult = await _controller.SaveAnswer(invitationId, command, CancellationToken.None);
+
+        var okResult = actionResult.Should().BeOfType<OkObjectResult>().Subject;
+        okResult.Value.Should().BeEquivalentTo(expected);
+        _sender.Verify(
+            s => s.Send(
+                It.Is<SaveAnswerCommand>(c =>
+                    c.InvitationId == invitationId
+                    && c.Category == "Technical"
+                    && c.QuestionIndex == 0
+                    && c.Answer == "An answer"
+                    && c.Practiced),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task EvaluateAnswers_SendsCommandWithInvitationIdAndReturnsOk()
+    {
+        var invitationId = Guid.NewGuid();
+        var expected = Preparation();
+        _sender
+            .Setup(s => s.Send(It.IsAny<EvaluateAnswersCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expected);
+
+        var actionResult = await _controller.EvaluateAnswers(invitationId, CancellationToken.None);
+
+        var okResult = actionResult.Should().BeOfType<OkObjectResult>().Subject;
+        okResult.Value.Should().BeEquivalentTo(expected);
+        _sender.Verify(
+            s => s.Send(
+                It.Is<EvaluateAnswersCommand>(c => c.InvitationId == invitationId),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public void EvaluateAnswers_IsRateLimitedWithDedicatedPolicy()
+    {
+        var method = typeof(InterviewPreparationController)
+            .GetMethod(nameof(InterviewPreparationController.EvaluateAnswers));
+
+        method.Should().NotBeNull();
+        var rateLimit = method!.GetCustomAttribute<EnableRateLimitingAttribute>();
+
+        rateLimit.Should().NotBeNull();
+        rateLimit!.PolicyName.Should().Be("InterviewPrepEvaluate");
     }
 
     [Theory]
