@@ -6,6 +6,7 @@ using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Common.Interfaces.Repositories;
 using TalentX.Application.Common.Models;
 using TalentX.Application.Features.Jobs.Commands.DeactivateJob;
+using TalentX.Application.Features.Notifications.DTOs;
 using TalentX.Application.Identity.Services;
 using TalentX.Domain;
 using TalentX.Domain.Entities;
@@ -24,6 +25,7 @@ public sealed class DeactivateJobCommandHandlerTests
     private readonly Mock<IEmailDispatchLogRepository> _emailDispatchLogRepository = new();
     private readonly Mock<ICurrentUserService> _currentUserService = new();
     private readonly Mock<IEmailService> _emailService = new();
+    private readonly Mock<INotificationService> _notificationService = new();
     private readonly DeactivateJobCommandHandler _handler;
 
     public DeactivateJobCommandHandlerTests()
@@ -44,6 +46,7 @@ public sealed class DeactivateJobCommandHandlerTests
             _unitOfWork.Object,
             _currentUserService.Object,
             _emailService.Object,
+            _notificationService.Object,
             Mock.Of<ILogger<DeactivateJobCommandHandler>>());
     }
 
@@ -145,6 +148,76 @@ public sealed class DeactivateJobCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_PublishesAJobDeactivatedNotificationToTheEmployerAfterTheSave()
+    {
+        var job = CreateJob();
+        job.MarkAsPublished();
+        SetupJob(job);
+        SetupEmployer();
+        var calls = new List<string>();
+        _unitOfWork
+            .Setup(unitOfWork => unitOfWork.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .Callback(() => calls.Add("save"))
+            .ReturnsAsync(1);
+        _notificationService
+            .Setup(service => service.PublishAsync(It.IsAny<PublishNotificationParameters>(), It.IsAny<CancellationToken>()))
+            .Callback(() => calls.Add("notify"))
+            .ReturnsAsync((NotificationDto)null!);
+
+        await _handler.Handle(Command(job.Id), CancellationToken.None);
+
+        _notificationService.Verify(
+            service => service.PublishAsync(
+                It.Is<PublishNotificationParameters>(parameters =>
+                    parameters.RecipientUserId == "employer-1" &&
+                    parameters.Type == NotificationType.JobDeactivated &&
+                    parameters.Title == "Job Deactivated" &&
+                    parameters.Body == "Your job 'Senior Backend Engineer' was deactivated. Reason: Misleading or invalid information." &&
+                    parameters.Metadata!.Contains(job.Id.ToString()) &&
+                    parameters.Metadata.Contains("Senior Backend Engineer")),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        // PublishAsync commits on its own, so it must never run inside the moderation save.
+        calls.Should().Equal("save", "notify");
+    }
+
+    [Fact]
+    public async Task Handle_WhenEmployerRecordIsMissing_StillPublishesTheNotification()
+    {
+        var job = CreateJob("ghost-employer");
+        job.MarkAsPublished();
+        SetupJob(job);
+        _userRepository
+            .Setup(repository => repository.GetByUserIdAsync("ghost-employer"))
+            .ReturnsAsync((User?)null);
+
+        await _handler.Handle(Command(job.Id), CancellationToken.None);
+
+        _notificationService.Verify(
+            service => service.PublishAsync(
+                It.Is<PublishNotificationParameters>(parameters => parameters.RecipientUserId == "ghost-employer"),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_WhenPublishingTheNotificationFails_StillReportsSuccess()
+    {
+        var job = CreateJob();
+        job.MarkAsPublished();
+        SetupJob(job);
+        SetupEmployer();
+        _notificationService
+            .Setup(service => service.PublishAsync(It.IsAny<PublishNotificationParameters>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("database unavailable"));
+
+        var result = await _handler.Handle(Command(job.Id), CancellationToken.None);
+
+        result.Message.Should().Be("Job deactivated.");
+        job.Status.Should().Be(JobStatus.Deactivated);
+    }
+
+    [Fact]
     public async Task Handle_WhenJobIsPendingReview_DeactivatesAgainWithTheNewReason()
     {
         var job = CreateJob();
@@ -200,6 +273,9 @@ public sealed class DeactivateJobCommandHandlerTests
             repository => repository.AddAsync(It.IsAny<EmailDispatchLog>(), It.IsAny<CancellationToken>()),
             Times.Never);
         _unitOfWork.Verify(unitOfWork => unitOfWork.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+        _notificationService.Verify(
+            service => service.PublishAsync(It.IsAny<PublishNotificationParameters>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]

@@ -25,7 +25,8 @@ public sealed class GetAuditLogsQueryHandlerTests
     public async Task Handle_WithDefaultPagination_CallsRepositoryWithNormalizedPaginationAndMapsDtos()
     {
         // Arrange
-        var auditLog = new AuditLog("admin@talentx.com", "Insert · Job", isSystem: false);
+        const string expectedIpAddress = "192.168.1.50";
+        var auditLog = new AuditLog("admin@talentx.com", "Insert · Job", isSystem: false, ipAddress: expectedIpAddress);
         var items = new List<AuditLog> { auditLog };
         const int totalCount = 1;
         var expectedParams = new AuditLogQueryParams { Page = 1, PageSize = 20 };
@@ -53,6 +54,7 @@ public sealed class GetAuditLogsQueryHandlerTests
         dto.Actor.Should().Be("admin@talentx.com");
         dto.Action.Should().Be("Insert · Job");
         dto.IsSystem.Should().BeFalse();
+        dto.IpAddress.Should().Be(expectedIpAddress);
         dto.Timestamp.Should().Be(auditLog.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss"));
 
         _auditLogRepository.Verify(

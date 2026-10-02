@@ -36,7 +36,8 @@ public sealed class GetAuditLogsQueryHandler : IRequestHandler<GetAuditLogsQuery
             Timestamp = auditLog.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss"),
             Actor = auditLog.Actor,
             IsSystem = auditLog.IsSystem,
-            Action = auditLog.Action
+            Action = auditLog.Action,
+            IpAddress = auditLog.IpAddress
         }).ToList();
 
         return new PaginatedList<AuditLogDto>(auditLogDtos, normalizedPage, normalizedPageSize, totalCount);

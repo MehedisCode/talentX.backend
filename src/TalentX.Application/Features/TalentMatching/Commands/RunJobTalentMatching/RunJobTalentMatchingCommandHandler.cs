@@ -62,9 +62,10 @@ public sealed class RunJobTalentMatchingCommandHandler
             throw new ForbiddenException("You do not have permission to run AI matching for this job.");
         }
 
-        if (job.Status != JobStatus.Published)
+        var effectiveStatus = job.GetEffectiveStatus();
+        if (effectiveStatus is not (JobStatus.Published or JobStatus.Expired))
         {
-            throw new BadRequestException("AI matching can only be triggered for published jobs.");
+            throw new BadRequestException("AI matching can only be triggered for active or expired jobs.");
         }
 
         return job;

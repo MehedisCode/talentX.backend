@@ -23,4 +23,28 @@ public class CurrentUserService : ICurrentUserService
 
     public IReadOnlyList<string> Roles =>
         User?.FindAll(ClaimTypes.Role).Select(c => c.Value).ToList() ?? new List<string>();
+
+    public string? IpAddress
+    {
+        get
+        {
+            var httpContext = _httpContextAccessor.HttpContext;
+            if (httpContext == null)
+            {
+                return null;
+            }
+
+            var forwardedFor = httpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault();
+            if (!string.IsNullOrWhiteSpace(forwardedFor))
+            {
+                var clientIp = forwardedFor.Split(',', StringSplitOptions.RemoveEmptyEntries)[0].Trim();
+                if (!string.IsNullOrWhiteSpace(clientIp))
+                {
+                    return clientIp;
+                }
+            }
+
+            return httpContext.Connection.RemoteIpAddress?.ToString();
+        }
+    }
 }

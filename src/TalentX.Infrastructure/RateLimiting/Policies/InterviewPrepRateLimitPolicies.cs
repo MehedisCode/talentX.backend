@@ -23,5 +23,17 @@ internal static class InterviewPrepRateLimitPolicies
                     Window = TimeSpan.FromHours(settings.RateLimitWindowHours),
                     QueueLimit = 0
                 }));
+
+        // Separate partition so frequent answer autosaves and generation traffic can
+        // never exhaust the budget for AI answer evaluations.
+        options.AddPolicy("InterviewPrepEvaluate", context =>
+            RateLimitPartition.GetFixedWindowLimiter(
+                partitionKey: RateLimitingStartup.GetUserId(context),
+                factory: _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = settings.EvaluateRateLimitPermits,
+                    Window = TimeSpan.FromHours(settings.RateLimitWindowHours),
+                    QueueLimit = 0
+                }));
     }
 }

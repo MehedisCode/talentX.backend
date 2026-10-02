@@ -6,4 +6,5 @@ public interface ICurrentUserService
     string? Email { get; }
     IReadOnlyList<string> Roles { get; }
     bool IsAuthenticated { get; }
+    string? IpAddress { get; }
 }

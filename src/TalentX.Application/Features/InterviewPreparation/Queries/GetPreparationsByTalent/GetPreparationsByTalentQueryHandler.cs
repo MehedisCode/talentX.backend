@@ -34,8 +34,28 @@ public sealed class GetPreparationsByTalentQueryHandler
 
         var accessWindow = config.AccessWindowAfterInterview;
 
+        if (preparations.Count == 0)
+            return [];
+
+        var preparationIds = preparations.Select(p => p.Id).ToList();
+
+        var answers = await _unitOfWork.InterviewPreparations
+            .GetAnswersByPreparationIdsAsync(preparationIds, ct);
+        var evaluations = await _unitOfWork.InterviewPreparations
+            .GetEvaluationsByPreparationIdsAsync(preparationIds, ct);
+
+        var answersByPreparation = answers
+            .GroupBy(a => a.InterviewPreparationId)
+            .ToDictionary(g => g.Key, g => (IReadOnlyList<Domain.Entities.PreparationAnswer>)g.ToList());
+        var evaluationByPreparation = evaluations
+            .ToDictionary(e => e.InterviewPreparationId);
+
         return preparations
-            .Select(p => InterviewPreparationMapper.ToDto(p, accessWindow))
+            .Select(p => InterviewPreparationMapper.ToDto(
+                p,
+                accessWindow,
+                answersByPreparation.GetValueOrDefault(p.Id),
+                evaluationByPreparation.GetValueOrDefault(p.Id)))
             .ToList();
     }
 }
