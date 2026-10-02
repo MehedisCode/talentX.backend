@@ -44,8 +44,10 @@ public sealed class SendBatchInterviewInvitationsCommandHandler
         foreach (var applicationId in request.ApplicationIds)
         {
             var application = await _unitOfWork.JobApplications.GetByIdAsync(applicationId, cancellationToken);
+            Console.WriteLine($"Processing application {applicationId} for job {request.JobId}.");
             if (application is null || application.JobId != request.JobId)
             {
+                Console.WriteLine($"Skipping application {applicationId}: not found or does not belong to job {request.JobId}.");
                 results.Add(new CandidateInvitationResultDto(
                     applicationId,
                     "Unknown Candidate",
