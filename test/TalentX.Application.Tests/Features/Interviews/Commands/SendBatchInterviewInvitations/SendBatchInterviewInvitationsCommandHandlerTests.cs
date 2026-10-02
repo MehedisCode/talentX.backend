@@ -90,7 +90,10 @@ public class SendBatchInterviewInvitationsCommandHandlerTests
 
         var result = await _handler.Handle(command, CancellationToken.None);
 
-        result.Should().HaveCount(1);
+        result.TotalProcessed.Should().Be(1);
+        result.InvitedCount.Should().Be(1);
+        result.SkippedCount.Should().Be(0);
+        result.Results.Should().ContainSingle(r => r.Success && r.ApplicationId == application.Id);
         application.Status.Should().Be(ApplicationStatus.Invited);
         _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -118,7 +121,10 @@ public class SendBatchInterviewInvitationsCommandHandlerTests
 
         var result = await _handler.Handle(command, CancellationToken.None);
 
-        result.Should().BeEmpty();
+        result.TotalProcessed.Should().Be(1);
+        result.InvitedCount.Should().Be(0);
+        result.SkippedCount.Should().Be(1);
+        result.Results.Should().ContainSingle(r => !r.Success && r.SkipReason != null && r.SkipReason.Contains(existingStatus.ToString()));
         application.Status.Should().Be(existingStatus);
         _interviewInvitationRepository.Verify(
             r => r.AddAsync(It.IsAny<InterviewInvitation>(), It.IsAny<CancellationToken>()),
