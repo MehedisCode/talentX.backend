@@ -291,15 +291,16 @@ public sealed class GetAdminDashboardQueryHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WithoutDates_UsesTheLastThirtyDaysEndingNow()
+    public async Task Handle_WithoutDates_UsesTheLastThirtyCalendarDaysIncludingToday()
     {
         var before = DateTime.UtcNow;
 
         var result = await _handler.Handle(new GetAdminDashboardQuery(), CancellationToken.None);
 
         result.EndDate.Should().BeOnOrAfter(before).And.BeOnOrBefore(DateTime.UtcNow);
-        (result.EndDate - result.StartDate).Should().Be(TimeSpan.FromDays(30));
+        result.StartDate.Should().Be(result.EndDate.Date.AddDays(-29));
         result.Trend.Granularity.Should().Be(AdminDashboardTrendGranularity.Day);
+        result.Trend.Points.Should().HaveCount(30);
     }
 
     [Fact]
@@ -392,25 +393,64 @@ public sealed class GetAdminDashboardQueryHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WeeklyTrend_SumsDaysIntoMondayStartedWeeks()
+    public async Task Handle_WeeklyTrend_SumsDaysIntoSevenDayBlocksFromTheStart()
     {
         _applications.Setup(r => r.GetAppliedCountsByBucketAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new Dictionary<DateTime, int>
             {
-                [Utc(2026, 7, 7)] = 1,
-                [Utc(2026, 7, 9)] = 2,
-                [Utc(2026, 7, 14)] = 5
+                [Utc(2026, 7, 8)] = 1,
+                [Utc(2026, 7, 14)] = 2,
+                [Utc(2026, 7, 15)] = 5
             });
 
-        // 2026-07-06 is a Monday.
+        // 2026-07-08 is a Wednesday: weeks run Wed-Tue from the start, not Mon-Sun.
         var result = await _handler.Handle(
             new GetAdminDashboardQuery { StartDate = Utc(2026, 7, 8), EndDate = Utc(2026, 9, 4) },
             CancellationToken.None);
 
         result.Trend.Granularity.Should().Be(AdminDashboardTrendGranularity.Week);
-        result.Trend.Points.First().BucketStart.Should().Be(Utc(2026, 7, 6));
-        result.Trend.Points.Single(p => p.BucketStart == Utc(2026, 7, 6)).Applications.Should().Be(3);
-        result.Trend.Points.Single(p => p.BucketStart == Utc(2026, 7, 13)).Applications.Should().Be(5);
+        result.Trend.Points.First().BucketStart.Should().Be(Utc(2026, 7, 8));
+        result.Trend.Points.Single(p => p.BucketStart == Utc(2026, 7, 8)).Applications.Should().Be(3);
+        result.Trend.Points.Single(p => p.BucketStart == Utc(2026, 7, 15)).Applications.Should().Be(5);
+    }
+
+    [Fact]
+    public async Task Handle_AlignedTwentyFourHours_ReturnsTwentyFourHourlyPointsEndingWithTheCurrentHour()
+    {
+        var result = await _handler.Handle(
+            new GetAdminDashboardQuery { StartDate = Utc(2026, 9, 23, 13), EndDate = Utc(2026, 9, 24, 12, 30) },
+            CancellationToken.None);
+
+        result.Trend.Granularity.Should().Be(AdminDashboardTrendGranularity.Hour);
+        result.Trend.Points.Should().HaveCount(24);
+        result.Trend.Points.First().BucketStart.Should().Be(Utc(2026, 9, 23, 13));
+        result.Trend.Points.Last().BucketStart.Should().Be(Utc(2026, 9, 24, 12));
+    }
+
+    [Fact]
+    public async Task Handle_AlignedNinetyDays_ReturnsThirteenWeeklyPointsStartingOnTheStartDay()
+    {
+        var result = await _handler.Handle(
+            new GetAdminDashboardQuery { StartDate = Utc(2026, 6, 27), EndDate = Utc(2026, 9, 24, 12) },
+            CancellationToken.None);
+
+        result.Trend.Granularity.Should().Be(AdminDashboardTrendGranularity.Week);
+        result.Trend.Points.Should().HaveCount(13);
+        result.Trend.Points.First().BucketStart.Should().Be(Utc(2026, 6, 27));
+        result.Trend.Points.Last().BucketStart.Should().Be(Utc(2026, 9, 19));
+    }
+
+    [Fact]
+    public async Task Handle_AlignedTwelveMonths_ReturnsTwelveMonthlyPointsEndingWithTheCurrentMonth()
+    {
+        var result = await _handler.Handle(
+            new GetAdminDashboardQuery { StartDate = Utc(2025, 10, 1), EndDate = Utc(2026, 9, 24, 12) },
+            CancellationToken.None);
+
+        result.Trend.Granularity.Should().Be(AdminDashboardTrendGranularity.Month);
+        result.Trend.Points.Should().HaveCount(12);
+        result.Trend.Points.First().BucketStart.Should().Be(Utc(2025, 10, 1));
+        result.Trend.Points.Last().BucketStart.Should().Be(Utc(2026, 9, 1));
     }
 
     [Fact]

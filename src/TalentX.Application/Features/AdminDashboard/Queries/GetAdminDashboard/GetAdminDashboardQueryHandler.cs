@@ -170,14 +170,15 @@ public sealed class GetAdminDashboardQueryHandler : IRequestHandler<GetAdminDash
             })
             .ToList();
 
-    // Instants are used as sent. A missing end means now; a missing start means 30 days before the end.
+    // Instants are used as sent. A missing end means now; a missing start means the last 30 calendar days in UTC,
+    // today included, matching the UI's 30D preset.
     // A start further back than the maximum range is pulled forward so a lone StartDate cannot scan everything.
     private static (DateTime Start, DateTime End) ResolveRange(GetAdminDashboardQuery request, DateTime now)
     {
         var end = request.EndDate.HasValue ? ToUtc(request.EndDate.Value) : now;
         var start = request.StartDate.HasValue
             ? ToUtc(request.StartDate.Value)
-            : end.AddDays(-AdminDashboardConstants.DefaultRangeDays);
+            : end.Date.AddDays(-(AdminDashboardConstants.DefaultRangeDays - 1));
 
         var earliest = end.AddDays(-AdminDashboardConstants.MaxRangeDays);
         if (start < earliest)
@@ -212,13 +213,13 @@ public sealed class GetAdminDashboardQueryHandler : IRequestHandler<GetAdminDash
         IReadOnlyDictionary<DateTime, int> interviews,
         IReadOnlyDictionary<DateTime, int> hires)
     {
-        var publishedBuckets = RollUp(published, granularity);
-        var applicationBuckets = RollUp(applications, granularity);
-        var interviewBuckets = RollUp(interviews, granularity);
-        var hireBuckets = RollUp(hires, granularity);
+        var publishedBuckets = RollUp(published, granularity, start);
+        var applicationBuckets = RollUp(applications, granularity, start);
+        var interviewBuckets = RollUp(interviews, granularity, start);
+        var hireBuckets = RollUp(hires, granularity, start);
 
         var points = new List<AdminDashboardTrendPointDto>();
-        for (var bucket = BucketStart(start, granularity); bucket <= end; bucket = NextBucket(bucket, granularity))
+        for (var bucket = BucketStart(start, granularity, start); bucket <= end; bucket = NextBucket(bucket, granularity))
         {
             points.Add(new AdminDashboardTrendPointDto
             {
@@ -236,29 +237,40 @@ public sealed class GetAdminDashboardQueryHandler : IRequestHandler<GetAdminDash
     // Repositories return hour or day buckets; weeks and months are summed up from the day buckets here.
     private static Dictionary<DateTime, int> RollUp(
         IReadOnlyDictionary<DateTime, int> counts,
-        AdminDashboardTrendGranularity granularity)
+        AdminDashboardTrendGranularity granularity,
+        DateTime rangeStart)
     {
         var result = new Dictionary<DateTime, int>();
         foreach (var (timestamp, count) in counts)
         {
-            var bucket = BucketStart(timestamp, granularity);
+            var bucket = BucketStart(timestamp, granularity, rangeStart);
             result[bucket] = result.GetValueOrDefault(bucket) + count;
         }
 
         return result;
     }
 
-    // Weeks start on Monday and months on the 1st, all in UTC.
-    private static DateTime BucketStart(DateTime timestamp, AdminDashboardTrendGranularity granularity)
+    // Hours, days and months start on their UTC calendar boundary. Weeks are 7-day blocks counted from the range
+    // start's day, so a 90-day range keeps a full first week instead of starting mid-week on a Monday boundary.
+    private static DateTime BucketStart(DateTime timestamp, AdminDashboardTrendGranularity granularity, DateTime rangeStart)
     {
         var utc = ToUtc(timestamp);
         return granularity switch
         {
             AdminDashboardTrendGranularity.Hour => new DateTime(utc.Year, utc.Month, utc.Day, utc.Hour, 0, 0, DateTimeKind.Utc),
             AdminDashboardTrendGranularity.Day => utc.Date,
-            AdminDashboardTrendGranularity.Week => utc.Date.AddDays(-(((int)utc.DayOfWeek + 6) % 7)),
+            AdminDashboardTrendGranularity.Week => WeekStart(utc, rangeStart),
             _ => new DateTime(utc.Year, utc.Month, 1, 0, 0, 0, DateTimeKind.Utc)
         };
+    }
+
+    // The start of the 7-day block, counted from the range start's day, that contains the timestamp.
+    private static DateTime WeekStart(DateTime utc, DateTime rangeStart)
+    {
+        var anchor = ToUtc(rangeStart).Date;
+        var daysFromAnchor = (utc.Date - anchor).Days;
+        var weeksFromAnchor = (int)Math.Floor(daysFromAnchor / 7.0);
+        return anchor.AddDays(weeksFromAnchor * 7);
     }
 
     private static DateTime NextBucket(DateTime bucket, AdminDashboardTrendGranularity granularity) => granularity switch
