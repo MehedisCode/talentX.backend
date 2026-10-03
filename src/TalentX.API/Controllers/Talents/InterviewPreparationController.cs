@@ -1,9 +1,12 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using TalentX.Application.Common.Models;
+using TalentX.Application.Features.InterviewPreparation.Commands.EvaluateAnswers;
 using TalentX.Application.Features.InterviewPreparation.Commands.GenerateAdditionalQuestions;
 using TalentX.Application.Features.InterviewPreparation.Commands.GeneratePreparation;
 using TalentX.Application.Features.InterviewPreparation.Commands.RegeneratePreparation;
+using TalentX.Application.Features.InterviewPreparation.Commands.SaveAnswer;
 using TalentX.Application.Features.InterviewPreparation.DTOs;
 using TalentX.Application.Features.InterviewPreparation.Queries.GetPreparation;
 using TalentX.Application.Features.InterviewPreparation.Queries.GetPreparationsByTalent;
@@ -64,6 +67,41 @@ public sealed class InterviewPreparationController : BaseApiController
         CancellationToken cancellationToken)
     {
         var result = await Sender.Send(new GenerateAdditionalQuestionsCommand(invitationId), cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpPut("{invitationId:guid}/preparation/answers")]
+    [Authorize(Roles = nameof(UserRole.Talent))]
+    [ProducesResponseType(typeof(InterviewPreparationDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> SaveAnswer(
+        Guid invitationId,
+        [FromBody] SaveAnswerCommand command,
+        CancellationToken cancellationToken)
+    {
+        var result = await Sender.Send(
+            command with { InvitationId = invitationId }, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpPost("{invitationId:guid}/preparation/evaluate")]
+    [Authorize(Roles = nameof(UserRole.Talent))]
+    [EnableRateLimiting("InterviewPrepEvaluate")]
+    [ProducesResponseType(typeof(InterviewPreparationDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
+    [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status502BadGateway)]
+    public async Task<IActionResult> EvaluateAnswers(
+        Guid invitationId,
+        CancellationToken cancellationToken)
+    {
+        var result = await Sender.Send(new EvaluateAnswersCommand(invitationId), cancellationToken);
         return Ok(result);
     }
 }

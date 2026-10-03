@@ -11,4 +11,8 @@ public interface IInterviewPreparationAiService
     Task<AdditionalQuestionsResult> GenerateAdditionalQuestionsAsync(
         AdditionalQuestionsContext context,
         CancellationToken cancellationToken = default);
+
+    Task<AnswersEvaluationResult> EvaluateAnswersAsync(
+        AnswersEvaluationContext context,
+        CancellationToken cancellationToken = default);
 }

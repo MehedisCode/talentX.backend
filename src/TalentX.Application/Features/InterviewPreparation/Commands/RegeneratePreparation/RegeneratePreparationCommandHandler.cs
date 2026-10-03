@@ -87,6 +87,14 @@ public sealed class RegeneratePreparationCommandHandler
         );
 
         _unitOfWork.InterviewPreparations.Update(existing);
+
+        // Regenerated questions replace the originals, so saved answers and any prior
+        // evaluation no longer reference valid questions.
+        await _unitOfWork.InterviewPreparations
+            .RemoveAnswersByPreparationIdAsync(existing.Id, ct);
+        await _unitOfWork.InterviewPreparations
+            .RemoveEvaluationByPreparationIdAsync(existing.Id, ct);
+
         await _unitOfWork.SaveChangesAsync(ct);
 
         return InterviewPreparationMapper.ToDto(

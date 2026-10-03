@@ -89,6 +89,7 @@ public sealed class InterviewInvitationRepository : IInterviewInvitationReposito
     {
         return await _context.InterviewInvitations
             .Include(x => x.Timeslots)
+            .OrderByDescending(x => x.SentAt)
             .FirstOrDefaultAsync(x => x.JobApplicationId == applicationId, cancellationToken);
     }
 
