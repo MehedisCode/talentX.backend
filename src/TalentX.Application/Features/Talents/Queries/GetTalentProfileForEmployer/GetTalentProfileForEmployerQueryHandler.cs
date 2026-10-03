@@ -98,6 +98,7 @@ public sealed class GetTalentProfileForEmployerQueryHandler
             ResumeOriginalFileName: resumeOriginalFileName ?? "Resume.pdf",
             ResumeUrl: await resumeUrlTask,
             ApplicationStatus: application.Status.ToString(),
+            AiMatchScore: application.AiMatchScore,
             CoverLetter: application.CoverLetter,
             AppliedAt: application.AppliedAt,
             WorkExperiences: _mapper.Map<List<WorkExperienceItemDto>>(workExperiences),
