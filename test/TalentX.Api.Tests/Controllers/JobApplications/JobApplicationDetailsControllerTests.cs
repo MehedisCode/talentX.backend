@@ -127,6 +127,7 @@ public class JobApplicationDetailsControllerTests
             ResumeOriginalFileName: "Resume.pdf",
             ResumeUrl: "https://storage.test/resume.pdf",
             ApplicationStatus: "Applied",
+            AiMatchScore: 86m,
             CoverLetter: null,
             AppliedAt: DateTime.UtcNow,
             WorkExperiences: new List<WorkExperienceItemDto>(),

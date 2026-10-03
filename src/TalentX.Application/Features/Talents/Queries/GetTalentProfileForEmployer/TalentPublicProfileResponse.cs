@@ -24,6 +24,7 @@ public sealed record TalentPublicProfileResponse(
     string? ResumeOriginalFileName,
     string? ResumeUrl,
     string ApplicationStatus,
+    decimal? AiMatchScore,
     string? CoverLetter,
     DateTime AppliedAt,
     IReadOnlyList<WorkExperienceItemDto> WorkExperiences,

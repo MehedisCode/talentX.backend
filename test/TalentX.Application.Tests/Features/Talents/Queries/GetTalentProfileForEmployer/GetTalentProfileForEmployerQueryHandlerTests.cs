@@ -116,6 +116,7 @@ public class GetTalentProfileForEmployerQueryHandlerTests
     {
         var job = CreateJob("employer-1");
         var application = CreateApplication(job.Id, "talent-1");
+        application.SetAiMatchScore(86m);
         var talent = CreateTalent("talent-1");
 
         var workExp = new WorkExperience(
@@ -157,6 +158,7 @@ public class GetTalentProfileForEmployerQueryHandlerTests
         result.VideoIntroUrl.Should().Be("https://storage.test/videos/jane_intro.mp4?expiry=60");
         result.ResumeUrl.Should().Be("https://storage.test/resumes/app_resume.pdf?expiry=60");
         result.ResumeOriginalFileName.Should().Be("Official_Resume.pdf");
+        result.AiMatchScore.Should().Be(86m);
         result.CoverLetter.Should().Be("Cover letter text");
     }
 
