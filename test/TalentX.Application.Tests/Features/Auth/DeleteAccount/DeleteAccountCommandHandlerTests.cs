@@ -47,6 +47,7 @@ public class DeleteAccountCommandHandlerTests
     private readonly Mock<IIdentityService> _identityServiceMock = new();
     private readonly Mock<IOtpService> _otpServiceMock = new();
     private readonly Mock<IEmailService> _emailServiceMock = new();
+    private readonly Mock<IFileStorageService> _fileStorageServiceMock = new();
     private readonly Mock<ILogger<DeleteAccountCommandHandler>> _loggerMock = new();
 
     private readonly FakeOtpAttemptTracker _attemptTracker = new();
@@ -86,6 +87,17 @@ public class DeleteAccountCommandHandlerTests
             .Setup(i => i.DeleteApplicationUserAsync("identity-fail"))
             .ReturnsAsync(IdentityResponse.Fail("identity store unavailable"));
 
+        _resumeRepositoryMock
+            .Setup(r => r.GetAllByUserIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Resume>());
+        _jobApplicationRepositoryMock
+            .Setup(r => r.GetResumeStorageKeysByTalentUserIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<string>());
+        _jobApplicationRepositoryMock
+            .Setup(r => r.GetResumeStorageKeysByJobIdsAsync(
+                It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<string>());
+
         _handler = new DeleteAccountCommandHandler(
             _currentUserServiceMock.Object,
             _unitOfWorkMock.Object,
@@ -93,6 +105,7 @@ public class DeleteAccountCommandHandlerTests
             _otpServiceMock.Object,
             _attemptTracker,
             _emailServiceMock.Object,
+            _fileStorageServiceMock.Object,
             _loggerMock.Object);
     }
 
@@ -216,6 +229,24 @@ public class DeleteAccountCommandHandlerTests
         calls.Should().Equal("reviews", "applications");
     }
 
+    [Fact]
+    public async Task Handle_ForTalent_ShouldCleanUpApplicationOnlyResumeFiles()
+    {
+        var user = NewUser(UserRole.Talent);
+        _userRepositoryMock
+            .Setup(r => r.GetByUserIdAsync(IdentityUserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(user);
+        _jobApplicationRepositoryMock
+            .Setup(r => r.GetResumeStorageKeysByTalentUserIdAsync(IdentityUserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<string> { "resumes/user-1/app-only.pdf" });
+
+        await _handler.Handle(new DeleteAccountCommand(ValidOtp), CancellationToken.None);
+
+        _fileStorageServiceMock.Verify(
+            s => s.DeleteAsync("resumes/user-1/app-only.pdf", It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
     #endregion
 
     #region Employer deletion
@@ -308,6 +339,67 @@ public class DeleteAccountCommandHandlerTests
         await _handler.Handle(new DeleteAccountCommand(ValidOtp), CancellationToken.None);
 
         calls.Should().Equal("reviews", "company");
+    }
+
+    [Fact]
+    public async Task Handle_ForEmployer_ShouldCleanUpResumesFromJobApplications()
+    {
+        var user = NewUser(UserRole.Employer);
+        var jobs = new List<Job>
+        {
+            Job.Create(IdentityUserId, "Dev", "TestCo", "Desc",
+                Domain.Enums.EmploymentType.FullTime, Domain.Enums.ExperienceLevel.MidLevel,
+                "Loc", Domain.Enums.WorkArrangement.FullRemote,
+                new List<string> { "C#" }, 1, DateTime.UtcNow.AddDays(30))
+        };
+        _userRepositoryMock
+            .Setup(r => r.GetByUserIdAsync(IdentityUserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(user);
+        _jobRepositoryMock
+            .Setup(j => j.GetByEmployerIdIncludingDeletedAsync(IdentityUserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(jobs);
+        _jobApplicationRepositoryMock
+            .Setup(r => r.GetResumeStorageKeysByJobIdsAsync(
+                It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<string> { "resumes/talent-1/cv.pdf" });
+
+        await _handler.Handle(new DeleteAccountCommand(ValidOtp), CancellationToken.None);
+
+        _fileStorageServiceMock.Verify(
+            s => s.DeleteAsync("resumes/talent-1/cv.pdf", It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_ForEmployer_ShouldKeepResumesStillInAProfileLibrary()
+    {
+        var user = NewUser(UserRole.Employer);
+        var jobs = new List<Job>
+        {
+            Job.Create(IdentityUserId, "Dev", "TestCo", "Desc",
+                Domain.Enums.EmploymentType.FullTime, Domain.Enums.ExperienceLevel.MidLevel,
+                "Loc", Domain.Enums.WorkArrangement.FullRemote,
+                new List<string> { "C#" }, 1, DateTime.UtcNow.AddDays(30))
+        };
+        _userRepositoryMock
+            .Setup(r => r.GetByUserIdAsync(IdentityUserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(user);
+        _jobRepositoryMock
+            .Setup(j => j.GetByEmployerIdIncludingDeletedAsync(IdentityUserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(jobs);
+        _jobApplicationRepositoryMock
+            .Setup(r => r.GetResumeStorageKeysByJobIdsAsync(
+                It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<string> { "resumes/talent-1/cv.pdf" });
+        _resumeRepositoryMock
+            .Setup(r => r.ExistsByStorageKeyAsync("resumes/talent-1/cv.pdf", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        await _handler.Handle(new DeleteAccountCommand(ValidOtp), CancellationToken.None);
+
+        _fileStorageServiceMock.Verify(
+            s => s.DeleteAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     #endregion

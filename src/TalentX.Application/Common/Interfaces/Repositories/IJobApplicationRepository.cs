@@ -16,6 +16,13 @@ public sealed record TalentApplicationRecord(
 public interface IJobApplicationRepository
 {
     Task<bool> ExistsByJobIdAndTalentUserIdAsync(Guid jobId, string talentUserId, CancellationToken cancellationToken = default);
+    Task<int> CountActiveByResumeStorageKeyAsync(string resumeStorageKey, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<string>> GetResumeStorageKeysByJobIdsAsync(
+        IReadOnlyCollection<Guid> jobIds,
+        CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<string>> GetResumeStorageKeysByTalentUserIdAsync(
+        string talentUserId,
+        CancellationToken cancellationToken = default);
     Task<bool> ExistsPendingByJobIdAndEmailAsync(Guid jobId, string email, CancellationToken cancellationToken = default);
     Task<JobApplication?> GetPendingByJobIdAndEmailAsync(Guid jobId, string email, CancellationToken cancellationToken = default);
     Task<JobApplication?> GetAnyByJobIdAndEmailAsync(Guid jobId, string email, CancellationToken cancellationToken = default);

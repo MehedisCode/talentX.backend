@@ -40,40 +40,20 @@ public sealed class ApplyToJobCommandHandler
         if (await _unitOfWork.JobApplications.ExistsByJobIdAndTalentUserIdAsync(job.Id, talentUserId, cancellationToken))
             throw new ConflictException("You have already applied to this job.");
 
+        var resumeStorageKey = await ResolveResumeStorageKeyAsync(request, talentUserId, cancellationToken);
+
         var application = new JobApplication(
             job.Id,
             talentUserId,
             JobApplicationRules.NormalizeRequired(request.ApplicantName),
             JobApplicationRules.NormalizeRequired(request.ApplicantEmail),
-            JobApplicationRules.NormalizeRequired(request.ResumeStorageKey),
+            JobApplicationRules.NormalizeRequired(resumeStorageKey),
             JobApplicationRules.NormalizeOptional(request.CoverLetter),
             request.ExpectedSalary,
             request.TotalYearsExperience,
             JobApplicationRules.NormalizeOptional(request.Location));
 
         await _unitOfWork.JobApplications.AddAsync(application, cancellationToken);
-
-        if (_unitOfWork.Resumes is not null)
-        {
-            var existingResume = await _unitOfWork.Resumes.GetByUserIdAsync(talentUserId, cancellationToken);
-            if (existingResume is null && !string.IsNullOrWhiteSpace(application.ResumeStorageKey))
-            {
-                var fileNameSegment = Path.GetFileName(application.ResumeStorageKey);
-                var firstUnderscore = fileNameSegment.IndexOf('_');
-                var originalFileName = firstUnderscore > 0 && firstUnderscore < fileNameSegment.Length - 1 && Guid.TryParse(fileNameSegment[..firstUnderscore], out _)
-                    ? fileNameSegment[(firstUnderscore + 1)..]
-                    : fileNameSegment;
-
-                await _unitOfWork.Resumes.AddAsync(
-                    new Resume(
-                        talentUserId,
-                        application.ResumeStorageKey,
-                        originalFileName,
-                        "application/pdf",
-                        0),
-                    cancellationToken);
-            }
-        }
 
         await _unitOfWork.JobApplicationStatusHistories.AddAsync(
             JobApplicationStatusHistory.Create(application.Id, null, application.Status, talentUserId),
@@ -87,6 +67,21 @@ public sealed class ApplyToJobCommandHandler
             application.JobId,
             application.Status.ToString(),
             application.AppliedAt);
+    }
+
+    private async Task<string> ResolveResumeStorageKeyAsync(
+        ApplyToJobCommand request,
+        string talentUserId,
+        CancellationToken cancellationToken)
+    {
+        if (!request.ResumeId.HasValue)
+            return request.ResumeStorageKey ?? string.Empty;
+
+        var resume = await _unitOfWork.Resumes.GetByIdAsync(request.ResumeId.Value, cancellationToken);
+        if (resume is null || resume.UserId != talentUserId)
+            throw new NotFoundException($"Resume '{request.ResumeId}' was not found.");
+
+        return resume.StorageKey;
     }
 
     private async Task CleanupPendingGuestApplicationsAsync(

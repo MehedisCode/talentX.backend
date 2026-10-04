@@ -78,8 +78,8 @@ public class GetTalentApplicationPrefillQueryHandlerTests
             .Setup(r => r.GetByUserIdAsync("user-1", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<WorkExperience>());
         _resumeRepository
-            .Setup(r => r.GetByUserIdAsync("user-1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync((Resume?)null);
+            .Setup(r => r.GetAllByUserIdAsync("user-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Resume>());
 
         var response = await _handler.Handle(new GetTalentApplicationPrefillQuery(), CancellationToken.None);
 
@@ -92,6 +92,7 @@ public class GetTalentApplicationPrefillQueryHandlerTests
         response.ResumeStorageKey.Should().BeNull();
         response.ResumeOriginalFileName.Should().BeNull();
         response.ResumeUrl.Should().BeNull();
+        response.Resumes.Should().BeEmpty();
         response.WorkExperiences.Should().BeEmpty();
     }
 
@@ -113,7 +114,9 @@ public class GetTalentApplicationPrefillQueryHandlerTests
             null);
 
         var workExperience = new WorkExperience("user-2", "Acme Corp", "Engineer", "2020", "Present", true);
-        var resume = new Resume("user-2", "resumes/user-2.pdf", "resume.pdf", "application/pdf", 1024);
+        var resume = new Resume(
+            "user-2", "resumes/user-2.pdf", "resume.pdf", "application/pdf", 1024,
+            displayName: "My Resume", isDefault: true);
 
         _talentRepository
             .Setup(r => r.GetByUserIdAsync("user-2", It.IsAny<CancellationToken>()))
@@ -122,8 +125,8 @@ public class GetTalentApplicationPrefillQueryHandlerTests
             .Setup(r => r.GetByUserIdAsync("user-2", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<WorkExperience> { workExperience });
         _resumeRepository
-            .Setup(r => r.GetByUserIdAsync("user-2", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(resume);
+            .Setup(r => r.GetAllByUserIdAsync("user-2", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Resume> { resume });
         _presignedUrlService
             .Setup(s => s.CreateDownloadUrlAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((string storageKey, TimeSpan _, CancellationToken _) => $"https://signed.example.com/{storageKey}");
@@ -136,6 +139,8 @@ public class GetTalentApplicationPrefillQueryHandlerTests
         response.ResumeStorageKey.Should().Be("resumes/user-2.pdf");
         response.ResumeOriginalFileName.Should().Be("resume.pdf");
         response.ResumeUrl.Should().Be("https://signed.example.com/resumes/user-2.pdf");
+        response.Resumes.Should().ContainSingle(resumeDto =>
+            resumeDto.DisplayName == "My Resume" && resumeDto.IsDefault);
         response.WorkExperiences.Should().ContainSingle(item => item.CompanyName == "Acme Corp");
     }
 }

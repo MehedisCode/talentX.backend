@@ -2,6 +2,7 @@ using AutoMapper;
 using MediatR;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
+using TalentX.Application.Features.Resumes.DTOs;
 using TalentX.Application.Features.Talents.DTOs;
 using TalentX.Application.Identity.Services;
 
@@ -40,11 +41,13 @@ public sealed class GetTalentApplicationPrefillQueryHandler
             ?? throw new NotFoundException($"Talent profile for user '{userId}' was not found.");
 
         var workExperiences = await _unitOfWork.WorkExperiences.GetByUserIdAsync(userId, cancellationToken);
-        var resume = await _unitOfWork.Resumes.GetByUserIdAsync(userId, cancellationToken);
+        var resumes = await _unitOfWork.Resumes.GetAllByUserIdAsync(userId, cancellationToken);
+        var defaultResume = resumes.FirstOrDefault(resume => resume.IsDefault) ?? resumes.FirstOrDefault();
 
-        var resumeUrl = string.IsNullOrWhiteSpace(resume?.StorageKey)
+        var resumeUrl = string.IsNullOrWhiteSpace(defaultResume?.StorageKey)
             ? null
-            : await _presignedUrlService.CreateDownloadUrlAsync(resume.StorageKey, DownloadUrlExpiry, cancellationToken);
+            : await _presignedUrlService.CreateDownloadUrlAsync(
+                defaultResume.StorageKey, DownloadUrlExpiry, cancellationToken);
 
         return new TalentApplicationPrefillResponse(
             talent.Name,
@@ -53,9 +56,10 @@ public sealed class GetTalentApplicationPrefillQueryHandler
             talent.Location,
             talent.ExpectedSalary,
             talent.TotalYearsExperience,
-            resume?.StorageKey,
-            resume?.OriginalFileName,
+            defaultResume?.StorageKey,
+            defaultResume?.OriginalFileName,
             resumeUrl,
+            resumes.Select(SavedResumeDto.FromEntity).ToList(),
             _mapper.Map<List<WorkExperienceItemDto>>(workExperiences)
         );
     }

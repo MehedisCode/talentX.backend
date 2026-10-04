@@ -41,8 +41,8 @@ public class VerifyGuestEmailCommandHandlerTests
         _unitOfWork.Setup(u => u.JobApplicationStatusHistories).Returns(_historyRepository.Object);
 
         _resumeRepository
-            .Setup(r => r.GetByUserIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((Resume?)null);
+            .Setup(r => r.GetAllByUserIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Resume>());
         _workExperienceRepository
             .Setup(r => r.GetByUserIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<WorkExperience>());

@@ -9,6 +9,13 @@ using Moq;
 using TalentX.API.Controllers.Talents;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Models;
+using TalentX.Application.Features.Resumes.Commands.DeleteResume;
+using TalentX.Application.Features.Resumes.Commands.RenameResume;
+using TalentX.Application.Features.Resumes.Commands.SaveResume;
+using TalentX.Application.Features.Resumes.Commands.SetDefaultResume;
+using TalentX.Application.Features.Resumes.DTOs;
+using TalentX.Application.Features.Resumes.Queries.GetMyResumes;
+using TalentX.Application.Features.Resumes.Queries.GetResumeUrl;
 using TalentX.Application.Features.Talents.Commands.AbortMediaMultipartUpload;
 using TalentX.Application.Features.Talents.Commands.ApplyExtractedProfile;
 using TalentX.Application.Features.Talents.Commands.CompleteMediaMultipartUpload;
@@ -68,6 +75,7 @@ public class TalentsControllerTests
             null, null, null, null, null, new List<string>(),
             null, null, new List<string>(), new List<string>(), new List<string>(), new List<string>(),
             null, null, null, null,
+            new List<SavedResumeDto>(),
             new List<WorkExperienceItemDto>(), new List<EducationItemDto>(),
             DateTime.UtcNow, null);
 
@@ -106,6 +114,7 @@ public class TalentsControllerTests
     {
         var expectedResponse = new TalentApplicationPrefillResponse(
             "Jane Doe", "jane@example.com", null, null, null, null, null, null, null,
+            new List<SavedResumeDto>(),
             new List<WorkExperienceItemDto>());
 
         _sender
@@ -372,5 +381,126 @@ public class TalentsControllerTests
 
         actionResult.Should().BeOfType<NoContentResult>();
         _sender.Verify(s => s.Send(It.Is<DeleteEducationCommand>(c => c.Id == id), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetMyResumes_SendsQuery_AndReturnsOk()
+    {
+        var expectedResponse = new GetMyResumesResponse(
+            new List<SavedResumeDto>
+            {
+                new(Guid.NewGuid(), "Backend Resume", "resume.pdf", "application/pdf", 1024, true, DateTime.UtcNow)
+            },
+            5);
+        _sender
+            .Setup(s => s.Send(It.IsAny<GetMyResumesQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expectedResponse);
+
+        var controller = CreateController();
+
+        var actionResult = await controller.GetMyResumes(CancellationToken.None);
+
+        var okResult = actionResult.Should().BeOfType<OkObjectResult>().Subject;
+        okResult.Value.Should().BeEquivalentTo(expectedResponse);
+    }
+
+    [Fact]
+    public async Task SaveResume_SendsCommandWithFileAndFlags_AndReturnsCreated()
+    {
+        var formFileMock = new Mock<IFormFile>();
+        formFileMock.Setup(f => f.FileName).Returns("resume.pdf");
+        formFileMock.Setup(f => f.ContentType).Returns("application/pdf");
+
+        var expectedResponse = new SavedResumeDto(
+            Guid.NewGuid(), "Backend Resume", "resume.pdf", "application/pdf", 1024, true, DateTime.UtcNow);
+
+        SaveResumeCommand? capturedCommand = null;
+        _sender
+            .Setup(s => s.Send(It.IsAny<SaveResumeCommand>(), It.IsAny<CancellationToken>()))
+            .Callback<IRequest<SavedResumeDto>, CancellationToken>(
+                (command, _) => capturedCommand = (SaveResumeCommand)command)
+            .ReturnsAsync(expectedResponse);
+
+        var controller = CreateController();
+
+        var actionResult = await controller.SaveResume(formFileMock.Object, "Backend Resume", true, CancellationToken.None);
+
+        var objectResult = actionResult.Should().BeOfType<ObjectResult>().Subject;
+        objectResult.StatusCode.Should().Be(StatusCodes.Status201Created);
+        objectResult.Value.Should().BeEquivalentTo(expectedResponse);
+        capturedCommand.Should().NotBeNull();
+        capturedCommand!.DisplayName.Should().Be("Backend Resume");
+        capturedCommand.UpdateProfile.Should().BeTrue();
+        capturedCommand.ResumeFile.FileName.Should().Be("resume.pdf");
+    }
+
+    [Fact]
+    public async Task RenameResume_UsesRouteId_AndReturnsOk()
+    {
+        var id = Guid.NewGuid();
+        var expectedResponse = new SavedResumeDto(
+            id, "Renamed", "resume.pdf", "application/pdf", 1024, false, DateTime.UtcNow);
+        _sender
+            .Setup(s => s.Send(It.IsAny<RenameResumeCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expectedResponse);
+
+        var controller = CreateController();
+
+        var actionResult = await controller.RenameResume(
+            id, new RenameResumeCommand(Guid.Empty, "Renamed"), CancellationToken.None);
+
+        var okResult = actionResult.Should().BeOfType<OkObjectResult>().Subject;
+        okResult.Value.Should().BeEquivalentTo(expectedResponse);
+        _sender.Verify(
+            s => s.Send(It.Is<RenameResumeCommand>(c => c.Id == id && c.DisplayName == "Renamed"), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task SetDefaultResume_SendsCommand_AndReturnsOk()
+    {
+        var id = Guid.NewGuid();
+        var expectedResponse = new SavedResumeDto(
+            id, "Backend Resume", "resume.pdf", "application/pdf", 1024, true, DateTime.UtcNow);
+        _sender
+            .Setup(s => s.Send(It.IsAny<SetDefaultResumeCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expectedResponse);
+
+        var controller = CreateController();
+
+        var actionResult = await controller.SetDefaultResume(id, CancellationToken.None);
+
+        var okResult = actionResult.Should().BeOfType<OkObjectResult>().Subject;
+        okResult.Value.Should().BeEquivalentTo(expectedResponse);
+    }
+
+    [Fact]
+    public async Task DeleteResume_SendsCommand_AndReturnsNoContent()
+    {
+        var id = Guid.NewGuid();
+        var controller = CreateController();
+
+        var actionResult = await controller.DeleteResume(id, CancellationToken.None);
+
+        actionResult.Should().BeOfType<NoContentResult>();
+        _sender.Verify(s => s.Send(It.Is<DeleteResumeCommand>(c => c.Id == id), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetResumeUrl_SendsQuery_AndReturnsOk()
+    {
+        var id = Guid.NewGuid();
+        var expectedResponse = new GetResumeUrlResponse(
+            id, "resume.pdf", "Backend Resume", "application/pdf", "https://signed.example.com/resume.pdf");
+        _sender
+            .Setup(s => s.Send(It.IsAny<GetResumeUrlQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expectedResponse);
+
+        var controller = CreateController();
+
+        var actionResult = await controller.GetResumeUrl(id, CancellationToken.None);
+
+        var okResult = actionResult.Should().BeOfType<OkObjectResult>().Subject;
+        okResult.Value.Should().BeEquivalentTo(expectedResponse);
     }
 }

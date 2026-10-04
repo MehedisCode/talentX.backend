@@ -18,7 +18,8 @@ public sealed class ApplyToJobCommandValidator : AbstractValidator<ApplyToJobCom
 
         RuleFor(x => x.ResumeStorageKey)
             .NotEmpty().WithMessage("A resume is required to apply.")
-            .MaximumLength(500).WithMessage("Resume reference cannot exceed 500 characters.");
+            .MaximumLength(500).WithMessage("Resume reference cannot exceed 500 characters.")
+            .When(x => !x.ResumeId.HasValue);
 
         RuleFor(x => x.CoverLetter)
             .Must(cl => cl is null || cl.Replace("\r\n", "\n").Replace("\r", "\n").Trim().Length <= 4000)

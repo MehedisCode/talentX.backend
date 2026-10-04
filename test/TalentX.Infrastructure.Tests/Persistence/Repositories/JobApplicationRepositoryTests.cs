@@ -310,6 +310,72 @@ public sealed class JobApplicationRepositoryTests
         candidatePipelineStatistics.HiredCount.Should().Be(0);
     }
 
+    [Fact]
+    public async Task CountActiveByResumeStorageKeyAsync_ExcludesApplicationsForSoftDeletedJobs()
+    {
+        await using var context = NewContext();
+        var repository = new JobApplicationRepository(context);
+
+        var activeJob = MakeJob();
+        var deletedJob = MakeJob();
+        deletedJob.SoftDelete();
+        context.Jobs.AddRange(activeJob, deletedJob);
+
+        var activeApplication = new JobApplication(
+            activeJob.Id, "talent-1", "Jane", "jane@example.com", "resumes/shared.pdf");
+        var deletedJobApplication = new JobApplication(
+            deletedJob.Id, "talent-2", "John", "john@example.com", "resumes/shared.pdf");
+
+        context.JobApplications.AddRange(activeApplication, deletedJobApplication);
+        await context.SaveChangesAsync();
+
+        var activeCount = await repository.CountActiveByResumeStorageKeyAsync("resumes/shared.pdf");
+        var missingCount = await repository.CountActiveByResumeStorageKeyAsync("resumes/missing.pdf");
+
+        activeCount.Should().Be(1);
+        missingCount.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task GetResumeStorageKeysByJobIdsAsync_ReturnsDistinctNonEmptyKeysForThoseJobs()
+    {
+        await using var context = NewContext();
+        var repository = new JobApplicationRepository(context);
+
+        var jobOne = MakeJob();
+        var jobTwo = MakeJob();
+        var unrelatedJob = MakeJob();
+        context.Jobs.AddRange(jobOne, jobTwo, unrelatedJob);
+
+        context.JobApplications.AddRange(
+            new JobApplication(jobOne.Id, "talent-1", "Jane", "jane@example.com", "resumes/a.pdf"),
+            new JobApplication(jobOne.Id, "talent-2", "John", "john@example.com", "resumes/a.pdf"),
+            new JobApplication(jobTwo.Id, "talent-3", "Jo", "jo@example.com", "resumes/b.pdf"),
+            new JobApplication(unrelatedJob.Id, "talent-4", "Jim", "jim@example.com", "resumes/c.pdf"));
+        await context.SaveChangesAsync();
+
+        var keys = await repository.GetResumeStorageKeysByJobIdsAsync([jobOne.Id, jobTwo.Id]);
+
+        keys.Should().BeEquivalentTo(["resumes/a.pdf", "resumes/b.pdf"]);
+    }
+
+    [Fact]
+    public async Task GetResumeStorageKeysByTalentUserIdAsync_ReturnsDistinctNonEmptyKeys()
+    {
+        await using var context = NewContext();
+        var repository = new JobApplicationRepository(context);
+
+        context.JobApplications.AddRange(
+            new JobApplication(Guid.NewGuid(), "talent-1", "Jane", "jane@example.com", "resumes/a.pdf"),
+            new JobApplication(Guid.NewGuid(), "talent-1", "Jane", "jane@example.com", "resumes/a.pdf"),
+            new JobApplication(Guid.NewGuid(), "talent-2", "John", "john@example.com", "resumes/b.pdf"));
+        await context.SaveChangesAsync();
+
+        var keys = await repository.GetResumeStorageKeysByTalentUserIdAsync("talent-1");
+
+        keys.Should().BeEquivalentTo(["resumes/a.pdf"]);
+    }
+
     private static Job MakeJob(string employerId = "employer-1")
     {
         var job = Job.Create(

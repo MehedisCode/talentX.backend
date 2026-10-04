@@ -75,6 +75,26 @@ public class ApplyToJobCommandValidatorTests
     }
 
     [Fact]
+    public void Validate_WithResumeIdAndNoStorageKey_HasNoError()
+    {
+        var command = ValidCommand() with { ResumeStorageKey = string.Empty, ResumeId = Guid.NewGuid() };
+
+        var result = _validator.TestValidate(command);
+
+        result.ShouldNotHaveValidationErrorFor(c => c.ResumeStorageKey);
+    }
+
+    [Fact]
+    public void Validate_WithResumeIdAndBlankStorageKey_HasNoError()
+    {
+        var command = ValidCommand() with { ResumeStorageKey = "   ", ResumeId = Guid.NewGuid() };
+
+        var result = _validator.TestValidate(command);
+
+        result.ShouldNotHaveValidationErrorFor(c => c.ResumeStorageKey);
+    }
+
+    [Fact]
     public void Validate_WithResumeStorageKeyOver500Characters_HasError()
     {
         var command = ValidCommand() with { ResumeStorageKey = new string('a', 501) };

@@ -16,6 +16,7 @@ public class ApplyToJobCommandHandlerTests
     private readonly Mock<IJobRepository> _jobRepository = new();
     private readonly Mock<IJobApplicationRepository> _jobApplicationRepository = new();
     private readonly Mock<IJobApplicationStatusHistoryRepository> _historyRepository = new();
+    private readonly Mock<IResumeRepository> _resumeRepository = new();
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
     private readonly Mock<ICurrentUserService> _currentUserService = new();
     private readonly Mock<IFileStorageService> _fileStorageService = new();
@@ -27,6 +28,7 @@ public class ApplyToJobCommandHandlerTests
         _unitOfWork.Setup(u => u.Jobs).Returns(_jobRepository.Object);
         _unitOfWork.Setup(u => u.JobApplications).Returns(_jobApplicationRepository.Object);
         _unitOfWork.Setup(u => u.JobApplicationStatusHistories).Returns(_historyRepository.Object);
+        _unitOfWork.Setup(u => u.Resumes).Returns(_resumeRepository.Object);
         _currentUserService.SetupGet(u => u.UserId).Returns("talent-1");
         _handler = new ApplyToJobCommandHandler(_unitOfWork.Object, _currentUserService.Object, _fileStorageService.Object, _logger.Object);
     }
@@ -162,6 +164,60 @@ public class ApplyToJobCommandHandlerTests
         _jobApplicationRepository.Verify(
             r => r.AddAsync(It.IsAny<JobApplication>(), It.IsAny<CancellationToken>()), Times.Never);
         _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_WithResumeId_UsesTheSavedResumesStorageKey()
+    {
+        var job = PublishedJob();
+        var resume = new Resume(
+            "talent-1", "resumes/talent-1/saved.pdf", "saved.pdf", "application/pdf", 1024,
+            displayName: "Saved Resume", isDefault: true);
+        _jobRepository
+            .Setup(r => r.GetPublishedJobByIdAsync(job.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(job);
+        _jobApplicationRepository
+            .Setup(r => r.ExistsByJobIdAndTalentUserIdAsync(job.Id, "talent-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+        _resumeRepository
+            .Setup(r => r.GetByIdAsync(resume.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(resume);
+
+        JobApplication? added = null;
+        _jobApplicationRepository
+            .Setup(r => r.AddAsync(It.IsAny<JobApplication>(), It.IsAny<CancellationToken>()))
+            .Callback<JobApplication, CancellationToken>((application, _) => added = application)
+            .Returns(Task.CompletedTask);
+
+        await _handler.Handle(
+            ValidCommand(job.Id) with { ResumeId = resume.Id, ResumeStorageKey = string.Empty },
+            CancellationToken.None);
+
+        added!.ResumeStorageKey.Should().Be("resumes/talent-1/saved.pdf");
+    }
+
+    [Fact]
+    public async Task Handle_WithResumeIdOfAnotherTalent_ThrowsNotFoundException_AndDoesNotPersist()
+    {
+        var job = PublishedJob();
+        var resume = new Resume("other-talent", "resumes/other-talent/cv.pdf", "cv.pdf", "application/pdf", 1024);
+        _jobRepository
+            .Setup(r => r.GetPublishedJobByIdAsync(job.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(job);
+        _jobApplicationRepository
+            .Setup(r => r.ExistsByJobIdAndTalentUserIdAsync(job.Id, "talent-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+        _resumeRepository
+            .Setup(r => r.GetByIdAsync(resume.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(resume);
+
+        var act = () => _handler.Handle(
+            ValidCommand(job.Id) with { ResumeId = resume.Id },
+            CancellationToken.None);
+
+        await act.Should().ThrowAsync<NotFoundException>();
+        _jobApplicationRepository.Verify(
+            r => r.AddAsync(It.IsAny<JobApplication>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]

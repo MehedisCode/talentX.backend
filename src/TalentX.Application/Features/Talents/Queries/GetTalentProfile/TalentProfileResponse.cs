@@ -1,3 +1,4 @@
+using TalentX.Application.Features.Resumes.DTOs;
 using TalentX.Application.Features.Talents.DTOs;
 
 namespace TalentX.Application.Features.Talents.Queries.GetTalentProfile;
@@ -23,6 +24,7 @@ public sealed record TalentProfileResponse(
     string? VideoIntroUrl,
     string? ResumeOriginalFileName,
     string? ResumeUrl,
+    IReadOnlyList<SavedResumeDto> Resumes,
     IReadOnlyList<WorkExperienceItemDto> WorkExperiences,
     IReadOnlyList<EducationItemDto> Educations,
     DateTime CreatedAt,

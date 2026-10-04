@@ -154,8 +154,11 @@ public sealed class VerifyGuestEmailCommandHandler : IRequestHandler<VerifyGuest
         if (string.IsNullOrWhiteSpace(originalFileName))
             return;
 
-        var existingResume = await _unitOfWork.Resumes.GetByUserIdAsync(talentUserId, cancellationToken);
-        if (existingResume is not null)
+        var existingResumes = await _unitOfWork.Resumes.GetAllByUserIdAsync(talentUserId, cancellationToken);
+        if (existingResumes.Count >= Resume.MaxPerUser)
+            return;
+
+        if (existingResumes.Any(resume => resume.StorageKey == application.ResumeStorageKey))
             return;
 
         await _unitOfWork.Resumes.AddAsync(
@@ -164,7 +167,8 @@ public sealed class VerifyGuestEmailCommandHandler : IRequestHandler<VerifyGuest
                 application.ResumeStorageKey,
                 originalFileName,
                 "application/octet-stream",
-                0),
+                0,
+                isDefault: existingResumes.Count == 0),
             cancellationToken);
     }
 

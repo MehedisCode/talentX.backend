@@ -2,6 +2,7 @@ using AutoMapper;
 using MediatR;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
+using TalentX.Application.Features.Resumes.DTOs;
 using TalentX.Application.Features.Talents.DTOs;
 using TalentX.Application.Identity.Services;
 
@@ -38,7 +39,8 @@ public sealed class GetTalentProfileQueryHandler : IRequestHandler<GetTalentProf
 
         var workExperiences = await _unitOfWork.WorkExperiences.GetByUserIdAsync(userId, cancellationToken);
         var educations = await _unitOfWork.Educations.GetByUserIdAsync(userId, cancellationToken);
-        var resume = await _unitOfWork.Resumes.GetByUserIdAsync(userId, cancellationToken);
+        var resumes = await _unitOfWork.Resumes.GetAllByUserIdAsync(userId, cancellationToken);
+        var resume = resumes.FirstOrDefault(item => item.IsDefault) ?? resumes.FirstOrDefault();
 
         var profilePictureUrlTask = CreateDownloadUrlOrNullAsync(talent.ProfilePictureStorageKey, cancellationToken);
         var videoIntroUrlTask = CreateDownloadUrlOrNullAsync(talent.VideoIntroStorageKey, cancellationToken);
@@ -71,6 +73,7 @@ public sealed class GetTalentProfileQueryHandler : IRequestHandler<GetTalentProf
             videoIntroUrl,
             resume?.OriginalFileName,
             resumeUrl,
+            resumes.Select(SavedResumeDto.FromEntity).ToList(),
             _mapper.Map<List<WorkExperienceItemDto>>(workExperiences),
             _mapper.Map<List<EducationItemDto>>(educations),
             talent.CreatedAt,
