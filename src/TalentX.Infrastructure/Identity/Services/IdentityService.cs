@@ -84,6 +84,11 @@ public class IdentityService : IIdentityService
         if (!await _userManager.CheckPasswordAsync(user, password))
         {
             await _userManager.AccessFailedAsync(user);
+            if (await _userManager.IsLockedOutAsync(user))
+            {
+                return IdentityResponse<PasswordValidationResult>.Fail("Account is locked out. Try again later.");
+            }
+
             return IdentityResponse<PasswordValidationResult>.Fail("Invalid credentials.");
         }
 

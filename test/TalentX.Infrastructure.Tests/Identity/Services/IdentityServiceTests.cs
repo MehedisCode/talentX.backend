@@ -429,6 +429,43 @@ public class IdentityServiceTests
     }
 
     [Fact]
+    public async Task ValidatePasswordAsync_WhenFailedAttemptTriggersLockout_ShouldReturnLockoutFailure()
+    {
+        // Arrange
+        var email = "user@example.com";
+        var password = "WrongPassword";
+
+        var user = new ApplicationUser { Email = email };
+
+        _userManagerMock
+            .Setup(x => x.FindByEmailAsync(email))
+            .ReturnsAsync(user);
+
+        _userManagerMock
+            .SetupSequence(x => x.IsLockedOutAsync(user))
+            .ReturnsAsync(false)
+            .ReturnsAsync(true);
+
+        _userManagerMock
+            .Setup(x => x.CheckPasswordAsync(user, password))
+            .ReturnsAsync(false);
+
+        _userManagerMock
+            .Setup(x => x.AccessFailedAsync(user))
+            .ReturnsAsync(IdentityResult.Success);
+
+        // Act
+        var result = await _identityService.ValidatePasswordAsync(email, password);
+
+        // Assert
+        result.Success.Should().BeFalse();
+        result.Errors.Should().Contain("Account is locked out. Try again later.");
+
+        _userManagerMock.Verify(x => x.AccessFailedAsync(user), Times.Once);
+        _userManagerMock.Verify(x => x.ResetAccessFailedCountAsync(It.IsAny<ApplicationUser>()), Times.Never);
+    }
+
+    [Fact]
     public async Task ValidatePasswordAsync_ShouldNotResetCountOnIncorrectPassword()
     {
         // Arrange
