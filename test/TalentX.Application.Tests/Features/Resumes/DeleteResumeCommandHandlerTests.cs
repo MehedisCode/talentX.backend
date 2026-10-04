@@ -29,6 +29,12 @@ public class DeleteResumeCommandHandlerTests
         _unitOfWork
             .Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(1);
+        _resumeRepository
+            .Setup(r => r.ExistsByStorageKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+        _jobApplicationRepository
+            .Setup(r => r.CountActiveByResumeStorageKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(0);
 
         _handler = new DeleteResumeCommandHandler(
             _unitOfWork.Object,
@@ -44,9 +50,6 @@ public class DeleteResumeCommandHandlerTests
         _resumeRepository
             .Setup(r => r.GetAllByUserIdAsync("user-1", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Resume> { resume });
-        _jobApplicationRepository
-            .Setup(r => r.CountByResumeStorageKeyAsync("resumes/user-1/a.pdf", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(0);
 
         await _handler.Handle(new DeleteResumeCommand(resume.Id), CancellationToken.None);
 
@@ -57,23 +60,59 @@ public class DeleteResumeCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WhenResumeIsUsedByApplications_ThrowsConflict_AndDeletesNothing()
+    public async Task Handle_WhenResumeIsUsedByAnActiveApplication_DeletesRowButKeepsStoredFile()
     {
         var resume = new Resume("user-1", "resumes/user-1/a.pdf", "a.pdf", "application/pdf", 1024);
         _resumeRepository
             .Setup(r => r.GetAllByUserIdAsync("user-1", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Resume> { resume });
         _jobApplicationRepository
-            .Setup(r => r.CountByResumeStorageKeyAsync("resumes/user-1/a.pdf", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(3);
+            .Setup(r => r.CountActiveByResumeStorageKeyAsync("resumes/user-1/a.pdf", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(2);
 
-        var act = () => _handler.Handle(new DeleteResumeCommand(resume.Id), CancellationToken.None);
+        await _handler.Handle(new DeleteResumeCommand(resume.Id), CancellationToken.None);
 
-        await act.Should().ThrowAsync<ConflictException>();
-        _resumeRepository.Verify(r => r.Delete(It.IsAny<Resume>()), Times.Never);
+        _resumeRepository.Verify(r => r.Delete(resume), Times.Once);
         _fileStorageService.Verify(
             s => s.DeleteAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_WhenResumeIsOnlyReferencedBySoftDeletedJobs_DeletesStoredFile()
+    {
+        // Soft-deleted jobs are excluded from the active count, so their files are
+        // cleanup candidates as soon as the profile row goes away.
+        var resume = new Resume("user-1", "resumes/user-1/a.pdf", "a.pdf", "application/pdf", 1024);
+        _resumeRepository
+            .Setup(r => r.GetAllByUserIdAsync("user-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Resume> { resume });
+        _jobApplicationRepository
+            .Setup(r => r.CountActiveByResumeStorageKeyAsync("resumes/user-1/a.pdf", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(0);
+
+        await _handler.Handle(new DeleteResumeCommand(resume.Id), CancellationToken.None);
+
+        _fileStorageService.Verify(
+            s => s.DeleteAsync("resumes/user-1/a.pdf", It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_WhenStoredFileDeletionFails_StillDeletesTheRow()
+    {
+        var resume = new Resume("user-1", "resumes/user-1/a.pdf", "a.pdf", "application/pdf", 1024);
+        _resumeRepository
+            .Setup(r => r.GetAllByUserIdAsync("user-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Resume> { resume });
+        _fileStorageService
+            .Setup(s => s.DeleteAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new Exception("Storage unavailable"));
+
+        await _handler.Handle(new DeleteResumeCommand(resume.Id), CancellationToken.None);
+
+        _resumeRepository.Verify(r => r.Delete(resume), Times.Once);
+        _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]

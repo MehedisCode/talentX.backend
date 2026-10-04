@@ -29,24 +29,41 @@ public sealed class JobApplicationRepository : IJobApplicationRepository
                 cancellationToken);
     }
 
-    public async Task<bool> ExistsByResumeStorageKeyAsync(
-        string resumeStorageKey,
-        CancellationToken cancellationToken = default)
-    {
-        return await _context.JobApplications
-            .AnyAsync(
-                application => application.ResumeStorageKey == resumeStorageKey,
-                cancellationToken);
-    }
-
-    public async Task<int> CountByResumeStorageKeyAsync(
+    // Only applications whose job is still live (not soft-deleted) count as
+    // references. The Job global query filter excludes soft-deleted jobs.
+    public async Task<int> CountActiveByResumeStorageKeyAsync(
         string resumeStorageKey,
         CancellationToken cancellationToken = default)
     {
         return await _context.JobApplications
             .CountAsync(
-                application => application.ResumeStorageKey == resumeStorageKey,
+                application => application.ResumeStorageKey == resumeStorageKey
+                    && _context.Jobs.Any(job => job.Id == application.JobId),
                 cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<string>> GetResumeStorageKeysByJobIdsAsync(
+        IReadOnlyCollection<Guid> jobIds,
+        CancellationToken cancellationToken = default)
+    {
+        return await _context.JobApplications
+            .Where(application => jobIds.Contains(application.JobId)
+                && application.ResumeStorageKey != string.Empty)
+            .Select(application => application.ResumeStorageKey)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<string>> GetResumeStorageKeysByTalentUserIdAsync(
+        string talentUserId,
+        CancellationToken cancellationToken = default)
+    {
+        return await _context.JobApplications
+            .Where(application => application.TalentUserId == talentUserId
+                && application.ResumeStorageKey != string.Empty)
+            .Select(application => application.ResumeStorageKey)
+            .Distinct()
+            .ToListAsync(cancellationToken);
     }
 
     public async Task<bool> ExistsPendingByJobIdAndEmailAsync(

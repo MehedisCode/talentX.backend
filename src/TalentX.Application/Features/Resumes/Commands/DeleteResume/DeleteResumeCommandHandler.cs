@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.Extensions.Logging;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
+using TalentX.Application.Features.Resumes;
 using TalentX.Application.Identity.Services;
 
 namespace TalentX.Application.Features.Resumes.Commands.DeleteResume;
@@ -34,16 +35,6 @@ public sealed class DeleteResumeCommandHandler : IRequestHandler<DeleteResumeCom
         if (resume is null)
             throw new NotFoundException($"Resume '{request.Id}' was not found.");
 
-        var applicationCount = await _unitOfWork.JobApplications
-            .CountByResumeStorageKeyAsync(resume.StorageKey, cancellationToken);
-
-        if (applicationCount > 0)
-        {
-            var applicationLabel = applicationCount == 1 ? "application" : "applications";
-            throw new ConflictException(
-                $"This resume was used in {applicationCount} job {applicationLabel} and cannot be deleted.");
-        }
-
         _unitOfWork.Resumes.Delete(resume);
 
         if (resume.IsDefault)
@@ -58,9 +49,17 @@ public sealed class DeleteResumeCommandHandler : IRequestHandler<DeleteResumeCom
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
+        // The stored object is shared with any applications that used this resume.
+        // Deleting the profile row is always allowed; the file survives while an
+        // active job application still references it and is cleaned up when that
+        // job is removed.
         try
         {
-            await _fileStorageService.DeleteAsync(resume.StorageKey, cancellationToken);
+            await ResumeFileCleanup.TryDeleteIfUnreferencedAsync(
+                _unitOfWork,
+                _fileStorageService,
+                resume.StorageKey,
+                cancellationToken);
         }
         catch (Exception exception)
         {

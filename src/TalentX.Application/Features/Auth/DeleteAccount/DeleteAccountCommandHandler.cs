@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using TalentX.Application.Common.Constants;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
+using TalentX.Application.Features.Resumes;
 using TalentX.Application.Identity.Interfaces;
 using TalentX.Application.Identity.Services;
 using TalentX.Domain;
@@ -65,20 +66,16 @@ public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountC
         var user = await _unitOfWork.Users.GetByUserIdAsync(identityUserId, cancellationToken);
         var recipientName = string.IsNullOrWhiteSpace(user?.Name) ? email : user!.Name;
 
-        // Capture stored file keys before the rows are removed so the objects can be
-        // cleaned up after the transaction commits.
-        var resumeStorageKeys = user?.Role == UserRole.Talent
-            ? (await _unitOfWork.Resumes.GetAllByUserIdAsync(identityUserId, cancellationToken))
-                .Select(resume => resume.StorageKey)
-                .ToList()
-            : [];
+        IReadOnlyList<string> resumeStorageKeys = [];
 
         await _unitOfWork.BeginTransactionAsync(cancellationToken);
         try
         {
             if (user is not null)
             {
-                await DeleteOwnedDomainDataAsync(user, identityUserId, cancellationToken);
+                // Storage keys are captured while the rows still exist so the objects
+                // can be cleaned up after the transaction commits.
+                resumeStorageKeys = await DeleteOwnedDomainDataAsync(user, identityUserId, cancellationToken);
             }
 
             var identityDelete = await _identityService.DeleteApplicationUserAsync(identityUserId);
@@ -103,7 +100,13 @@ public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountC
         {
             try
             {
-                await _fileStorageService.DeleteAsync(storageKey, cancellationToken);
+                // Employer deletion can leave files that another talent still has in
+                // their profile library — only delete objects no longer referenced.
+                await ResumeFileCleanup.TryDeleteIfUnreferencedAsync(
+                    _unitOfWork,
+                    _fileStorageService,
+                    storageKey,
+                    cancellationToken);
             }
             catch (Exception ex)
             {
@@ -131,14 +134,26 @@ public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountC
         return new DeleteAccountResult(email);
     }
 
-    private async Task DeleteOwnedDomainDataAsync(User user, string identityUserId, CancellationToken cancellationToken)
+    private async Task<IReadOnlyList<string>> DeleteOwnedDomainDataAsync(
+        User user,
+        string identityUserId,
+        CancellationToken cancellationToken)
     {
+        var resumeStorageKeys = new List<string>();
+
         if (user.Role == UserRole.Employer)
         {
             var jobs = await _unitOfWork.Jobs.GetByEmployerIdIncludingDeletedAsync(identityUserId, cancellationToken);
             if (jobs.Count > 0)
             {
                 var jobIds = jobs.Select(j => j.Id).ToList();
+
+                // Every resume attached to the employer's jobs (including soft-deleted
+                // jobs, which are hard-deleted with the account). Files still in a
+                // talent's profile library are retained by the cleanup helper.
+                resumeStorageKeys.AddRange(await _unitOfWork.JobApplications
+                    .GetResumeStorageKeysByJobIdsAsync(jobIds, cancellationToken));
+
                 await _unitOfWork.JobModerationHistories.DeleteByJobIdsAsync(jobIds, cancellationToken);
                 _unitOfWork.Jobs.RemoveRange(jobs);
             }
@@ -154,6 +169,14 @@ public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountC
         }
         else if (user.Role == UserRole.Talent)
         {
+            // Profile library plus application-only uploads, captured before the
+            // rows are removed.
+            var profileResumes = await _unitOfWork.Resumes
+                .GetAllByUserIdAsync(identityUserId, cancellationToken);
+            resumeStorageKeys.AddRange(profileResumes.Select(resume => resume.StorageKey));
+            resumeStorageKeys.AddRange(await _unitOfWork.JobApplications
+                .GetResumeStorageKeysByTalentUserIdAsync(identityUserId, cancellationToken));
+
             // Reviews first: they reference the job applications deleted next.
             await _unitOfWork.CompanyReviews.DeleteByTalentUserIdAsync(identityUserId, cancellationToken);
             await _unitOfWork.JobApplications.DeleteByTalentUserIdAsync(identityUserId, cancellationToken);
@@ -177,5 +200,10 @@ public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountC
         _unitOfWork.Users.Delete(user);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return resumeStorageKeys
+            .Where(storageKey => !string.IsNullOrWhiteSpace(storageKey))
+            .Distinct()
+            .ToList();
     }
 }

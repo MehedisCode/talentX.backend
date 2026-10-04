@@ -47,6 +47,14 @@ public sealed class ResumeRepository : IResumeRepository
             .FirstOrDefaultAsync(resume => resume.Id == id, cancellationToken);
     }
 
+    public async Task<bool> ExistsByStorageKeyAsync(
+        string storageKey,
+        CancellationToken cancellationToken = default)
+    {
+        return await _context.Resumes
+            .AnyAsync(resume => resume.StorageKey == storageKey, cancellationToken);
+    }
+
     public async Task<int> CountByUserIdAsync(string userId, CancellationToken cancellationToken = default)
     {
         return await _context.Resumes

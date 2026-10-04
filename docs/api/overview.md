@@ -66,7 +66,7 @@ The TalentX REST API is built on **ASP.NET Core (.NET 10)** following RESTful de
 | `POST` | `/api/v1/talents/me/resumes` | Save a resume to the profile library (`updateProfile=true` also runs AI extraction) | **Yes (`Bearer`, Talent)** |
 | `PUT` | `/api/v1/talents/me/resumes/{id}` | Rename a saved resume | **Yes (`Bearer`, Talent)** |
 | `PUT` | `/api/v1/talents/me/resumes/{id}/default` | Set the default saved resume | **Yes (`Bearer`, Talent)** |
-| `DELETE` | `/api/v1/talents/me/resumes/{id}` | Delete a saved resume (409 if used in applications) | **Yes (`Bearer`, Talent)** |
+| `DELETE` | `/api/v1/talents/me/resumes/{id}` | Remove a saved resume from the profile; files still used by open applications are kept until those jobs are removed | **Yes (`Bearer`, Talent)** |
 | `GET` | `/api/v1/talents/me/resumes/{id}/url` | 15-minute presigned preview/download URL | **Yes (`Bearer`, Talent)** |
 
 ### 5. Job Applications API (`/api/v1/job-applications`)

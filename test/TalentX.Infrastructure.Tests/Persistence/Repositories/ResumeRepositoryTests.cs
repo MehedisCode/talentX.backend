@@ -116,6 +116,21 @@ public sealed class ResumeRepositoryTests
     }
 
     [Fact]
+    public async Task ExistsByStorageKeyAsync_ReturnsTrueOnlyForAMatchingKey()
+    {
+        await using var context = CreateInMemoryContext();
+        var repository = new ResumeRepository(context);
+        await repository.AddAsync(new Resume("user-9", "resumes/user-9/a.pdf", "a.pdf", "application/pdf", 1024));
+        await context.SaveChangesAsync();
+
+        var exists = await repository.ExistsByStorageKeyAsync("resumes/user-9/a.pdf");
+        var missing = await repository.ExistsByStorageKeyAsync("resumes/user-9/other.pdf");
+
+        exists.Should().BeTrue();
+        missing.Should().BeFalse();
+    }
+
+    [Fact]
     public async Task Delete_RemovesResumeFromDatabase()
     {
         await using var context = CreateInMemoryContext();
