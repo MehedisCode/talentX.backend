@@ -39,6 +39,8 @@ public sealed class AcceptInterviewInvitationCommandHandler
             throw new ForbiddenException("You cannot view or accept interview invitations belonging to another user.");
         }
 
+        InterviewRules.EnsureNotExpired(invitation, DateTime.UtcNow);
+
         DateTime? scheduledAt = null;
         string? bookedMeetingUrl = null;
 
