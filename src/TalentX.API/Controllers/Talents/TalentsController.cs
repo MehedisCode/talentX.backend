@@ -2,7 +2,14 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using TalentX.Application.Common.Exceptions;
+using TalentX.Application.Features.Resumes.Commands.DeleteResume;
+using TalentX.Application.Features.Resumes.Commands.RenameResume;
+using TalentX.Application.Features.Resumes.Commands.SaveResume;
+using TalentX.Application.Features.Resumes.Commands.SetDefaultResume;
+using TalentX.Application.Features.Resumes.Queries.GetMyResumes;
+using TalentX.Application.Features.Resumes.Queries.GetResumeUrl;
 using TalentX.Application.Features.Talents.Commands.AbortMediaMultipartUpload;
 using TalentX.Application.Features.Talents.Commands.ApplyExtractedProfile;
 using TalentX.Application.Features.Talents.Commands.CompleteMediaMultipartUpload;
@@ -50,6 +57,62 @@ public sealed class TalentsController : BaseApiController
     {
         var prefill = await Sender.Send(new GetTalentApplicationPrefillQuery(), cancellationToken);
         return Ok(prefill);
+    }
+
+    [HttpGet("me/resumes")]
+    public async Task<IActionResult> GetMyResumes(CancellationToken cancellationToken)
+    {
+        var result = await Sender.Send(new GetMyResumesQuery(), cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpPost("me/resumes")]
+    [Consumes("multipart/form-data")]
+    [RequestSizeLimit(5 * 1024 * 1024)]
+    [EnableRateLimiting("UploadResume")]
+    public async Task<IActionResult> SaveResume(
+        IFormFile file,
+        [FromForm] string? displayName,
+        [FromForm] bool updateProfile,
+        CancellationToken cancellationToken)
+    {
+        var command = new SaveResumeCommand(
+            new FormFileUploadedFile(file),
+            displayName,
+            updateProfile);
+        var result = await Sender.Send(command, cancellationToken);
+        return StatusCode(StatusCodes.Status201Created, result);
+    }
+
+    [HttpPut("me/resumes/{id:guid}")]
+    public async Task<IActionResult> RenameResume(
+        Guid id,
+        [FromBody] RenameResumeCommand command,
+        CancellationToken cancellationToken)
+    {
+        var result = await Sender.Send(command with { Id = id }, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpPut("me/resumes/{id:guid}/default")]
+    public async Task<IActionResult> SetDefaultResume(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await Sender.Send(new SetDefaultResumeCommand(id), cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpDelete("me/resumes/{id:guid}")]
+    public async Task<IActionResult> DeleteResume(Guid id, CancellationToken cancellationToken)
+    {
+        await Sender.Send(new DeleteResumeCommand(id), cancellationToken);
+        return NoContent();
+    }
+
+    [HttpGet("me/resumes/{id:guid}/url")]
+    public async Task<IActionResult> GetResumeUrl(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await Sender.Send(new GetResumeUrlQuery(id), cancellationToken);
+        return Ok(result);
     }
 
     [HttpPost("me/resume/extract")]

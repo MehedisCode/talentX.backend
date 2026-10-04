@@ -100,7 +100,8 @@ public sealed class ApplyExtractedProfileCommandHandler : IRequestHandler<ApplyE
                     resumeStorageKey,
                     sanitizedResumeFileName,
                     request.ResumeFile.ContentType,
-                    request.ResumeFile.Length),
+                    request.ResumeFile.Length,
+                    isDefault: true),
                 cancellationToken);
         }
         else

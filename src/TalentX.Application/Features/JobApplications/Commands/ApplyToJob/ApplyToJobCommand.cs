@@ -11,4 +11,5 @@ public record ApplyToJobCommand(
     string? CoverLetter,
     decimal? ExpectedSalary,
     decimal? TotalYearsExperience,
-    string? Location) : IRequest<ApplicationSubmittedDto>;
+    string? Location,
+    Guid? ResumeId = null) : IRequest<ApplicationSubmittedDto>;

@@ -220,10 +220,18 @@ erDiagram
 | Column | Type | Constraints | Description |
 | :--- | :--- | :--- | :--- |
 | `Id` | `uuid` | `PRIMARY KEY` | Resume record identifier |
-| `UserId` | `varchar(200)` | `NOT NULL, INDEXED` | Owning talent user ID |
+| `UserId` | `varchar(200)` | `NOT NULL, INDEXED` | Owning talent user ID (up to 5 resumes per user) |
 | `StorageKey` | `varchar(500)` | `NOT NULL` | Storage service key |
-| `FileName` | `varchar(255)` | `NOT NULL` | Sanitized original filename |
+| `OriginalFileName` | `varchar(255)` | `NOT NULL` | Sanitized original filename |
+| `DisplayName` | `varchar(100)` | `NOT NULL` | User-facing label (defaults to the file name) |
 | `ContentType` | `varchar(100)` | `NOT NULL` | MIME content type (PDF/DOCX) |
-| `FileSizeBytes` | `bigint` | `NOT NULL` | File size in bytes |
+| `SizeBytes` | `bigint` | `NOT NULL` | File size in bytes |
+| `IsDefault` | `boolean` | `NOT NULL, DEFAULT false` | Whether the resume is used by apply prefill |
 | `UploadedAt` | `timestamptz` | `NOT NULL` | Upload timestamp |
+| `CreatedAt` | `timestamptz` | `NOT NULL` | Creation timestamp |
+| `UpdatedAt` | `timestamptz` | `NULL` | Modification timestamp |
+
+The 5-resume cap and the single-default rule are enforced in application handlers; the
+unique index that previously limited talents to one resume was dropped in the
+`AddResumeLibrary` migration (existing rows were backfilled as the default resume).
 

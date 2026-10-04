@@ -1,3 +1,4 @@
+using TalentX.Application.Features.Resumes.DTOs;
 using TalentX.Application.Features.Talents.DTOs;
 
 namespace TalentX.Application.Features.Talents.Queries.GetTalentApplicationPrefill;
@@ -12,5 +13,6 @@ public sealed record TalentApplicationPrefillResponse(
     string? ResumeStorageKey,
     string? ResumeOriginalFileName,
     string? ResumeUrl,
+    IReadOnlyList<SavedResumeDto> Resumes,
     IReadOnlyList<WorkExperienceItemDto> WorkExperiences
 );

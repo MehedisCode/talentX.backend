@@ -84,8 +84,8 @@ public class GetTalentProfileQueryHandlerTests
             .Setup(r => r.GetByUserIdAsync("user-1", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Education>());
         _resumeRepository
-            .Setup(r => r.GetByUserIdAsync("user-1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync((Resume?)null);
+            .Setup(r => r.GetAllByUserIdAsync("user-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Resume>());
 
         var response = await _handler.Handle(new GetTalentProfileQuery(), CancellationToken.None);
 
@@ -93,6 +93,7 @@ public class GetTalentProfileQueryHandlerTests
         response.VideoIntroUrl.Should().BeNull();
         response.ResumeUrl.Should().BeNull();
         response.ResumeOriginalFileName.Should().BeNull();
+        response.Resumes.Should().BeEmpty();
         _presignedUrlService.Verify(
             s => s.CreateDownloadUrlAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()),
             Times.Never);
@@ -108,7 +109,9 @@ public class GetTalentProfileQueryHandlerTests
 
         var workExperience = new WorkExperience("user-2", "Acme Corp", "Engineer", "2020", "Present", true);
         var education = new Education("user-2", "State University", "B.Sc. Computer Science", "2016", "2020");
-        var resume = new Resume("user-2", "resumes/user-2.pdf", "resume.pdf", "application/pdf", 1024);
+        var resume = new Resume(
+            "user-2", "resumes/user-2.pdf", "resume.pdf", "application/pdf", 1024,
+            displayName: "Primary Resume", isDefault: true);
 
         _talentRepository
             .Setup(r => r.GetByUserIdAsync("user-2", It.IsAny<CancellationToken>()))
@@ -120,8 +123,8 @@ public class GetTalentProfileQueryHandlerTests
             .Setup(r => r.GetByUserIdAsync("user-2", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Education> { education });
         _resumeRepository
-            .Setup(r => r.GetByUserIdAsync("user-2", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(resume);
+            .Setup(r => r.GetAllByUserIdAsync("user-2", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Resume> { resume });
         _presignedUrlService
             .Setup(s => s.CreateDownloadUrlAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((string storageKey, TimeSpan _, CancellationToken _) => $"https://signed.example.com/{storageKey}");
@@ -132,6 +135,8 @@ public class GetTalentProfileQueryHandlerTests
         response.VideoIntroUrl.Should().Be("https://signed.example.com/videos/user-2.mp4");
         response.ResumeUrl.Should().Be("https://signed.example.com/resumes/user-2.pdf");
         response.ResumeOriginalFileName.Should().Be("resume.pdf");
+        response.Resumes.Should().ContainSingle(resumeDto =>
+            resumeDto.DisplayName == "Primary Resume" && resumeDto.IsDefault);
         response.WorkExperiences.Should().ContainSingle(item => item.CompanyName == "Acme Corp");
         response.Educations.Should().ContainSingle(item => item.Institution == "State University");
     }
@@ -160,8 +165,8 @@ public class GetTalentProfileQueryHandlerTests
             .Setup(r => r.GetByUserIdAsync("user-3", It.IsAny<CancellationToken>()))
             .Returns(() => TrackOverlapAsync(concurrentCallCount, (IReadOnlyList<Education>)new List<Education>()));
         _resumeRepository
-            .Setup(r => r.GetByUserIdAsync("user-3", It.IsAny<CancellationToken>()))
-            .Returns(() => TrackOverlapAsync(concurrentCallCount, (Resume?)null));
+            .Setup(r => r.GetAllByUserIdAsync("user-3", It.IsAny<CancellationToken>()))
+            .Returns(() => TrackOverlapAsync(concurrentCallCount, (IReadOnlyList<Resume>)new List<Resume>()));
 
         var act = () => _handler.Handle(new GetTalentProfileQuery(), CancellationToken.None);
 

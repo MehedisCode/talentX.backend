@@ -62,6 +62,12 @@ The TalentX REST API is built on **ASP.NET Core (.NET 10)** following RESTful de
 | `GET` | `/api/v1/talents/me/application-prefill` | Pre-fill candidate job application form data | **Yes (`Bearer`, Talent)** |
 | `POST` | `/api/v1/talents/me/resume/extract` | In-memory resume extraction via AI | **Yes (`Bearer`, Talent)** |
 | `POST` | `/api/v1/talents/me/profile/apply-extraction` | Atomic save of extracted resume & profile fields | **Yes (`Bearer`, Talent)** |
+| `GET` | `/api/v1/talents/me/resumes` | List saved resumes (max 5, default first) | **Yes (`Bearer`, Talent)** |
+| `POST` | `/api/v1/talents/me/resumes` | Save a resume to the profile library (`updateProfile=true` also runs AI extraction) | **Yes (`Bearer`, Talent)** |
+| `PUT` | `/api/v1/talents/me/resumes/{id}` | Rename a saved resume | **Yes (`Bearer`, Talent)** |
+| `PUT` | `/api/v1/talents/me/resumes/{id}/default` | Set the default saved resume | **Yes (`Bearer`, Talent)** |
+| `DELETE` | `/api/v1/talents/me/resumes/{id}` | Delete a saved resume (409 if used in applications) | **Yes (`Bearer`, Talent)** |
+| `GET` | `/api/v1/talents/me/resumes/{id}/url` | 15-minute presigned preview/download URL | **Yes (`Bearer`, Talent)** |
 
 ### 5. Job Applications API (`/api/v1/job-applications`)
 | Method | Endpoint | Description | Auth Required |
@@ -70,10 +76,10 @@ The TalentX REST API is built on **ASP.NET Core (.NET 10)** following RESTful de
 | `GET` | `/api/v1/job-applications/{id}` | View application details | **Yes (`Bearer`)** |
 | `PATCH` | `/api/v1/job-applications/{id}/status` | Update candidate application status | **Yes (`Bearer`, Employer)** |
 
-### 6. Resumes API (`/api/v1/resumes`)
+### 6. Resumes API (`/api/v1/Resumes`)
 | Method | Endpoint | Description | Auth Required |
 | :--- | :--- | :--- | :--- |
-| `GET` | `/api/v1/resumes/{storageKey}` | Stream resume file directly from storage | **Yes (`Bearer`)** |
+| `POST` | `/api/v1/Resumes/upload` | AI extraction only (nothing is persisted) | No |
 
 ### 7. Diagnostics & Health (`/api/v1/health`)
 | Method | Endpoint | Description | Auth Required |

@@ -47,6 +47,7 @@ public class DeleteAccountCommandHandlerTests
     private readonly Mock<IIdentityService> _identityServiceMock = new();
     private readonly Mock<IOtpService> _otpServiceMock = new();
     private readonly Mock<IEmailService> _emailServiceMock = new();
+    private readonly Mock<IFileStorageService> _fileStorageServiceMock = new();
     private readonly Mock<ILogger<DeleteAccountCommandHandler>> _loggerMock = new();
 
     private readonly FakeOtpAttemptTracker _attemptTracker = new();
@@ -86,6 +87,10 @@ public class DeleteAccountCommandHandlerTests
             .Setup(i => i.DeleteApplicationUserAsync("identity-fail"))
             .ReturnsAsync(IdentityResponse.Fail("identity store unavailable"));
 
+        _resumeRepositoryMock
+            .Setup(r => r.GetAllByUserIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Resume>());
+
         _handler = new DeleteAccountCommandHandler(
             _currentUserServiceMock.Object,
             _unitOfWorkMock.Object,
@@ -93,6 +98,7 @@ public class DeleteAccountCommandHandlerTests
             _otpServiceMock.Object,
             _attemptTracker,
             _emailServiceMock.Object,
+            _fileStorageServiceMock.Object,
             _loggerMock.Object);
     }
 

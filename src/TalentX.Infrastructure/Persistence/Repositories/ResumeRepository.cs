@@ -14,10 +14,43 @@ public sealed class ResumeRepository : IResumeRepository
         _context = context;
     }
 
-    public async Task<Resume?> GetByUserIdAsync(string userId, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<Resume>> GetAllByUserIdAsync(
+        string userId,
+        CancellationToken cancellationToken = default)
     {
         return await _context.Resumes
-            .FirstOrDefaultAsync(resume => resume.UserId == userId, cancellationToken);
+            .Where(resume => resume.UserId == userId)
+            .OrderByDescending(resume => resume.IsDefault)
+            .ThenByDescending(resume => resume.UploadedAt)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<Resume?> GetDefaultByUserIdAsync(
+        string userId,
+        CancellationToken cancellationToken = default)
+    {
+        return await _context.Resumes
+            .Where(resume => resume.UserId == userId)
+            .OrderByDescending(resume => resume.IsDefault)
+            .ThenByDescending(resume => resume.UploadedAt)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    public async Task<Resume?> GetByUserIdAsync(string userId, CancellationToken cancellationToken = default)
+    {
+        return await GetDefaultByUserIdAsync(userId, cancellationToken);
+    }
+
+    public async Task<Resume?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        return await _context.Resumes
+            .FirstOrDefaultAsync(resume => resume.Id == id, cancellationToken);
+    }
+
+    public async Task<int> CountByUserIdAsync(string userId, CancellationToken cancellationToken = default)
+    {
+        return await _context.Resumes
+            .CountAsync(resume => resume.UserId == userId, cancellationToken);
     }
 
     public async Task AddAsync(Resume resume, CancellationToken cancellationToken = default)

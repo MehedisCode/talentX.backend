@@ -15,8 +15,7 @@ public sealed class ResumeConfiguration : IEntityTypeConfiguration<Resume>
             .HasMaxLength(200)
             .IsRequired();
 
-        builder.HasIndex(resume => resume.UserId)
-            .IsUnique();
+        builder.HasIndex(resume => resume.UserId);
 
         builder.Property(resume => resume.StorageKey)
             .HasMaxLength(500)
@@ -24,6 +23,13 @@ public sealed class ResumeConfiguration : IEntityTypeConfiguration<Resume>
 
         builder.Property(resume => resume.OriginalFileName)
             .HasMaxLength(255)
+            .IsRequired();
+
+        builder.Property(resume => resume.DisplayName)
+            .HasMaxLength(Resume.MaxDisplayNameLength)
+            .IsRequired();
+
+        builder.Property(resume => resume.IsDefault)
             .IsRequired();
 
         builder.Property(resume => resume.ContentType)

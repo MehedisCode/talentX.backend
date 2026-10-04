@@ -29,6 +29,26 @@ public sealed class JobApplicationRepository : IJobApplicationRepository
                 cancellationToken);
     }
 
+    public async Task<bool> ExistsByResumeStorageKeyAsync(
+        string resumeStorageKey,
+        CancellationToken cancellationToken = default)
+    {
+        return await _context.JobApplications
+            .AnyAsync(
+                application => application.ResumeStorageKey == resumeStorageKey,
+                cancellationToken);
+    }
+
+    public async Task<int> CountByResumeStorageKeyAsync(
+        string resumeStorageKey,
+        CancellationToken cancellationToken = default)
+    {
+        return await _context.JobApplications
+            .CountAsync(
+                application => application.ResumeStorageKey == resumeStorageKey,
+                cancellationToken);
+    }
+
     public async Task<bool> ExistsPendingByJobIdAndEmailAsync(
         Guid jobId,
         string email,

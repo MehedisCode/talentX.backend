@@ -18,6 +18,7 @@ public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountC
     private readonly IOtpService _otpService;
     private readonly IOtpAttemptTracker _attemptTracker;
     private readonly IEmailService _emailService;
+    private readonly IFileStorageService _fileStorageService;
     private readonly ILogger<DeleteAccountCommandHandler> _logger;
 
     public DeleteAccountCommandHandler(
@@ -27,6 +28,7 @@ public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountC
         IOtpService otpService,
         IOtpAttemptTracker attemptTracker,
         IEmailService emailService,
+        IFileStorageService fileStorageService,
         ILogger<DeleteAccountCommandHandler> logger)
     {
         _currentUserService = currentUserService;
@@ -35,6 +37,7 @@ public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountC
         _otpService = otpService;
         _attemptTracker = attemptTracker;
         _emailService = emailService;
+        _fileStorageService = fileStorageService;
         _logger = logger;
     }
 
@@ -62,6 +65,14 @@ public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountC
         var user = await _unitOfWork.Users.GetByUserIdAsync(identityUserId, cancellationToken);
         var recipientName = string.IsNullOrWhiteSpace(user?.Name) ? email : user!.Name;
 
+        // Capture stored file keys before the rows are removed so the objects can be
+        // cleaned up after the transaction commits.
+        var resumeStorageKeys = user?.Role == UserRole.Talent
+            ? (await _unitOfWork.Resumes.GetAllByUserIdAsync(identityUserId, cancellationToken))
+                .Select(resume => resume.StorageKey)
+                .ToList()
+            : [];
+
         await _unitOfWork.BeginTransactionAsync(cancellationToken);
         try
         {
@@ -86,6 +97,22 @@ public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountC
         {
             await _unitOfWork.RollbackTransactionAsync(cancellationToken);
             throw;
+        }
+
+        foreach (var storageKey in resumeStorageKeys)
+        {
+            try
+            {
+                await _fileStorageService.DeleteAsync(storageKey, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "Account deleted for {Email} but the stored resume {StorageKey} could not be removed.",
+                    email,
+                    storageKey);
+            }
         }
 
         try
