@@ -23,7 +23,7 @@ public class ApplyToJobCommandValidator : AbstractValidator<ApplyToJobCommand>
             .EmailAddress().WithMessage("Invalid email format.")
             .MaximumLength(255).WithMessage("Email must not exceed 255 characters.");
 
-        this.ApplyResumeFileValidationRules(v => v.ResumeFile);
+        this.ApplyResumeFileValidationRules(v => v.ResumeFile, required: false);
 
         RuleFor(v => v.CoverLetter)
             .NotNull().WithMessage("Cover letter is required.")

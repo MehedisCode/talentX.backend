@@ -291,4 +291,58 @@ public class ApplyToJobCommandHandlerTests
         _emailService.Verify(e => e.SendVerificationLinkEmailAsync(
             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
     }
+
+    [Fact]
+    public async Task Handle_WithoutResumeFile_CreatesApplicationWithEmptyStorageKeyAndSkipsStorageSave()
+    {
+        SetupPublishedJob();
+        _jobApplicationRepository
+            .Setup(r => r.GetAnyByJobIdAndEmailAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((JobApplication?)null);
+
+        JobApplication? addedApplication = null;
+        _jobApplicationRepository
+            .Setup(r => r.AddAsync(It.IsAny<JobApplication>(), It.IsAny<CancellationToken>()))
+            .Callback<JobApplication, CancellationToken>((app, _) => addedApplication = app)
+            .Returns(Task.CompletedTask);
+
+        var command = ValidCommand() with { ResumeFile = null };
+        var response = await _handler.Handle(command, CancellationToken.None);
+
+        addedApplication.Should().NotBeNull();
+        addedApplication!.ResumeStorageKey.Should().BeEmpty();
+        response.AccountExists.Should().BeFalse();
+        _fileStorageService.Verify(
+            s => s.SaveAsync(It.IsAny<IUploadedFile>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        _emailService.Verify(
+            e => e.SendVerificationLinkEmailAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_WhenAccountExistsForEmail_ReturnsAccountExistsWithoutCreatingApplication()
+    {
+        SetupPublishedJob();
+        _userRepository
+            .Setup(r => r.ExistsByEmailAsync("jane@example.com", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var command = ValidCommand();
+        var response = await _handler.Handle(command, CancellationToken.None);
+
+        response.AccountExists.Should().BeTrue();
+        response.ApplicationId.Should().BeEmpty();
+        response.AlreadyApplied.Should().BeFalse();
+        response.VerificationEmailResent.Should().BeFalse();
+
+        _jobApplicationRepository.Verify(r => r.AddAsync(It.IsAny<JobApplication>(), It.IsAny<CancellationToken>()), Times.Never);
+        _verificationTokenRepository.Verify(r => r.AddAsync(It.IsAny<EmailVerificationToken>(), It.IsAny<CancellationToken>()), Times.Never);
+        _emailService.Verify(e => e.SendVerificationLinkEmailAsync(
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        _fileStorageService.Verify(
+            s => s.SaveAsync(It.IsAny<IUploadedFile>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
 }
