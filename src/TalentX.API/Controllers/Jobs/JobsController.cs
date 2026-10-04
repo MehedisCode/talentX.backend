@@ -146,7 +146,7 @@ public class JobsController : BaseApiController
             id,
             request.ApplicantName,
             request.ApplicantEmail,
-            new FormFileUploadedFile(request.ResumeFile),
+            request.ResumeFile is null ? null : new FormFileUploadedFile(request.ResumeFile),
             request.CoverLetter,
             request.ExpectedSalary,
             request.TotalYearsExperience,

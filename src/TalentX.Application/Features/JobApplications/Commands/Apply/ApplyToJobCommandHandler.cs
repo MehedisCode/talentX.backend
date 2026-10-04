@@ -50,6 +50,12 @@ public class ApplyToJobCommandHandler : IRequestHandler<ApplyToJobCommand, Apply
         var name = request.ApplicantName.Trim();
         var email = request.ApplicantEmail.Trim().ToLowerInvariant();
 
+        var accountExists = await _unitOfWork.Users.ExistsByEmailAsync(email, cancellationToken);
+        if (accountExists)
+        {
+            return new ApplyToJobResponse(Guid.Empty, request.JobId, AccountExists: true);
+        }
+
         var existingApplication = await _jobApplicationRepository.GetAnyByJobIdAndEmailAsync(request.JobId, email, cancellationToken);
 
         if (existingApplication is not null)
@@ -80,21 +86,24 @@ public class ApplyToJobCommandHandler : IRequestHandler<ApplyToJobCommand, Apply
             }
         }
 
-        var sanitizedResumeFileName = TalentMediaStorageKeyGuard.SanitizeFileNameSegment(request.ResumeFile.FileName);
-        var storageFileName = TalentMediaStorageKeyGuard.BuildStorageKey(
-            "resumes",
-            "pending",
-            $"{Guid.NewGuid()}_{sanitizedResumeFileName}");
+        string resumeStorageKey = string.Empty;
+        if (request.ResumeFile is not null)
+        {
+            var sanitizedResumeFileName = TalentMediaStorageKeyGuard.SanitizeFileNameSegment(request.ResumeFile.FileName);
+            var storageFileName = TalentMediaStorageKeyGuard.BuildStorageKey(
+                "resumes",
+                "pending",
+                $"{Guid.NewGuid()}_{sanitizedResumeFileName}");
 
-        string resumeStorageKey;
-        try
-        {
-            resumeStorageKey = await _fileStorageService.SaveAsync(request.ResumeFile, storageFileName, cancellationToken);
-        }
-        catch (Exception exception)
-        {
-            _logger.LogError(exception, "Failed to save resume {FileName} to storage", sanitizedResumeFileName);
-            throw new BadGatewayException("File storage is temporarily unavailable.");
+            try
+            {
+                resumeStorageKey = await _fileStorageService.SaveAsync(request.ResumeFile, storageFileName, cancellationToken);
+            }
+            catch (Exception exception)
+            {
+                _logger.LogError(exception, "Failed to save resume {FileName} to storage", sanitizedResumeFileName);
+                throw new BadGatewayException("File storage is temporarily unavailable.");
+            }
         }
 
         var application = JobApplication.CreateGuestApplication(

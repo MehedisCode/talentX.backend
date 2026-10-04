@@ -9,6 +9,8 @@ namespace TalentX.Application.Common.Validation;
 /// magic-byte sniffing) so every command that accepts a raw resume upload
 /// (<c>UploadResumeCommand</c>, <c>ExtractResumeCommand</c>, <c>ApplyExtractedProfileCommand</c>)
 /// enforces identical rules from one place instead of three copies.
+/// Pass <c>required: false</c> when the file is optional (guest apply) — the size,
+/// extension, content-type and magic-byte rules still run whenever a file is present.
 /// </summary>
 public static class ResumeFileValidationRules
 {
@@ -22,36 +24,40 @@ public static class ResumeFileValidationRules
 
     public static void ApplyResumeFileValidationRules<T>(
         this AbstractValidator<T> validator,
-        Expression<Func<T, IUploadedFile>> fileSelector)
+        Expression<Func<T, IUploadedFile?>> fileSelector,
+        bool required = true)
     {
         var compiledFileSelector = fileSelector.Compile();
 
-        validator.RuleFor(fileSelector)
-            .NotNull().WithMessage("A resume file is required.");
+        if (required)
+        {
+            validator.RuleFor(fileSelector)
+                .NotNull().WithMessage("A resume file is required.");
+        }
 
         validator.When(command => compiledFileSelector(command) is not null, () =>
         {
-            validator.RuleFor(command => compiledFileSelector(command).Length)
+            validator.RuleFor(command => compiledFileSelector(command)!.Length)
                 .LessThanOrEqualTo(MaxFileSizeBytes)
                 .WithMessage("File size must not exceed 5 MB.");
 
-            validator.RuleFor(command => compiledFileSelector(command).FileName)
+            validator.RuleFor(command => compiledFileSelector(command)!.FileName)
                 .Must(fileName => AllowedExtensions.Contains(
                     Path.GetExtension(fileName).ToLowerInvariant()))
                 .WithMessage("Only PDF and DOCX files are accepted.");
 
-            validator.RuleFor(command => compiledFileSelector(command).ContentType)
+            validator.RuleFor(command => compiledFileSelector(command)!.ContentType)
                 .Must(contentType => AllowedContentTypes.Contains(contentType?.ToLowerInvariant()))
                 .WithMessage("File content type is not supported.");
 
-            validator.RuleFor(command => compiledFileSelector(command))
+            validator.RuleFor(command => compiledFileSelector(command)!)
                 .MustAsync(HaveValidMagicBytesAsync)
                 .WithMessage("File content does not match its declared type.");
         });
     }
 
     private static async Task<bool> HaveValidMagicBytesAsync(
-        IUploadedFile file, CancellationToken cancellationToken)
+        IUploadedFile? file, CancellationToken cancellationToken)
     {
         if (file is null || string.IsNullOrWhiteSpace(file.FileName) || file.Length < 4) return false;
 

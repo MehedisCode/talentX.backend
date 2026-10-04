@@ -208,7 +208,35 @@ public class JobsControllerTests
         sentCommand.Should().NotBeNull();
         sentCommand!.JobId.Should().Be(routeId);
         sentCommand.ApplicantName.Should().Be("Jane Doe");
-        sentCommand.ResumeFile.FileName.Should().Be("resume.pdf");
+        sentCommand.ResumeFile!.FileName.Should().Be("resume.pdf");
+    }
+
+    [Fact]
+    public async Task Apply_WithoutResumeFile_SendsCommandWithNullResumeFile()
+    {
+        var routeId = Guid.NewGuid();
+        var requestDto = new ApplyToJobRequestDto(
+            "Jane Doe",
+            "jane@example.com",
+            ResumeFile: null,
+            "I am excited to apply for this role.",
+            85000,
+            6,
+            "Dhaka"
+        );
+        ApplyToJobCommand? sentCommand = null;
+        var response = new ApplyToJobResponse(Guid.NewGuid(), routeId);
+        _sender
+            .Setup(s => s.Send(It.IsAny<ApplyToJobCommand>(), It.IsAny<CancellationToken>()))
+            .Callback<IRequest<ApplyToJobResponse>, CancellationToken>((req, _) => sentCommand = (ApplyToJobCommand)req)
+            .ReturnsAsync(response);
+
+        var result = await _controller.Apply(routeId, requestDto, CancellationToken.None);
+
+        var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
+        okResult.Value.Should().BeEquivalentTo(response);
+        sentCommand.Should().NotBeNull();
+        sentCommand!.ResumeFile.Should().BeNull();
     }
 
     [Fact]

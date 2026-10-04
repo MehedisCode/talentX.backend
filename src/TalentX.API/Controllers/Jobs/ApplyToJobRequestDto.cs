@@ -5,7 +5,7 @@ namespace TalentX.API.Controllers;
 public sealed record ApplyToJobRequestDto(
     string ApplicantName,
     string ApplicantEmail,
-    IFormFile ResumeFile,
+    IFormFile? ResumeFile,
     string CoverLetter,
     decimal ExpectedSalary,
     decimal TotalYearsExperience,

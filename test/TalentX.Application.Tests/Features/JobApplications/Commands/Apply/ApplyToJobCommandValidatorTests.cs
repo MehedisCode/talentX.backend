@@ -131,13 +131,24 @@ public class ApplyToJobCommandValidatorTests
     }
 
     [Fact]
-    public async Task Validate_WithMissingResumeFile_HasError()
+    public async Task Validate_WithMissingResumeFile_HasNoError()
     {
-        var command = ValidCommand() with { ResumeFile = null! };
+        var command = ValidCommand() with { ResumeFile = null };
 
         var result = await _validator.TestValidateAsync(command);
 
-        result.ShouldHaveValidationErrorFor(c => c.ResumeFile);
+        result.ShouldNotHaveValidationErrorFor(c => c.ResumeFile);
+    }
+
+    [Fact]
+    public async Task Validate_WithPresentResumeFileOfUnsupportedType_HasError()
+    {
+        var command = ValidCommand(file: MockResumeFile("resume.txt").Object);
+
+        var result = await _validator.TestValidateAsync(command);
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.ErrorMessage == "Only PDF and DOCX files are accepted.");
     }
 
     [Theory]

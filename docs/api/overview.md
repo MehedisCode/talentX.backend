@@ -49,7 +49,7 @@ The TalentX REST API is built on **ASP.NET Core (.NET 10)** following RESTful de
 | `GET` | `/api/v1/jobs/mine/{id}` | Retrieve single owned job by ID | **Yes (`Bearer`, Employer)** |
 | `POST` | `/api/v1/jobs/generate-description` | Generate job description using AI | **Yes (`Bearer`, Employer)** |
 | `POST` | `/api/v1/jobs/generate-skills` | Generate relevant job skills using AI | **Yes (`Bearer`, Employer)** |
-| `POST` | `/api/v1/jobs/{id}/apply` | Candidate apply to job (multipart form with resume) | No |
+| `POST` | `/api/v1/jobs/{id}/apply` | Guest apply to job (multipart form, resume optional; `accountExists: true` when the email already has an account) | No |
 | `PATCH` | `/api/v1/jobs/{id}/status` | Close a job listing | **Yes (`Bearer`, Employer)** |
 | `PATCH` | `/api/v1/jobs/{id}/reopen` | Reopen a closed job listing | **Yes (`Bearer`, Employer)** |
 | `DELETE` | `/api/v1/jobs/{id}` | Soft-delete a job listing | **Yes (`Bearer`, Employer)** |
