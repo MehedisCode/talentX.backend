@@ -301,6 +301,107 @@ public sealed class InterviewInvitationRepositoryTests
         result.Should().OnlyContain(x => x.Timeslots.Count == 1);
     }
 
+    // ---- GetByTalentUserIdPaginatedAsync (talent "My Interviews" ordering) ----
+
+    [Fact]
+    public async Task GetByTalentUserIdPaginatedAsync_OrdersUpcomingFirstThenEndedThenDeclined()
+    {
+        await using var context = NewContext();
+        var repository = new InterviewInvitationRepository(context);
+        var job = NewJob();
+        var jobId = job.Id;
+        context.Jobs.Add(job);
+        var now = DateTime.UtcNow;
+
+        var soonUpcomingApp = NewApplication(jobId);
+        var laterUpcomingApp = NewApplication(jobId);
+        var recentlyEndedApp = NewApplication(jobId);
+        var longAgoExpiredApp = NewApplication(jobId);
+        var cancelledApp = NewApplication(jobId);
+        var declinedApp = NewApplication(jobId);
+        context.JobApplications.AddRange(
+            soonUpcomingApp, laterUpcomingApp, recentlyEndedApp, longAgoExpiredApp, cancelledApp, declinedApp);
+
+        // Bucket 0 (upcoming): accepted, interview still ahead — nearer one must sort first.
+        var soonUpcoming = NewInvitation(jobId, soonUpcomingApp.Id, InterviewType.OnCall);
+        soonUpcoming.AddTimeslot(now.AddDays(1), now.AddDays(1).AddHours(1));
+        soonUpcoming.Accept(soonUpcoming.Timeslots[0].Id, soonUpcoming.Timeslots[0].StartTime);
+
+        var laterUpcoming = NewInvitation(jobId, laterUpcomingApp.Id, InterviewType.OnCall);
+        laterUpcoming.AddTimeslot(now.AddDays(5), now.AddDays(5).AddHours(1));
+        laterUpcoming.Accept(laterUpcoming.Timeslots[0].Id, laterUpcoming.Timeslots[0].StartTime);
+
+        // Bucket 1 (ended/cancelled): accepted-but-over, never-answered, and cancelled — most
+        // recently ended first.
+        var recentlyEnded = NewInvitation(jobId, recentlyEndedApp.Id, InterviewType.OnCall);
+        recentlyEnded.AddTimeslot(now.AddDays(-1), now.AddDays(-1).AddHours(1));
+        recentlyEnded.Accept(recentlyEnded.Timeslots[0].Id, recentlyEnded.Timeslots[0].StartTime);
+
+        var longAgoExpired = new InterviewInvitation(
+            jobId,
+            longAgoExpiredApp.Id,
+            "employer-1",
+            "talent-1",
+            InterviewType.OnlineAssessment,
+            assessmentUrl: "https://assessment.example.com",
+            assessmentDeadline: now.AddDays(-10));
+
+        var cancelled = NewInvitation(jobId, cancelledApp.Id, InterviewType.OnCall);
+        cancelled.AddTimeslot(now.AddDays(-3), now.AddDays(-3).AddHours(1));
+        cancelled.Cancel();
+
+        // Bucket 2 (declined): always last.
+        var declined = NewInvitation(jobId, declinedApp.Id);
+        declined.Decline();
+
+        context.InterviewInvitations.AddRange(
+            laterUpcoming, declined, cancelled, longAgoExpired, soonUpcoming, recentlyEnded);
+        await context.SaveChangesAsync();
+
+        var result = await repository.GetByTalentUserIdPaginatedAsync("talent-1", 1, 10);
+
+        result.Items.Select(x => x.Id).Should().ContainInOrder(
+            soonUpcoming.Id,
+            laterUpcoming.Id,
+            recentlyEnded.Id,
+            cancelled.Id,
+            longAgoExpired.Id,
+            declined.Id);
+    }
+
+    [Fact]
+    public async Task GetByTalentUserIdPaginatedAsync_PaginatesAfterSorting()
+    {
+        await using var context = NewContext();
+        var repository = new InterviewInvitationRepository(context);
+        var job = NewJob();
+        var jobId = job.Id;
+        context.Jobs.Add(job);
+        var now = DateTime.UtcNow;
+
+        var nearApp = NewApplication(jobId);
+        var farApp = NewApplication(jobId);
+        context.JobApplications.AddRange(nearApp, farApp);
+
+        var near = NewInvitation(jobId, nearApp.Id, InterviewType.OnCall);
+        near.AddTimeslot(now.AddDays(1), now.AddDays(1).AddHours(1));
+        near.Accept(near.Timeslots[0].Id, near.Timeslots[0].StartTime);
+
+        var far = NewInvitation(jobId, farApp.Id, InterviewType.OnCall);
+        far.AddTimeslot(now.AddDays(10), now.AddDays(10).AddHours(1));
+        far.Accept(far.Timeslots[0].Id, far.Timeslots[0].StartTime);
+
+        context.InterviewInvitations.AddRange(far, near);
+        await context.SaveChangesAsync();
+
+        var firstPage = await repository.GetByTalentUserIdPaginatedAsync("talent-1", 1, 1);
+        var secondPage = await repository.GetByTalentUserIdPaginatedAsync("talent-1", 2, 1);
+
+        firstPage.TotalCount.Should().Be(2);
+        firstPage.Items.Single().Id.Should().Be(near.Id);
+        secondPage.Items.Single().Id.Should().Be(far.Id);
+    }
+
     [Fact]
     public async Task GetAcceptedByApplicationIdAsync_NoAcceptedRounds_ReturnsEmpty()
     {
