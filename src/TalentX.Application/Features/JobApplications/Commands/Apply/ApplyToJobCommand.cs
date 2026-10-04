@@ -7,7 +7,7 @@ public record ApplyToJobCommand(
     Guid JobId,
     string ApplicantName,
     string ApplicantEmail,
-    IUploadedFile ResumeFile,
+    IUploadedFile? ResumeFile,
     string CoverLetter,
     decimal ExpectedSalary,
     decimal TotalYearsExperience,

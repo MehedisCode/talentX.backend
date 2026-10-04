@@ -6,6 +6,9 @@ namespace TalentX.Application.Common.Interfaces.Repositories;
 public interface IUserRepository
 {
     Task<User?> GetByEmailAsync(string email, CancellationToken cancellationToken = default);
+    // Case-insensitive: PostgreSQL equality is case-sensitive while account emails
+    // are stored as typed, but callers (e.g. guest apply) normalize to lower-case.
+    Task<bool> ExistsByEmailAsync(string email, CancellationToken cancellationToken = default);
     Task<User?> GetByUserIdAsync(string userId, CancellationToken cancellationToken = default);
     Task<User?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<User>> GetByUserIdsAsync(IEnumerable<string> userIds, CancellationToken cancellationToken = default);

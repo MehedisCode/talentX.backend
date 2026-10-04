@@ -23,6 +23,14 @@ public class UserRepository : IUserRepository
             .FirstOrDefaultAsync(u => u.Email == email, cancellationToken);
     }
 
+    public async Task<bool> ExistsByEmailAsync(string email, CancellationToken cancellationToken = default)
+    {
+        var normalizedEmail = email.Trim().ToLower();
+        return await _context.DomainUsers
+            .AsNoTracking()
+            .AnyAsync(u => u.Email.ToLower() == normalizedEmail, cancellationToken);
+    }
+
     public async Task<User?> GetByUserIdAsync(string userId, CancellationToken cancellationToken = default)
     {
         return await _context.DomainUsers
