@@ -47,7 +47,7 @@ public class TokenService : ITokenService
         }
 
         var roles = await _userManager.GetRolesAsync(user);
-        var accessToken = GenerateAccessToken(user, roles);
+        var accessToken = GenerateAccessToken(user, roles, domainUser?.Name);
         var rawRefreshToken = GenerateRawToken();
 
         _context.RefreshTokens.Add(new RefreshToken
@@ -93,7 +93,7 @@ public class TokenService : ITokenService
         }
 
         var roles = await _userManager.GetRolesAsync(user);
-        var newAccessToken = GenerateAccessToken(user, roles);
+        var newAccessToken = GenerateAccessToken(user, roles, domainUser?.Name);
         var newRawRefreshToken = GenerateRawToken();
         var newHash = Hash(newRawRefreshToken);
 
@@ -166,13 +166,14 @@ public class TokenService : ITokenService
     }
 
 
-    private string GenerateAccessToken(ApplicationUser user, IList<string> roles)
+    private string GenerateAccessToken(ApplicationUser user, IList<string> roles, string? displayName = null)
     {
+        var effectiveDisplayName = !string.IsNullOrWhiteSpace(displayName) ? displayName : user.UserName ?? string.Empty;
         var claims = new List<Claim>
         {
             new(ClaimTypes.NameIdentifier, user.Id),
             new(ClaimTypes.Email, user.Email ?? string.Empty),
-            new(ClaimTypes.Name, user.UserName ?? string.Empty),
+            new(ClaimTypes.Name, effectiveDisplayName),
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
 

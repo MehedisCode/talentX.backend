@@ -966,6 +966,80 @@ public class TokenServiceTests : IAsyncLifetime
         roleClaims.Should().HaveCount(10);
     }
 
+    [Fact]
+    public async Task CreateAsync_WhenDomainUserExists_IncludesDomainUserNameInClaimTypesName()
+    {
+        // Arrange
+        var userId = "user-employer-123";
+        var user = new ApplicationUser
+        {
+            Id = userId,
+            UserName = "fariha.jabin@gmail.com",
+            Email = "fariha.jabin@gmail.com"
+        };
+
+        var employer = new Employer(userId, "Fariha Jabin", "fariha.jabin@gmail.com", "Acme Corp");
+        await _context.DomainUsers.AddAsync(employer);
+        await _context.SaveChangesAsync();
+
+        _userManagerMock
+            .Setup(x => x.FindByIdAsync(userId))
+            .ReturnsAsync(user);
+
+        _userManagerMock
+            .Setup(x => x.GetRolesAsync(user))
+            .ReturnsAsync(new List<string> { "Employer" });
+
+        // Act
+        var result = await _tokenService.CreateAsync(userId);
+
+        // Assert
+        result.Success.Should().BeTrue();
+        var handler = new JwtSecurityTokenHandler();
+        var token = handler.ReadJwtToken(result.Data!.AccessToken);
+        var nameClaim = token.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Name);
+        nameClaim.Should().NotBeNull();
+        nameClaim!.Value.Should().Be("Fariha Jabin");
+    }
+
+    [Fact]
+    public async Task ValidateAndRotateAsync_WhenDomainUserExists_IncludesDomainUserNameInClaimTypesName()
+    {
+        // Arrange
+        var userId = "user-employer-rotate";
+        var user = new ApplicationUser
+        {
+            Id = userId,
+            UserName = "fariha.jabin@gmail.com",
+            Email = "fariha.jabin@gmail.com"
+        };
+
+        var employer = new Employer(userId, "Fariha Jabin", "fariha.jabin@gmail.com", "Acme Corp");
+        await _context.DomainUsers.AddAsync(employer);
+        await _context.SaveChangesAsync();
+
+        var initialToken = await CreateInitialToken(userId, user);
+
+        _userManagerMock
+            .Setup(x => x.FindByIdAsync(userId))
+            .ReturnsAsync(user);
+
+        _userManagerMock
+            .Setup(x => x.GetRolesAsync(user))
+            .ReturnsAsync(new List<string> { "Employer" });
+
+        // Act
+        var result = await _tokenService.ValidateAndRotateAsync(initialToken.RefreshToken);
+
+        // Assert
+        result.Success.Should().BeTrue();
+        var handler = new JwtSecurityTokenHandler();
+        var token = handler.ReadJwtToken(result.Data!.AccessToken);
+        var nameClaim = token.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Name);
+        nameClaim.Should().NotBeNull();
+        nameClaim!.Value.Should().Be("Fariha Jabin");
+    }
+
     #endregion
 
     #region Helper Methods
