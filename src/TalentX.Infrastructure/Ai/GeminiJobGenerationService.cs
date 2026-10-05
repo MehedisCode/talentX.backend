@@ -15,9 +15,8 @@ namespace TalentX.Infrastructure.Ai;
 public sealed class GeminiJobGenerationService : IJobGenerationService
 {
     private readonly HttpClient _httpClient;
+    private readonly IAiConfigurationProvider _aiConfigProvider;
     private readonly ILogger<GeminiJobGenerationService> _logger;
-    private readonly string _apiKey;
-    private readonly string _modelName;
 
     // JSON options for deserializing Gemini API responses
     private static readonly JsonSerializerOptions CaseInsensitive =
@@ -25,10 +24,12 @@ public sealed class GeminiJobGenerationService : IJobGenerationService
 
     public GeminiJobGenerationService(
         HttpClient httpClient,
+        IAiConfigurationProvider aiConfigProvider,
         IConfiguration configuration,
         ILogger<GeminiJobGenerationService> logger)
     {
         _httpClient = httpClient;
+        _aiConfigProvider = aiConfigProvider;
         _logger = logger;
 
         // Load Gemini configuration from environment or appsettings
@@ -37,16 +38,6 @@ public sealed class GeminiJobGenerationService : IJobGenerationService
             ?? configuration["Gemini:BaseUrl"]
             ?? "https://generativelanguage.googleapis.com";
         _httpClient.BaseAddress = new Uri(baseUrl);
-
-        _apiKey = Environment.GetEnvironmentVariable("GEMINI_API_KEY")
-            ?? configuration["GEMINI_API_KEY"]
-            ?? configuration["Gemini:ApiKey"]
-            ?? throw new InvalidOperationException("Gemini:ApiKey is not configured.");
-
-        _modelName = Environment.GetEnvironmentVariable("GEMINI_MODEL_NAME")
-            ?? configuration["GEMINI_MODEL_NAME"]
-            ?? configuration["Gemini:ModelName"]
-            ?? "gemini-3.7-flash";
     }
 
     /// <inheritdoc />
@@ -111,6 +102,12 @@ public sealed class GeminiJobGenerationService : IJobGenerationService
     /// </summary>
     private async Task<string> CallGeminiAsync(string prompt, CancellationToken cancellationToken)
     {
+        var (modelName, apiKey) = await _aiConfigProvider.GetConfigAsync(cancellationToken);
+        if (string.IsNullOrWhiteSpace(apiKey))
+        {
+            throw new InvalidOperationException("Gemini:ApiKey is not configured.");
+        }
+
         var requestBody = new
         {
             contents = new[]
@@ -132,7 +129,7 @@ public sealed class GeminiJobGenerationService : IJobGenerationService
         };
 
         var response = await _httpClient.PostAsJsonAsync(
-            $"/v1beta/models/{_modelName}:generateContent?key={_apiKey}",
+            $"/v1beta/models/{modelName}:generateContent?key={apiKey}",
             requestBody,
             cancellationToken);
 

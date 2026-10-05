@@ -17,6 +17,7 @@ public static class InfrastructureStartup
         IConfiguration configuration
     )
     {
+        services.AddMemoryCache();
         services.AddPersistence(configuration);
         services.AddIdentityServices(configuration);
         services.AddFileStorage(configuration);
