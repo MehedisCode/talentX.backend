@@ -46,7 +46,7 @@ public sealed class GetAdminDashboardQueryHandlerTests
         _employers.Setup(r => r.GetRecentCreatedBetweenAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Employer>());
 
-        _jobs.Setup(r => r.GetStatusCountsCreatedBetweenAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+        _jobs.Setup(r => r.GetStatusCountsFirstPublishedBetweenAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new Dictionary<JobStatus, int>());
         _jobs.Setup(r => r.GetPublishedCountsByBucketAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(NoBuckets);
@@ -84,6 +84,7 @@ public sealed class GetAdminDashboardQueryHandlerTests
             EmploymentType.FullTime, ExperienceLevel.MidLevel, location,
             WorkArrangement.RemoteButAccessible, ["C#"], 2, publishedAt.AddDays(30));
         SetProperty(job, nameof(Job.PublishedAt), publishedAt);
+        SetProperty(job, nameof(Job.FirstPublishedAt), publishedAt);
         return job;
     }
 
@@ -163,7 +164,7 @@ public sealed class GetAdminDashboardQueryHandlerTests
                 [EmployerVerificationStatus.PendingVerification] = 3,
                 [EmployerVerificationStatus.Rejected] = 1
             });
-        _jobs.Setup(r => r.GetStatusCountsCreatedBetweenAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+        _jobs.Setup(r => r.GetStatusCountsFirstPublishedBetweenAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new Dictionary<JobStatus, int>
             {
                 [JobStatus.Published] = 10,
@@ -209,7 +210,7 @@ public sealed class GetAdminDashboardQueryHandlerTests
         _talents.Setup(r => r.CountCreatedBetweenAsync(rangeStart, rangeEnd, It.IsAny<CancellationToken>())).ReturnsAsync(5);
         _employers.Setup(r => r.GetVerificationStatusCountsCreatedBetweenAsync(rangeStart, rangeEnd, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new Dictionary<EmployerVerificationStatus, int> { [EmployerVerificationStatus.Verified] = 2 });
-        _jobs.Setup(r => r.GetStatusCountsCreatedBetweenAsync(rangeStart, rangeEnd, It.IsAny<CancellationToken>()))
+        _jobs.Setup(r => r.GetStatusCountsFirstPublishedBetweenAsync(rangeStart, rangeEnd, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new Dictionary<JobStatus, int> { [JobStatus.Published] = 3 });
         _applications.Setup(r => r.GetStatusCountsAppliedBetweenAsync(rangeStart, rangeEnd, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new Dictionary<ApplicationStatus, int> { [ApplicationStatus.Applied] = 7 });
@@ -225,7 +226,7 @@ public sealed class GetAdminDashboardQueryHandlerTests
                 [EmployerVerificationStatus.PendingVerification] = 4,
                 [EmployerVerificationStatus.Rejected] = 1
             });
-        _jobs.Setup(r => r.GetStatusCountsCreatedBetweenAsync(AllTimeStart, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+        _jobs.Setup(r => r.GetStatusCountsFirstPublishedBetweenAsync(AllTimeStart, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new Dictionary<JobStatus, int>
             {
                 [JobStatus.Published] = 30,
@@ -603,6 +604,19 @@ public sealed class GetAdminDashboardQueryHandlerTests
         talentActivity.Title.Should().Be("Aisha Rahman");
         talentActivity.Detail.Should().Be("Data Analyst · Dubai");
         talentActivity.VerificationStatus.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Handle_JobActivityUsesWhenTheJobWasFirstPublishedNotItsLatestReopen()
+    {
+        var job = NewJob("Reopened Role", "Acme", "Dhaka", Utc(2026, 9, 10, 10));
+        SetProperty(job, nameof(Job.PublishedAt), Utc(2026, 9, 20, 10));
+        _jobs.Setup(r => r.GetRecentPublishedBetweenAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Job> { job });
+
+        var result = await _handler.Handle(new GetAdminDashboardQuery(), CancellationToken.None);
+
+        result.Activities.Single().OccurredAt.Should().Be(Utc(2026, 9, 10, 10));
     }
 
     [Fact]

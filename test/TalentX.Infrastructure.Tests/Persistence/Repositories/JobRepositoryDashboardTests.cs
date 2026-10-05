@@ -27,7 +27,8 @@ public sealed class JobRepositoryDashboardTests
         DateTime createdAt,
         DateTime? publishedAt = null,
         string title = "Backend Engineer",
-        DateTime? expireAt = null)
+        DateTime? expireAt = null,
+        DateTime? firstPublishedAt = null)
     {
         var job = Job.Create(
             "employer-1",
@@ -65,6 +66,12 @@ public sealed class JobRepositoryDashboardTests
             context.Entry(job).Property(j => j.PublishedAt).CurrentValue = publishedAt;
         }
 
+        // Published jobs were first posted at the given first-publish time, else their publish time, else creation.
+        if (status != JobStatus.Draft)
+        {
+            context.Entry(job).Property(j => j.FirstPublishedAt).CurrentValue = firstPublishedAt ?? publishedAt ?? createdAt;
+        }
+
         // Set after publishing, because publishing refuses a deadline that has already passed.
         if (expireAt.HasValue)
         {
@@ -75,7 +82,7 @@ public sealed class JobRepositoryDashboardTests
     }
 
     [Fact]
-    public async Task GetStatusCountsCreatedBetweenAsync_ExcludesDraftsDeletedJobsAndOutOfRangeJobs()
+    public async Task GetStatusCountsFirstPublishedBetweenAsync_ExcludesDraftsDeletedJobsAndOutOfRangeJobs()
     {
         await using var context = NewContext();
         AddJob(context, JobStatus.Published, Base.AddHours(-1));
@@ -89,7 +96,7 @@ public sealed class JobRepositoryDashboardTests
         await context.SaveChangesAsync();
         var repository = new JobRepository(context);
 
-        var counts = await repository.GetStatusCountsCreatedBetweenAsync(Base.AddDays(-1), Base);
+        var counts = await repository.GetStatusCountsFirstPublishedBetweenAsync(Base.AddDays(-1), Base);
 
         counts[JobStatus.Published].Should().Be(2);
         counts[JobStatus.Closed].Should().Be(1);
@@ -98,7 +105,7 @@ public sealed class JobRepositoryDashboardTests
     }
 
     [Fact]
-    public async Task GetStatusCountsCreatedBetweenAsync_CountsAPublishedJobPastItsDeadlineAsExpired()
+    public async Task GetStatusCountsFirstPublishedBetweenAsync_CountsAPublishedJobPastItsDeadlineAsExpired()
     {
         await using var context = NewContext();
         AddJob(context, JobStatus.Published, Base.AddHours(-1));
@@ -107,14 +114,14 @@ public sealed class JobRepositoryDashboardTests
         await context.SaveChangesAsync();
         var repository = new JobRepository(context);
 
-        var counts = await repository.GetStatusCountsCreatedBetweenAsync(Base.AddDays(-1), Base);
+        var counts = await repository.GetStatusCountsFirstPublishedBetweenAsync(Base.AddDays(-1), Base);
 
         counts[JobStatus.Published].Should().Be(1);
         counts[JobStatus.Expired].Should().Be(2);
     }
 
     [Fact]
-    public async Task GetStatusCountsCreatedBetweenAsync_AddsExplicitlyExpiredJobsToThoseDerivedFromTheDeadline()
+    public async Task GetStatusCountsFirstPublishedBetweenAsync_AddsExplicitlyExpiredJobsToThoseDerivedFromTheDeadline()
     {
         await using var context = NewContext();
         var stored = AddJob(context, JobStatus.Published, Base.AddHours(-1));
@@ -123,14 +130,14 @@ public sealed class JobRepositoryDashboardTests
         await context.SaveChangesAsync();
         var repository = new JobRepository(context);
 
-        var counts = await repository.GetStatusCountsCreatedBetweenAsync(Base.AddDays(-1), Base);
+        var counts = await repository.GetStatusCountsFirstPublishedBetweenAsync(Base.AddDays(-1), Base);
 
         counts[JobStatus.Expired].Should().Be(2);
         counts.Should().NotContainKey(JobStatus.Published);
     }
 
     [Fact]
-    public async Task GetStatusCountsCreatedBetweenAsync_DoesNotTurnOtherStatusesIntoExpiredJustBecauseTheDeadlinePassed()
+    public async Task GetStatusCountsFirstPublishedBetweenAsync_DoesNotTurnOtherStatusesIntoExpiredJustBecauseTheDeadlinePassed()
     {
         await using var context = NewContext();
         AddJob(context, JobStatus.Closed, Base.AddHours(-1), expireAt: DateTime.UtcNow.AddDays(-5));
@@ -138,7 +145,7 @@ public sealed class JobRepositoryDashboardTests
         await context.SaveChangesAsync();
         var repository = new JobRepository(context);
 
-        var counts = await repository.GetStatusCountsCreatedBetweenAsync(Base.AddDays(-1), Base);
+        var counts = await repository.GetStatusCountsFirstPublishedBetweenAsync(Base.AddDays(-1), Base);
 
         counts[JobStatus.Closed].Should().Be(1);
         counts[JobStatus.Deactivated].Should().Be(1);
@@ -195,5 +202,62 @@ public sealed class JobRepositoryDashboardTests
         var recent = await repository.GetRecentPublishedBetweenAsync(Base.AddDays(-1), Base, take: 2);
 
         recent.Select(j => j.Title).Should().Equal("Newest", "Middle");
+    }
+
+    [Fact]
+    public async Task DashboardQueries_DoNotCountAnOldJobReopenedInsideTheWindowAsANewPosting()
+    {
+        await using var context = NewContext();
+        AddJob(context, JobStatus.Published, Base.AddDays(-40), publishedAt: Base.AddHours(-1),
+            firstPublishedAt: Base.AddDays(-40), title: "Reopened");
+        AddJob(context, JobStatus.Published, Base.AddDays(-5), publishedAt: Base.AddHours(-2), title: "New");
+        await context.SaveChangesAsync();
+        var repository = new JobRepository(context);
+
+        var counts = await repository.GetStatusCountsFirstPublishedBetweenAsync(Base.AddDays(-1), Base);
+        var buckets = await repository.GetPublishedCountsByBucketAsync(Base.AddDays(-1), Base, groupByHour: false);
+        var recent = await repository.GetRecentPublishedBetweenAsync(Base.AddDays(-1), Base, take: 5);
+
+        counts.Values.Sum().Should().Be(1);
+        buckets.Values.Sum().Should().Be(1);
+        recent.Select(j => j.Title).Should().Equal("New");
+    }
+
+    [Fact]
+    public async Task DashboardQueries_FallBackToCreatedAtForPublishedJobsWithoutAFirstPublishDate()
+    {
+        await using var context = NewContext();
+        var legacy = AddJob(context, JobStatus.Published, Base.AddHours(-3), title: "Legacy");
+        context.Entry(legacy).Property(j => j.FirstPublishedAt).CurrentValue = null;
+        await context.SaveChangesAsync();
+        var repository = new JobRepository(context);
+
+        var counts = await repository.GetStatusCountsFirstPublishedBetweenAsync(Base.AddDays(-1), Base);
+        var buckets = await repository.GetPublishedCountsByBucketAsync(Base.AddDays(-1), Base, groupByHour: false);
+        var recent = await repository.GetRecentPublishedBetweenAsync(Base.AddDays(-1), Base, take: 5);
+
+        counts.Values.Sum().Should().Be(1);
+        buckets[Base.Date].Should().Be(1);
+        recent.Select(j => j.Title).Should().Equal("Legacy");
+    }
+
+    [Fact]
+    public async Task DashboardQueries_TheJobCardTotalMatchesTheTrendTotalForTheSameWindow()
+    {
+        await using var context = NewContext();
+        AddJob(context, JobStatus.Published, Base.AddDays(-3), publishedAt: Base.AddDays(-2));
+        AddJob(context, JobStatus.Closed, Base.AddDays(-4), publishedAt: Base.AddDays(-3));
+        AddJob(context, JobStatus.Deactivated, Base.AddDays(-5), publishedAt: Base.AddDays(-4));
+        AddJob(context, JobStatus.Published, Base.AddDays(-60), publishedAt: Base.AddDays(-1),
+            firstPublishedAt: Base.AddDays(-60));
+        AddJob(context, JobStatus.Draft, Base.AddDays(-2));
+        await context.SaveChangesAsync();
+        var repository = new JobRepository(context);
+
+        var counts = await repository.GetStatusCountsFirstPublishedBetweenAsync(Base.AddDays(-7), Base);
+        var buckets = await repository.GetPublishedCountsByBucketAsync(Base.AddDays(-7), Base, groupByHour: false);
+
+        counts.Values.Sum().Should().Be(3);
+        buckets.Values.Sum().Should().Be(counts.Values.Sum());
     }
 }

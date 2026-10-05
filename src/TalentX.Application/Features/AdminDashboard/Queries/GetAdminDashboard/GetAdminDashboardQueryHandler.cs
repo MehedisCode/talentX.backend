@@ -44,7 +44,7 @@ public sealed class GetAdminDashboardQueryHandler : IRequestHandler<GetAdminDash
         var verificationCounts = await _unitOfWork.Employers
             .GetVerificationStatusCountsCreatedBetweenAsync(start, end, cancellationToken);
         var oldestPending = await _unitOfWork.Employers.GetOldestPendingCreatedAtAsync(cancellationToken);
-        var jobCounts = await _unitOfWork.Jobs.GetStatusCountsCreatedBetweenAsync(start, end, cancellationToken);
+        var jobCounts = await _unitOfWork.Jobs.GetStatusCountsFirstPublishedBetweenAsync(start, end, cancellationToken);
         var applicationCounts = await _unitOfWork.JobApplications
             .GetStatusCountsAppliedBetweenAsync(start, end, cancellationToken);
 
@@ -108,7 +108,7 @@ public sealed class GetAdminDashboardQueryHandler : IRequestHandler<GetAdminDash
         var verificationCounts = await _unitOfWork.Employers
             .GetVerificationStatusCountsCreatedBetweenAsync(allTimeStart, now, cancellationToken);
         var jobCounts = await _unitOfWork.Jobs
-            .GetStatusCountsCreatedBetweenAsync(allTimeStart, now, cancellationToken);
+            .GetStatusCountsFirstPublishedBetweenAsync(allTimeStart, now, cancellationToken);
         var applicationCounts = await _unitOfWork.JobApplications
             .GetStatusCountsAppliedBetweenAsync(allTimeStart, now, cancellationToken);
         var interviewCount = await _unitOfWork.InterviewInvitations
@@ -373,7 +373,7 @@ public sealed class GetAdminDashboardQueryHandler : IRequestHandler<GetAdminDash
             Id = job.Id,
             Title = job.Title,
             Detail = Join(job.CompanyName, job.Location),
-            OccurredAt = job.PublishedAt ?? job.CreatedAt
+            OccurredAt = job.FirstPublishedAt ?? job.CreatedAt
         }));
 
         return activities

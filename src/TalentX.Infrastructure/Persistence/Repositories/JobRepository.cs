@@ -382,7 +382,17 @@ public sealed class JobRepository : RepositoryBase<Job>, IJobRepository
         Context.Jobs.RemoveRange(jobs);
     }
 
-    public async Task<IReadOnlyDictionary<JobStatus, int>> GetStatusCountsCreatedBetweenAsync(
+    // Jobs first posted in the window. A reopen or reactivation is not a new posting, so FirstPublishedAt is used, falling
+    // back to CreatedAt for non-draft jobs older than that column. The three dashboard queries below share this rule, so
+    // the job card, the trend line and the activity feed always count the same jobs.
+    private IQueryable<Job> FirstPostedBetween(DateTime startUtc, DateTime endUtc) =>
+        Context.Jobs
+            .AsNoTracking()
+            .Where(j => j.Status != JobStatus.Draft
+                        && (j.FirstPublishedAt ?? j.CreatedAt) >= startUtc
+                        && (j.FirstPublishedAt ?? j.CreatedAt) <= endUtc);
+
+    public async Task<IReadOnlyDictionary<JobStatus, int>> GetStatusCountsFirstPublishedBetweenAsync(
         DateTime startUtc,
         DateTime endUtc,
         CancellationToken cancellationToken = default)
@@ -391,9 +401,7 @@ public sealed class JobRepository : RepositoryBase<Job>, IJobRepository
         // still Published after its ExpireAt date counts as Expired here, the same rule the employer dashboard uses.
         var currentDate = DateTime.UtcNow.Date;
 
-        return await Context.Jobs
-            .AsNoTracking()
-            .Where(j => j.CreatedAt >= startUtc && j.CreatedAt <= endUtc && j.Status != JobStatus.Draft)
+        return await FirstPostedBetween(startUtc, endUtc)
             .GroupBy(j => j.Status == JobStatus.Published && j.ExpireAt.Date < currentDate
                 ? JobStatus.Expired
                 : j.Status)
@@ -407,12 +415,9 @@ public sealed class JobRepository : RepositoryBase<Job>, IJobRepository
         bool groupByHour,
         CancellationToken cancellationToken = default)
     {
-        var publishedAt = Context.Jobs
-            .AsNoTracking()
-            .Where(j => j.PublishedAt != null && j.PublishedAt >= startUtc && j.PublishedAt <= endUtc)
-            .Select(j => j.PublishedAt!.Value);
+        var firstPostedAt = FirstPostedBetween(startUtc, endUtc).Select(j => j.FirstPublishedAt ?? j.CreatedAt);
 
-        return await TimeBucketCounter.CountAsync(publishedAt, groupByHour, cancellationToken);
+        return await TimeBucketCounter.CountAsync(firstPostedAt, groupByHour, cancellationToken);
     }
 
     public async Task<IReadOnlyList<Job>> GetRecentPublishedBetweenAsync(
@@ -421,10 +426,8 @@ public sealed class JobRepository : RepositoryBase<Job>, IJobRepository
         int take,
         CancellationToken cancellationToken = default)
     {
-        return await Context.Jobs
-            .AsNoTracking()
-            .Where(j => j.PublishedAt != null && j.PublishedAt >= startUtc && j.PublishedAt <= endUtc)
-            .OrderByDescending(j => j.PublishedAt)
+        return await FirstPostedBetween(startUtc, endUtc)
+            .OrderByDescending(j => j.FirstPublishedAt ?? j.CreatedAt)
             .Take(take)
             .ToListAsync(cancellationToken);
     }
