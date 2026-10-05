@@ -12,11 +12,10 @@ namespace TalentX.Infrastructure.Ai;
 public sealed class GeminiTalentMatchingService : ITalentMatchingService
 {
     private readonly HttpClient _httpClient;
+    private readonly IAiConfigurationProvider _aiConfigProvider;
     private readonly ITalentMatchingPromptFactory _promptFactory;
     private readonly ILogger<GeminiTalentMatchingService> _logger;
 
-    private readonly string _apiKey;
-    private readonly string _modelName;
     private readonly string _promptVersion;
     private readonly double _temperature;
     private readonly double _topP;
@@ -29,11 +28,13 @@ public sealed class GeminiTalentMatchingService : ITalentMatchingService
 
     public GeminiTalentMatchingService(
         HttpClient httpClient,
+        IAiConfigurationProvider aiConfigProvider,
         IConfiguration configuration,
         ITalentMatchingPromptFactory promptFactory,
         ILogger<GeminiTalentMatchingService> logger)
     {
         _httpClient = httpClient;
+        _aiConfigProvider = aiConfigProvider;
         _promptFactory = promptFactory;
         _logger = logger;
 
@@ -41,14 +42,6 @@ public sealed class GeminiTalentMatchingService : ITalentMatchingService
             ?? configuration["Gemini:BaseUrl"]
             ?? "https://generativelanguage.googleapis.com";
         _httpClient.BaseAddress = new Uri(baseUrl);
-
-        _apiKey = configuration["GEMINI_API_KEY"]
-            ?? configuration["Gemini:ApiKey"]
-            ?? string.Empty;
-
-        _modelName = configuration["GEMINI_MODEL_NAME"]
-            ?? configuration["Gemini:ModelName"]
-            ?? "gemini-3.7-flash";
 
         _promptVersion = configuration["GEMINI_PROMPT_VERSION"]
             ?? configuration["Gemini:PromptVersion"]
@@ -73,7 +66,8 @@ public sealed class GeminiTalentMatchingService : ITalentMatchingService
             return new TalentMatchingResult { Matches = new List<CandidateMatchResult>() };
         }
 
-        if (string.IsNullOrWhiteSpace(_apiKey))
+        var (modelName, apiKey) = await _aiConfigProvider.GetConfigAsync(cancellationToken);
+        if (string.IsNullOrWhiteSpace(apiKey))
         {
             _logger.LogError("Gemini API key is not configured.");
             throw new InvalidOperationException("Gemini API key is not configured.");
@@ -103,7 +97,7 @@ public sealed class GeminiTalentMatchingService : ITalentMatchingService
         };
 
         var response = await _httpClient.PostAsJsonAsync(
-            $"/v1beta/models/{_modelName}:generateContent?key={_apiKey}",
+            $"/v1beta/models/{modelName}:generateContent?key={apiKey}",
             requestBody,
             cancellationToken);
 

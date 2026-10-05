@@ -38,6 +38,7 @@ public sealed class UnitOfWork : IUnitOfWork
     public IInterviewPreparationConfigRepository InterviewPreparationConfigs { get; }
     public ICompanyReviewRepository CompanyReviews { get; }
     public IJobReportRepository JobReports { get; }
+    public IAiConfigurationRepository AiConfigurations { get; }
 
     public UnitOfWork(ApplicationDbContext context)
     {
@@ -67,6 +68,7 @@ public sealed class UnitOfWork : IUnitOfWork
         InterviewPreparationConfigs = new InterviewPreparationConfigRepository(_context);
         CompanyReviews = new CompanyReviewRepository(_context);
         JobReports = new JobReportRepository(_context);
+        AiConfigurations = new AiConfigurationRepository(_context);
     }
 
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

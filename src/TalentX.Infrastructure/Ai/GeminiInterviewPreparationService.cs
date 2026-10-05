@@ -13,10 +13,9 @@ namespace TalentX.Infrastructure.Ai;
 public sealed class GeminiInterviewPreparationService : IInterviewPreparationAiService
 {
     private readonly HttpClient _httpClient;
+    private readonly IAiConfigurationProvider _aiConfigProvider;
     private readonly ILogger<GeminiInterviewPreparationService> _logger;
 
-    private readonly string _apiKey;
-    private readonly string _modelName;
     private readonly double _temperature;
     private readonly double _topP;
     private readonly int _maxOutputTokens;
@@ -39,18 +38,16 @@ public sealed class GeminiInterviewPreparationService : IInterviewPreparationAiS
 
     public GeminiInterviewPreparationService(
         HttpClient httpClient,
+        IAiConfigurationProvider aiConfigProvider,
         IConfiguration configuration,
         ILogger<GeminiInterviewPreparationService> logger)
     {
         _httpClient = httpClient;
+        _aiConfigProvider = aiConfigProvider;
         _logger = logger;
 
         var baseUrl = GetConfigValue(configuration, "GEMINI_BASE_URL", "Gemini:BaseUrl", GeminiConstants.DefaultBaseUrl);
         _httpClient.BaseAddress = new Uri(baseUrl);
-
-        _apiKey = GetConfigValue(configuration, "GEMINI_API_KEY", "Gemini:ApiKey");
-
-        _modelName = GetConfigValue(configuration, "GEMINI_MODEL_NAME", "Gemini:ModelName", GeminiConstants.DefaultModelName);
 
         var tempStr = GetConfigValue(configuration, "GEMINI_TEMPERATURE", "Gemini:Temperature");
         _temperature = double.TryParse(tempStr, out var tempVal) ? tempVal : 0.7;
@@ -117,7 +114,8 @@ public sealed class GeminiInterviewPreparationService : IInterviewPreparationAiS
         object? responseSchema,
         CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(_apiKey))
+        var (modelName, apiKey) = await _aiConfigProvider.GetConfigAsync(cancellationToken);
+        if (string.IsNullOrWhiteSpace(apiKey))
         {
             throw new InvalidOperationException("Gemini API key is not configured.");
         }
@@ -150,7 +148,7 @@ public sealed class GeminiInterviewPreparationService : IInterviewPreparationAiS
         };
 
         var response = await _httpClient.PostAsJsonAsync(
-            $"/v1beta/models/{_modelName}:generateContent?key={_apiKey}",
+            $"/v1beta/models/{modelName}:generateContent?key={apiKey}",
             requestBody,
             cancellationToken);
 
