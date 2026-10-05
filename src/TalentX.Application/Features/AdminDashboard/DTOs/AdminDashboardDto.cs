@@ -73,6 +73,19 @@ public sealed record AdminDashboardTrendDto
 {
     public AdminDashboardTrendGranularity Granularity { get; init; }
     public IReadOnlyList<AdminDashboardTrendPointDto> Points { get; init; } = [];
+    // The window just before the selected range, the same length and shifted back by whole hours/days/months.
+    public DateTime PreviousStartDate { get; init; }
+    public DateTime PreviousEndDate { get; init; }
+    // Each series' total over the previous window, so the UI can show the change against it.
+    public AdminDashboardTrendTotalsDto PreviousTotals { get; init; } = new();
+}
+
+public sealed record AdminDashboardTrendTotalsDto
+{
+    public int PublishedJobs { get; init; }
+    public int Applications { get; init; }
+    public int Interviews { get; init; }
+    public int Hires { get; init; }
 }
 
 public sealed record AdminDashboardTrendPointDto

@@ -352,12 +352,13 @@ public sealed class GetAdminDashboardQueryHandlerTests
     [Fact]
     public async Task Handle_WithDailyGranularity_AsksRepositoriesForDayBuckets()
     {
-        await _handler.Handle(
-            new GetAdminDashboardQuery { StartDate = Utc(2026, 9, 1), EndDate = Utc(2026, 9, 10) },
-            CancellationToken.None);
+        var start = Utc(2026, 9, 1);
+        var end = Utc(2026, 9, 10);
 
-        _jobs.Verify(r => r.GetPublishedCountsByBucketAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>(), false, It.IsAny<CancellationToken>()), Times.Once);
-        _applications.Verify(r => r.GetAppliedCountsByBucketAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>(), false, It.IsAny<CancellationToken>()), Times.Once);
+        await _handler.Handle(new GetAdminDashboardQuery { StartDate = start, EndDate = end }, CancellationToken.None);
+
+        _jobs.Verify(r => r.GetPublishedCountsByBucketAsync(start, end, false, It.IsAny<CancellationToken>()), Times.Once);
+        _applications.Verify(r => r.GetAppliedCountsByBucketAsync(start, end, false, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -452,6 +453,86 @@ public sealed class GetAdminDashboardQueryHandlerTests
         result.Trend.Points.Should().HaveCount(12);
         result.Trend.Points.First().BucketStart.Should().Be(Utc(2025, 10, 1));
         result.Trend.Points.Last().BucketStart.Should().Be(Utc(2026, 9, 1));
+    }
+
+    // Each preset's aligned window (now = 2026-10-05 14:20 UTC) and the window just before it.
+    public static TheoryData<DateTime, DateTime, DateTime, DateTime> PreviousRangeCases => new()
+    {
+        // 24H: 24 whole hours, shifted back 24 hours.
+        { Utc(2026, 10, 4, 15), Utc(2026, 10, 5, 14, 20), Utc(2026, 10, 3, 15), Utc(2026, 10, 4, 14, 20) },
+        // 7D: 7 calendar days, shifted back 7 days.
+        { Utc(2026, 9, 29), Utc(2026, 10, 5, 14, 20), Utc(2026, 9, 22), Utc(2026, 9, 28, 14, 20) },
+        // 30D: 30 calendar days, shifted back 30 days.
+        { Utc(2026, 9, 6), Utc(2026, 10, 5, 14, 20), Utc(2026, 8, 7), Utc(2026, 9, 5, 14, 20) },
+        // 90D (weekly buckets): shifted back 90 days, not 13 weeks.
+        { Utc(2026, 7, 8), Utc(2026, 10, 5, 14, 20), Utc(2026, 4, 9), Utc(2026, 7, 7, 14, 20) },
+        // 12M: 12 calendar months across a year boundary, shifted back 12 months.
+        { Utc(2025, 11, 1), Utc(2026, 10, 5, 14, 20), Utc(2024, 11, 1), Utc(2025, 10, 5, 14, 20) },
+        // 30D ending on the last day of a month.
+        { Utc(2026, 3, 2), Utc(2026, 3, 31, 12), Utc(2026, 1, 31), Utc(2026, 3, 1, 12) }
+    };
+
+    [Theory]
+    [MemberData(nameof(PreviousRangeCases))]
+    public async Task Handle_ReturnsThePreviousWindowShiftedBackByTheWholeUnitsTheRangeCovers(
+        DateTime start, DateTime end, DateTime expectedPreviousStart, DateTime expectedPreviousEnd)
+    {
+        var result = await _handler.Handle(new GetAdminDashboardQuery { StartDate = start, EndDate = end }, CancellationToken.None);
+
+        result.Trend.PreviousStartDate.Should().Be(expectedPreviousStart);
+        result.Trend.PreviousEndDate.Should().Be(expectedPreviousEnd);
+        result.Trend.PreviousEndDate.Should().BeBefore(start);
+    }
+
+    [Fact]
+    public async Task Handle_WithoutDates_ComparesWithTheThirtyDaysBefore()
+    {
+        var result = await _handler.Handle(new GetAdminDashboardQuery(), CancellationToken.None);
+
+        result.Trend.PreviousStartDate.Should().Be(result.StartDate.AddDays(-30));
+        result.Trend.PreviousEndDate.Should().Be(result.EndDate.AddDays(-30));
+    }
+
+    [Fact]
+    public async Task Handle_SumsEachSeriesOverThePreviousWindowWithTheSameRepositoryQueries()
+    {
+        var start = Utc(2026, 9, 6);
+        var end = Utc(2026, 10, 5, 14, 20);
+        var previousStart = Utc(2026, 8, 7);
+        var previousEnd = Utc(2026, 9, 5, 14, 20);
+
+        _jobs.Setup(r => r.GetPublishedCountsByBucketAsync(previousStart, previousEnd, false, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<DateTime, int> { [Utc(2026, 8, 10)] = 2, [Utc(2026, 8, 20)] = 3 });
+        _applications.Setup(r => r.GetAppliedCountsByBucketAsync(previousStart, previousEnd, false, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<DateTime, int> { [Utc(2026, 8, 7)] = 10, [Utc(2026, 9, 5)] = 23 });
+        _interviews.Setup(r => r.GetCreatedCountsByBucketAsync(previousStart, previousEnd, false, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<DateTime, int> { [Utc(2026, 8, 15)] = 4 });
+        _applications.Setup(r => r.GetHiredCountsByBucketAsync(previousStart, previousEnd, false, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<DateTime, int> { [Utc(2026, 8, 30)] = 1 });
+        // The current window has its own counts, which must not leak into the previous totals.
+        _applications.Setup(r => r.GetAppliedCountsByBucketAsync(start, end, false, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<DateTime, int> { [Utc(2026, 9, 10)] = 99 });
+
+        var result = await _handler.Handle(new GetAdminDashboardQuery { StartDate = start, EndDate = end }, CancellationToken.None);
+
+        result.Trend.PreviousTotals.PublishedJobs.Should().Be(5);
+        result.Trend.PreviousTotals.Applications.Should().Be(33);
+        result.Trend.PreviousTotals.Interviews.Should().Be(4);
+        result.Trend.PreviousTotals.Hires.Should().Be(1);
+        result.Trend.Points.Sum(p => p.Applications).Should().Be(99);
+    }
+
+    [Fact]
+    public async Task Handle_WithHourlyGranularity_SumsThePreviousWindowFromDayBuckets()
+    {
+        var start = Utc(2026, 10, 4, 15);
+        var end = Utc(2026, 10, 5, 14, 20);
+
+        await _handler.Handle(new GetAdminDashboardQuery { StartDate = start, EndDate = end }, CancellationToken.None);
+
+        _applications.Verify(
+            r => r.GetAppliedCountsByBucketAsync(Utc(2026, 10, 3, 15), Utc(2026, 10, 4, 14, 20), false, It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
