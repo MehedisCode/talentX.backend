@@ -255,6 +255,32 @@ namespace TalentX.Migrations.Migrations
                     b.ToTable("EmailVerificationTokens", (string)null);
                 });
 
+            modelBuilder.Entity("TalentX.Domain.Entities.AiConfiguration", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("EncryptedApiKey")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("ModelName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("AiConfigurations", (string)null);
+                });
+
             modelBuilder.Entity("TalentX.Domain.Entities.AuditLog", b =>
                 {
                     b.Property<Guid>("Id")
