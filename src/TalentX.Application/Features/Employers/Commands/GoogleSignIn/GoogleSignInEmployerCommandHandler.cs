@@ -46,6 +46,13 @@ public sealed class GoogleSignInEmployerCommandHandler : IRequestHandler<GoogleS
         var existingTalent = await _unitOfWork.Talents.GetByUserIdAsync(userId, cancellationToken)
             ?? await _unitOfWork.Talents.GetByEmailAsync(googleUser.Email, cancellationToken);
 
+        if (existingTalent != null && existingTalent.UserId != userId)
+        {
+            _unitOfWork.Users.Delete(existingTalent);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            existingTalent = null;
+        }
+
         if (existingTalent != null)
         {
             if (!existingTalent.IsVerified)
@@ -72,11 +79,32 @@ public sealed class GoogleSignInEmployerCommandHandler : IRequestHandler<GoogleS
         }
 
         var existingEmployer = await _unitOfWork.Employers.GetByEmailAsync(googleUser.Email, cancellationToken);
+        if (existingEmployer != null && existingEmployer.UserId != userId)
+        {
+            _unitOfWork.Users.Delete(existingEmployer);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            existingEmployer = null;
+        }
+
         if (existingEmployer != null)
         {
+            var isStateChanged = false;
+
             if (!existingEmployer.IsVerified)
             {
                 existingEmployer.MarkEmailVerified();
+                isStateChanged = true;
+            }
+
+            if (!string.IsNullOrWhiteSpace(googleUser.Name) &&
+                (string.IsNullOrWhiteSpace(existingEmployer.Name) || existingEmployer.Name.Contains('@')))
+            {
+                existingEmployer.UpdateName(googleUser.Name);
+                isStateChanged = true;
+            }
+
+            if (isStateChanged)
+            {
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
             }
 

@@ -155,4 +155,24 @@ public sealed class EmployersControllerTests
         capturedQuery!.SearchTerm.Should().Be("Backend");
         _sender.Verify(sender => sender.Send(It.IsAny<GetEmployerJobsQuery>(), It.IsAny<CancellationToken>()), Times.Once);
     }
+
+    [Fact]
+    public async Task GetMyProfile_ReturnsOk_WithEmployerName()
+    {
+        var currentUserServiceMock = new Mock<TalentX.Application.Identity.Services.ICurrentUserService>();
+        currentUserServiceMock.Setup(s => s.UserId).Returns("emp-user-123");
+
+        var employer = new TalentX.Domain.Employer("emp-user-123", "Fariha Jabin", "fariha.jabin@example.com", "Acme Corp");
+        var employerRepositoryMock = new Mock<TalentX.Application.Common.Interfaces.Repositories.IEmployerRepository>();
+        employerRepositoryMock
+            .Setup(r => r.GetByUserIdAsync("emp-user-123", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(employer);
+
+        var actionResult = await _controller.GetMyProfile(currentUserServiceMock.Object, employerRepositoryMock.Object, CancellationToken.None);
+
+        var okResult = actionResult.Should().BeOfType<OkObjectResult>().Subject;
+        var resultDto = okResult.Value.Should().BeOfType<CurrentEmployerResult>().Subject;
+        resultDto.Name.Should().Be("Fariha Jabin");
+        resultDto.CompanyName.Should().Be("Acme Corp");
+    }
 }

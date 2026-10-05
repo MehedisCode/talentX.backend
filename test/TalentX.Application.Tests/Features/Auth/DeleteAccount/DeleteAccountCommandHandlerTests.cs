@@ -444,5 +444,29 @@ public class DeleteAccountCommandHandlerTests
         _unitOfWorkMock.Verify(u => u.CommitTransactionAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    [Fact]
+    public async Task Handle_WhenUserNotFoundByIdentityUserId_FallsBackToEmailAndDeletesDomainData()
+    {
+        var oldUserId = "old-identity-user-id";
+        var user = new Talent(oldUserId, "Talent Patel", Email);
+
+        _userRepositoryMock
+            .Setup(r => r.GetByUserIdAsync(IdentityUserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((User?)null);
+
+        _userRepositoryMock
+            .Setup(r => r.GetByEmailAsync(Email, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(user);
+
+        var result = await _handler.Handle(new DeleteAccountCommand(ValidOtp), CancellationToken.None);
+
+        result.Email.Should().Be(Email);
+        _userRepositoryMock.Verify(r => r.Delete(user), Times.Once);
+        _unitOfWorkMock.Verify(u => u.JobApplications.DeleteByTalentUserIdAsync(oldUserId, It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWorkMock.Verify(u => u.Notifications.DeleteByRecipientIdAsync(oldUserId, It.IsAny<CancellationToken>()), Times.Once);
+        _identityServiceMock.Verify(i => i.DeleteApplicationUserAsync(IdentityUserId), Times.Once);
+        _unitOfWorkMock.Verify(u => u.CommitTransactionAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
     #endregion
 }
