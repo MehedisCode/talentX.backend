@@ -186,6 +186,40 @@ public class JobTests
     }
 
     [Fact]
+    public void Create_LeavesFirstPublishedAtNull()
+    {
+        var job = CreateJob();
+
+        job.FirstPublishedAt.Should().BeNull();
+    }
+
+    [Fact]
+    public void MarkAsPublished_TheFirstTime_SetsFirstPublishedAtToThePublishTime()
+    {
+        var job = CreateJob();
+
+        job.MarkAsPublished();
+
+        job.FirstPublishedAt.Should().NotBeNull();
+        job.FirstPublishedAt.Should().Be(job.PublishedAt);
+    }
+
+    [Fact]
+    public void MarkAsPublished_Again_MovesPublishedAtButKeepsFirstPublishedAt()
+    {
+        // Editing a live job with Publish = true calls MarkAsPublished a second time.
+        var job = CreateJob();
+        job.MarkAsPublished();
+        var firstPublishedAt = job.FirstPublishedAt;
+        Thread.Sleep(5);
+
+        job.MarkAsPublished();
+
+        job.FirstPublishedAt.Should().Be(firstPublishedAt);
+        job.PublishedAt.Should().BeAfter(firstPublishedAt!.Value);
+    }
+
+    [Fact]
     public void MarkAsPublished_DoesNotValidateCompleteness()
     {
         // No guardrail here by design — JobRules.EnsurePublishable is what
@@ -288,6 +322,21 @@ public class JobTests
         job.PublishedAt.Should().NotBeNull();
         job.PublishedAt!.Value.Should().BeOnOrAfter(beforeReopen).And.BeOnOrBefore(afterReopen);
         job.PublishedAt.Should().BeAfter(originalPublishedAt!.Value);
+    }
+
+    [Fact]
+    public void Reopen_KeepsFirstPublishedAt()
+    {
+        var job = CreateJob();
+        job.MarkAsPublished();
+        var firstPublishedAt = job.FirstPublishedAt;
+        Thread.Sleep(5);
+        job.MarkAsClosed();
+
+        job.Reopen();
+
+        job.FirstPublishedAt.Should().Be(firstPublishedAt);
+        job.PublishedAt.Should().BeAfter(firstPublishedAt!.Value);
     }
 
     [Fact]
@@ -423,6 +472,21 @@ public class JobTests
         job.DeactivatedAt.Should().BeNull();
         job.PublishedAt!.Value.Should().BeOnOrAfter(beforeReactivate).And.BeOnOrBefore(afterReactivate);
         job.UpdatedAt!.Value.Should().BeOnOrAfter(beforeReactivate).And.BeOnOrBefore(afterReactivate);
+    }
+
+    [Fact]
+    public void Reactivate_KeepsFirstPublishedAt()
+    {
+        var job = CreateJob();
+        job.MarkAsPublished();
+        var firstPublishedAt = job.FirstPublishedAt;
+        Thread.Sleep(5);
+        job.Deactivate(DeactivationReason.Spam, "Posting links to an unrelated external site.");
+
+        job.Reactivate();
+
+        job.FirstPublishedAt.Should().Be(firstPublishedAt);
+        job.PublishedAt.Should().BeAfter(firstPublishedAt!.Value);
     }
 
     [Theory]
