@@ -2,6 +2,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Infrastructure.Ai.Prompts;
+using TalentX.Infrastructure.Services;
 
 namespace TalentX.Infrastructure.Ai;
 
@@ -14,6 +15,8 @@ public static class ExtractionStartup
         this IServiceCollection services,
         IConfiguration? configuration = null)
     {
+        services.AddScoped<IAiConfigurationProvider, AiConfigurationProvider>();
+
         // Resume extraction service (existing)
         services.AddHttpClient<IResumeExtractionService, GeminiExtractionService>();
 
