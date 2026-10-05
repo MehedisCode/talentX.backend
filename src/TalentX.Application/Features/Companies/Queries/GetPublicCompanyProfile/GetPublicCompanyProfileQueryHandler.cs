@@ -51,7 +51,8 @@ public sealed class GetPublicCompanyProfileQueryHandler : IRequestHandler<GetPub
             job.ExperienceLevel,
             job.Vacancies,
             job.ExpireAt,
-            job.PublishedAt
+            job.PublishedAt,
+            job.IsReposted
         )).ToList();
 
         return new PublicCompanyProfileDto(

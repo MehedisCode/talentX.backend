@@ -340,6 +340,30 @@ public class JobTests
     }
 
     [Fact]
+    public void IsReposted_IsFalseBeforePublishingAndAfterTheFirstPublish()
+    {
+        var job = CreateJob();
+        job.IsReposted.Should().BeFalse();
+
+        job.MarkAsPublished();
+
+        job.IsReposted.Should().BeFalse();
+    }
+
+    [Fact]
+    public void IsReposted_IsTrueOnceTheJobIsRelisted()
+    {
+        var job = CreateJob();
+        job.MarkAsPublished();
+        Thread.Sleep(5);
+        job.MarkAsClosed();
+
+        job.Reopen();
+
+        job.IsReposted.Should().BeTrue();
+    }
+
+    [Fact]
     public void Reopen_WhenNotClosed_ThrowsInvalidOperationException()
     {
         var job = CreateJob();

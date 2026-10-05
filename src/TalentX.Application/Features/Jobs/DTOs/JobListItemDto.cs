@@ -26,6 +26,8 @@ public class JobListItemDto
     /// here — this is intentionally not the Job's raw creation timestamp.
     /// </summary>
     public DateTime CreatedAt { get; set; }
+    // True when the job was relisted after its first publish, so CreatedAt is a repost date, not the original one.
+    public bool IsReposted { get; set; }
     public DateTime ExpireAt { get; set; }
     public SalaryType? SalaryType { get; set; }
     public decimal? SalaryMin { get; set; }
