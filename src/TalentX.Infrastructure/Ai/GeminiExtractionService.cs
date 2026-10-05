@@ -43,6 +43,8 @@ public sealed class GeminiExtractionService : IResumeExtractionService
             : 8192;
     }
 
+    private const int MaxAttempts = 3;
+
     public async Task<ResumeExtractionResult> ExtractAsync(
         IUploadedFile file,
         CancellationToken cancellationToken = default)
@@ -84,36 +86,104 @@ public sealed class GeminiExtractionService : IResumeExtractionService
             throw new InvalidOperationException("Gemini:ApiKey is not configured.");
         }
 
-        var response = await _httpClient.PostAsJsonAsync(
-            $"/v1beta/models/{modelName}:generateContent?key={apiKey}",
-            requestBody,
-            cancellationToken);
-
-        if (!response.IsSuccessStatusCode)
+        for (var attempt = 1; attempt <= MaxAttempts; attempt++)
         {
-            var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
-            _logger.LogError(
-                "Gemini API call failed with status code {StatusCode}. Error: {ErrorContent}",
-                response.StatusCode, errorContent);
-            throw new Exception($"Gemini API error: {response.StatusCode}");
+            try
+            {
+                var response = await _httpClient.PostAsJsonAsync(
+                    $"/v1beta/models/{modelName}:generateContent?key={apiKey}",
+                    requestBody,
+                    cancellationToken);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
+                    var statusCode = (int)response.StatusCode;
+                    var isTransient = statusCode is 429 or 500 or 502 or 503 or 504;
+
+                    _logger.LogWarning(
+                        "Gemini API call attempt {Attempt} failed with status code {StatusCode}. Error: {ErrorContent}",
+                        attempt, response.StatusCode, errorContent);
+
+                    if (!isTransient || attempt == MaxAttempts)
+                    {
+                        throw new Exception($"Gemini API error: {response.StatusCode}");
+                    }
+
+                    await Task.Delay(attempt == 1 ? 1000 : 2000, cancellationToken);
+                    continue;
+                }
+
+                var geminiResponse = await response.Content.ReadFromJsonAsync<GeminiResponse>(
+                    CaseInsensitive, cancellationToken);
+
+                var jsonText = geminiResponse?.Candidates?.FirstOrDefault()?.Content?.Parts?.FirstOrDefault()?.Text;
+
+                if (string.IsNullOrWhiteSpace(jsonText))
+                {
+                    _logger.LogWarning("Gemini API returned an empty response on attempt {Attempt}.", attempt);
+                    if (attempt == MaxAttempts)
+                    {
+                        throw new Exception("Gemini API returned an empty content part.");
+                    }
+
+                    await Task.Delay(attempt == 1 ? 1000 : 2000, cancellationToken);
+                    continue;
+                }
+
+                var result = GeminiResponseMapper.MapToResult(
+                    jsonText,
+                    deterministicEmail,
+                    deterministicPhone,
+                    _logger,
+                    plainText);
+
+                if (IsEmptyOrIncomplete(result, plainText))
+                {
+                    if (attempt < MaxAttempts)
+                    {
+                        _logger.LogWarning(
+                            "Gemini API returned empty/incomplete extraction data on attempt {Attempt}. Retrying...",
+                            attempt);
+                        await Task.Delay(attempt == 1 ? 1000 : 2000, cancellationToken);
+                        continue;
+                    }
+
+                    _logger.LogError("Gemini API returned empty/incomplete extraction data after {MaxAttempts} attempts.", MaxAttempts);
+                    throw new Exception("AI extraction returned incomplete or empty data.");
+                }
+
+                return result;
+            }
+            catch (Exception ex) when (ex is not InvalidOperationException && ex is not UnprocessableEntityException)
+            {
+                if (attempt == MaxAttempts || cancellationToken.IsCancellationRequested)
+                {
+                    throw;
+                }
+
+                _logger.LogWarning(ex, "Gemini API extraction failed on attempt {Attempt}. Retrying...", attempt);
+                await Task.Delay(attempt == 1 ? 1000 : 2000, cancellationToken);
+            }
         }
 
-        var geminiResponse = await response.Content.ReadFromJsonAsync<GeminiResponse>(
-            CaseInsensitive, cancellationToken);
+        throw new Exception("AI extraction failed after maximum retry attempts.");
+    }
 
-        var jsonText = geminiResponse?.Candidates?.FirstOrDefault()?.Content?.Parts?.FirstOrDefault()?.Text;
-
-        if (string.IsNullOrWhiteSpace(jsonText))
+    private static bool IsEmptyOrIncomplete(ResumeExtractionResult result, string plainText)
+    {
+        if (plainText.Length < 100)
         {
-            _logger.LogError("Gemini API returned an empty response or invalid format.");
-            throw new Exception("Gemini API returned an empty content part.");
+            return false;
         }
 
-        return GeminiResponseMapper.MapToResult(
-            jsonText,
-            deterministicEmail,
-            deterministicPhone,
-            _logger,
-            plainText);
+        var hasName = !string.IsNullOrWhiteSpace(result.FullName);
+        var hasExperience = result.WorkExperience.Count > 0;
+        var hasEducation = result.Education.Count > 0;
+        var hasSkills = result.TechnicalSkills.Count > 0 ||
+                        result.SoftSkills.Count > 0 ||
+                        result.ToolsAndPlatforms.Count > 0;
+
+        return !hasName && !hasExperience && !hasEducation && !hasSkills;
     }
 }

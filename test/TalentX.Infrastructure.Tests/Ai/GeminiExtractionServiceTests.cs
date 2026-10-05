@@ -1,0 +1,200 @@
+using System.Net;
+using System.Text;
+using DocumentFormat.OpenXml;
+using DocumentFormat.OpenXml.Packaging;
+using DocumentFormat.OpenXml.Wordprocessing;
+using FluentAssertions;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
+using TalentX.Application.Common.Interfaces;
+using TalentX.Infrastructure.Ai;
+using Xunit;
+
+namespace TalentX.Infrastructure.Tests.Ai;
+
+public class GeminiExtractionServiceTests
+{
+    private class FakeHttpMessageHandler : HttpMessageHandler
+    {
+        private readonly Queue<HttpResponseMessage> _responses = new();
+        public int CallCount { get; private set; }
+
+        public void Enqueue(HttpResponseMessage response) => _responses.Enqueue(response);
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            CallCount++;
+            if (_responses.Count > 0)
+            {
+                return Task.FromResult(_responses.Dequeue());
+            }
+
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.InternalServerError));
+        }
+    }
+
+    private static byte[] CreateSampleDocx(string text)
+    {
+        using var mem = new MemoryStream();
+        using (var doc = WordprocessingDocument.Create(mem, WordprocessingDocumentType.Document))
+        {
+            var mainPart = doc.AddMainDocumentPart();
+            mainPart.Document = new Document(new Body(new Paragraph(new Run(new Text(text)))));
+            mainPart.Document.Save();
+        }
+        return mem.ToArray();
+    }
+
+    private static Mock<IUploadedFile> CreateMockFile(string text)
+    {
+        var bytes = CreateSampleDocx(text);
+        var mock = new Mock<IUploadedFile>();
+        mock.Setup(f => f.FileName).Returns("resume.docx");
+        mock.Setup(f => f.OpenReadStream()).Returns(() => new MemoryStream(bytes));
+        return mock;
+    }
+
+    private static HttpResponseMessage CreateGeminiSuccessResponse(string jsonContent)
+    {
+        var escapedJson = jsonContent.Replace("\"", "\\\"").Replace("\r", "").Replace("\n", " ");
+        var geminiResponseJson = $$"""
+        {
+            "candidates": [
+                {
+                    "content": {
+                        "parts": [
+                            {
+                                "text": "{{escapedJson}}"
+                            }
+                        ]
+                    }
+                }
+            ]
+        }
+        """;
+
+        return new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(geminiResponseJson, Encoding.UTF8, "application/json")
+        };
+    }
+
+    [Fact]
+    public async Task ExtractAsync_WhenFirstAttemptFailsWith503_RetriesAndSucceedsOnSecondAttempt()
+    {
+        var fakeHandler = new FakeHttpMessageHandler();
+        fakeHandler.Enqueue(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
+        {
+            Content = new StringContent("Service Unavailable")
+        });
+
+        const string validJson = """
+        {
+            "fullName": "Jane Doe",
+            "email": "jane@example.com",
+            "technicalSkills": ["C#", ".NET"]
+        }
+        """;
+        fakeHandler.Enqueue(CreateGeminiSuccessResponse(validJson));
+
+        var httpClient = new HttpClient(fakeHandler) { BaseAddress = new Uri("https://generativelanguage.googleapis.com") };
+        var configProviderMock = new Mock<IAiConfigurationProvider>();
+        configProviderMock.Setup(c => c.GetConfigAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(("gemini-2.5-flash", "test-key"));
+
+        var config = new ConfigurationBuilder().Build();
+        var service = new GeminiExtractionService(
+            httpClient,
+            configProviderMock.Object,
+            config,
+            NullLogger<GeminiExtractionService>.Instance);
+
+        var file = CreateMockFile("Jane Doe - Senior .NET Developer with 8 years of experience in C# and .NET Core.");
+
+        var result = await service.ExtractAsync(file.Object);
+
+        result.Should().NotBeNull();
+        result.FullName.Should().Be("Jane Doe");
+        result.TechnicalSkills.Should().Contain("C#");
+        fakeHandler.CallCount.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task ExtractAsync_WhenFirstAttemptReturnsEmptyData_RetriesAndSucceedsOnSecondAttempt()
+    {
+        var fakeHandler = new FakeHttpMessageHandler();
+
+        const string emptyJson = """
+        {
+            "fullName": "",
+            "workExperience": [],
+            "education": [],
+            "technicalSkills": [],
+            "softSkills": [],
+            "toolsAndPlatforms": []
+        }
+        """;
+        fakeHandler.Enqueue(CreateGeminiSuccessResponse(emptyJson));
+
+        const string validJson = """
+        {
+            "fullName": "John Smith",
+            "email": "john@example.com",
+            "technicalSkills": ["TypeScript", "React"]
+        }
+        """;
+        fakeHandler.Enqueue(CreateGeminiSuccessResponse(validJson));
+
+        var httpClient = new HttpClient(fakeHandler) { BaseAddress = new Uri("https://generativelanguage.googleapis.com") };
+        var configProviderMock = new Mock<IAiConfigurationProvider>();
+        configProviderMock.Setup(c => c.GetConfigAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(("gemini-2.5-flash", "test-key"));
+
+        var config = new ConfigurationBuilder().Build();
+        var service = new GeminiExtractionService(
+            httpClient,
+            configProviderMock.Object,
+            config,
+            NullLogger<GeminiExtractionService>.Instance);
+
+        var file = CreateMockFile("John Smith - Full Stack Developer. Extensive background with TypeScript, React, and web technologies for over 100 characters of resume text.");
+
+        var result = await service.ExtractAsync(file.Object);
+
+        result.Should().NotBeNull();
+        result.FullName.Should().Be("John Smith");
+        result.TechnicalSkills.Should().Contain("TypeScript");
+        fakeHandler.CallCount.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task ExtractAsync_WhenAllAttemptsFail_ThrowsException()
+    {
+        var fakeHandler = new FakeHttpMessageHandler();
+        fakeHandler.Enqueue(new HttpResponseMessage(HttpStatusCode.InternalServerError));
+        fakeHandler.Enqueue(new HttpResponseMessage(HttpStatusCode.InternalServerError));
+        fakeHandler.Enqueue(new HttpResponseMessage(HttpStatusCode.InternalServerError));
+
+        var httpClient = new HttpClient(fakeHandler) { BaseAddress = new Uri("https://generativelanguage.googleapis.com") };
+        var configProviderMock = new Mock<IAiConfigurationProvider>();
+        configProviderMock.Setup(c => c.GetConfigAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(("gemini-2.5-flash", "test-key"));
+
+        var config = new ConfigurationBuilder().Build();
+        var service = new GeminiExtractionService(
+            httpClient,
+            configProviderMock.Object,
+            config,
+            NullLogger<GeminiExtractionService>.Instance);
+
+        var file = CreateMockFile("Jane Doe - Senior .NET Developer with 8 years of experience in C# and .NET Core.");
+
+        var act = () => service.ExtractAsync(file.Object);
+
+        await act.Should().ThrowAsync<Exception>();
+        fakeHandler.CallCount.Should().Be(3);
+    }
+}
