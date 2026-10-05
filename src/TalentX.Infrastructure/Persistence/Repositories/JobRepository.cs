@@ -337,6 +337,7 @@ public sealed class JobRepository : RepositoryBase<Job>, IJobRepository
                 row.Job.EmploymentType,
                 row.Job.WorkArrangement,
                 row.Job.PublishedAt,
+                row.Job.FirstPublishedAt,
                 row.Job.ExpireAt,
                 row.Job.DeactivatedAt,
                 ApplicantCount = Context.JobApplications.Count(application => application.JobId == row.Job.Id)
@@ -357,6 +358,7 @@ public sealed class JobRepository : RepositoryBase<Job>, IJobRepository
             WorkArrangement = row.WorkArrangement,
             ApplicantCount = row.ApplicantCount,
             PublishedAt = row.PublishedAt,
+            FirstPublishedAt = row.FirstPublishedAt,
             ExpireAt = row.ExpireAt,
             DeactivatedAt = row.DeactivatedAt
         }).ToList();

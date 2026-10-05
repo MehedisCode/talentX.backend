@@ -84,6 +84,25 @@ public sealed class GetAdminJobDetailsQueryHandlerTests
     }
 
     [Fact]
+    public async Task Handle_ReturnsBothTheFirstPostedAndTheLastPublishedDates()
+    {
+        var job = CreateJob();
+        job.MarkAsPublished();
+        var firstPublishedAt = job.FirstPublishedAt;
+        Thread.Sleep(5);
+        job.Deactivate(DeactivationReason.Spam, "Posting spam links to another site.");
+        job.Reactivate();
+        SetupJob(job);
+        SetupEmployer("employer-1");
+
+        var result = await _handler.Handle(new GetAdminJobDetailsQuery(job.Id), CancellationToken.None);
+
+        result.FirstPublishedAt.Should().Be(firstPublishedAt);
+        result.PublishedAt.Should().Be(job.PublishedAt);
+        result.PublishedAt.Should().BeAfter(firstPublishedAt!.Value);
+    }
+
+    [Fact]
     public async Task Handle_MapsModerationHistoryNewestFirstWithLabels()
     {
         var job = CreateJob();
