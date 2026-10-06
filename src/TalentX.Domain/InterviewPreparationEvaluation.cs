@@ -14,6 +14,13 @@ public sealed class InterviewPreparationEvaluation : BaseEntity
     public int TotalCount { get; private set; }
     public DateTime EvaluatedAt { get; private set; }
 
+    // AI observability: null for evaluations created before these columns existed.
+    public string? ModelName { get; private set; }
+    public string? PromptVersion { get; private set; }
+    public long? LatencyMs { get; private set; }
+    public int? InputTokenCount { get; private set; }
+    public int? OutputTokenCount { get; private set; }
+
     private InterviewPreparationEvaluation() { }
 
     public static InterviewPreparationEvaluation Create(CreateEvaluationPayload payload)
@@ -42,6 +49,11 @@ public sealed class InterviewPreparationEvaluation : BaseEntity
         QuestionFeedback = payload.QuestionFeedback;
         AnsweredCount = payload.AnsweredCount;
         TotalCount = payload.TotalCount;
+        ModelName = payload.ModelName;
+        PromptVersion = payload.PromptVersion;
+        LatencyMs = payload.LatencyMs;
+        InputTokenCount = payload.InputTokenCount;
+        OutputTokenCount = payload.OutputTokenCount;
         EvaluatedAt = DateTime.UtcNow;
     }
 }

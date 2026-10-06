@@ -585,13 +585,11 @@ namespace TalentX.Migrations.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<string>("AdditionalQuestions")
-                        .HasMaxLength(8000)
-                        .HasColumnType("character varying(8000)");
+                        .HasColumnType("text");
 
                     b.Property<string>("BehavioralQuestions")
                         .IsRequired()
-                        .HasMaxLength(8000)
-                        .HasColumnType("character varying(8000)");
+                        .HasColumnType("text");
 
                     b.Property<string>("CompanyName")
                         .IsRequired()
@@ -603,8 +601,7 @@ namespace TalentX.Migrations.Migrations
 
                     b.Property<string>("ExperienceBasedQuestions")
                         .IsRequired()
-                        .HasMaxLength(8000)
-                        .HasColumnType("character varying(8000)");
+                        .HasColumnType("text");
 
                     b.Property<int>("GenerationCount")
                         .HasColumnType("integer");
@@ -627,13 +624,11 @@ namespace TalentX.Migrations.Migrations
 
                     b.Property<string>("KeyTopicsToPrepare")
                         .IsRequired()
-                        .HasMaxLength(4000)
-                        .HasColumnType("character varying(4000)");
+                        .HasColumnType("text");
 
                     b.Property<string>("RoleSpecificQuestions")
                         .IsRequired()
-                        .HasMaxLength(8000)
-                        .HasColumnType("character varying(8000)");
+                        .HasColumnType("text");
 
                     b.Property<DateTime?>("ScheduledAt")
                         .HasColumnType("timestamp with time zone");
@@ -643,8 +638,7 @@ namespace TalentX.Migrations.Migrations
 
                     b.Property<string>("SuggestedRevisionAreas")
                         .IsRequired()
-                        .HasMaxLength(4000)
-                        .HasColumnType("character varying(4000)");
+                        .HasColumnType("text");
 
                     b.Property<string>("TalentUserId")
                         .IsRequired()
@@ -653,8 +647,7 @@ namespace TalentX.Migrations.Migrations
 
                     b.Property<string>("TechnicalQuestions")
                         .IsRequired()
-                        .HasMaxLength(8000)
-                        .HasColumnType("character varying(8000)");
+                        .HasColumnType("text");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -684,8 +677,7 @@ namespace TalentX.Migrations.Migrations
 
                     b.Property<string>("AreasToImprove")
                         .IsRequired()
-                        .HasMaxLength(8000)
-                        .HasColumnType("character varying(8000)");
+                        .HasColumnType("text");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -693,11 +685,28 @@ namespace TalentX.Migrations.Migrations
                     b.Property<DateTime>("EvaluatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int?>("InputTokenCount")
+                        .HasColumnType("integer");
+
                     b.Property<Guid>("InterviewPreparationId")
                         .HasColumnType("uuid");
 
+                    b.Property<long?>("LatencyMs")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("ModelName")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int?>("OutputTokenCount")
+                        .HasColumnType("integer");
+
                     b.Property<int>("OverallScore")
                         .HasColumnType("integer");
+
+                    b.Property<string>("PromptVersion")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
 
                     b.Property<string>("QuestionFeedback")
                         .IsRequired()
@@ -705,13 +714,11 @@ namespace TalentX.Migrations.Migrations
 
                     b.Property<string>("Strengths")
                         .IsRequired()
-                        .HasMaxLength(8000)
-                        .HasColumnType("character varying(8000)");
+                        .HasColumnType("text");
 
                     b.Property<string>("Summary")
                         .IsRequired()
-                        .HasMaxLength(4000)
-                        .HasColumnType("character varying(4000)");
+                        .HasColumnType("text");
 
                     b.Property<int>("TotalCount")
                         .HasColumnType("integer");
@@ -725,6 +732,40 @@ namespace TalentX.Migrations.Migrations
                         .IsUnique();
 
                     b.ToTable("InterviewPreparationEvaluations", (string)null);
+                });
+
+            modelBuilder.Entity("TalentX.Domain.Entities.InterviewPreparationGeneration", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("InterviewPreparationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("TalentUserId")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InterviewPreparationId");
+
+                    b.HasIndex("TalentUserId");
+
+                    b.HasIndex("TalentUserId", "CreatedAt");
+
+                    b.ToTable("InterviewPreparationGenerations", (string)null);
                 });
 
             modelBuilder.Entity("TalentX.Domain.Entities.InterviewTimeslot", b =>
@@ -1951,6 +1992,15 @@ namespace TalentX.Migrations.Migrations
                 });
 
             modelBuilder.Entity("TalentX.Domain.Entities.InterviewPreparationEvaluation", b =>
+                {
+                    b.HasOne("TalentX.Domain.Entities.InterviewPreparation", null)
+                        .WithMany()
+                        .HasForeignKey("InterviewPreparationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("TalentX.Domain.Entities.InterviewPreparationGeneration", b =>
                 {
                     b.HasOne("TalentX.Domain.Entities.InterviewPreparation", null)
                         .WithMany()

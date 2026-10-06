@@ -43,6 +43,7 @@ public class ApplicationDbContext
     public DbSet<PreparationAnswer> PreparationAnswers => Set<PreparationAnswer>();
     public DbSet<InterviewPreparationEvaluation> InterviewPreparationEvaluations => Set<InterviewPreparationEvaluation>();
     public DbSet<InterviewPreparationConfig> InterviewPreparationConfigs => Set<InterviewPreparationConfig>();
+    public DbSet<InterviewPreparationGeneration> InterviewPreparationGenerations => Set<InterviewPreparationGeneration>();
     public DbSet<CompanyReview> CompanyReviews => Set<CompanyReview>();
     public DbSet<JobReport> JobReports => Set<JobReport>();
 

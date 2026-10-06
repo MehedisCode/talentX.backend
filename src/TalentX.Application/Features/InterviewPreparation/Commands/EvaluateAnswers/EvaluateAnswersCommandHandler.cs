@@ -60,6 +60,18 @@ public sealed class EvaluateAnswersCommandHandler
 
         var result = await EvaluateWithAiAsync(context, request.InvitationId, ct);
 
+        _logger.LogInformation(
+            "AI evaluation for preparation {PreparationId} (invitation {InvitationId}): model {ModelName}, prompt {PromptVersion}, latency {LatencyMs}ms, tokens in {InputTokenCount} out {OutputTokenCount}, overallScore {OverallScore}, answered {AnsweredCount}/{TotalCount}, outcome 200",
+            preparation.Id, request.InvitationId,
+            result.Metadata?.ModelName ?? "unknown",
+            result.Metadata?.PromptVersion ?? "unknown",
+            result.Metadata?.LatencyMs ?? 0,
+            result.Metadata?.InputTokenCount ?? 0,
+            result.Metadata?.OutputTokenCount ?? 0,
+            result.OverallScore,
+            context.AnsweredQuestions.Count,
+            context.TotalQuestionCount);
+
         var evaluation = await UpsertEvaluationAsync(preparation, context, result, ct);
 
         return InterviewPreparationMapper.ToDto(
@@ -88,7 +100,12 @@ public sealed class EvaluateAnswersCommandHandler
             AreasToImprove: result.AreasToImprove,
             QuestionFeedback: result.QuestionFeedback,
             AnsweredCount: context.AnsweredQuestions.Count,
-            TotalCount: context.TotalQuestionCount);
+            TotalCount: context.TotalQuestionCount,
+            ModelName: result.Metadata?.ModelName,
+            PromptVersion: result.Metadata?.PromptVersion,
+            LatencyMs: result.Metadata?.LatencyMs,
+            InputTokenCount: result.Metadata?.InputTokenCount,
+            OutputTokenCount: result.Metadata?.OutputTokenCount);
 
         var evaluation = await _unitOfWork.InterviewPreparations
             .GetEvaluationByPreparationIdAsync(preparation.Id, ct);
@@ -118,7 +135,7 @@ public sealed class EvaluateAnswersCommandHandler
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "AI answer evaluation failed for invitation {Id}", invitationId);
+            _logger.LogError(ex, "AI answer evaluation failed for invitation {Id} (outcome 502)", invitationId);
             throw new BadGatewayException("AI service is temporarily unavailable.");
         }
     }

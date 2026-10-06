@@ -23,4 +23,5 @@ public sealed record AnswersEvaluationResult
     public string Strengths { get; init; } = "[]";
     public string AreasToImprove { get; init; } = "[]";
     public string QuestionFeedback { get; init; } = "[]";
+    public AiCallMetadata? Metadata { get; init; }
 }

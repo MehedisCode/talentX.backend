@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using TalentX.Application.Common.Interfaces.Repositories;
 using TalentX.Domain.Entities;
+using TalentX.Domain.Enums;
 using TalentX.Infrastructure.Persistence.Contexts;
 
 namespace TalentX.Infrastructure.Persistence.Repositories;
@@ -46,12 +47,31 @@ public sealed class InterviewPreparationRepository : IInterviewPreparationReposi
         _context.InterviewPreparations.Update(entity);
     }
 
-    public async Task<int> CountTodayByTalentAsync(string talentUserId, CancellationToken ct = default)
+    public async Task<int> CountInitialGenerationsTodayByTalentAsync(
+        string talentUserId, CancellationToken ct = default)
     {
         var today = DateTime.UtcNow.Date;
-        return await _context.InterviewPreparations
-            .Where(p => p.TalentUserId == talentUserId && p.CreatedAt >= today)
-            .SumAsync(p => p.GenerationCount, ct);
+        return await _context.InterviewPreparationGenerations
+            .CountAsync(g =>
+                g.TalentUserId == talentUserId
+                && g.Kind == InterviewPreparationGenerationKind.Initial
+                && g.CreatedAt >= today, ct);
+    }
+
+    public async Task<int> CountAllGenerationsTodayByTalentAsync(
+        string talentUserId, CancellationToken ct = default)
+    {
+        var today = DateTime.UtcNow.Date;
+        return await _context.InterviewPreparationGenerations
+            .CountAsync(g =>
+                g.TalentUserId == talentUserId
+                && g.CreatedAt >= today, ct);
+    }
+
+    public async Task AddGenerationAsync(
+        InterviewPreparationGeneration entity, CancellationToken ct = default)
+    {
+        await _context.InterviewPreparationGenerations.AddAsync(entity, ct);
     }
 
     public async Task<IReadOnlyList<PreparationAnswer>> GetAnswersByPreparationIdAsync(

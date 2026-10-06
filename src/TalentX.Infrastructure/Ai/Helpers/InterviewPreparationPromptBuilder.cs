@@ -196,4 +196,45 @@ Rules for questionFeedback:
             required = new[] { "additionalQuestions" }
         };
     }
+
+    // Mirrors the JSON structure demanded by BuildEvaluationPrompt so Gemini is
+    // schema-constrained, not just asked nicely. Server-side validation still
+    // verifies coverage and ranges because a schema alone proves nothing.
+    public static object BuildEvaluationSchema()
+    {
+        var feedbackItemSchema = new
+        {
+            type = "OBJECT",
+            properties = new
+            {
+                category = new { type = "STRING" },
+                questionIndex = new { type = "INTEGER", minimum = 0 },
+                score = new { type = "INTEGER", minimum = 0, maximum = 100 },
+                feedback = new { type = "STRING" },
+                suggestedAnswer = new { type = "STRING" }
+            },
+            required = new[] { "category", "questionIndex", "score", "feedback" }
+        };
+
+        return new
+        {
+            type = "OBJECT",
+            properties = new
+            {
+                overallScore = new { type = "INTEGER", minimum = 0, maximum = 100 },
+                summary = new { type = "STRING" },
+                strengths = new { type = "ARRAY", items = new { type = "STRING" } },
+                areasToImprove = new { type = "ARRAY", items = new { type = "STRING" } },
+                questionFeedback = new { type = "ARRAY", items = feedbackItemSchema }
+            },
+            required = new[]
+            {
+                "overallScore",
+                "summary",
+                "strengths",
+                "areasToImprove",
+                "questionFeedback"
+            }
+        };
+    }
 }

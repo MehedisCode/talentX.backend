@@ -56,7 +56,7 @@ public sealed class GeneratePreparationCommandHandler
             throw new ConflictException("Preparation already exists. Use regenerate instead.");
 
         var todayCount = await _unitOfWork.InterviewPreparations
-            .CountTodayByTalentAsync(userId, ct);
+            .CountInitialGenerationsTodayByTalentAsync(userId, ct);
         if (todayCount >= config.DailyGenerateLimit)
             throw new TooManyRequestsException(
                 $"Daily interview preparation limit reached ({config.DailyGenerateLimit}/day).");
@@ -96,7 +96,20 @@ public sealed class GeneratePreparationCommandHandler
                 SuggestedRevisionAreas: aiResult.SuggestedRevisionAreas));
 
         await _unitOfWork.InterviewPreparations.AddAsync(preparation, ct);
+        await _unitOfWork.InterviewPreparations.AddGenerationAsync(
+            InterviewPreparationGeneration.Create(new CreateGenerationPayload(
+                preparation.Id, userId, InterviewPreparationGenerationKind.Initial)),
+            ct);
         await _unitOfWork.SaveChangesAsync(ct);
+
+        _logger.LogInformation(
+            "Interview preparation {PreparationId} generated for talent {TalentUserId}: model {ModelName}, prompt {PromptVersion}, latency {LatencyMs}ms, tokens in {InputTokenCount} out {OutputTokenCount}",
+            preparation.Id, userId,
+            aiResult.Metadata?.ModelName ?? "unknown",
+            aiResult.Metadata?.PromptVersion ?? "unknown",
+            aiResult.Metadata?.LatencyMs ?? 0,
+            aiResult.Metadata?.InputTokenCount ?? 0,
+            aiResult.Metadata?.OutputTokenCount ?? 0);
 
         return InterviewPreparationMapper.ToDto(
             preparation, config.AccessWindowAfterInterview);
