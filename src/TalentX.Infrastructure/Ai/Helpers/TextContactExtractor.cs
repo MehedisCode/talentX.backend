@@ -9,7 +9,7 @@ public static class TextContactExtractor
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
     private static readonly Regex PhoneRegex = new(
-        @"(?:\+?\d{1,3}[\s.-]?)?\(?\d{2,4}\)?[\s.-]?\d{3,4}[\s.-]?\d{3,4}",
+        @"(?:\+?\d{1,3}[\s.-]*)?\(?\d{2,4}\)?[\s.-]*\d{3,4}[\s.-]*\d{3,4}",
         RegexOptions.Compiled);
 
     public static string? ExtractEmail(string plainText)
@@ -27,7 +27,7 @@ public static class TextContactExtractor
         var match = PhoneRegex.Match(plainText);
         if (!match.Success) return null;
 
-        var raw = match.Value.Trim();
+        var raw = Regex.Replace(match.Value.Trim(), @"\s+", " ");
         // Ignore matches that are too short (e.g. year range numbers)
         var digitsOnly = Regex.Replace(raw, @"\D", "");
         if (digitsOnly.Length < 7 || digitsOnly.Length > 15) return null;
