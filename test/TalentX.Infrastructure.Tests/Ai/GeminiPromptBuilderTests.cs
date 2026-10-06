@@ -21,7 +21,7 @@ public class GeminiPromptBuilderTests
         using var document = JsonDocument.Parse(json);
         var required = document.RootElement
             .GetProperty("generationConfig")
-            .GetProperty("response_schema")
+            .GetProperty("responseJsonSchema")
             .GetProperty("properties")
             .GetProperty("education")
             .GetProperty("items")
@@ -60,7 +60,7 @@ public class GeminiPromptBuilderTests
         using var document = JsonDocument.Parse(json);
         var schema = document.RootElement
             .GetProperty("generationConfig")
-            .GetProperty("response_schema");
+            .GetProperty("responseJsonSchema");
 
         var propertyOrder = schema
             .GetProperty("properties")
@@ -92,7 +92,7 @@ public class GeminiPromptBuilderTests
         using var document = JsonDocument.Parse(json);
         var workItem = document.RootElement
             .GetProperty("generationConfig")
-            .GetProperty("response_schema")
+            .GetProperty("responseJsonSchema")
             .GetProperty("properties")
             .GetProperty("workExperience")
             .GetProperty("items");
@@ -156,6 +156,22 @@ public class GeminiPromptBuilderTests
             .GetString();
 
         prompt.Should().Contain("Extract EVERY work experience entry");
+    }
+
+    [Fact]
+    public void BuildRequestBody_PromptCoversMonthYearPresentRange()
+    {
+        var body = GeminiPromptBuilder.BuildRequestBody("resume text", Array.Empty<string>());
+        var json = JsonSerializer.Serialize(body);
+
+        using var document = JsonDocument.Parse(json);
+        var prompt = document.RootElement
+            .GetProperty("contents")[0]
+            .GetProperty("parts")[0]
+            .GetProperty("text")
+            .GetString();
+
+        prompt.Should().Contain("(December 2024 - Present)");
     }
 
     [Fact]

@@ -157,11 +157,52 @@ public class DocxDocumentParserTests
     }
     
     [Fact]
+    public void ExtractContent_ConsecutiveSpacesBetweenRuns_CollapsesToSingleSpace()
+    {
+        // Arrange: runs carrying surrounding whitespace, as seen in real resumes
+        using var memoryStream = new MemoryStream();
+
+        using (var doc = WordprocessingDocument.Create(memoryStream, WordprocessingDocumentType.Document))
+        {
+            var mainPart = doc.AddMainDocumentPart();
+            mainPart.Document = new Document();
+            var body = mainPart.Document.AppendChild(new Body());
+
+            var paragraph = new Paragraph();
+            paragraph.Append(CreateRunWithSpaces("Astha "));
+            paragraph.Append(CreateRunWithSpaces(" IT "));
+            paragraph.Append(CreateRunWithSpaces(" Ltd "));
+            paragraph.Append(CreateRunWithSpaces(" (December "));
+            paragraph.Append(CreateRunWithSpaces(" 2024 - "));
+            paragraph.Append(CreateRunWithSpaces(" Present)"));
+
+            body.Append(paragraph);
+            mainPart.Document.Save();
+        }
+
+        memoryStream.Position = 0;
+
+        // Act
+        var (plainText, _) = DocxDocumentParser.ExtractContent(memoryStream);
+
+        // Assert
+        plainText.Should().Contain("Astha IT Ltd (December 2024 - Present)");
+        plainText.Should().NotContain("  ");
+    }
+
+    private static Run CreateRunWithSpaces(string text)
+    {
+        var run = new Run();
+        run.Append(new Text(text) { Space = SpaceProcessingModeValues.Preserve });
+        return run;
+    }
+
+    [Fact]
     public void ExtractContent_MultipleParagraphs_PreservesLineBreaks()
     {
         // Arrange
         using var memoryStream = new MemoryStream();
-        
+
         using (var doc = WordprocessingDocument.Create(memoryStream, WordprocessingDocumentType.Document))
         {
             var mainPart = doc.AddMainDocumentPart();

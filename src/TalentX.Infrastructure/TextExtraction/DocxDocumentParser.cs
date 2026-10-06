@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.RegularExpressions;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 
@@ -7,6 +8,8 @@ namespace TalentX.Infrastructure.TextExtraction;
 public static class DocxDocumentParser
 {
     private static readonly char[] TrailingTrimChars = ['.', ',', ';', ':', ')', ']', '>', '"', '\'', '|'];
+
+    private static readonly Regex WhitespaceRegex = new(@"\s+", RegexOptions.Compiled);
 
     public static (string PlainText, IReadOnlyList<string> Links) ExtractContent(
         Stream fileStream,
@@ -42,7 +45,7 @@ public static class DocxDocumentParser
                 var runs = paragraph.Descendants<Text>()
                     .Select(t => t.Text)
                     .Where(t => !string.IsNullOrEmpty(t));
-                var line = string.Join(" ", runs).Trim();
+                var line = WhitespaceRegex.Replace(string.Join(" ", runs), " ").Trim();
                 
                 if (!string.IsNullOrEmpty(line))
                 {

@@ -70,7 +70,7 @@ public static class GeminiPromptBuilder
         "EXTRACTION & CLASSIFICATION GUIDELINES:\n" +
         "- fullName: Candidate's full name (usually located at the top/header of the resume).\n" +
         "- location: Candidate's current residence/location (city, state/province, country). Do NOT use company locations as candidate location.\n" +
-        "- workExperience: Extract EVERY work experience entry in the resume — full-time, part-time, internship, contract, and freelance roles. Do not merge or skip roles, and do not omit a role just because its dates are missing (leave the date fields empty instead). Only treat a role as CURRENT (set 'endDate' to 'Present' and 'isCurrent' to true) when the resume indicates it: a start date with no end date, or wording like Present / Current / till date. If the resume gives NO dates for a role, leave both date fields empty and set 'isCurrent' to false — do not infer or invent 'Present'. For past roles, set 'isCurrent' to false and fill 'startDate' and 'endDate' from the resume.\n" +
+        "- workExperience: Extract EVERY work experience entry in the resume — full-time, part-time, internship, contract, and freelance roles. Do not merge or skip roles, and do not omit a role just because its dates are missing (leave the date fields empty instead). Only treat a role as CURRENT (set 'endDate' to 'Present' and 'isCurrent' to true) when the resume indicates it: a start date with no end date, or wording like Present / Current / till date. A range such as '(December 2024 - Present)' means startDate 'December 2024' and endDate 'Present' with 'isCurrent' true. If the resume gives NO dates for a role, leave both date fields empty and set 'isCurrent' to false — do not infer or invent 'Present'. For past roles, set 'isCurrent' to false and fill 'startDate' and 'endDate' from the resume.\n" +
         "- education: Extract all degrees, universities, and colleges. When the resume shows a date range (e.g. '2016 - 2020'), put the first year in 'startDate' and the second year in 'endDate'. For ongoing studies, set 'endDate' to 'Expected <Year>' or 'Present'. If the resume lists only a SINGLE year for a degree, treat that year as the completion/graduation year and put it in 'endDate' (leave 'startDate' empty). Do not invent dates that are not present.\n" +
         "- technicalSkills: Programming languages, frameworks, libraries, databases, and core technical proficiencies (e.g. C#, .NET, Python, React, PostgreSQL, REST APIs, GraphQL).\n" +
         "- toolsAndPlatforms: Developer tools, cloud providers, DevOps tools, version control, and infrastructure (e.g. Git, Docker, Kubernetes, AWS, Azure, GCP, Linux, Jira, Postman, CI/CD).\n" +
@@ -97,9 +97,12 @@ public static class GeminiPromptBuilder
         top_p = 0.95,
         max_output_tokens = maxOutputTokens,
         response_mime_type = "application/json",
-        response_schema = new
+        // Gemini 3 thinking models mishandle the OpenAPI-style `response_schema`
+        // (arrays of objects are truncated to a single item). JSON-Schema format
+        // produces complete results.
+        responseJsonSchema = new
         {
-            type = "OBJECT",
+            type = "object",
             required = new[]
             {
                 "fullName",
@@ -111,48 +114,48 @@ public static class GeminiPromptBuilder
             },
             properties = new
             {
-                fullName = new { type = "STRING" },
-                email = new { type = "STRING" },
-                phone = new { type = "STRING" },
-                location = new { type = "STRING" },
-                linkedInUrl = new { type = "STRING" },
-                portfolioUrls = new { type = "ARRAY", items = new { type = "STRING" } },
+                fullName = new { type = "string" },
+                email = new { type = "string" },
+                phone = new { type = "string" },
+                location = new { type = "string" },
+                linkedInUrl = new { type = "string" },
+                portfolioUrls = new { type = "array", items = new { type = "string" } },
                 workExperience = new
                 {
-                    type = "ARRAY",
+                    type = "array",
                     items = new
                     {
-                        type = "OBJECT",
+                        type = "object",
                         required = new[] { "companyName", "jobTitle" },
                         properties = new
                         {
-                            companyName = new { type = "STRING" },
-                            jobTitle = new { type = "STRING" },
-                            startDate = new { type = "STRING" },
-                            endDate = new { type = "STRING" },
-                            isCurrent = new { type = "BOOLEAN" }
+                            companyName = new { type = "string" },
+                            jobTitle = new { type = "string" },
+                            startDate = new { type = "string" },
+                            endDate = new { type = "string" },
+                            isCurrent = new { type = "boolean" }
                         }
                     }
                 },
                 education = new
                 {
-                    type = "ARRAY",
+                    type = "array",
                     items = new
                     {
-                        type = "OBJECT",
+                        type = "object",
                         required = new[] { "institution", "degree" },
                         properties = new
                         {
-                            institution = new { type = "STRING" },
-                            degree = new { type = "STRING" },
-                            startDate = new { type = "STRING" },
-                            endDate = new { type = "STRING" }
+                            institution = new { type = "string" },
+                            degree = new { type = "string" },
+                            startDate = new { type = "string" },
+                            endDate = new { type = "string" }
                         }
                     }
                 },
-                technicalSkills = new { type = "ARRAY", items = new { type = "STRING" } },
-                softSkills = new { type = "ARRAY", items = new { type = "STRING" } },
-                toolsAndPlatforms = new { type = "ARRAY", items = new { type = "STRING" } }
+                technicalSkills = new { type = "array", items = new { type = "string" } },
+                softSkills = new { type = "array", items = new { type = "string" } },
+                toolsAndPlatforms = new { type = "array", items = new { type = "string" } }
             }
         }
     };
