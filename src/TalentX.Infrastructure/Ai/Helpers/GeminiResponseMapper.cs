@@ -35,7 +35,7 @@ public static class GeminiResponseMapper
             var workExperience = (result.WorkExperience ?? [])
                 .Select(w =>
                 {
-                    var isCurrent = WorkExperienceNormalizer.IsCurrent(w.IsCurrent, w.EndDate);
+                    var isCurrent = WorkExperienceNormalizer.IsCurrent(w.IsCurrent, w.EndDate, w.StartDate);
 
                     return new WorkExperienceDto
                     {

@@ -15,6 +15,7 @@ COPY test/TalentX.Domain.Tests/TalentX.Domain.Tests.csproj test/TalentX.Domain.T
 COPY test/TalentX.Application.Tests/TalentX.Application.Tests.csproj test/TalentX.Application.Tests/
 COPY test/TalentX.Infrastructure.Tests/TalentX.Infrastructure.Tests.csproj test/TalentX.Infrastructure.Tests/
 COPY test/TalentX.Api.Tests/TalentX.Api.Tests.csproj test/TalentX.Api.Tests/
+COPY tools/InterviewEvaluationHarness/InterviewEvaluationHarness.csproj tools/InterviewEvaluationHarness/
 
 RUN dotnet restore TalentX.slnx
 
