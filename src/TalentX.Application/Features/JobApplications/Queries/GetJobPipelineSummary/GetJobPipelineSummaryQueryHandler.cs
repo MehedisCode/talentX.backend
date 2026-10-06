@@ -52,7 +52,8 @@ public sealed class GetJobPipelineSummaryQueryHandler
             job.CompanyName,
             job.Status.ToString(),
             job.Vacancies,
-            job.PublishedAt ?? job.CreatedAt,
+            // The original posting date: the applicants span the job's whole life, not just since a reopen.
+            job.FirstPublishedAt ?? job.CreatedAt,
             totalApplicants,
             pipelineStatistics);
     }

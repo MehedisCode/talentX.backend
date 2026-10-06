@@ -131,6 +131,29 @@ public sealed class GetJobPipelineSummaryQueryHandlerTests
     }
 
     [Fact]
+    public async Task Handle_WhenJobWasReopened_ReturnsTheOriginalPostingDate()
+    {
+        var job = CreateJob("employer-1");
+        job.MarkAsPublished();
+        var firstPublishedAt = job.FirstPublishedAt!.Value;
+        Thread.Sleep(5);
+        job.MarkAsClosed();
+        job.Reopen();
+
+        _jobRepository
+            .Setup(repository => repository.GetByIdAsync(job.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(job);
+        _jobApplicationRepository
+            .Setup(repository => repository.GetCandidatePipelineStatsByJobIdAsync(job.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CandidatePipelineStatsDto(0, 0, 0, 0, 0, 0));
+
+        var result = await _handler.Handle(new GetJobPipelineSummaryQuery(job.Id), CancellationToken.None);
+
+        result.PostedDate.Should().Be(firstPublishedAt);
+        result.PostedDate.Should().BeBefore(job.PublishedAt!.Value);
+    }
+
+    [Fact]
     public async Task Handle_WhenJobHasZeroApplicants_ReturnsZeroCountsAndTotal()
     {
         var job = CreateJob("employer-1");

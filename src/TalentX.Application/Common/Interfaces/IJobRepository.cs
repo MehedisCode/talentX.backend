@@ -50,17 +50,20 @@ public interface IJobRepository
         AdminJobQueryParams queryParams,
         CancellationToken cancellationToken = default);
 
-      Task<IReadOnlyDictionary<JobStatus, int>> GetStatusCountsCreatedBetweenAsync(
+    // Status counts of the jobs first posted in the window (reopens and reactivations are not new postings).
+    Task<IReadOnlyDictionary<JobStatus, int>> GetStatusCountsFirstPublishedBetweenAsync(
         DateTime startUtc,
         DateTime endUtc,
         CancellationToken cancellationToken = default);
 
+    // Jobs first posted in the window, counted per hour or day bucket.
     Task<IReadOnlyDictionary<DateTime, int>> GetPublishedCountsByBucketAsync(
         DateTime startUtc,
         DateTime endUtc,
         bool groupByHour,
         CancellationToken cancellationToken = default);
 
+    // The newest jobs first posted in the window.
     Task<IReadOnlyList<Job>> GetRecentPublishedBetweenAsync(
         DateTime startUtc,
         DateTime endUtc,

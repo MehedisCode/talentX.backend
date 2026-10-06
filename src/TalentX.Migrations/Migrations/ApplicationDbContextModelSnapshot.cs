@@ -940,6 +940,9 @@ namespace TalentX.Migrations.Migrations
                     b.Property<DateTime>("ExpireAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateTime?>("FirstPublishedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<bool>("IsDeleted")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
@@ -1005,6 +1008,8 @@ namespace TalentX.Migrations.Migrations
                     b.HasIndex("EmployerId");
 
                     b.HasIndex("ExpireAt");
+
+                    b.HasIndex("FirstPublishedAt");
 
                     b.HasIndex("Status");
 
