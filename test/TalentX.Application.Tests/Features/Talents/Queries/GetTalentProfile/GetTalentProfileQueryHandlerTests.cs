@@ -173,6 +173,54 @@ public class GetTalentProfileQueryHandlerTests
         await act.Should().NotThrowAsync();
     }
 
+    [Fact]
+    public async Task Handle_WhenWorkExperiencesAndEducationsExist_ReturnsThemInReverseChronologicalOrder()
+    {
+        _currentUserService.SetupGet(u => u.UserId).Returns("user-sorted");
+        var talent = new Talent("user-sorted", "Alex Doe", "alex@example.com");
+
+        var workExperiences = new List<WorkExperience>
+        {
+            new("user-sorted", "Company A", "Senior Software Test Engineer", "04/2022", "09/2025", false),
+            new("user-sorted", "Company B", "SQA Engineer (Old)", "04/2019", "01/2020", false),
+            new("user-sorted", "Company C", "Quality Excellence Lead", "09/2025", "Present", true),
+            new("user-sorted", "Company D", "SQA Engineer (Mid)", "02/2021", "02/2022", false)
+        };
+
+        var educations = new List<Education>
+        {
+            new("user-sorted", "State University", "B.Sc. Computer Science", "2016", "2020"),
+            new("user-sorted", "Research Institute", "Ph.D.", "2023", "Present"),
+            new("user-sorted", "Graduate School", "M.Sc. Software Engineering", "2020", "2022")
+        };
+
+        _talentRepository
+            .Setup(r => r.GetByUserIdAsync("user-sorted", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(talent);
+        _workExperienceRepository
+            .Setup(r => r.GetByUserIdAsync("user-sorted", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(workExperiences);
+        _educationRepository
+            .Setup(r => r.GetByUserIdAsync("user-sorted", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(educations);
+        _resumeRepository
+            .Setup(r => r.GetAllByUserIdAsync("user-sorted", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Resume>());
+
+        var response = await _handler.Handle(new GetTalentProfileQuery(), CancellationToken.None);
+
+        response.WorkExperiences.Select(item => item.JobTitle).Should().Equal(
+            "Quality Excellence Lead",
+            "Senior Software Test Engineer",
+            "SQA Engineer (Mid)",
+            "SQA Engineer (Old)");
+
+        response.Educations.Select(item => item.Degree).Should().Equal(
+            "Ph.D.",
+            "M.Sc. Software Engineering",
+            "B.Sc. Computer Science");
+    }
+
     private static async Task<T> TrackOverlapAsync<T>(int[] concurrentCallCount, T result)
     {
         var callsInFlight = Interlocked.Increment(ref concurrentCallCount[0]);

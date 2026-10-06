@@ -4,6 +4,7 @@ using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Features.Resumes.DTOs;
 using TalentX.Application.Features.Talents.DTOs;
+using TalentX.Application.Features.Talents.Helpers;
 using TalentX.Application.Identity.Services;
 
 namespace TalentX.Application.Features.Talents.Queries.GetTalentProfile;
@@ -52,6 +53,16 @@ public sealed class GetTalentProfileQueryHandler : IRequestHandler<GetTalentProf
         var videoIntroUrl = await videoIntroUrlTask;
         var resumeUrl = await resumeUrlTask;
 
+        var mappedWorkExperiences = _mapper.Map<List<WorkExperienceItemDto>>(workExperiences);
+        var sortedWorkExperiences = ChronologicalOrderingHelper.SortWorkExperiences(
+            mappedWorkExperiences,
+            experience => (experience.IsCurrent, experience.StartDate, experience.EndDate));
+
+        var mappedEducations = _mapper.Map<List<EducationItemDto>>(educations);
+        var sortedEducations = ChronologicalOrderingHelper.SortEducations(
+            mappedEducations,
+            education => (education.StartDate, education.EndDate));
+
         return new TalentProfileResponse(
             talent.Id,
             talent.UserId,
@@ -74,8 +85,8 @@ public sealed class GetTalentProfileQueryHandler : IRequestHandler<GetTalentProf
             resume?.OriginalFileName,
             resumeUrl,
             resumes.Select(SavedResumeDto.FromEntity).ToList(),
-            _mapper.Map<List<WorkExperienceItemDto>>(workExperiences),
-            _mapper.Map<List<EducationItemDto>>(educations),
+            sortedWorkExperiences,
+            sortedEducations,
             talent.CreatedAt,
             talent.UpdatedAt
         );
