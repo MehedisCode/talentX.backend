@@ -7,11 +7,13 @@ namespace TalentX.Infrastructure.Tests.Ai;
 
 public class GeminiPromptBuilderTests
 {
-    // Requiring 'startDate' is what makes Gemini reliably emit education dates
-    // at all; when it was optional the model skipped the dates entirely. This
-    // guards that regression (see TX26-320 #3).
+    // Education dates are optional in the schema (startDate is not required),
+    // but the prompt strongly instructs Gemini to extract them. The normalizer
+    // handles single-year degrees (moves lone year to endDate). This test
+    // verifies the schema does not require startDate, allowing Gemini to
+    // follow the prompt instruction to leave it empty for single-year degrees.
     [Fact]
-    public void BuildRequestBody_RequiresEducationStartDate()
+    public void BuildRequestBody_EducationDoesNotRequireStartDate()
     {
         var body = GeminiPromptBuilder.BuildRequestBody("resume text", Array.Empty<string>());
         var json = JsonSerializer.Serialize(body);
@@ -19,7 +21,7 @@ public class GeminiPromptBuilderTests
         using var document = JsonDocument.Parse(json);
         var required = document.RootElement
             .GetProperty("generationConfig")
-            .GetProperty("response_schema")
+            .GetProperty("responseJsonSchema")
             .GetProperty("properties")
             .GetProperty("education")
             .GetProperty("items")
@@ -30,7 +32,7 @@ public class GeminiPromptBuilderTests
 
         required.Should().Contain("institution");
         required.Should().Contain("degree");
-        required.Should().Contain("startDate");
+        required.Should().NotContain("startDate");
     }
 
     [Fact]
@@ -58,7 +60,7 @@ public class GeminiPromptBuilderTests
         using var document = JsonDocument.Parse(json);
         var schema = document.RootElement
             .GetProperty("generationConfig")
-            .GetProperty("response_schema");
+            .GetProperty("responseJsonSchema");
 
         var propertyOrder = schema
             .GetProperty("properties")
@@ -77,8 +79,12 @@ public class GeminiPromptBuilderTests
         requiredOrder.IndexOf("workExperience").Should().BeLessThan(requiredOrder.IndexOf("technicalSkills"));
     }
 
+    // The work item's 'startDate' must NOT be required: structured output forces
+    // values for required fields, so a required startDate made the model invent
+    // dates (or a "Present" end date) for dateless roles (TX26-433). 'companyName'
+    // and 'jobTitle' must stay required so roles themselves aren't dropped.
     [Fact]
-    public void BuildRequestBody_RequiresWorkItemStartDateAndExposesIsCurrent()
+    public void BuildRequestBody_WorkItemRequiresNameAndTitle_ButNotStartDate()
     {
         var body = GeminiPromptBuilder.BuildRequestBody("resume text", Array.Empty<string>());
         var json = JsonSerializer.Serialize(body);
@@ -86,7 +92,7 @@ public class GeminiPromptBuilderTests
         using var document = JsonDocument.Parse(json);
         var workItem = document.RootElement
             .GetProperty("generationConfig")
-            .GetProperty("response_schema")
+            .GetProperty("responseJsonSchema")
             .GetProperty("properties")
             .GetProperty("workExperience")
             .GetProperty("items");
@@ -99,9 +105,26 @@ public class GeminiPromptBuilderTests
 
         required.Should().Contain("companyName");
         required.Should().Contain("jobTitle");
-        required.Should().Contain("startDate");
+        required.Should().NotContain("startDate");
 
         workItem.GetProperty("properties").TryGetProperty("isCurrent", out _).Should().BeTrue();
+    }
+
+    [Fact]
+    public void BuildRequestBody_PromptGuardsCurrentRoleClassification()
+    {
+        var body = GeminiPromptBuilder.BuildRequestBody("resume text", Array.Empty<string>());
+        var json = JsonSerializer.Serialize(body);
+
+        using var document = JsonDocument.Parse(json);
+        var prompt = document.RootElement
+            .GetProperty("contents")[0]
+            .GetProperty("parts")[0]
+            .GetProperty("text")
+            .GetString();
+
+        prompt.Should().Contain("Only treat a role as CURRENT");
+        prompt.Should().Contain("If the resume gives NO dates for a role, leave both date fields empty and set 'isCurrent' to false");
     }
 
     [Fact]
@@ -133,5 +156,39 @@ public class GeminiPromptBuilderTests
             .GetString();
 
         prompt.Should().Contain("Extract EVERY work experience entry");
+    }
+
+    [Fact]
+    public void BuildRequestBody_PromptCoversMonthYearPresentRange()
+    {
+        var body = GeminiPromptBuilder.BuildRequestBody("resume text", Array.Empty<string>());
+        var json = JsonSerializer.Serialize(body);
+
+        using var document = JsonDocument.Parse(json);
+        var prompt = document.RootElement
+            .GetProperty("contents")[0]
+            .GetProperty("parts")[0]
+            .GetProperty("text")
+            .GetString();
+
+        prompt.Should().Contain("(December 2024 - Present)");
+    }
+
+    [Fact]
+    public void BuildRequestBody_PromptIncludesEdgeCaseInstructions()
+    {
+        var body = GeminiPromptBuilder.BuildRequestBody("resume text", Array.Empty<string>());
+        var json = JsonSerializer.Serialize(body);
+
+        using var document = JsonDocument.Parse(json);
+        var prompt = document.RootElement
+            .GetProperty("contents")[0]
+            .GetProperty("parts")[0]
+            .GetProperty("text")
+            .GetString();
+
+        prompt.Should().Contain("multiple LinkedIn URLs");
+        prompt.Should().Contain("redacted or masked");
+        prompt.Should().Contain("invalid or impossible dates");
     }
 }
