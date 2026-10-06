@@ -1,0 +1,434 @@
+[
+  {
+    "id": "weak-technical-closure",
+    "expectedScore": 30,
+    "jobTitle": "Backend Engineer",
+    "companyName": "Acme Corp",
+    "interviewType": "Technical",
+    "talentName": "Rohan",
+    "totalQuestionCount": 1,
+    "questions": [
+      {
+        "category": "Technical",
+        "questionIndex": 0,
+        "question": "What is a closure in JavaScript, and when would you use one?",
+        "answer": "A closure is when a function remembers stuff from outside. I don't really use them much, I mostly just write React components and use hooks."
+      }
+    ]
+  },
+  {
+    "id": "weak-behavioral-conflict",
+    "expectedScore": 28,
+    "jobTitle": "Software Engineer",
+    "companyName": "Globex",
+    "interviewType": "Behavioral",
+    "talentName": "Rohan",
+    "totalQuestionCount": 1,
+    "questions": [
+      {
+        "category": "Behavioral",
+        "questionIndex": 0,
+        "question": "Tell me about a time you disagreed with a teammate.",
+        "answer": "We disagreed on a feature and he was being difficult about it, so I just did it my way and we shipped it. It worked out fine."
+      }
+    ]
+  },
+  {
+    "id": "weak-experience-downtime",
+    "expectedScore": 32,
+    "jobTitle": "Backend Engineer",
+    "companyName": "Acme Corp",
+    "interviewType": "Technical",
+    "talentName": "Rohan",
+    "totalQuestionCount": 1,
+    "questions": [
+      {
+        "category": "Experience-Based",
+        "questionIndex": 0,
+        "question": "Describe a time production went down and how you handled it.",
+        "answer": "Sometimes things go down. We usually restart stuff and it comes back up. I was not really on call that particular time so someone else fixed it."
+      }
+    ]
+  },
+  {
+    "id": "weak-role-queue",
+    "expectedScore": 36,
+    "jobTitle": "Platform Engineer",
+    "companyName": "Initech",
+    "interviewType": "Role-Specific",
+    "talentName": "Rohan",
+    "totalQuestionCount": 1,
+    "questions": [
+      {
+        "category": "Role-Specific",
+        "questionIndex": 0,
+        "question": "How would you scale a background job processing system?",
+        "answer": "Just add more servers and maybe upgrade the database. If it is still slow we can buy a bigger machine."
+      }
+    ]
+  },
+  {
+    "id": "weak-technical-slow-query",
+    "expectedScore": 26,
+    "jobTitle": "Backend Engineer",
+    "companyName": "Acme Corp",
+    "interviewType": "Technical",
+    "talentName": "Rohan",
+    "totalQuestionCount": 1,
+    "questions": [
+      {
+        "category": "Technical",
+        "questionIndex": 0,
+        "question": "A dashboard query suddenly got 10x slower. How do you investigate?",
+        "answer": "I would restart the database or ask the DBA to look at it. I do not really know how to read execution plans or check indexes."
+      }
+    ]
+  },
+  {
+    "id": "weak-behavioral-failure",
+    "expectedScore": 30,
+    "jobTitle": "Software Engineer",
+    "companyName": "Globex",
+    "interviewType": "Behavioral",
+    "talentName": "Rohan",
+    "totalQuestionCount": 1,
+    "questions": [
+      {
+        "category": "Behavioral",
+        "questionIndex": 0,
+        "question": "Tell me about a professional failure and what you learned from it.",
+        "answer": "I have not really failed at anything major. I try to do a good job and finish my tasks on time. I guess I learned to be hardworking."
+      }
+    ]
+  },
+  {
+    "id": "weak-role-api-versioning",
+    "expectedScore": 40,
+    "jobTitle": "Platform Engineer",
+    "companyName": "Initech",
+    "interviewType": "Role-Specific",
+    "talentName": "Rohan",
+    "totalQuestionCount": 1,
+    "questions": [
+      {
+        "category": "Role-Specific",
+        "questionIndex": 0,
+        "question": "How do you version a public API without breaking existing clients?",
+        "answer": "You can just add new endpoints and keep the old ones around, or maybe change the URL. I have not had to deal with versioning directly yet."
+      }
+    ]
+  },
+  {
+    "id": "weak-multi-http-and-motivation",
+    "expectedScore": 34,
+    "jobTitle": "Backend Engineer",
+    "companyName": "Acme Corp",
+    "interviewType": "Technical",
+    "talentName": "Rohan",
+    "totalQuestionCount": 2,
+    "questions": [
+      {
+        "category": "Technical",
+        "questionIndex": 0,
+        "question": "What does HTTP 409 mean and when would your API return it?",
+        "answer": "I think it is an error code, maybe like a server error? Our API mostly returns 200 or 500 so I have not seen 409 much."
+      },
+      {
+        "category": "Behavioral",
+        "questionIndex": 1,
+        "question": "Why do you want to work here?",
+        "answer": "I need a job and the salary looks good. The company seems fine from what I read online."
+      }
+    ]
+  },
+  {
+    "id": "mid-technical-closure",
+    "expectedScore": 58,
+    "jobTitle": "Backend Engineer",
+    "companyName": "Acme Corp",
+    "interviewType": "Technical",
+    "talentName": "Rohan",
+    "totalQuestionCount": 1,
+    "questions": [
+      {
+        "category": "Technical",
+        "questionIndex": 0,
+        "question": "What is a closure in JavaScript, and when would you use one?",
+        "answer": "A closure is a function that captures variables from the scope where it was created, even after that scope has finished running. You use them for callbacks and for keeping private state, like a counter function that remembers its count. I have used them mostly in small utility functions and event handlers."
+      }
+    ]
+  },
+  {
+    "id": "mid-behavioral-conflict",
+    "expectedScore": 62,
+    "jobTitle": "Software Engineer",
+    "companyName": "Globex",
+    "interviewType": "Behavioral",
+    "talentName": "Rohan",
+    "totalQuestionCount": 1,
+    "questions": [
+      {
+        "category": "Behavioral",
+        "questionIndex": 0,
+        "question": "Tell me about a time you disagreed with a teammate.",
+        "answer": "On my last team we disagreed about whether to build a custom workflow tool or buy one. I set up a meeting where we both wrote down our concerns, and we compared the costs of building versus the subscription price. We ended up buying the tool, which saved about a month of work. I learned that putting numbers on both sides settles these debates faster than arguing opinions."
+      }
+    ]
+  },
+  {
+    "id": "mid-experience-migration",
+    "expectedScore": 58,
+    "jobTitle": "Backend Engineer",
+    "companyName": "Acme Corp",
+    "interviewType": "Technical",
+    "talentName": "Rohan",
+    "totalQuestionCount": 1,
+    "questions": [
+      {
+        "category": "Experience-Based",
+        "questionIndex": 0,
+        "question": "Tell me about a risky migration you drove.",
+        "answer": "We moved our main Postgres database to a newer major version. I wrote a rollback plan, tested it on a staging copy, and did the cutover during a low-traffic window. The replica lagged behind for about ten minutes which delayed some reads, but we caught it quickly and waited for sync. Afterwards we added a checklist so the next upgrade includes replica monitoring."
+      }
+    ]
+  },
+  {
+    "id": "mid-role-rate-limiting",
+    "expectedScore": 65,
+    "jobTitle": "Platform Engineer",
+    "companyName": "Initech",
+    "interviewType": "Role-Specific",
+    "talentName": "Rohan",
+    "totalQuestionCount": 1,
+    "questions": [
+      {
+        "category": "Role-Specific",
+        "questionIndex": 0,
+        "question": "How would you rate limit a public API?",
+        "answer": "I would use a token bucket per API key, keyed by the client id, with limits stored in Redis so all instances share the same counter. When a client exceeds the limit we return 429 with a Retry-After header. I would also add a burst allowance so short spikes do not get blocked, and dashboard the rejections to see which clients are misbehaving."
+      }
+    ]
+  },
+  {
+    "id": "mid-technical-indexing",
+    "expectedScore": 55,
+    "jobTitle": "Backend Engineer",
+    "companyName": "Acme Corp",
+    "interviewType": "Technical",
+    "talentName": "Rohan",
+    "totalQuestionCount": 1,
+    "questions": [
+      {
+        "category": "Technical",
+        "questionIndex": 0,
+        "question": "When would you add a composite index, and what trade-offs does that introduce?",
+        "answer": "A composite index helps when queries filter on multiple columns together, like WHERE tenant_id and created_at. The order of columns matters because the index is used left to right. The trade-off is that writes get slower because the index has to be updated, and it takes disk space. I usually check the query plan first to confirm the index would actually be used."
+      }
+    ]
+  },
+  {
+    "id": "mid-behavioral-teamwork",
+    "expectedScore": 55,
+    "jobTitle": "Software Engineer",
+    "companyName": "Globex",
+    "interviewType": "Behavioral",
+    "talentName": "Rohan",
+    "totalQuestionCount": 1,
+    "questions": [
+      {
+        "category": "Behavioral",
+        "questionIndex": 0,
+        "question": "How do you make sure a design review goes well?",
+        "answer": "I circulate the design doc a day early so people can read it, and I start the meeting by writing the key decisions on the board. I ask the quiet folks directly for their concerns because otherwise the loudest voice wins. After the meeting I send a short summary of what we decided. It is not perfect but it keeps reviews from turning into unstructured debates."
+      }
+    ]
+  },
+  {
+    "id": "mid-role-observability",
+    "expectedScore": 63,
+    "jobTitle": "Platform Engineer",
+    "companyName": "Initech",
+    "interviewType": "Role-Specific",
+    "talentName": "Rohan",
+    "totalQuestionCount": 1,
+    "questions": [
+      {
+        "category": "Role-Specific",
+        "questionIndex": 0,
+        "question": "What does a healthy observability setup look like for a service you own?",
+        "answer": "Three pillars: structured logs for debugging individual requests, metrics for latency and error rate with alerts on SLO burn, and traces to follow a request across services. Every log line should carry a request id. I also want dashboards per endpoint so we can see which route is degrading. We review alert noise monthly and delete alerts nobody acts on."
+      }
+    ]
+  },
+  {
+    "id": "mid-multi-caching-and-mentoring",
+    "expectedScore": 58,
+    "jobTitle": "Backend Engineer",
+    "companyName": "Acme Corp",
+    "interviewType": "Technical",
+    "talentName": "Rohan",
+    "totalQuestionCount": 2,
+    "questions": [
+      {
+        "category": "Technical",
+        "questionIndex": 0,
+        "question": "Where would you add caching in a read-heavy service?",
+        "answer": "I would cache the hot read paths in Redis with a short TTL, and also add a CDN for anything public. The hard part is invalidation, so I would invalidate on write where we can and rely on the TTL for the rest. We tried something like this at my last job and it cut p95 latency noticeably."
+      },
+      {
+        "category": "Experience-Based",
+        "questionIndex": 1,
+        "question": "Tell me about a time you mentored a junior engineer.",
+        "answer": "I paired with a junior teammate on tickets for a few weeks, walking through how we break work down and how to test. She started picking up features on her own after about a month and her pull requests needed fewer review rounds. I do not have metrics on it, but it felt like a real improvement."
+      }
+    ]
+  },
+  {
+    "id": "strong-technical-closure",
+    "expectedScore": 88,
+    "jobTitle": "Backend Engineer",
+    "companyName": "Acme Corp",
+    "interviewType": "Technical",
+    "talentName": "Rohan",
+    "totalQuestionCount": 1,
+    "questions": [
+      {
+        "category": "Technical",
+        "questionIndex": 0,
+        "question": "What is a closure in JavaScript, and when would you use one?",
+        "answer": "A closure is the combination of a function together with the lexical environment it was defined in, so the function keeps access to that environment's variables even after the enclosing scope has returned. In practice I use them for encapsulated state, like a memoize helper, for event handlers that remember their registration context, and for factory functions that return configured functions. The classic footgun is closures in loops: with var, every iteration shares one binding, which is why we use let or an IIFE. It is also worth remembering that a closure keeps its captured scope alive as long as the function is reachable, so capturing large objects in long-lived listeners can leak memory."
+      }
+    ]
+  },
+  {
+    "id": "strong-behavioral-conflict",
+    "expectedScore": 85,
+    "jobTitle": "Software Engineer",
+    "companyName": "Globex",
+    "interviewType": "Behavioral",
+    "talentName": "Rohan",
+    "totalQuestionCount": 1,
+    "questions": [
+      {
+        "category": "Behavioral",
+        "questionIndex": 0,
+        "question": "Tell me about a time you disagreed with a teammate.",
+        "answer": "Situation: our team was split on whether to rewrite the billing importer or patch it. My teammate wanted the rewrite; I thought the risk was too high two weeks before quarter close. Task: I owned coming up with a decision we could both defend to our manager. Action: I wrote a one-pager comparing both options against three criteria: blast radius, effort, and what happens if we are wrong. I also proposed a hybrid, patching the top two failure modes now and scheduling the rewrite for the next quarter. We walked through the doc together, found we actually agreed on the risks, and took the hybrid path. Result: the patched importer ran through quarter close with zero failed runs, and the rewrite shipped six weeks later with a much clearer design. What I learned: most conflicts I have had are about unstated constraints, and writing them down turns a debate into a joint decision."
+      }
+    ]
+  },
+  {
+    "id": "strong-experience-outage",
+    "expectedScore": 90,
+    "jobTitle": "Backend Engineer",
+    "companyName": "Acme Corp",
+    "interviewType": "Technical",
+    "talentName": "Rohan",
+    "totalQuestionCount": 1,
+    "questions": [
+      {
+        "category": "Experience-Based",
+        "questionIndex": 0,
+        "question": "Describe a serious production outage you handled and what changed afterwards.",
+        "answer": "Situation: a deploy at 14:05 took our checkout API down for about 22 minutes, roughly 1,800 failed requests per minute at peak. Task: as the on-call engineer I ran the incident while a teammate handled comms. Action: the error rate alert fired within a minute; we saw connection pool exhaustion and rolled back the offending release within seven minutes, which restored service. We kept digging because the rollback did not fully explain the pool exhaustion, and found the migration had dropped a statement timeout, so one slow report query was holding connections open. We re-applied the timeout as an emergency change and added a pool saturation alert. Result: full recovery in 22 minutes, no data loss, and we published a blameless postmortem the same week. Follow-ups: deploys now block if the migration changes timeout settings without review, the alert exists, and we added a load-test gate for the report path. What I learned: the first hypothesis after a rollback is often only part of the story, and the second 15 minutes of investigation is where the real fix comes from."
+      }
+    ]
+  },
+  {
+    "id": "strong-role-queue",
+    "expectedScore": 87,
+    "jobTitle": "Platform Engineer",
+    "companyName": "Initech",
+    "interviewType": "Role-Specific",
+    "talentName": "Rohan",
+    "totalQuestionCount": 1,
+    "questions": [
+      {
+        "category": "Role-Specific",
+        "questionIndex": 0,
+        "question": "How would you scale a background job processing system?",
+        "answer": "I start from the delivery semantics, because that drives everything else. First, enqueue jobs with a durable queue and make every handler idempotent, using an idempotency key, so at-least-once delivery does not produce duplicate side effects. Second, partition by a shard key like tenant id so hot tenants cannot starve everyone else, and scale consumers per partition while keeping per-tenant concurrency limits. Third, use visibility timeouts or leases so a crashed worker's job is redelivered instead of lost, and cap retry attempts with exponential backoff. Fourth, send exhausted jobs to a dead-letter queue with an alert and a replay tool, because silently retrying forever hides bugs. Fifth, add backpressure: if the queue depth crosses a threshold, shed or defer low-priority work rather than letting latency grow without bound. For observability I would track queue age rather than just depth, because queue age is what users actually feel, plus success rate and consumer lag. I have run a system roughly like this processing a few million jobs a day; the piece teams most often skip is idempotency, and it is the piece that saves you during the inevitable retries."
+      }
+    ]
+  },
+  {
+    "id": "strong-technical-idempotency",
+    "expectedScore": 92,
+    "jobTitle": "Backend Engineer",
+    "companyName": "Acme Corp",
+    "interviewType": "Technical",
+    "talentName": "Rohan",
+    "totalQuestionCount": 1,
+    "questions": [
+      {
+        "category": "Technical",
+        "questionIndex": 0,
+        "question": "How do you make a payment API safe to retry?",
+        "answer": "Two layers. At the edge, the client sends an idempotency key generated once per logical operation; we store the key with a hash of the request body and the first response, scoped to the caller. A retry with the same key returns the stored response instead of charging again, and the same key with a different body is a 409 because that usually means a client bug. Underneath, the actual charge against the provider carries its own provider-side idempotency key, so even if we crash between storing our record and calling the provider, the provider deduplicates. The tricky parts: the key store must be written with the same transaction boundaries as our ledger entry, keys need a TTL long enough to cover client retries, say 24 hours, and the stored response must include enough state for the client to resume. We also make sure our webhook handler is idempotent, because provider callbacks can arrive out of order or more than once. The mental model I keep is that retries move the problem from 'did the user get a response' to 'is the effect applied exactly once,' and you answer that at the database layer, not by hoping the network cooperates."
+      }
+    ]
+  },
+  {
+    "id": "strong-role-rate-limiting",
+    "expectedScore": 84,
+    "jobTitle": "Platform Engineer",
+    "companyName": "Initech",
+    "interviewType": "Role-Specific",
+    "talentName": "Rohan",
+    "totalQuestionCount": 1,
+    "questions": [
+      {
+        "category": "Role-Specific",
+        "questionIndex": 0,
+        "question": "How would you rate limit a public API?",
+        "answer": "I would enforce at the edge for cheap rejection and again at the service for accurate, per-feature limits. The primitive is a token bucket per caller, keyed by API key, with a steady refill rate plus a burst size; Redis with a Lua script gives atomic check-and-consume across instances. Responses carry X-RateLimit-Limit, remaining and reset headers, and rejections return 429 with Retry-After so well-behaved clients back off correctly. Design details that matter: separate limits for expensive endpoints like report generation, per-tenant fairness so one customer cannot consume the whole budget, and a shadow mode first where we log what we would have rejected to validate the numbers before enforcing. I would page on a sudden spike in 429s for top tenants because that usually means a client bug or someone scraping. The trade-off to be explicit about is that distributed counters add a network hop and a failure mode; if Redis is down I fail open with a local best-effort counter rather than taking the API down, and I would rather absorb a little abuse than lose availability."
+      }
+    ]
+  },
+  {
+    "id": "strong-experience-mentorship",
+    "expectedScore": 86,
+    "jobTitle": "Software Engineer",
+    "companyName": "Globex",
+    "interviewType": "Behavioral",
+    "talentName": "Rohan",
+    "totalQuestionCount": 1,
+    "questions": [
+      {
+        "category": "Experience-Based",
+        "questionIndex": 0,
+        "question": "Tell me about a time you grew someone else's skills.",
+        "answer": "Situation: I was reviewing a lot of one teammate's pull requests and the same review comments kept appearing, which was not fair to him or to my time. Task: I wanted him to go from needing detailed reviews to owning features end to end. Action: we agreed on a six-week plan. I shared the design docs before coding started so we could discuss approach rather than style, we did 30 minutes of pairing weekly focused on testing and edge cases, and I gave him one slice of a feature to spec and deliver himself, including the rollout plan. I also wrote down the recurring review comments as a personal checklist he could self-check against. Result: by week six his PRs needed one pass instead of three, he shipped the feature slice with only one escalation, and six months later he was leading a small workstream. What I learned: the useful version of mentoring here was not more explanations, it was moving the feedback earlier, from code review back to design conversations."
+      }
+    ]
+  },
+  {
+    "id": "strong-multi-incident-review-queue",
+    "expectedScore": 89,
+    "jobTitle": "Platform Engineer",
+    "companyName": "Initech",
+    "interviewType": "Role-Specific",
+    "talentName": "Rohan",
+    "totalQuestionCount": 3,
+    "questions": [
+      {
+        "category": "Technical",
+        "questionIndex": 0,
+        "question": "What is the difference between a latch and a semaphore, and where have you used one?",
+        "answer": "A latch is a one-shot gate: it opens once and everyone after that passes through, which is why CountDownLatch style primitives work for 'wait until all services have registered before starting traffic.' A semaphore is a counting permit you acquire and release, so it bounds concurrency: N threads may hold the resource at once. I used a semaphore in a data import tool to cap concurrent batch writes at eight, because more than that saturated the database and made p99 worse even though throughput looked fine on average. I used a latch-like barrier in a test harness that starts load only after every worker had connected."
+      },
+      {
+        "category": "Role-Specific",
+        "questionIndex": 1,
+        "question": "How do you roll out a change you are not fully confident in?",
+        "answer": "I make the change reversible before making it visible: feature flag first, so rollback is a config change instead of a deploy. Then canary to internal users or one region, with a fixed observation window and the two or three metrics that would tell me it is wrong, typically error rate and latency. I write the rollback command down before the canary starts. If the numbers hold I ramp in stages with soak time between them rather than going to 100 percent immediately. The part I would emphasize is that the decision criteria are set before I look at the data, because otherwise I rationalize whatever I see."
+      },
+      {
+        "category": "Behavioral",
+        "questionIndex": 2,
+        "question": "Tell me about a time you changed your mind based on data.",
+        "answer": "I was convinced our search latency problem was the database, and I had already sketched an indexing plan. Before implementing it I added tracing to the top three queries and found 60 percent of the time was spent serializing a large JSON field on the application side, not in the database at all. We moved to a slimmer response DTO and p95 dropped from about 480ms to 190ms without touching a single index. It was a humbling afternoon, but it changed how I work: I now budget an hour of measurement before committing to a fix, and I keep a note of my initial hypothesis so I can check whether I was anchored on it."
+      }
+    ]
+  }
+]

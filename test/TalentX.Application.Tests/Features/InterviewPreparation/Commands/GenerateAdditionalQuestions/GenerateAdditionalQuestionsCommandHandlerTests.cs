@@ -11,6 +11,7 @@ using TalentX.Application.Features.InterviewPreparation.DTOs;
 using TalentX.Application.Identity.Services;
 using TalentX.Domain;
 using TalentX.Domain.Entities;
+using TalentX.Domain.Enums;
 using Xunit;
 using InterviewPreparationEntity = TalentX.Domain.Entities.InterviewPreparation;
 
@@ -105,7 +106,38 @@ public class GenerateAdditionalQuestionsCommandHandlerTests
         existing.AdditionalQuestions.Should().Contain("Fresh question");
 
         _preparationRepository.Verify(r => r.Update(existing), Times.Once);
+        _preparationRepository.Verify(
+            r => r.AddGenerationAsync(
+                It.Is<InterviewPreparationGeneration>(g =>
+                    g.Kind == InterviewPreparationGenerationKind.AdditionalQuestions
+                    && g.InterviewPreparationId == existing.Id
+                    && g.TalentUserId == TalentUserId),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
         _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_WhenDailyGenerationLimitIsReached_ThrowsTooManyRequestsException()
+    {
+        var existing = CreatePreparation();
+        SetUpFlow(existing);
+        _preparationRepository
+            .Setup(r => r.CountAllGenerationsTodayByTalentAsync(
+                TalentUserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(10);
+
+        var act = () => _handler.Handle(
+            new GenerateAdditionalQuestionsCommand(existing.InterviewInvitationId),
+            CancellationToken.None);
+
+        await act.Should().ThrowAsync<TooManyRequestsException>()
+            .WithMessage("Daily interview preparation generation limit reached.");
+        _aiService.Verify(
+            s => s.GenerateAdditionalQuestionsAsync(
+                It.IsAny<AdditionalQuestionsContext>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]

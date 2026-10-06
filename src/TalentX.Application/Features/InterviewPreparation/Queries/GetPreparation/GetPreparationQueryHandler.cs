@@ -36,6 +36,9 @@ public sealed class GetPreparationQueryHandler
 
         InterviewPreparationAccessValidator.EnsureUserCanAccess(preparation, userId);
 
+        // Intentional: reads are allowed after the access window (ownership only);
+        // every mutating path enforces EnsurePreparationIsAccessible and 403s, so
+        // a talent can still review their prep while no longer editing it.
         return await InterviewPreparationDtoLoader.LoadAsync(
             _unitOfWork, preparation, config.AccessWindowAfterInterview, ct);
     }

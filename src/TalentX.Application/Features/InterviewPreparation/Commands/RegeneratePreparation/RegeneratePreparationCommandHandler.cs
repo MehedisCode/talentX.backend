@@ -7,6 +7,7 @@ using TalentX.Application.Features.InterviewPreparation.Helpers;
 using TalentX.Application.Features.InterviewPreparation.Mappers;
 using TalentX.Application.Identity.Services;
 using TalentX.Domain.Entities;
+using TalentX.Domain.Enums;
 using InterviewPreparationEntity = TalentX.Domain.Entities.InterviewPreparation;
 
 namespace TalentX.Application.Features.InterviewPreparation.Commands.RegeneratePreparation;
@@ -50,7 +51,7 @@ public sealed class RegeneratePreparationCommandHandler
                 $"Maximum regeneration limit reached ({config.MaxRegenerationCount} times).");
 
         var todayCount = await _unitOfWork.InterviewPreparations
-            .CountTodayByTalentAsync(userId, ct);
+            .CountAllGenerationsTodayByTalentAsync(userId, ct);
         if (todayCount >= config.DailyGenerationLimit)
             throw new TooManyRequestsException("Daily interview preparation generation limit reached.");
 
@@ -87,6 +88,10 @@ public sealed class RegeneratePreparationCommandHandler
         );
 
         _unitOfWork.InterviewPreparations.Update(existing);
+        await _unitOfWork.InterviewPreparations.AddGenerationAsync(
+            InterviewPreparationGeneration.Create(new CreateGenerationPayload(
+                existing.Id, userId, InterviewPreparationGenerationKind.Regenerate)),
+            ct);
 
         // Regenerated questions replace the originals, so saved answers and any prior
         // evaluation no longer reference valid questions.
@@ -96,6 +101,15 @@ public sealed class RegeneratePreparationCommandHandler
             .RemoveEvaluationByPreparationIdAsync(existing.Id, ct);
 
         await _unitOfWork.SaveChangesAsync(ct);
+
+        _logger.LogInformation(
+            "Interview preparation {PreparationId} regenerated for talent {TalentUserId}: model {ModelName}, prompt {PromptVersion}, latency {LatencyMs}ms, tokens in {InputTokenCount} out {OutputTokenCount}",
+            existing.Id, userId,
+            aiResult.Metadata?.ModelName ?? "unknown",
+            aiResult.Metadata?.PromptVersion ?? "unknown",
+            aiResult.Metadata?.LatencyMs ?? 0,
+            aiResult.Metadata?.InputTokenCount ?? 0,
+            aiResult.Metadata?.OutputTokenCount ?? 0);
 
         return InterviewPreparationMapper.ToDto(
             existing, config.AccessWindowAfterInterview);

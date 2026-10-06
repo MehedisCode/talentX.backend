@@ -166,35 +166,105 @@ public sealed class InterviewPreparationRepositoryTests
     }
 
     [Fact]
-    public async Task CountTodayByTalentAsync_SumsGenerationCountOfTodayRowsOnly()
+    public async Task CountInitialGenerationsTodayByTalentAsync_CountsOnlyInitialEventsForTalent()
     {
         await using var context = NewContext();
         var repository = new InterviewPreparationRepository(context);
-        var first = NewPreparation();
-        var regenerated = NewPreparation();
-        var yesterday = NewPreparation();
-        var otherTalent = NewPreparation(talentUserId: "talent-2");
-        regenerated.Regenerate(
-            new RegenerateInterviewPreparationPayload(
-                "[\"n1\"]", "[\"n2\"]", "[\"n3\"]", "[\"n4\"]", "[\"n5\"]", "[\"n6\"]"));
-        context.InterviewPreparations.AddRange(first, regenerated, yesterday, otherTalent);
-
-        context.Entry(yesterday).Property(x => x.CreatedAt).CurrentValue = DateTime.UtcNow.AddDays(-1);
+        var preparation = NewPreparation();
+        context.InterviewPreparations.Add(preparation);
         await context.SaveChangesAsync();
 
-        var count = await repository.CountTodayByTalentAsync("talent-1");
+        var initial = InterviewPreparationGeneration.Create(
+            new CreateGenerationPayload(preparation.Id, "talent-1",
+                TalentX.Domain.Enums.InterviewPreparationGenerationKind.Initial));
+        var regenerate = InterviewPreparationGeneration.Create(
+            new CreateGenerationPayload(preparation.Id, "talent-1",
+                TalentX.Domain.Enums.InterviewPreparationGenerationKind.Regenerate));
+        var additional = InterviewPreparationGeneration.Create(
+            new CreateGenerationPayload(preparation.Id, "talent-1",
+                TalentX.Domain.Enums.InterviewPreparationGenerationKind.AdditionalQuestions));
+        var yesterday = InterviewPreparationGeneration.Create(
+            new CreateGenerationPayload(preparation.Id, "talent-1",
+                TalentX.Domain.Enums.InterviewPreparationGenerationKind.Initial));
+        var otherTalent = InterviewPreparationGeneration.Create(
+            new CreateGenerationPayload(preparation.Id, "talent-2",
+                TalentX.Domain.Enums.InterviewPreparationGenerationKind.Initial));
+        context.InterviewPreparationGenerations
+            .AddRange(initial, regenerate, additional, yesterday, otherTalent);
+        context.Entry(yesterday).Property(x => x.CreatedAt).CurrentValue =
+            DateTime.UtcNow.AddDays(-1);
+        await context.SaveChangesAsync();
 
-        count.Should().Be(3);
+        var count = await repository.CountInitialGenerationsTodayByTalentAsync("talent-1");
+
+        count.Should().Be(1);
     }
 
     [Fact]
-    public async Task CountTodayByTalentAsync_WhenNoRowsToday_ReturnsZero()
+    public async Task CountAllGenerationsTodayByTalentAsync_CountsEveryKindForTalent()
+    {
+        await using var context = NewContext();
+        var repository = new InterviewPreparationRepository(context);
+        var preparation = NewPreparation();
+        context.InterviewPreparations.Add(preparation);
+        await context.SaveChangesAsync();
+
+        var initial = InterviewPreparationGeneration.Create(
+            new CreateGenerationPayload(preparation.Id, "talent-1",
+                TalentX.Domain.Enums.InterviewPreparationGenerationKind.Initial));
+        var regenerate = InterviewPreparationGeneration.Create(
+            new CreateGenerationPayload(preparation.Id, "talent-1",
+                TalentX.Domain.Enums.InterviewPreparationGenerationKind.Regenerate));
+        var yesterday = InterviewPreparationGeneration.Create(
+            new CreateGenerationPayload(preparation.Id, "talent-1",
+                TalentX.Domain.Enums.InterviewPreparationGenerationKind.Initial));
+        var otherTalent = InterviewPreparationGeneration.Create(
+            new CreateGenerationPayload(preparation.Id, "talent-2",
+                TalentX.Domain.Enums.InterviewPreparationGenerationKind.Regenerate));
+        context.InterviewPreparationGenerations
+            .AddRange(initial, regenerate, yesterday, otherTalent);
+        context.Entry(yesterday).Property(x => x.CreatedAt).CurrentValue =
+            DateTime.UtcNow.AddDays(-1);
+        await context.SaveChangesAsync();
+
+        var count = await repository.CountAllGenerationsTodayByTalentAsync("talent-1");
+
+        count.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task CountAllGenerationsTodayByTalentAsync_WhenNoEventsToday_ReturnsZero()
     {
         await using var context = NewContext();
         var repository = new InterviewPreparationRepository(context);
 
-        var count = await repository.CountTodayByTalentAsync("talent-unknown");
+        var count = await repository.CountAllGenerationsTodayByTalentAsync("talent-unknown");
 
         count.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task AddGenerationAsync_SavesGenerationEventToContext()
+    {
+        await using var context = NewContext();
+        var repository = new InterviewPreparationRepository(context);
+        var preparation = NewPreparation();
+        context.InterviewPreparations.Add(preparation);
+        await context.SaveChangesAsync();
+
+        var generation = InterviewPreparationGeneration.Create(
+            new CreateGenerationPayload(preparation.Id, "talent-1",
+                TalentX.Domain.Enums.InterviewPreparationGenerationKind.Initial));
+
+        await repository.AddGenerationAsync(generation);
+        await context.SaveChangesAsync();
+
+        var stored = await context.InterviewPreparationGenerations
+            .AsNoTracking()
+            .FirstOrDefaultAsync(g => g.Id == generation.Id);
+        stored.Should().NotBeNull();
+        stored!.InterviewPreparationId.Should().Be(preparation.Id);
+        stored.Kind.Should().Be(
+            TalentX.Domain.Enums.InterviewPreparationGenerationKind.Initial);
     }
 }

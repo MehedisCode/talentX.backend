@@ -11,7 +11,15 @@ public interface IInterviewPreparationRepository
         string talentUserId, CancellationToken ct = default);
     Task AddAsync(InterviewPreparation entity, CancellationToken ct = default);
     void Update(InterviewPreparation entity);
-    Task<int> CountTodayByTalentAsync(string talentUserId, CancellationToken ct = default);
+
+    // Daily quotas count generation events (one row per AI call), never
+    // GenerationCount sums — creations and regenerations are tracked separately.
+    Task<int> CountInitialGenerationsTodayByTalentAsync(
+        string talentUserId, CancellationToken ct = default);
+    Task<int> CountAllGenerationsTodayByTalentAsync(
+        string talentUserId, CancellationToken ct = default);
+    Task AddGenerationAsync(
+        InterviewPreparationGeneration entity, CancellationToken ct = default);
 
     Task<IReadOnlyList<PreparationAnswer>> GetAnswersByPreparationIdAsync(
         Guid interviewPreparationId, CancellationToken ct = default);

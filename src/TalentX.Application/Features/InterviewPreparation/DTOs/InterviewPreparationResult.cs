@@ -8,4 +8,5 @@ public sealed record InterviewPreparationResult
     public string RoleSpecificQuestions { get; init; } = string.Empty;
     public string KeyTopicsToPrepare { get; init; } = string.Empty;
     public string SuggestedRevisionAreas { get; init; } = string.Empty;
+    public AiCallMetadata? Metadata { get; init; }
 }
