@@ -70,7 +70,7 @@ public static class GeminiPromptBuilder
         "EXTRACTION & CLASSIFICATION GUIDELINES:\n" +
         "- fullName: Candidate's full name (usually located at the top/header of the resume).\n" +
         "- location: Candidate's current residence/location (city, state/province, country). Do NOT use company locations as candidate location.\n" +
-        "- workExperience: Extract EVERY work experience entry in the resume — full-time, part-time, internship, contract, and freelance roles. Do not merge or skip roles, and do not omit a role just because its dates are missing (leave the date fields empty instead). For the candidate's CURRENT role, set 'endDate' to 'Present' and 'isCurrent' to true. For past roles, set 'isCurrent' to false and fill 'startDate' and 'endDate' from the resume.\n" +
+        "- workExperience: Extract EVERY work experience entry in the resume — full-time, part-time, internship, contract, and freelance roles. Do not merge or skip roles, and do not omit a role just because its dates are missing (leave the date fields empty instead). Only treat a role as CURRENT (set 'endDate' to 'Present' and 'isCurrent' to true) when the resume indicates it: a start date with no end date, or wording like Present / Current / till date. If the resume gives NO dates for a role, leave both date fields empty and set 'isCurrent' to false — do not infer or invent 'Present'. For past roles, set 'isCurrent' to false and fill 'startDate' and 'endDate' from the resume.\n" +
         "- education: Extract all degrees, universities, and colleges. When the resume shows a date range (e.g. '2016 - 2020'), put the first year in 'startDate' and the second year in 'endDate'. For ongoing studies, set 'endDate' to 'Expected <Year>' or 'Present'. If the resume lists only a SINGLE year for a degree, treat that year as the completion/graduation year and put it in 'endDate' (leave 'startDate' empty). Do not invent dates that are not present.\n" +
         "- technicalSkills: Programming languages, frameworks, libraries, databases, and core technical proficiencies (e.g. C#, .NET, Python, React, PostgreSQL, REST APIs, GraphQL).\n" +
         "- toolsAndPlatforms: Developer tools, cloud providers, DevOps tools, version control, and infrastructure (e.g. Git, Docker, Kubernetes, AWS, Azure, GCP, Linux, Jira, Postman, CI/CD).\n" +
@@ -120,7 +120,7 @@ public static class GeminiPromptBuilder
                     items = new
                     {
                         type = "OBJECT",
-                        required = new[] { "companyName", "jobTitle", "startDate" },
+                        required = new[] { "companyName", "jobTitle" },
                         properties = new
                         {
                             companyName = new { type = "STRING" },

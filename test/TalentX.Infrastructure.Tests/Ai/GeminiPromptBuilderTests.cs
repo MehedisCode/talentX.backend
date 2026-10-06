@@ -77,8 +77,12 @@ public class GeminiPromptBuilderTests
         requiredOrder.IndexOf("workExperience").Should().BeLessThan(requiredOrder.IndexOf("technicalSkills"));
     }
 
+    // The work item's 'startDate' must NOT be required: structured output forces
+    // values for required fields, so a required startDate made the model invent
+    // dates (or a "Present" end date) for dateless roles (TX26-433). 'companyName'
+    // and 'jobTitle' must stay required so roles themselves aren't dropped.
     [Fact]
-    public void BuildRequestBody_RequiresWorkItemStartDateAndExposesIsCurrent()
+    public void BuildRequestBody_WorkItemRequiresNameAndTitle_ButNotStartDate()
     {
         var body = GeminiPromptBuilder.BuildRequestBody("resume text", Array.Empty<string>());
         var json = JsonSerializer.Serialize(body);
@@ -99,9 +103,26 @@ public class GeminiPromptBuilderTests
 
         required.Should().Contain("companyName");
         required.Should().Contain("jobTitle");
-        required.Should().Contain("startDate");
+        required.Should().NotContain("startDate");
 
         workItem.GetProperty("properties").TryGetProperty("isCurrent", out _).Should().BeTrue();
+    }
+
+    [Fact]
+    public void BuildRequestBody_PromptGuardsCurrentRoleClassification()
+    {
+        var body = GeminiPromptBuilder.BuildRequestBody("resume text", Array.Empty<string>());
+        var json = JsonSerializer.Serialize(body);
+
+        using var document = JsonDocument.Parse(json);
+        var prompt = document.RootElement
+            .GetProperty("contents")[0]
+            .GetProperty("parts")[0]
+            .GetProperty("text")
+            .GetString();
+
+        prompt.Should().Contain("Only treat a role as CURRENT");
+        prompt.Should().Contain("If the resume gives NO dates for a role, leave both date fields empty and set 'isCurrent' to false");
     }
 
     [Fact]
