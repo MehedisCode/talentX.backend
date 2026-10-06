@@ -44,7 +44,7 @@ public sealed class GetAdminDashboardQueryHandler : IRequestHandler<GetAdminDash
         var verificationCounts = await _unitOfWork.Employers
             .GetVerificationStatusCountsCreatedBetweenAsync(start, end, cancellationToken);
         var oldestPending = await _unitOfWork.Employers.GetOldestPendingCreatedAtAsync(cancellationToken);
-        var jobCounts = await _unitOfWork.Jobs.GetStatusCountsCreatedBetweenAsync(start, end, cancellationToken);
+        var jobCounts = await _unitOfWork.Jobs.GetStatusCountsFirstPublishedBetweenAsync(start, end, cancellationToken);
         var applicationCounts = await _unitOfWork.JobApplications
             .GetStatusCountsAppliedBetweenAsync(start, end, cancellationToken);
 
@@ -56,6 +56,10 @@ public sealed class GetAdminDashboardQueryHandler : IRequestHandler<GetAdminDash
             .GetCreatedCountsByBucketAsync(start, end, groupByHour, cancellationToken);
         var hiresByBucket = await _unitOfWork.JobApplications
             .GetHiredCountsByBucketAsync(start, end, groupByHour, cancellationToken);
+
+        var (previousStart, previousEnd) = ResolvePreviousRange(start, end, granularity);
+        var previousPoints = await LoadPreviousPointsAsync(
+            previousStart, previousEnd, granularity, groupByHour, cancellationToken);
 
         var recentTalents = await _unitOfWork.Talents
             .GetRecentCreatedBetweenAsync(start, end, AdminDashboardConstants.RecentActivityPerType, cancellationToken);
@@ -86,7 +90,19 @@ public sealed class GetAdminDashboardQueryHandler : IRequestHandler<GetAdminDash
                 publishedByBucket,
                 appliedByBucket,
                 interviewsByBucket,
-                hiresByBucket),
+                hiresByBucket) with
+            {
+                PreviousStartDate = previousStart,
+                PreviousEndDate = previousEnd,
+                PreviousPoints = previousPoints,
+                PreviousTotals = new AdminDashboardTrendTotalsDto
+                {
+                    PublishedJobs = previousPoints.Sum(point => point.PublishedJobs),
+                    Applications = previousPoints.Sum(point => point.Applications),
+                    Interviews = previousPoints.Sum(point => point.Interviews),
+                    Hires = previousPoints.Sum(point => point.Hires)
+                }
+            },
             Activities = BuildActivities(recentTalents, recentEmployers, recentJobs)
         };
     }
@@ -100,13 +116,34 @@ public sealed class GetAdminDashboardQueryHandler : IRequestHandler<GetAdminDash
         var verificationCounts = await _unitOfWork.Employers
             .GetVerificationStatusCountsCreatedBetweenAsync(allTimeStart, now, cancellationToken);
         var jobCounts = await _unitOfWork.Jobs
-            .GetStatusCountsCreatedBetweenAsync(allTimeStart, now, cancellationToken);
+            .GetStatusCountsFirstPublishedBetweenAsync(allTimeStart, now, cancellationToken);
         var applicationCounts = await _unitOfWork.JobApplications
             .GetStatusCountsAppliedBetweenAsync(allTimeStart, now, cancellationToken);
         var interviewCount = await _unitOfWork.InterviewInvitations
             .CountCreatedBetweenAsync(allTimeStart, now, cancellationToken);
 
         return BuildMetrics(talentCount, verificationCounts, jobCounts, applicationCounts, interviewCount);
+    }
+
+    // The previous window's trend, bucket by bucket with the same size and rules as the current one (weekly blocks
+    // counted from the previous start), so point n of both windows lines up.
+    private async Task<IReadOnlyList<AdminDashboardTrendPointDto>> LoadPreviousPointsAsync(
+        DateTime previousStart,
+        DateTime previousEnd,
+        AdminDashboardTrendGranularity granularity,
+        bool groupByHour,
+        CancellationToken cancellationToken)
+    {
+        var published = await _unitOfWork.Jobs
+            .GetPublishedCountsByBucketAsync(previousStart, previousEnd, groupByHour, cancellationToken);
+        var applications = await _unitOfWork.JobApplications
+            .GetAppliedCountsByBucketAsync(previousStart, previousEnd, groupByHour, cancellationToken);
+        var interviews = await _unitOfWork.InterviewInvitations
+            .GetCreatedCountsByBucketAsync(previousStart, previousEnd, groupByHour, cancellationToken);
+        var hires = await _unitOfWork.JobApplications
+            .GetHiredCountsByBucketAsync(previousStart, previousEnd, groupByHour, cancellationToken);
+
+        return BuildTrend(previousStart, previousEnd, granularity, published, applications, interviews, hires).Points;
     }
 
     // One set of rules for the range and all-time blocks: drafts and PendingVerification applications are
@@ -195,6 +232,34 @@ public sealed class GetAdminDashboardQueryHandler : IRequestHandler<GetAdminDash
         DateTimeKind.Local => value.ToUniversalTime(),
         _ => DateTime.SpecifyKind(value, DateTimeKind.Utc)
     };
+
+    // The window just before [start, end]: shifted back by the whole hours, days or months the range covers (the
+    // unfinished current one included), so both windows are the same length and never overlap. Weekly ranges shift by
+    // days, since a 90-day range is 90 days, not 13 weeks.
+    private static (DateTime Start, DateTime End) ResolvePreviousRange(
+        DateTime start,
+        DateTime end,
+        AdminDashboardTrendGranularity granularity)
+    {
+        switch (granularity)
+        {
+            case AdminDashboardTrendGranularity.Hour:
+            {
+                var hours = (int)Math.Floor((end - start).TotalHours) + 1;
+                return (start.AddHours(-hours), end.AddHours(-hours));
+            }
+            case AdminDashboardTrendGranularity.Month:
+            {
+                var months = (end.Year - start.Year) * 12 + (end.Month - start.Month) + 1;
+                return (start.AddMonths(-months), end.AddMonths(-months));
+            }
+            default:
+            {
+                var days = (end.Date - start.Date).Days + 1;
+                return (start.AddDays(-days), end.AddDays(-days));
+            }
+        }
+    }
 
     private static AdminDashboardTrendGranularity ChooseGranularity(TimeSpan span)
     {
@@ -313,7 +378,7 @@ public sealed class GetAdminDashboardQueryHandler : IRequestHandler<GetAdminDash
             Id = job.Id,
             Title = job.Title,
             Detail = Join(job.CompanyName, job.Location),
-            OccurredAt = job.PublishedAt ?? job.CreatedAt
+            OccurredAt = job.FirstPublishedAt ?? job.CreatedAt
         }));
 
         return activities

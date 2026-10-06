@@ -19,7 +19,10 @@ public sealed record AdminJobListItemDto
     public EmploymentType EmploymentType { get; init; }
     public WorkArrangement WorkArrangement { get; init; }
     public int ApplicantCount { get; init; }
+    // When the job last went live (moves on reopen/reactivation).
     public DateTime? PublishedAt { get; init; }
+    // When the job was first posted (never changes).
+    public DateTime? FirstPublishedAt { get; init; }
     public DateTime ExpireAt { get; init; }
     public DateTime? DeactivatedAt { get; init; }
 }

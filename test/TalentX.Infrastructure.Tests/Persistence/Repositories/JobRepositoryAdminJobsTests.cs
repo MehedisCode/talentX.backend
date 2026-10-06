@@ -104,6 +104,28 @@ public class JobRepositoryAdminJobsTests
     }
 
     [Fact]
+    public async Task GetAdminJobsPagedAsync_ReturnsBothTheFirstPostedAndTheLastPublishedDates()
+    {
+        await using var context = NewContext();
+        var repository = new JobRepository(context);
+        var job = MakeJob(JobStatus.Published, title: "Reactivated Job");
+        var firstPublishedAt = job.FirstPublishedAt;
+        Thread.Sleep(5);
+        job.Deactivate(DeactivationReason.Spam, "Posting spam links to another site.");
+        job.Reactivate();
+        context.DomainUsers.Add(MakeEmployer());
+        context.Jobs.Add(job);
+        await context.SaveChangesAsync();
+
+        var result = await repository.GetAdminJobsPagedAsync(Params());
+
+        var item = result.Items.Single();
+        item.FirstPublishedAt.Should().Be(firstPublishedAt);
+        item.PublishedAt.Should().Be(job.PublishedAt);
+        item.PublishedAt.Should().BeAfter(firstPublishedAt!.Value);
+    }
+
+    [Fact]
     public async Task GetAdminJobsPagedAsync_OrdersJobsAwaitingReviewFirst()
     {
         await using var context = NewContext();

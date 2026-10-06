@@ -28,7 +28,10 @@ public sealed record AdminJobDetailsDto
     public JobStatus Status { get; init; }
     public bool IsExpired { get; init; }
     public DateTime CreatedAt { get; init; }
+    // When the job last went live (moves on reopen/reactivation).
     public DateTime? PublishedAt { get; init; }
+    // When the job was first posted (never changes).
+    public DateTime? FirstPublishedAt { get; init; }
     public DateTime ExpireAt { get; init; }
 
     public string EmployerName { get; init; } = string.Empty;

@@ -56,6 +56,7 @@ public sealed class GetAdminJobDetailsQueryHandler : IRequestHandler<GetAdminJob
             IsExpired = job.Status == JobStatus.Published && job.ExpireAt.Date < DateTime.UtcNow.Date,
             CreatedAt = job.CreatedAt,
             PublishedAt = job.PublishedAt,
+            FirstPublishedAt = job.FirstPublishedAt,
             ExpireAt = job.ExpireAt,
             EmployerName = employer?.Name ?? string.Empty,
             EmployerEmail = employer?.Email ?? string.Empty,

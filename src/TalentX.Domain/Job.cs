@@ -29,7 +29,10 @@ public class Job : BaseEntity
     public SalaryPeriod? SalaryPeriod { get; private set; }
     public bool IsDeleted { get; private set; }
     public DateTime? DeletedAt { get; private set; }
+    // When the job last went live: reset by every publish, reopen and reactivation.
     public DateTime? PublishedAt { get; private set; }
+    // When the job was first posted: set by the first publish only, never changed afterwards.
+    public DateTime? FirstPublishedAt { get; private set; }
     public DeactivationReason? DeactivationReason { get; private set; }
     public string? DeactivationDetails { get; private set; }
     public DateTime? DeactivatedAt { get; private set; }
@@ -121,9 +124,11 @@ public class Job : BaseEntity
 
     public void MarkAsPublished()
     {
+        var now = DateTime.UtcNow;
         Status = JobStatus.Published;
-        PublishedAt = DateTime.UtcNow;
-        UpdatedAt = DateTime.UtcNow;
+        PublishedAt = now;
+        FirstPublishedAt ??= now;
+        UpdatedAt = now;
     }
 
     public void MarkAsExpired()
