@@ -134,4 +134,59 @@ public class GeminiPromptBuilderTests
 
         prompt.Should().Contain("Extract EVERY work experience entry");
     }
+
+    [Fact]
+    public void BuildRequestBody_PromptIncludesNewExtractionFields()
+    {
+        var body = GeminiPromptBuilder.BuildRequestBody("resume text", Array.Empty<string>());
+        var json = JsonSerializer.Serialize(body);
+
+        using var document = JsonDocument.Parse(json);
+        var prompt = document.RootElement
+            .GetProperty("contents")[0]
+            .GetProperty("parts")[0]
+            .GetProperty("text")
+            .GetString();
+
+        prompt.Should().NotBeNull();
+        prompt.Should().Contain("tagline: Headline / professional title");
+        prompt.Should().Contain("shortBio: Executive summary / about me / professional summary");
+        prompt.Should().Contain("totalYearsExperience: Total years of professional experience as a number");
+        prompt.Should().Contain("expectedSalary: Desired/expected salary or compensation");
+        prompt.Should().Contain("skillPropositions: Key strengths, value propositions");
+    }
+
+    [Fact]
+    public void BuildRequestBody_SchemaIncludesNewProperties()
+    {
+        var body = GeminiPromptBuilder.BuildRequestBody("resume text", Array.Empty<string>());
+        var json = JsonSerializer.Serialize(body);
+
+        using var document = JsonDocument.Parse(json);
+        var properties = document.RootElement
+            .GetProperty("generationConfig")
+            .GetProperty("response_schema")
+            .GetProperty("properties");
+
+        properties.TryGetProperty("tagline", out var taglineProperty).Should().BeTrue();
+        taglineProperty.GetProperty("type").GetString().Should().Be("STRING");
+        taglineProperty.GetProperty("description").GetString().Should().Be("Professional title or headline");
+
+        properties.TryGetProperty("shortBio", out var shortBioProperty).Should().BeTrue();
+        shortBioProperty.GetProperty("type").GetString().Should().Be("STRING");
+        shortBioProperty.GetProperty("description").GetString().Should().Be("Executive summary or professional bio");
+
+        properties.TryGetProperty("totalYearsExperience", out var experienceProperty).Should().BeTrue();
+        experienceProperty.GetProperty("type").GetString().Should().Be("NUMBER");
+        experienceProperty.GetProperty("description").GetString().Should().Be("Total years of professional experience");
+
+        properties.TryGetProperty("expectedSalary", out var salaryProperty).Should().BeTrue();
+        salaryProperty.GetProperty("type").GetString().Should().Be("NUMBER");
+        salaryProperty.GetProperty("description").GetString().Should().Be("Expected salary or compensation if stated");
+
+        properties.TryGetProperty("skillPropositions", out var propositionsProperty).Should().BeTrue();
+        propositionsProperty.GetProperty("type").GetString().Should().Be("ARRAY");
+        propositionsProperty.GetProperty("items").GetProperty("type").GetString().Should().Be("STRING");
+        propositionsProperty.GetProperty("description").GetString().Should().Be("Key value propositions or skill highlights");
+    }
 }
