@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using TalentX.Application.Common.Interfaces.Repositories;
 using TalentX.Application.Common.Models;
+using TalentX.Application.Features.Interviews;
 using TalentX.Domain.Entities;
 using TalentX.Domain.Enums;
 using TalentX.Infrastructure.Persistence;
@@ -69,18 +70,36 @@ public sealed class InterviewInvitationRepository : IInterviewInvitationReposito
         int pageSize,
         CancellationToken cancellationToken = default)
     {
-        var query = _context.InterviewInvitations
+        var utcNow = DateTime.UtcNow;
+
+        // Sorted/paginated in memory rather than in SQL: a talent's own invitations are a small,
+        // user-scoped set (not a global table), and the order here — upcoming soonest-first, then
+        // ended/cancelled most-recently-first, then declined — depends on InterviewRules'
+        // computed bucket + effective date across three different source fields (ScheduledAt /
+        // AssessmentDeadline / Timeslots), which isn't reliably translatable to SQL.
+        var invitations = await _context.InterviewInvitations
             .IgnoreQueryFilters()
             .Include(x => x.Job)
             .Include(x => x.Timeslots)
             .Where(x => x.TalentUserId == talentUserId)
-            .OrderByDescending(x => x.SentAt);
+            .ToListAsync(cancellationToken);
 
-        var totalCount = await query.CountAsync(cancellationToken);
-        var items = await query
+        var ordered = invitations
+            .Select(x => (
+                Invitation: x,
+                Bucket: InterviewRules.GetTalentListSortBucket(x, utcNow),
+                EffectiveAt: InterviewRules.GetEffectiveAt(x)))
+            .OrderBy(x => x.Bucket)
+            .ThenBy(x => x.Bucket == 0 ? x.EffectiveAt : DateTime.MinValue)
+            .ThenByDescending(x => x.Bucket != 0 ? x.EffectiveAt : DateTime.MinValue)
+            .Select(x => x.Invitation)
+            .ToList();
+
+        var totalCount = ordered.Count;
+        var items = ordered
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
-            .ToListAsync(cancellationToken);
+            .ToList();
 
         return new PaginatedList<InterviewInvitation>(items, page, pageSize, totalCount);
     }

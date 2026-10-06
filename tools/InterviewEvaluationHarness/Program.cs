@@ -1,6 +1,8 @@
 using System.Text.Json;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using TalentX.Application.Common.Interfaces;
+using TalentX.Application.Features.AiConfiguration.Constants;
 using TalentX.Infrastructure.Ai;
 using TalentX.Tools.InterviewEvaluationHarness;
 
@@ -109,6 +111,7 @@ using var loggerFactory = LoggerFactory.Create(logging => logging
     .SetMinimumLevel(LogLevel.Warning));
 var service = new GeminiInterviewPreparationService(
     new HttpClient(),
+    new ConfigurationAiConfigurationProvider(configuration),
     configuration,
     loggerFactory.CreateLogger<GeminiInterviewPreparationService>());
 
@@ -268,3 +271,28 @@ internal sealed record ResultRow(
     int FeedbackCount,
     int Answered,
     string? Error);
+
+// Harness has no database, so it mirrors only the environment/appsettings
+// fallback of AiConfigurationProvider.
+internal sealed class ConfigurationAiConfigurationProvider : IAiConfigurationProvider
+{
+    private readonly IConfiguration _configuration;
+
+    public ConfigurationAiConfigurationProvider(IConfiguration configuration)
+    {
+        _configuration = configuration;
+    }
+
+    public Task<(string ModelName, string ApiKey)> GetConfigAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var modelName = _configuration["GEMINI_MODEL_NAME"]
+            ?? _configuration["Gemini:ModelName"]
+            ?? AiConfigurationConstants.DefaultModelName;
+        var apiKey = _configuration["GEMINI_API_KEY"]
+            ?? _configuration["Gemini:ApiKey"]
+            ?? string.Empty;
+
+        return Task.FromResult((modelName, apiKey));
+    }
+}

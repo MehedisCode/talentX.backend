@@ -14,9 +14,8 @@ namespace TalentX.Infrastructure.Ai;
 public sealed class GeminiExtractionService : IResumeExtractionService
 {
     private readonly HttpClient _httpClient;
+    private readonly IAiConfigurationProvider _aiConfigProvider;
     private readonly ILogger<GeminiExtractionService> _logger;
-    private readonly string _apiKey;
-    private readonly string _modelName;
     private readonly int _maxOutputTokens;
 
     private static readonly JsonSerializerOptions CaseInsensitive =
@@ -24,10 +23,12 @@ public sealed class GeminiExtractionService : IResumeExtractionService
 
     public GeminiExtractionService(
         HttpClient httpClient,
+        IAiConfigurationProvider aiConfigProvider,
         IConfiguration configuration,
         ILogger<GeminiExtractionService> logger)
     {
         _httpClient = httpClient;
+        _aiConfigProvider = aiConfigProvider;
         _logger = logger;
 
         var baseUrl = Environment.GetEnvironmentVariable("GEMINI_BASE_URL")
@@ -35,16 +36,6 @@ public sealed class GeminiExtractionService : IResumeExtractionService
             ?? configuration["Gemini:BaseUrl"]
             ?? "https://generativelanguage.googleapis.com";
         _httpClient.BaseAddress = new Uri(baseUrl);
-
-        _apiKey = Environment.GetEnvironmentVariable("GEMINI_API_KEY")
-            ?? configuration["GEMINI_API_KEY"]
-            ?? configuration["Gemini:ApiKey"]
-            ?? throw new InvalidOperationException("Gemini:ApiKey is not configured.");
-
-        _modelName = Environment.GetEnvironmentVariable("GEMINI_MODEL_NAME")
-            ?? configuration["GEMINI_MODEL_NAME"]
-            ?? configuration["Gemini:ModelName"]
-            ?? "gemini-3.7-flash";
 
         var maxTokensValue = Environment.GetEnvironmentVariable("GEMINI_MAX_OUTPUT_TOKENS");
         _maxOutputTokens = int.TryParse(maxTokensValue, out var maxTokens) && maxTokens > 0
@@ -87,8 +78,14 @@ public sealed class GeminiExtractionService : IResumeExtractionService
             deterministicPhone,
             _maxOutputTokens);
 
+        var (modelName, apiKey) = await _aiConfigProvider.GetConfigAsync(cancellationToken);
+        if (string.IsNullOrWhiteSpace(apiKey))
+        {
+            throw new InvalidOperationException("Gemini:ApiKey is not configured.");
+        }
+
         var response = await _httpClient.PostAsJsonAsync(
-            $"/v1beta/models/{_modelName}:generateContent?key={_apiKey}",
+            $"/v1beta/models/{modelName}:generateContent?key={apiKey}",
             requestBody,
             cancellationToken);
 

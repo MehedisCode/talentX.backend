@@ -4,6 +4,7 @@ using System.Text.Json;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
+using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Features.InterviewPreparation.DTOs;
 using TalentX.Infrastructure.Ai;
 using Xunit;
@@ -28,9 +29,7 @@ public class GeminiInterviewPreparationServiceTests
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["GEMINI_API_KEY"] = "test-key",
                 ["GEMINI_BASE_URL"] = "https://unit.test",
-                ["GEMINI_MODEL_NAME"] = ModelName,
                 ["GEMINI_PROMPT_VERSION"] = PromptVersion,
                 ["GEMINI_RETRY_BASE_DELAY_MS"] = "0"
             })
@@ -38,7 +37,10 @@ public class GeminiInterviewPreparationServiceTests
 
         var httpClient = new HttpClient(handler);
         return new GeminiInterviewPreparationService(
-            httpClient, configuration, NullLogger<GeminiInterviewPreparationService>.Instance);
+            httpClient,
+            new StubAiConfigurationProvider(ModelName, "test-key"),
+            configuration,
+            NullLogger<GeminiInterviewPreparationService>.Instance);
     }
 
     private static AnswersEvaluationContext EvaluationContext()
@@ -366,6 +368,22 @@ public class GeminiInterviewPreparationServiceTests
 
         result.AdditionalQuestions.Should().Contain("How do you shard a queue?");
         result.Metadata.Should().NotBeNull();
+    }
+
+    private sealed class StubAiConfigurationProvider : IAiConfigurationProvider
+    {
+        private readonly string _modelName;
+        private readonly string _apiKey;
+
+        public StubAiConfigurationProvider(string modelName, string apiKey)
+        {
+            _modelName = modelName;
+            _apiKey = apiKey;
+        }
+
+        public Task<(string ModelName, string ApiKey)> GetConfigAsync(
+            CancellationToken cancellationToken = default)
+            => Task.FromResult((_modelName, _apiKey));
     }
 
     private sealed class StubHttpMessageHandler : HttpMessageHandler

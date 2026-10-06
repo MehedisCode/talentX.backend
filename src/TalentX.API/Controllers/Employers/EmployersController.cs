@@ -105,6 +105,7 @@ public sealed class EmployersController : BaseApiController
         return Ok(new CurrentEmployerResult
         {
             Id = employer.Id.ToString(),
+            Name = employer.Name,
             CompanyName = employer.CompanyName,
             VerificationStatus = employer.VerificationStatus,
             RejectionReason = employer.RejectionReason

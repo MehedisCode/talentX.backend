@@ -19,10 +19,9 @@ public sealed class GeminiInterviewPreparationService : IInterviewPreparationAiS
     private const int DefaultRetryBaseDelayMs = 500;
 
     private readonly HttpClient _httpClient;
+    private readonly IAiConfigurationProvider _aiConfigProvider;
     private readonly ILogger<GeminiInterviewPreparationService> _logger;
 
-    private readonly string _apiKey;
-    private readonly string _modelName;
     private readonly string _promptVersion;
     private readonly double _temperature;
     private readonly double _topP;
@@ -47,18 +46,16 @@ public sealed class GeminiInterviewPreparationService : IInterviewPreparationAiS
 
     public GeminiInterviewPreparationService(
         HttpClient httpClient,
+        IAiConfigurationProvider aiConfigProvider,
         IConfiguration configuration,
         ILogger<GeminiInterviewPreparationService> logger)
     {
         _httpClient = httpClient;
+        _aiConfigProvider = aiConfigProvider;
         _logger = logger;
 
         var baseUrl = GetConfigValue(configuration, "GEMINI_BASE_URL", "Gemini:BaseUrl", GeminiConstants.DefaultBaseUrl);
         _httpClient.BaseAddress = new Uri(baseUrl);
-
-        _apiKey = GetConfigValue(configuration, "GEMINI_API_KEY", "Gemini:ApiKey");
-
-        _modelName = GetConfigValue(configuration, "GEMINI_MODEL_NAME", "Gemini:ModelName", GeminiConstants.DefaultModelName);
 
         _promptVersion = GetConfigValue(configuration, "GEMINI_PROMPT_VERSION", "Gemini:PromptVersion", "v1");
 
@@ -132,7 +129,7 @@ public sealed class GeminiInterviewPreparationService : IInterviewPreparationAiS
     {
         return new AiCallMetadata
         {
-            ModelName = _modelName,
+            ModelName = call.ModelName,
             PromptVersion = _promptVersion,
             LatencyMs = call.LatencyMs,
             InputTokenCount = call.Usage?.PromptTokenCount ?? 0,
@@ -148,7 +145,8 @@ public sealed class GeminiInterviewPreparationService : IInterviewPreparationAiS
         string operation,
         CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(_apiKey))
+        var (modelName, apiKey) = await _aiConfigProvider.GetConfigAsync(cancellationToken);
+        if (string.IsNullOrWhiteSpace(apiKey))
         {
             throw new InvalidOperationException("Gemini API key is not configured.");
         }
@@ -190,7 +188,7 @@ public sealed class GeminiInterviewPreparationService : IInterviewPreparationAiS
             try
             {
                 using var response = await _httpClient.PostAsJsonAsync(
-                    $"/v1beta/models/{_modelName}:generateContent?key={_apiKey}",
+                    $"/v1beta/models/{modelName}:generateContent?key={apiKey}",
                     requestBody,
                     cancellationToken);
 
@@ -207,7 +205,7 @@ public sealed class GeminiInterviewPreparationService : IInterviewPreparationAiS
                     else
                     {
                         stopwatch.Stop();
-                        success = new GeminiCallResult(text, geminiResponse!.UsageMetadata, stopwatch.ElapsedMilliseconds);
+                        success = new GeminiCallResult(text, modelName, geminiResponse!.UsageMetadata, stopwatch.ElapsedMilliseconds);
                     }
                 }
                 else
@@ -237,7 +235,7 @@ public sealed class GeminiInterviewPreparationService : IInterviewPreparationAiS
             {
                 _logger.LogInformation(
                     "Gemini call {Operation} succeeded: model {ModelName}, prompt {PromptVersion}, latency {LatencyMs}ms, tokens in {InputTokenCount} out {OutputTokenCount}, attempt {Attempt}",
-                    operation, _modelName, _promptVersion, success.LatencyMs,
+                    operation, success.ModelName, _promptVersion, success.LatencyMs,
                     success.Usage?.PromptTokenCount ?? 0, success.Usage?.CandidatesTokenCount ?? 0, attempt);
                 return success;
             }
@@ -479,5 +477,5 @@ public sealed class GeminiInterviewPreparationService : IInterviewPreparationAiS
     }
 
     private sealed record GeminiCallResult(
-        string Text, GeminiUsageMetadata? Usage, long LatencyMs);
+        string Text, string ModelName, GeminiUsageMetadata? Usage, long LatencyMs);
 }

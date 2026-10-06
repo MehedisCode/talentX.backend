@@ -63,7 +63,8 @@ public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountC
 
         await _attemptTracker.ResetAsync(otpKey, cancellationToken);
 
-        var user = await _unitOfWork.Users.GetByUserIdAsync(identityUserId, cancellationToken);
+        var user = await _unitOfWork.Users.GetByUserIdAsync(identityUserId, cancellationToken)
+            ?? await _unitOfWork.Users.GetByEmailAsync(email, cancellationToken);
         var recipientName = string.IsNullOrWhiteSpace(user?.Name) ? email : user!.Name;
 
         IReadOnlyList<string> resumeStorageKeys = [];
@@ -75,7 +76,8 @@ public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountC
             {
                 // Storage keys are captured while the rows still exist so the objects
                 // can be cleaned up after the transaction commits.
-                resumeStorageKeys = await DeleteOwnedDomainDataAsync(user, identityUserId, cancellationToken);
+                var targetUserId = !string.IsNullOrWhiteSpace(user.UserId) ? user.UserId : identityUserId;
+                resumeStorageKeys = await DeleteOwnedDomainDataAsync(user, targetUserId, cancellationToken);
             }
 
             var identityDelete = await _identityService.DeleteApplicationUserAsync(identityUserId);

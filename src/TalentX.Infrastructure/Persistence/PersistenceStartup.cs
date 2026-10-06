@@ -53,6 +53,7 @@ public static class PersistenceStartup
         services.AddScoped<ICompanyReviewRepository, CompanyReviewRepository>();
         services.AddScoped<IInterviewPreparationConfigRepository, InterviewPreparationConfigRepository>();
         services.AddScoped<IInterviewPreparationConfigProvider, Infrastructure.Services.InterviewPreparationConfigProvider>();
+        services.AddScoped<IAiConfigurationRepository, AiConfigurationRepository>();
 
         return services;
     }

@@ -46,6 +46,7 @@ public class ApplicationDbContext
     public DbSet<InterviewPreparationGeneration> InterviewPreparationGenerations => Set<InterviewPreparationGeneration>();
     public DbSet<CompanyReview> CompanyReviews => Set<CompanyReview>();
     public DbSet<JobReport> JobReports => Set<JobReport>();
+    public DbSet<AiConfiguration> AiConfigurations => Set<AiConfiguration>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
