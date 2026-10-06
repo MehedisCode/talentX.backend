@@ -86,6 +86,9 @@ public static class GeminiPromptBuilder
         "- portfolioUrls: ONLY the candidate's OWN portfolio, personal website, personal blog, or design portfolio (e.g. Behance, Dribbble, a *.github.io site, a personal domain, or a GitHub/GitLab profile).\n" +
         "- Do NOT add any of the following to portfolioUrls: LinkedIn, social media (Facebook, X/Twitter, Instagram, TikTok, YouTube), job boards or freelance marketplaces, company or university websites, link shorteners, or email/messaging links.\n" +
         "- Do NOT treat every URL as a portfolio. When you are unsure whether a URL is the candidate's personal portfolio, OMIT it — an empty list is better than an unrelated link.\n" +
+        "- If the resume contains multiple LinkedIn URLs, extract ONLY the primary one (usually the one in the header or contact section).\n" +
+        "- If information appears redacted or masked (e.g. 'Confidential', 'XXX', '[REDACTED]'), leave the field empty rather than guessing.\n" +
+        "- Do not extract invalid or impossible dates (e.g. month > 12, day > 31, February 30th).\n" +
         "- Your job is strictly to extract semantic information and classify the extracted URLs into the appropriate fields.";
 
     private static object BuildGenerationConfig(int maxOutputTokens) => new
@@ -137,7 +140,7 @@ public static class GeminiPromptBuilder
                     items = new
                     {
                         type = "OBJECT",
-                        required = new[] { "institution", "degree", "startDate" },
+                        required = new[] { "institution", "degree" },
                         properties = new
                         {
                             institution = new { type = "STRING" },

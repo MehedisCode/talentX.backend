@@ -7,11 +7,13 @@ namespace TalentX.Infrastructure.Tests.Ai;
 
 public class GeminiPromptBuilderTests
 {
-    // Requiring 'startDate' is what makes Gemini reliably emit education dates
-    // at all; when it was optional the model skipped the dates entirely. This
-    // guards that regression (see TX26-320 #3).
+    // Education dates are optional in the schema (startDate is not required),
+    // but the prompt strongly instructs Gemini to extract them. The normalizer
+    // handles single-year degrees (moves lone year to endDate). This test
+    // verifies the schema does not require startDate, allowing Gemini to
+    // follow the prompt instruction to leave it empty for single-year degrees.
     [Fact]
-    public void BuildRequestBody_RequiresEducationStartDate()
+    public void BuildRequestBody_EducationDoesNotRequireStartDate()
     {
         var body = GeminiPromptBuilder.BuildRequestBody("resume text", Array.Empty<string>());
         var json = JsonSerializer.Serialize(body);
@@ -30,7 +32,7 @@ public class GeminiPromptBuilderTests
 
         required.Should().Contain("institution");
         required.Should().Contain("degree");
-        required.Should().Contain("startDate");
+        required.Should().NotContain("startDate");
     }
 
     [Fact]
@@ -154,5 +156,23 @@ public class GeminiPromptBuilderTests
             .GetString();
 
         prompt.Should().Contain("Extract EVERY work experience entry");
+    }
+
+    [Fact]
+    public void BuildRequestBody_PromptIncludesEdgeCaseInstructions()
+    {
+        var body = GeminiPromptBuilder.BuildRequestBody("resume text", Array.Empty<string>());
+        var json = JsonSerializer.Serialize(body);
+
+        using var document = JsonDocument.Parse(json);
+        var prompt = document.RootElement
+            .GetProperty("contents")[0]
+            .GetProperty("parts")[0]
+            .GetProperty("text")
+            .GetString();
+
+        prompt.Should().Contain("multiple LinkedIn URLs");
+        prompt.Should().Contain("redacted or masked");
+        prompt.Should().Contain("invalid or impossible dates");
     }
 }

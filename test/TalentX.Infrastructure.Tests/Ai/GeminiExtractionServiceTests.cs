@@ -123,7 +123,7 @@ public class GeminiExtractionServiceTests
     }
 
     [Fact]
-    public async Task ExtractAsync_WhenFirstAttemptReturnsEmptyData_RetriesAndSucceedsOnSecondAttempt()
+    public async Task ExtractAsync_WhenFirstAttemptReturnsEmptyData_ThrowsImmediately()
     {
         var fakeHandler = new FakeHttpMessageHandler();
 
@@ -137,16 +137,8 @@ public class GeminiExtractionServiceTests
             "toolsAndPlatforms": []
         }
         """;
-        fakeHandler.Enqueue(CreateGeminiSuccessResponse(emptyJson));
-
-        const string validJson = """
-        {
-            "fullName": "John Smith",
-            "email": "john@example.com",
-            "technicalSkills": ["TypeScript", "React"]
-        }
-        """;
-        fakeHandler.Enqueue(CreateGeminiSuccessResponse(validJson));
+        var response = CreateGeminiSuccessResponse(emptyJson);
+        fakeHandler.Enqueue(response);
 
         var httpClient = new HttpClient(fakeHandler) { BaseAddress = new Uri("https://generativelanguage.googleapis.com") };
         var configProviderMock = new Mock<IAiConfigurationProvider>();
@@ -160,14 +152,13 @@ public class GeminiExtractionServiceTests
             config,
             NullLogger<GeminiExtractionService>.Instance);
 
-        var file = CreateMockFile("John Smith - Full Stack Developer. Extensive background with TypeScript, React, and web technologies for over 100 characters of resume text.");
+        var file = CreateMockFile("John Smith - Full Stack Developer with extensive professional experience. Extensive background with TypeScript, React, and web technologies. Over 10 years of work history building enterprise applications. Skilled in modern development practices and agile methodologies. Proven track record of delivering high-quality software solutions for Fortune 500 companies. Expert in front-end and back-end development.");
 
-        var result = await service.ExtractAsync(file.Object);
+        var act = () => service.ExtractAsync(file.Object);
 
-        result.Should().NotBeNull();
-        result.FullName.Should().Be("John Smith");
-        result.TechnicalSkills.Should().Contain("TypeScript");
-        fakeHandler.CallCount.Should().Be(2);
+        await act.Should().ThrowAsync<Exception>()
+            .WithMessage("*incomplete or empty data*");
+        fakeHandler.CallCount.Should().Be(1);
     }
 
     [Fact]

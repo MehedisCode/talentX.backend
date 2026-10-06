@@ -88,9 +88,10 @@ public sealed class GeminiExtractionService : IResumeExtractionService
 
         for (var attempt = 1; attempt <= MaxAttempts; attempt++)
         {
+            HttpResponseMessage? response = null;
             try
             {
-                var response = await _httpClient.PostAsJsonAsync(
+                response = await _httpClient.PostAsJsonAsync(
                     $"/v1beta/models/{modelName}:generateContent?key={apiKey}",
                     requestBody,
                     cancellationToken);
@@ -110,7 +111,7 @@ public sealed class GeminiExtractionService : IResumeExtractionService
                         throw new Exception($"Gemini API error: {response.StatusCode}");
                     }
 
-                    await Task.Delay(attempt == 1 ? 1000 : 2000, cancellationToken);
+                    await Task.Delay(attempt * 1000, cancellationToken);
                     continue;
                 }
 
@@ -121,14 +122,8 @@ public sealed class GeminiExtractionService : IResumeExtractionService
 
                 if (string.IsNullOrWhiteSpace(jsonText))
                 {
-                    _logger.LogWarning("Gemini API returned an empty response on attempt {Attempt}.", attempt);
-                    if (attempt == MaxAttempts)
-                    {
-                        throw new Exception("Gemini API returned an empty content part.");
-                    }
-
-                    await Task.Delay(attempt == 1 ? 1000 : 2000, cancellationToken);
-                    continue;
+                    _logger.LogWarning("Gemini API returned an empty response.");
+                    throw new InvalidOperationException("Gemini API returned an empty content part.");
                 }
 
                 var result = GeminiResponseMapper.MapToResult(
@@ -140,17 +135,8 @@ public sealed class GeminiExtractionService : IResumeExtractionService
 
                 if (IsEmptyOrIncomplete(result, plainText))
                 {
-                    if (attempt < MaxAttempts)
-                    {
-                        _logger.LogWarning(
-                            "Gemini API returned empty/incomplete extraction data on attempt {Attempt}. Retrying...",
-                            attempt);
-                        await Task.Delay(attempt == 1 ? 1000 : 2000, cancellationToken);
-                        continue;
-                    }
-
-                    _logger.LogError("Gemini API returned empty/incomplete extraction data after {MaxAttempts} attempts.", MaxAttempts);
-                    throw new Exception("AI extraction returned incomplete or empty data.");
+                    _logger.LogError("Gemini API returned empty/incomplete extraction data.");
+                    throw new InvalidOperationException("AI extraction returned incomplete or empty data.");
                 }
 
                 return result;
@@ -163,7 +149,11 @@ public sealed class GeminiExtractionService : IResumeExtractionService
                 }
 
                 _logger.LogWarning(ex, "Gemini API extraction failed on attempt {Attempt}. Retrying...", attempt);
-                await Task.Delay(attempt == 1 ? 1000 : 2000, cancellationToken);
+                await Task.Delay(attempt * 1000, cancellationToken);
+            }
+            finally
+            {
+                response?.Dispose();
             }
         }
 
@@ -184,6 +174,22 @@ public sealed class GeminiExtractionService : IResumeExtractionService
                         result.SoftSkills.Count > 0 ||
                         result.ToolsAndPlatforms.Count > 0;
 
-        return !hasName && !hasExperience && !hasEducation && !hasSkills;
+        var extractionScore = (hasName ? 1 : 0) + (hasExperience ? 1 : 0) +
+                              (hasEducation ? 1 : 0) + (hasSkills ? 1 : 0);
+
+        if (extractionScore < 2 && plainText.Length > 300)
+        {
+            return true;
+        }
+
+        var mentionsExperience = System.Text.RegularExpressions.Regex.IsMatch(plainText,
+            @"\b(experience|work history|employment)\b",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        if (mentionsExperience && !hasExperience && plainText.Length > 500)
+        {
+            return true;
+        }
+
+        return false;
     }
 }
