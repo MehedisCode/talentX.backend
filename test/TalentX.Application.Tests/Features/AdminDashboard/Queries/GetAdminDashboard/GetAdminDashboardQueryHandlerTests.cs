@@ -339,15 +339,14 @@ public sealed class GetAdminDashboardQueryHandlerTests
     public async Task Handle_WithHourlyGranularity_AsksRepositoriesForHourBuckets()
     {
         var end = Utc(2026, 9, 11, 10, 30);
+        var start = end.AddHours(-24);
 
-        await _handler.Handle(
-            new GetAdminDashboardQuery { StartDate = end.AddHours(-24), EndDate = end },
-            CancellationToken.None);
+        await _handler.Handle(new GetAdminDashboardQuery { StartDate = start, EndDate = end }, CancellationToken.None);
 
-        _jobs.Verify(r => r.GetPublishedCountsByBucketAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>(), true, It.IsAny<CancellationToken>()), Times.Once);
-        _applications.Verify(r => r.GetAppliedCountsByBucketAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>(), true, It.IsAny<CancellationToken>()), Times.Once);
-        _applications.Verify(r => r.GetHiredCountsByBucketAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>(), true, It.IsAny<CancellationToken>()), Times.Once);
-        _interviews.Verify(r => r.GetCreatedCountsByBucketAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>(), true, It.IsAny<CancellationToken>()), Times.Once);
+        _jobs.Verify(r => r.GetPublishedCountsByBucketAsync(start, end, true, It.IsAny<CancellationToken>()), Times.Once);
+        _applications.Verify(r => r.GetAppliedCountsByBucketAsync(start, end, true, It.IsAny<CancellationToken>()), Times.Once);
+        _applications.Verify(r => r.GetHiredCountsByBucketAsync(start, end, true, It.IsAny<CancellationToken>()), Times.Once);
+        _interviews.Verify(r => r.GetCreatedCountsByBucketAsync(start, end, true, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -483,6 +482,8 @@ public sealed class GetAdminDashboardQueryHandlerTests
         result.Trend.PreviousStartDate.Should().Be(expectedPreviousStart);
         result.Trend.PreviousEndDate.Should().Be(expectedPreviousEnd);
         result.Trend.PreviousEndDate.Should().BeBefore(start);
+        // Same buckets in both windows, so they line up point by point.
+        result.Trend.PreviousPoints.Should().HaveCount(result.Trend.Points.Count);
     }
 
     [Fact]
@@ -521,19 +522,44 @@ public sealed class GetAdminDashboardQueryHandlerTests
         result.Trend.PreviousTotals.Interviews.Should().Be(4);
         result.Trend.PreviousTotals.Hires.Should().Be(1);
         result.Trend.Points.Sum(p => p.Applications).Should().Be(99);
+
+        // The same counts, placed in the previous window's own day buckets.
+        result.Trend.PreviousPoints.First().BucketStart.Should().Be(previousStart);
+        result.Trend.PreviousPoints.Last().BucketStart.Should().Be(Utc(2026, 9, 5));
+        result.Trend.PreviousPoints.Single(p => p.BucketStart == Utc(2026, 8, 10)).PublishedJobs.Should().Be(2);
+        result.Trend.PreviousPoints.Single(p => p.BucketStart == Utc(2026, 8, 7)).Applications.Should().Be(10);
+        result.Trend.PreviousPoints.Single(p => p.BucketStart == Utc(2026, 9, 5)).Applications.Should().Be(23);
+        result.Trend.PreviousPoints.Single(p => p.BucketStart == Utc(2026, 8, 30)).Hires.Should().Be(1);
     }
 
     [Fact]
-    public async Task Handle_WithHourlyGranularity_SumsThePreviousWindowFromDayBuckets()
+    public async Task Handle_WithHourlyGranularity_FetchesThePreviousWindowInHourBuckets()
     {
         var start = Utc(2026, 10, 4, 15);
         var end = Utc(2026, 10, 5, 14, 20);
+        _applications.Setup(r => r.GetAppliedCountsByBucketAsync(Utc(2026, 10, 3, 15), Utc(2026, 10, 4, 14, 20), true, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<DateTime, int> { [Utc(2026, 10, 3, 18)] = 6 });
 
-        await _handler.Handle(new GetAdminDashboardQuery { StartDate = start, EndDate = end }, CancellationToken.None);
+        var result = await _handler.Handle(new GetAdminDashboardQuery { StartDate = start, EndDate = end }, CancellationToken.None);
 
-        _applications.Verify(
-            r => r.GetAppliedCountsByBucketAsync(Utc(2026, 10, 3, 15), Utc(2026, 10, 4, 14, 20), false, It.IsAny<CancellationToken>()),
-            Times.Once);
+        result.Trend.PreviousPoints.Should().HaveCount(24);
+        result.Trend.PreviousPoints.First().BucketStart.Should().Be(Utc(2026, 10, 3, 15));
+        // 18:00 is the fourth hour of the previous window, lining up with 18:00 of the current one.
+        result.Trend.PreviousPoints[3].Applications.Should().Be(6);
+        result.Trend.Points[3].BucketStart.Should().Be(Utc(2026, 10, 4, 18));
+    }
+
+    [Fact]
+    public async Task Handle_WeeklyTrend_CountsThePreviousWindowsWeeksFromItsOwnStart()
+    {
+        // 90D: current Jul 8 -> Oct 5, previous Apr 9 -> Jul 7.
+        var result = await _handler.Handle(
+            new GetAdminDashboardQuery { StartDate = Utc(2026, 7, 8), EndDate = Utc(2026, 10, 5, 14, 20) },
+            CancellationToken.None);
+
+        result.Trend.PreviousPoints.Should().HaveCount(13);
+        result.Trend.PreviousPoints.Select(p => p.BucketStart).Take(3)
+            .Should().Equal(Utc(2026, 4, 9), Utc(2026, 4, 16), Utc(2026, 4, 23));
     }
 
     [Fact]

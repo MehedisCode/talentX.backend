@@ -76,7 +76,9 @@ public sealed record AdminDashboardTrendDto
     // The window just before the selected range, the same length and shifted back by whole hours/days/months.
     public DateTime PreviousStartDate { get; init; }
     public DateTime PreviousEndDate { get; init; }
-    // Each series' total over the previous window, so the UI can show the change against it.
+    // The previous window bucket by bucket; it has the same buckets as Points, so they line up by position.
+    public IReadOnlyList<AdminDashboardTrendPointDto> PreviousPoints { get; init; } = [];
+    // Each series' total over the previous window (the sum of PreviousPoints), so the UI can show the change against it.
     public AdminDashboardTrendTotalsDto PreviousTotals { get; init; } = new();
 }
 

@@ -58,7 +58,8 @@ public sealed class GetAdminDashboardQueryHandler : IRequestHandler<GetAdminDash
             .GetHiredCountsByBucketAsync(start, end, groupByHour, cancellationToken);
 
         var (previousStart, previousEnd) = ResolvePreviousRange(start, end, granularity);
-        var previousTotals = await LoadPreviousTotalsAsync(previousStart, previousEnd, cancellationToken);
+        var previousPoints = await LoadPreviousPointsAsync(
+            previousStart, previousEnd, granularity, groupByHour, cancellationToken);
 
         var recentTalents = await _unitOfWork.Talents
             .GetRecentCreatedBetweenAsync(start, end, AdminDashboardConstants.RecentActivityPerType, cancellationToken);
@@ -93,7 +94,14 @@ public sealed class GetAdminDashboardQueryHandler : IRequestHandler<GetAdminDash
             {
                 PreviousStartDate = previousStart,
                 PreviousEndDate = previousEnd,
-                PreviousTotals = previousTotals
+                PreviousPoints = previousPoints,
+                PreviousTotals = new AdminDashboardTrendTotalsDto
+                {
+                    PublishedJobs = previousPoints.Sum(point => point.PublishedJobs),
+                    Applications = previousPoints.Sum(point => point.Applications),
+                    Interviews = previousPoints.Sum(point => point.Interviews),
+                    Hires = previousPoints.Sum(point => point.Hires)
+                }
             },
             Activities = BuildActivities(recentTalents, recentEmployers, recentJobs)
         };
@@ -117,28 +125,25 @@ public sealed class GetAdminDashboardQueryHandler : IRequestHandler<GetAdminDash
         return BuildMetrics(talentCount, verificationCounts, jobCounts, applicationCounts, interviewCount);
     }
 
-    // The four trend series summed over the previous window, counted by the same rules as the trend buckets.
-    private async Task<AdminDashboardTrendTotalsDto> LoadPreviousTotalsAsync(
+    // The previous window's trend, bucket by bucket with the same size and rules as the current one (weekly blocks
+    // counted from the previous start), so point n of both windows lines up.
+    private async Task<IReadOnlyList<AdminDashboardTrendPointDto>> LoadPreviousPointsAsync(
         DateTime previousStart,
         DateTime previousEnd,
+        AdminDashboardTrendGranularity granularity,
+        bool groupByHour,
         CancellationToken cancellationToken)
     {
         var published = await _unitOfWork.Jobs
-            .GetPublishedCountsByBucketAsync(previousStart, previousEnd, false, cancellationToken);
+            .GetPublishedCountsByBucketAsync(previousStart, previousEnd, groupByHour, cancellationToken);
         var applications = await _unitOfWork.JobApplications
-            .GetAppliedCountsByBucketAsync(previousStart, previousEnd, false, cancellationToken);
+            .GetAppliedCountsByBucketAsync(previousStart, previousEnd, groupByHour, cancellationToken);
         var interviews = await _unitOfWork.InterviewInvitations
-            .GetCreatedCountsByBucketAsync(previousStart, previousEnd, false, cancellationToken);
+            .GetCreatedCountsByBucketAsync(previousStart, previousEnd, groupByHour, cancellationToken);
         var hires = await _unitOfWork.JobApplications
-            .GetHiredCountsByBucketAsync(previousStart, previousEnd, false, cancellationToken);
+            .GetHiredCountsByBucketAsync(previousStart, previousEnd, groupByHour, cancellationToken);
 
-        return new AdminDashboardTrendTotalsDto
-        {
-            PublishedJobs = published.Values.Sum(),
-            Applications = applications.Values.Sum(),
-            Interviews = interviews.Values.Sum(),
-            Hires = hires.Values.Sum()
-        };
+        return BuildTrend(previousStart, previousEnd, granularity, published, applications, interviews, hires).Points;
     }
 
     // One set of rules for the range and all-time blocks: drafts and PendingVerification applications are
