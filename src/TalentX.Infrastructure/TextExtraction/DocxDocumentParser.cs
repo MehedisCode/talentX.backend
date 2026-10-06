@@ -38,7 +38,12 @@ public static class DocxDocumentParser
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                var line = paragraph.InnerText.Trim();
+                // Extract text from individual runs and join with spaces to preserve word boundaries
+                var runs = paragraph.Descendants<Text>()
+                    .Select(t => t.Text)
+                    .Where(t => !string.IsNullOrEmpty(t));
+                var line = string.Join(" ", runs).Trim();
+                
                 if (!string.IsNullOrEmpty(line))
                 {
                     sb.AppendLine(line);
