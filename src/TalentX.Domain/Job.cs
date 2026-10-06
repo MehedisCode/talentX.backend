@@ -33,9 +33,6 @@ public class Job : BaseEntity
     public DateTime? PublishedAt { get; private set; }
     // When the job was first posted: set by the first publish only, never changed afterwards.
     public DateTime? FirstPublishedAt { get; private set; }
-    // Relisted after its first publish (reopened, reactivated or re-published), so candidates can be told it isn't new.
-    // A lifted comparison: false while either date is missing (never published, or published before FirstPublishedAt existed).
-    public bool IsReposted => PublishedAt > FirstPublishedAt;
     public DeactivationReason? DeactivationReason { get; private set; }
     public string? DeactivationDetails { get; private set; }
     public DateTime? DeactivatedAt { get; private set; }

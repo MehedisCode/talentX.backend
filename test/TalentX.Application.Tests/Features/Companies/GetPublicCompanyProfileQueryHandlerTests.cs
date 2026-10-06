@@ -83,7 +83,6 @@ public sealed class GetPublicCompanyProfileQueryHandlerTests
         Assert.Equal(1, result.ActiveJobsCount);
         Assert.Single(result.PublishedJobs);
         Assert.Equal("Senior Backend Engineer", result.PublishedJobs[0].Title);
-        Assert.False(result.PublishedJobs[0].IsReposted);
         Assert.Equal(CompanyReviewSummaryCalculator.Empty, result.ReviewSummary);
     }
 

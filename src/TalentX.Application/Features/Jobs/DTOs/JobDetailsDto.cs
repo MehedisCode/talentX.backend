@@ -19,8 +19,6 @@ public class JobDetailsDto
     public int Vacancies { get; set; }
 
     public DateTime CreatedAt { get; set; }
-    // True when the job was relisted after its first publish, so CreatedAt is a repost date, not the original one.
-    public bool IsReposted { get; set; }
     public DateTime ExpireAt { get; set; }
     public string? City { get; set; }
     public string? Country { get; set; }

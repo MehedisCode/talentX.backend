@@ -11,7 +11,5 @@ public sealed record PublicCompanyJobDto(
     ExperienceLevel ExperienceLevel,
     int Vacancies,
     DateTime ExpireAt,
-    DateTime? PublishedAt,
-    // True when the job was relisted after its first publish (PublishedAt is the repost date).
-    bool IsReposted
+    DateTime? PublishedAt
 );
