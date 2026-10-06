@@ -3,6 +3,7 @@ using MediatR;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Features.Talents.DTOs;
+using TalentX.Application.Features.Talents.Helpers;
 using TalentX.Application.Identity.Services;
 
 namespace TalentX.Application.Features.Talents.Queries.GetTalentProfileForEmployer;
@@ -76,6 +77,16 @@ public sealed class GetTalentProfileForEmployerQueryHandler
             }
         }
 
+        var mappedWorkExperiences = _mapper.Map<List<WorkExperienceItemDto>>(workExperiences);
+        var sortedWorkExperiences = ChronologicalOrderingHelper.SortWorkExperiences(
+            mappedWorkExperiences,
+            experience => (experience.IsCurrent, experience.StartDate, experience.EndDate));
+
+        var mappedEducations = _mapper.Map<List<EducationItemDto>>(educations);
+        var sortedEducations = ChronologicalOrderingHelper.SortEducations(
+            mappedEducations,
+            education => (education.StartDate, education.EndDate));
+
         return new TalentPublicProfileResponse(
             ApplicationId: application.Id,
             JobId: application.JobId,
@@ -101,8 +112,8 @@ public sealed class GetTalentProfileForEmployerQueryHandler
             AiMatchScore: application.AiMatchScore,
             CoverLetter: application.CoverLetter,
             AppliedAt: application.AppliedAt,
-            WorkExperiences: _mapper.Map<List<WorkExperienceItemDto>>(workExperiences),
-            Educations: _mapper.Map<List<EducationItemDto>>(educations)
+            WorkExperiences: sortedWorkExperiences,
+            Educations: sortedEducations
         );
     }
 

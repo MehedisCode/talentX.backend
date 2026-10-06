@@ -143,4 +143,37 @@ public class GetTalentApplicationPrefillQueryHandlerTests
             resumeDto.DisplayName == "My Resume" && resumeDto.IsDefault);
         response.WorkExperiences.Should().ContainSingle(item => item.CompanyName == "Acme Corp");
     }
+
+    [Fact]
+    public async Task Handle_WhenMultipleWorkExperiencesExist_ReturnsThemInReverseChronologicalOrder()
+    {
+        _currentUserService.SetupGet(u => u.UserId).Returns("user-multi");
+        var talent = new Talent("user-multi", "John Smith", "john@example.com");
+
+        var workExperiences = new List<WorkExperience>
+        {
+            new("user-multi", "Company A", "Senior Software Test Engineer", "04/2022", "09/2025", false),
+            new("user-multi", "Company B", "SQA Engineer (Old)", "04/2019", "01/2020", false),
+            new("user-multi", "Company C", "Quality Excellence Lead", "09/2025", "Present", true),
+            new("user-multi", "Company D", "SQA Engineer (Mid)", "02/2021", "02/2022", false)
+        };
+
+        _talentRepository
+            .Setup(r => r.GetByUserIdAsync("user-multi", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(talent);
+        _workExperienceRepository
+            .Setup(r => r.GetByUserIdAsync("user-multi", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(workExperiences);
+        _resumeRepository
+            .Setup(r => r.GetAllByUserIdAsync("user-multi", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Resume>());
+
+        var response = await _handler.Handle(new GetTalentApplicationPrefillQuery(), CancellationToken.None);
+
+        response.WorkExperiences.Select(item => item.JobTitle).Should().Equal(
+            "Quality Excellence Lead",
+            "Senior Software Test Engineer",
+            "SQA Engineer (Mid)",
+            "SQA Engineer (Old)");
+    }
 }

@@ -4,6 +4,7 @@ using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Features.Resumes.DTOs;
 using TalentX.Application.Features.Talents.DTOs;
+using TalentX.Application.Features.Talents.Helpers;
 using TalentX.Application.Identity.Services;
 
 namespace TalentX.Application.Features.Talents.Queries.GetTalentApplicationPrefill;
@@ -49,6 +50,11 @@ public sealed class GetTalentApplicationPrefillQueryHandler
             : await _presignedUrlService.CreateDownloadUrlAsync(
                 defaultResume.StorageKey, DownloadUrlExpiry, cancellationToken);
 
+        var mappedWorkExperiences = _mapper.Map<List<WorkExperienceItemDto>>(workExperiences);
+        var sortedWorkExperiences = ChronologicalOrderingHelper.SortWorkExperiences(
+            mappedWorkExperiences,
+            experience => (experience.IsCurrent, experience.StartDate, experience.EndDate));
+
         return new TalentApplicationPrefillResponse(
             talent.Name,
             talent.Email,
@@ -60,7 +66,7 @@ public sealed class GetTalentApplicationPrefillQueryHandler
             defaultResume?.OriginalFileName,
             resumeUrl,
             resumes.Select(SavedResumeDto.FromEntity).ToList(),
-            _mapper.Map<List<WorkExperienceItemDto>>(workExperiences)
+            sortedWorkExperiences
         );
     }
 }
