@@ -7,20 +7,38 @@ namespace TalentX.Infrastructure.Tests.Ai;
 public class WorkExperienceNormalizerTests
 {
     [Theory]
-    [InlineData(true, null, true)]
-    [InlineData(false, "Present", true)]
-    [InlineData(null, "Present", true)]
-    [InlineData(null, "present", true)]
-    [InlineData(null, "Current", true)]
-    [InlineData(null, "Ongoing", true)]
-    [InlineData(null, "Now", true)]
-    [InlineData(false, "Dec 2023", false)]
-    [InlineData(null, "2019", false)]
-    [InlineData(null, null, false)]
-    [InlineData(null, "   ", false)]
-    public void IsCurrent_DetectsCurrentRoles(bool? flag, string? endDate, bool expected)
+    [InlineData(true, null, null, false)]
+    [InlineData(true, " ", null, false)]
+    [InlineData(true, null, "", false)]
+    [InlineData(true, null, "Jan 2021", true)]
+    [InlineData(true, "Dec 2023", "Jan 2021", true)]
+    [InlineData(false, null, null, false)]
+    [InlineData(null, null, null, false)]
+    [InlineData(null, "Present", null, true)]
+    [InlineData(null, null, "Jan 2021", false)]
+    public void IsCurrent_DatelessRoleIsNeverCurrent_EvenWhenFlagged(
+        bool? flag, string? endDate, string? startDate, bool expected)
     {
-        WorkExperienceNormalizer.IsCurrent(flag, endDate).Should().Be(expected);
+        WorkExperienceNormalizer.IsCurrent(flag, endDate, startDate).Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData(true, "Old job", "Jan 2021", true)]
+    [InlineData(true, "Old job", null, true)]
+    [InlineData(false, "Present", null, true)]
+    [InlineData(null, "Present", null, true)]
+    [InlineData(null, "present", null, true)]
+    [InlineData(null, "Current", null, true)]
+    [InlineData(null, "Ongoing", null, true)]
+    [InlineData(null, "Now", null, true)]
+    [InlineData(false, "Dec 2023", "Jan 2021", false)]
+    [InlineData(null, "2019", "Jan 2021", false)]
+    [InlineData(null, null, "Jan 2021", false)]
+    [InlineData(null, "   ", "Jan 2021", false)]
+    public void IsCurrent_PhoneticEndDates_DetectsCurrentRoles(
+        bool? flag, string? endDate, string? startDate, bool expected)
+    {
+        WorkExperienceNormalizer.IsCurrent(flag, endDate, startDate).Should().Be(expected);
     }
 
     [Theory]

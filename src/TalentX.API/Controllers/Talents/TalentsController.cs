@@ -154,12 +154,25 @@ public sealed class TalentsController : BaseApiController
         if (parsedPayload is null)
             throw new BadRequestException("The apply-extraction payload is required.");
 
-        var command = new ApplyExtractedProfileCommand(
+        var profileData = new ApplyExtractedProfileData(
+            parsedPayload.FullName,
+            parsedPayload.Tagline,
+            parsedPayload.ShortBio,
+            parsedPayload.Location,
+            parsedPayload.Phone,
+            parsedPayload.LinkedInUrl,
+            parsedPayload.AdditionalUrls,
+            parsedPayload.TotalYearsExperience,
+            parsedPayload.ExpectedSalary,
+            parsedPayload.SkillPropositions,
             parsedPayload.TechnicalSkills,
             parsedPayload.SoftSkills,
             parsedPayload.ToolsAndPlatforms,
             parsedPayload.WorkExperiences,
-            parsedPayload.Educations,
+            parsedPayload.Educations);
+
+        var command = new ApplyExtractedProfileCommand(
+            profileData,
             new FormFileUploadedFile(file));
 
         await Sender.Send(command, cancellationToken);
