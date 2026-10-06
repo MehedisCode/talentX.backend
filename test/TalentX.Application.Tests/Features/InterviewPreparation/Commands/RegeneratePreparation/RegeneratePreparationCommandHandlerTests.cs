@@ -122,7 +122,7 @@ public class RegeneratePreparationCommandHandlerTests
             .Setup(r => r.GetByInvitationIdAsync(existing.InterviewInvitationId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(existing);
         _preparationRepository
-            .Setup(r => r.CountTodayByTalentAsync(TalentUserId, It.IsAny<CancellationToken>()))
+            .Setup(r => r.CountAllGenerationsTodayByTalentAsync(TalentUserId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(todayCount);
         _invitationRepository
             .Setup(r => r.GetByIdAsync(existing.InterviewInvitationId, It.IsAny<CancellationToken>()))
@@ -162,6 +162,14 @@ public class RegeneratePreparationCommandHandlerTests
         result.AdditionalQuestions.Should().BeEmpty();
 
         _preparationRepository.Verify(r => r.Update(existing), Times.Once);
+        _preparationRepository.Verify(
+            r => r.AddGenerationAsync(
+                It.Is<InterviewPreparationGeneration>(g =>
+                    g.Kind == InterviewPreparationGenerationKind.Regenerate
+                    && g.InterviewPreparationId == existing.Id
+                    && g.TalentUserId == TalentUserId),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
         _preparationRepository.Verify(
             r => r.AddAsync(It.IsAny<InterviewPreparationEntity>(), It.IsAny<CancellationToken>()),
             Times.Never);

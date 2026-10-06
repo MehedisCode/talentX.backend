@@ -6,6 +6,7 @@ using TalentX.Application.Features.InterviewPreparation.DTOs;
 using TalentX.Application.Features.InterviewPreparation.Helpers;
 using TalentX.Application.Identity.Services;
 using TalentX.Domain.Entities;
+using TalentX.Domain.Enums;
 using InterviewPreparationEntity = TalentX.Domain.Entities.InterviewPreparation;
 
 namespace TalentX.Application.Features.InterviewPreparation.Commands.GenerateAdditionalQuestions;
@@ -44,6 +45,11 @@ public sealed class GenerateAdditionalQuestionsCommandHandler
         InterviewPreparationAccessValidator.EnsureUserCanAccess(preparation, userId);
         InterviewPreparationAccessValidator.EnsurePreparationIsAccessible(preparation, config.AccessWindowAfterInterview);
 
+        var todayCount = await _unitOfWork.InterviewPreparations
+            .CountAllGenerationsTodayByTalentAsync(userId, ct);
+        if (todayCount >= config.DailyGenerationLimit)
+            throw new TooManyRequestsException("Daily interview preparation generation limit reached.");
+
         var talent = await _unitOfWork.Talents.GetByUserIdAsync(userId, ct);
 
         var context = CreateContext(preparation, talent?.Name);
@@ -53,7 +59,20 @@ public sealed class GenerateAdditionalQuestionsCommandHandler
         preparation.SetAdditionalQuestions(result.AdditionalQuestions);
 
         _unitOfWork.InterviewPreparations.Update(preparation);
+        await _unitOfWork.InterviewPreparations.AddGenerationAsync(
+            InterviewPreparationGeneration.Create(new CreateGenerationPayload(
+                preparation.Id, userId, InterviewPreparationGenerationKind.AdditionalQuestions)),
+            ct);
         await _unitOfWork.SaveChangesAsync(ct);
+
+        _logger.LogInformation(
+            "Additional questions generated for preparation {PreparationId} (talent {TalentUserId}): model {ModelName}, prompt {PromptVersion}, latency {LatencyMs}ms, tokens in {InputTokenCount} out {OutputTokenCount}",
+            preparation.Id, userId,
+            result.Metadata?.ModelName ?? "unknown",
+            result.Metadata?.PromptVersion ?? "unknown",
+            result.Metadata?.LatencyMs ?? 0,
+            result.Metadata?.InputTokenCount ?? 0,
+            result.Metadata?.OutputTokenCount ?? 0);
 
         return await InterviewPreparationDtoLoader.LoadAsync(
             _unitOfWork, preparation, config.AccessWindowAfterInterview, ct);

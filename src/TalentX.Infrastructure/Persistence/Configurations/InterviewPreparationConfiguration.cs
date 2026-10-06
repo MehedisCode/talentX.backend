@@ -20,13 +20,15 @@ public sealed class InterviewPreparationConfiguration
         builder.Property(p => p.InterviewType).HasMaxLength(50).IsRequired();
         builder.Property(p => p.Status).HasConversion<int>().IsRequired();
 
-        builder.Property(p => p.TechnicalQuestions).HasMaxLength(8000).IsRequired();
-        builder.Property(p => p.BehavioralQuestions).HasMaxLength(8000).IsRequired();
-        builder.Property(p => p.ExperienceBasedQuestions).HasMaxLength(8000).IsRequired();
-        builder.Property(p => p.RoleSpecificQuestions).HasMaxLength(8000).IsRequired();
-        builder.Property(p => p.KeyTopicsToPrepare).HasMaxLength(4000).IsRequired();
-        builder.Property(p => p.SuggestedRevisionAreas).HasMaxLength(4000).IsRequired();
-        builder.Property(p => p.AdditionalQuestions).HasMaxLength(8000);
+        // AI-generated JSON columns: unbounded `text` so an over-long model
+        // output cannot fail the INSERT with a varchar overflow (500).
+        builder.Property(p => p.TechnicalQuestions).IsRequired();
+        builder.Property(p => p.BehavioralQuestions).IsRequired();
+        builder.Property(p => p.ExperienceBasedQuestions).IsRequired();
+        builder.Property(p => p.RoleSpecificQuestions).IsRequired();
+        builder.Property(p => p.KeyTopicsToPrepare).IsRequired();
+        builder.Property(p => p.SuggestedRevisionAreas).IsRequired();
+        builder.Property(p => p.AdditionalQuestions);
 
         builder.HasIndex(p => p.TalentUserId);
         builder.HasIndex(p => p.InterviewInvitationId).IsUnique();

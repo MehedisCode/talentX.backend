@@ -8,6 +8,7 @@ using TalentX.Application.Features.InterviewPreparation.Commands.GeneratePrepara
 using TalentX.Application.Features.InterviewPreparation.Commands.RegeneratePreparation;
 using TalentX.Application.Features.InterviewPreparation.Commands.SaveAnswer;
 using TalentX.Application.Features.InterviewPreparation.DTOs;
+using TalentX.Application.Features.InterviewPreparation.Queries.GetInterviewPreparationQuota;
 using TalentX.Application.Features.InterviewPreparation.Queries.GetPreparation;
 using TalentX.Application.Features.InterviewPreparation.Queries.GetPreparationsByTalent;
 using TalentX.Domain.Enums;
@@ -24,6 +25,14 @@ public sealed class InterviewPreparationController : BaseApiController
     public async Task<IActionResult> GetMyPreparations(CancellationToken cancellationToken)
     {
         var result = await Sender.Send(new GetPreparationsByTalentQuery(), cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpGet("preparation/quota")]
+    [ProducesResponseType(typeof(InterviewPreparationQuotaDto), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetPreparationQuota(CancellationToken cancellationToken)
+    {
+        var result = await Sender.Send(new GetInterviewPreparationQuotaQuery(), cancellationToken);
         return Ok(result);
     }
 

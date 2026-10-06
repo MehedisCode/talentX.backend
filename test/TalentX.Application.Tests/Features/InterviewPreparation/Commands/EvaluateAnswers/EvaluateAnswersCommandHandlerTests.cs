@@ -171,6 +171,48 @@ public class EvaluateAnswersCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_WhenAiResultCarriesMetadata_PersistsItOnTheEvaluation()
+    {
+        var preparation = CreatePreparation();
+        SetUpPreparation(preparation, new List<PreparationAnswer>
+        {
+            CreateAnswer(preparation.Id, "My answer")
+        });
+        _aiService
+            .Setup(s => s.EvaluateAnswersAsync(
+                It.IsAny<AnswersEvaluationContext>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AnswersEvaluationResult
+            {
+                OverallScore = 75,
+                Summary = "Good.",
+                QuestionFeedback =
+                    """[{"category":"Technical","questionIndex":0,"score":75,"feedback":"Good.","suggestedAnswer":""}]""",
+                Metadata = new AiCallMetadata
+                {
+                    ModelName = "gemini-test",
+                    PromptVersion = "v-test",
+                    LatencyMs = 1234,
+                    InputTokenCount = 100,
+                    OutputTokenCount = 50
+                }
+            });
+
+        await _handler.Handle(
+            new EvaluateAnswersCommand(preparation.InterviewInvitationId), CancellationToken.None);
+
+        _preparationRepository.Verify(
+            r => r.AddEvaluationAsync(
+                It.Is<InterviewPreparationEvaluation>(e =>
+                    e.ModelName == "gemini-test"
+                    && e.PromptVersion == "v-test"
+                    && e.LatencyMs == 1234
+                    && e.InputTokenCount == 100
+                    && e.OutputTokenCount == 50),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
     public async Task Handle_WhenNoQuestionWasAnswered_ThrowsBadRequestException()
     {
         var preparation = CreatePreparation();

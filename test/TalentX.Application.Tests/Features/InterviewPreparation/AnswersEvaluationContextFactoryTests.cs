@@ -90,4 +90,66 @@ public class AnswersEvaluationContextFactoryTests
 
         context.TotalQuestionCount.Should().Be(3);
     }
+
+    [Fact]
+    public void CreateContext_WhenAnswerFitsPerAnswerBudget_LeavesItUntouched()
+    {
+        var preparation = CreatePreparation();
+        var answered = new List<PreparationAnswer>
+        {
+            Answer(preparation.Id, "Technical", 0, "What is a closure?",
+                "A closure captures its lexical scope.")
+        };
+
+        var context = AnswersEvaluationContextFactory.CreateContext(
+            preparation, "Ada Lovelace", answered,
+            inputTokenBudget: 24000, perAnswerTokenBudget: 1000);
+
+        context.AnsweredQuestions[0].Answer.Should()
+            .Be("A closure captures its lexical scope.");
+    }
+
+    [Fact]
+    public void CreateContext_WhenAnswerExceedsPerAnswerBudget_TruncatesItWithMarker()
+    {
+        var preparation = CreatePreparation();
+        var longAnswer = new string('a', 500);
+        var answered = new List<PreparationAnswer>
+        {
+            Answer(preparation.Id, "Technical", 0, "What is a closure?", longAnswer)
+        };
+
+        var context = AnswersEvaluationContextFactory.CreateContext(
+            preparation, "Ada Lovelace", answered,
+            inputTokenBudget: 24000, perAnswerTokenBudget: 10);
+
+        // 10 tokens x 4 chars = 40 chars kept, then an ellipsis marker.
+        context.AnsweredQuestions[0].Answer.Should().HaveLength(41);
+        context.AnsweredQuestions[0].Answer.Should().EndWith("…");
+        context.AnsweredQuestions[0].Answer.Should().StartWith(new string('a', 40));
+    }
+
+    [Fact]
+    public void CreateContext_WhenTotalBudgetIsTighterThanPerAnswer_SplitsItAcrossAnswers()
+    {
+        var preparation = CreatePreparation();
+        var answered = new List<PreparationAnswer>
+        {
+            Answer(preparation.Id, "Technical", 0, "Q1", new string('a', 500)),
+            Answer(preparation.Id, "Technical", 1, "Q2", new string('b', 500)),
+            Answer(preparation.Id, "Technical", 2, "Q3", new string('c', 500)),
+            Answer(preparation.Id, "Technical", 3, "Q4", new string('d', 500))
+        };
+
+        var context = AnswersEvaluationContextFactory.CreateContext(
+            preparation, "Ada Lovelace", answered,
+            inputTokenBudget: 40, perAnswerTokenBudget: 1000);
+
+        // 40 total tokens / 4 answers = 10 tokens each -> 40 chars + marker.
+        foreach (var question in context.AnsweredQuestions)
+        {
+            question.Answer.Should().HaveLength(41);
+            question.Answer.Should().EndWith("…");
+        }
+    }
 }
