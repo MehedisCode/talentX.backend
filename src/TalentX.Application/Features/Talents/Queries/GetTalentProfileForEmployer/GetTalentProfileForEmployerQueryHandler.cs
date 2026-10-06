@@ -61,20 +61,11 @@ public sealed class GetTalentProfileForEmployerQueryHandler
 
         await Task.WhenAll(profilePictureUrlTask, videoIntroUrlTask, resumeUrlTask);
 
-        string? resumeOriginalFileName = resume?.OriginalFileName;
-        if (string.IsNullOrWhiteSpace(resumeOriginalFileName) && !string.IsNullOrWhiteSpace(application.ResumeStorageKey))
-        {
-            var fileNameSegment = Path.GetFileName(application.ResumeStorageKey);
-            var firstUnderscore = fileNameSegment.IndexOf('_');
-            if (firstUnderscore > 0 && firstUnderscore < fileNameSegment.Length - 1 && Guid.TryParse(fileNameSegment[..firstUnderscore], out _))
-            {
-                resumeOriginalFileName = fileNameSegment[(firstUnderscore + 1)..];
-            }
-            else
-            {
-                resumeOriginalFileName = fileNameSegment;
-            }
-        }
+        var rawResumeFileName = !string.IsNullOrWhiteSpace(resume?.OriginalFileName)
+            ? resume.OriginalFileName
+            : application.ResumeStorageKey;
+
+        var resumeOriginalFileName = TalentMediaStorageKeyGuard.ExtractOriginalFileName(rawResumeFileName);
 
         return new TalentPublicProfileResponse(
             ApplicationId: application.Id,
@@ -95,7 +86,7 @@ public sealed class GetTalentProfileForEmployerQueryHandler
             ToolsAndPlatforms: talent?.ToolsAndPlatforms ?? new List<string>(),
             ProfilePictureUrl: await profilePictureUrlTask,
             VideoIntroUrl: await videoIntroUrlTask,
-            ResumeOriginalFileName: resumeOriginalFileName ?? "Resume.pdf",
+            ResumeOriginalFileName: resumeOriginalFileName,
             ResumeUrl: await resumeUrlTask,
             ApplicationStatus: application.Status.ToString(),
             AiMatchScore: application.AiMatchScore,

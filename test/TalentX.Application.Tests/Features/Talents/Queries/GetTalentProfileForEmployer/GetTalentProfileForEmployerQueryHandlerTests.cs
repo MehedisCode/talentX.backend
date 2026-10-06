@@ -230,4 +230,86 @@ public class GetTalentProfileForEmployerQueryHandlerTests
         result.ExpectedSalary.Should().Be(application.ExpectedSalary);
         result.ResumeOriginalFileName.Should().Be("app_resume.pdf");
     }
+
+    [Fact]
+    public async Task Handle_WhenResumeOriginalFileNameHasGuidPrefix_StripsGuidPrefix()
+    {
+        var job = CreateJob("employer-1");
+        var application = CreateApplication(job.Id, "talent-1");
+        var talent = CreateTalent("talent-1");
+        var prefixGuid = Guid.NewGuid();
+        var resume = new Resume("talent-1", "resumes/profile_cv.pdf", $"{prefixGuid}_candidate_resume.pdf", "application/pdf", 1024);
+
+        _jobApplicationRepository.Setup(r => r.GetByIdAsync(application.Id, It.IsAny<CancellationToken>())).ReturnsAsync(application);
+        _jobRepository.Setup(r => r.GetByIdAsync(job.Id, It.IsAny<CancellationToken>())).ReturnsAsync(job);
+        _talentRepository.Setup(r => r.GetByUserIdAsync("talent-1", It.IsAny<CancellationToken>())).ReturnsAsync(talent);
+        _workExperienceRepository.Setup(r => r.GetByUserIdAsync("talent-1", It.IsAny<CancellationToken>())).ReturnsAsync(new List<WorkExperience>());
+        _educationRepository.Setup(r => r.GetByUserIdAsync("talent-1", It.IsAny<CancellationToken>())).ReturnsAsync(new List<Education>());
+        _resumeRepository.Setup(r => r.GetByUserIdAsync("talent-1", It.IsAny<CancellationToken>())).ReturnsAsync(resume);
+
+        var query = new GetTalentProfileForEmployerQuery(application.Id);
+
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        result.ResumeOriginalFileName.Should().Be("candidate_resume.pdf");
+    }
+
+    [Fact]
+    public async Task Handle_WhenResumeIsNullAndApplicationResumeStorageKeyHasGuidPrefix_StripsGuidPrefix()
+    {
+        var job = CreateJob("employer-1");
+        var prefixGuid = Guid.NewGuid();
+        var application = new JobApplication(
+            job.Id,
+            "talent-1",
+            "Jane Candidate",
+            "jane@example.com",
+            $"resumes/pending/{prefixGuid}_app_resume.pdf",
+            "Cover letter text",
+            100000m,
+            5m,
+            "New York, USA");
+
+        _jobApplicationRepository.Setup(r => r.GetByIdAsync(application.Id, It.IsAny<CancellationToken>())).ReturnsAsync(application);
+        _jobRepository.Setup(r => r.GetByIdAsync(job.Id, It.IsAny<CancellationToken>())).ReturnsAsync(job);
+        _talentRepository.Setup(r => r.GetByUserIdAsync("talent-1", It.IsAny<CancellationToken>())).ReturnsAsync((Talent?)null);
+        _workExperienceRepository.Setup(r => r.GetByUserIdAsync("talent-1", It.IsAny<CancellationToken>())).ReturnsAsync(new List<WorkExperience>());
+        _educationRepository.Setup(r => r.GetByUserIdAsync("talent-1", It.IsAny<CancellationToken>())).ReturnsAsync(new List<Education>());
+        _resumeRepository.Setup(r => r.GetByUserIdAsync("talent-1", It.IsAny<CancellationToken>())).ReturnsAsync((Resume?)null);
+
+        var query = new GetTalentProfileForEmployerQuery(application.Id);
+
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        result.ResumeOriginalFileName.Should().Be("app_resume.pdf");
+    }
+
+    [Fact]
+    public async Task Handle_WhenBothResumeAndApplicationResumeStorageKeyAreNullOrEmpty_ReturnsDefaultResumePdf()
+    {
+        var job = CreateJob("employer-1");
+        var application = new JobApplication(
+            job.Id,
+            "talent-1",
+            "Jane Candidate",
+            "jane@example.com",
+            string.Empty,
+            "Cover letter text",
+            100000m,
+            5m,
+            "New York, USA");
+
+        _jobApplicationRepository.Setup(r => r.GetByIdAsync(application.Id, It.IsAny<CancellationToken>())).ReturnsAsync(application);
+        _jobRepository.Setup(r => r.GetByIdAsync(job.Id, It.IsAny<CancellationToken>())).ReturnsAsync(job);
+        _talentRepository.Setup(r => r.GetByUserIdAsync("talent-1", It.IsAny<CancellationToken>())).ReturnsAsync((Talent?)null);
+        _workExperienceRepository.Setup(r => r.GetByUserIdAsync("talent-1", It.IsAny<CancellationToken>())).ReturnsAsync(new List<WorkExperience>());
+        _educationRepository.Setup(r => r.GetByUserIdAsync("talent-1", It.IsAny<CancellationToken>())).ReturnsAsync(new List<Education>());
+        _resumeRepository.Setup(r => r.GetByUserIdAsync("talent-1", It.IsAny<CancellationToken>())).ReturnsAsync((Resume?)null);
+
+        var query = new GetTalentProfileForEmployerQuery(application.Id);
+
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        result.ResumeOriginalFileName.Should().Be("Resume.pdf");
+    }
 }
