@@ -52,12 +52,26 @@ public class ApplyExtractedProfileCommandHandlerTests
         return fileMock;
     }
 
-    private static ApplyExtractedProfileCommand ValidCommand(IUploadedFile file) => new(
+    private static ApplyExtractedProfileData ValidProfileData() => new(
+        "Jane Smith",
+        "Senior Cloud Architect",
+        "Experienced architect with expertise in cloud systems.",
+        "San Francisco, CA",
+        "+14155552671",
+        "https://www.linkedin.com/in/janesmith",
+        ["https://github.com/janesmith"],
+        8.5m,
+        140000m,
+        ["High velocity delivery"],
         ["C#", ".NET"],
         ["Communication"],
         ["Git"],
         [new ApplyExtractedWorkExperienceItem("Acme", "Engineer", "2020", "Present", true)],
-        [new ApplyExtractedEducationItem("State University", "BSc", "2016", "2020")],
+        [new ApplyExtractedEducationItem("State University", "BSc", "2016", "2020")]
+    );
+
+    private static ApplyExtractedProfileCommand ValidCommand(IUploadedFile file) => new(
+        ValidProfileData(),
         file
     );
 
@@ -260,5 +274,102 @@ public class ApplyExtractedProfileCommandHandlerTests
         talent.SoftSkills.Should().BeEquivalentTo(["Communication"]);
         talent.ToolsAndPlatforms.Should().BeEquivalentTo(["Git"]);
         _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_UpdatesTalentProfile_WithProvidedValues()
+    {
+        var talent = new Talent("user-1", "Jane Doe", "jane@example.com");
+        _talentRepository.Setup(r => r.GetByUserIdAsync("user-1", It.IsAny<CancellationToken>())).ReturnsAsync(talent);
+        _resumeRepository.Setup(r => r.GetByUserIdAsync("user-1", It.IsAny<CancellationToken>())).ReturnsAsync((Resume?)null);
+        _fileStorageService
+            .Setup(s => s.SaveAsync(It.IsAny<IUploadedFile>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync("resumes/user-1/new-key.pdf");
+
+        await _handler.Handle(ValidCommand(ValidFileMock().Object), CancellationToken.None);
+
+        talent.Name.Should().Be("Jane Smith");
+        talent.Tagline.Should().Be("Senior Cloud Architect");
+        talent.ShortBio.Should().Be("Experienced architect with expertise in cloud systems.");
+        talent.Location.Should().Be("San Francisco, CA");
+        talent.Phone.Should().Be("+14155552671");
+        talent.LinkedInUrl.Should().Be("https://www.linkedin.com/in/janesmith");
+        talent.AdditionalUrls.Should().Equal("https://github.com/janesmith");
+        talent.TotalYearsExperience.Should().Be(8.5m);
+        talent.ExpectedSalary.Should().Be(140000m);
+        talent.SkillPropositions.Should().Equal("High velocity delivery");
+    }
+
+    [Fact]
+    public async Task Handle_WhenProfileFieldsAreNull_PreservesExistingTalentProfileValues()
+    {
+        var talent = new Talent("user-1", "Original Name", "jane@example.com");
+        talent.UpdateProfile(
+            "Original Name",
+            "Original Tagline",
+            "Original Bio",
+            "Original Location",
+            "Original Phone",
+            "https://linkedin.com/in/original",
+            ["https://original.com"],
+            3m,
+            80000m,
+            ["Original Proposition"]);
+
+        _talentRepository.Setup(r => r.GetByUserIdAsync("user-1", It.IsAny<CancellationToken>())).ReturnsAsync(talent);
+        _resumeRepository.Setup(r => r.GetByUserIdAsync("user-1", It.IsAny<CancellationToken>())).ReturnsAsync((Resume?)null);
+        _fileStorageService
+            .Setup(s => s.SaveAsync(It.IsAny<IUploadedFile>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync("resumes/user-1/new-key.pdf");
+
+        var sparseProfileData = new ApplyExtractedProfileData(
+            FullName: null,
+            Tagline: null,
+            ShortBio: null,
+            Location: null,
+            Phone: null,
+            LinkedInUrl: null,
+            AdditionalUrls: null,
+            TotalYearsExperience: null,
+            ExpectedSalary: null,
+            SkillPropositions: null,
+            TechnicalSkills: null,
+            SoftSkills: null,
+            ToolsAndPlatforms: null,
+            WorkExperiences: null,
+            Educations: null);
+
+        var command = new ApplyExtractedProfileCommand(sparseProfileData, ValidFileMock().Object);
+
+        await _handler.Handle(command, CancellationToken.None);
+
+        talent.Name.Should().Be("Original Name");
+        talent.Tagline.Should().Be("Original Tagline");
+        talent.ShortBio.Should().Be("Original Bio");
+        talent.Location.Should().Be("Original Location");
+        talent.Phone.Should().Be("Original Phone");
+        talent.LinkedInUrl.Should().Be("https://linkedin.com/in/original");
+        talent.AdditionalUrls.Should().Equal("https://original.com");
+        talent.TotalYearsExperience.Should().Be(3m);
+        talent.ExpectedSalary.Should().Be(80000m);
+        talent.SkillPropositions.Should().Equal("Original Proposition");
+    }
+
+    [Fact]
+    public async Task Handle_WhenFullNameIsWhitespace_PreservesExistingTalentName()
+    {
+        var talent = new Talent("user-1", "Original Name", "jane@example.com");
+        _talentRepository.Setup(r => r.GetByUserIdAsync("user-1", It.IsAny<CancellationToken>())).ReturnsAsync(talent);
+        _resumeRepository.Setup(r => r.GetByUserIdAsync("user-1", It.IsAny<CancellationToken>())).ReturnsAsync((Resume?)null);
+        _fileStorageService
+            .Setup(s => s.SaveAsync(It.IsAny<IUploadedFile>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync("resumes/user-1/new-key.pdf");
+
+        var profileData = ValidProfileData() with { FullName = "   " };
+        var command = new ApplyExtractedProfileCommand(profileData, ValidFileMock().Object);
+
+        await _handler.Handle(command, CancellationToken.None);
+
+        talent.Name.Should().Be("Original Name");
     }
 }

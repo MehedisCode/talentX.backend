@@ -60,10 +60,27 @@ public sealed class ApplyExtractedProfileCommandHandler : IRequestHandler<ApplyE
         var talent = await _unitOfWork.Talents.GetByUserIdAsync(userId, cancellationToken)
             ?? throw new NotFoundException($"Talent profile for user '{userId}' was not found.");
 
-        talent.UpdateSkills(request.TechnicalSkills, request.SoftSkills, request.ToolsAndPlatforms);
+        talent.UpdateProfile(
+            !string.IsNullOrWhiteSpace(request.ProfileData.FullName) ? request.ProfileData.FullName : talent.Name,
+            request.ProfileData.Tagline ?? talent.Tagline,
+            request.ProfileData.ShortBio ?? talent.ShortBio,
+            request.ProfileData.Location ?? talent.Location,
+            request.ProfileData.Phone ?? talent.Phone,
+            request.ProfileData.LinkedInUrl ?? talent.LinkedInUrl,
+            request.ProfileData.AdditionalUrls ?? talent.AdditionalUrls,
+            request.ProfileData.TotalYearsExperience ?? talent.TotalYearsExperience,
+            request.ProfileData.ExpectedSalary ?? talent.ExpectedSalary,
+            request.ProfileData.SkillPropositions ?? talent.SkillPropositions
+        );
+
+        talent.UpdateSkills(
+            request.ProfileData.TechnicalSkills ?? talent.TechnicalSkills,
+            request.ProfileData.SoftSkills ?? talent.SoftSkills,
+            request.ProfileData.ToolsAndPlatforms ?? talent.ToolsAndPlatforms
+        );
 
         await _unitOfWork.WorkExperiences.DeleteByUserIdAsync(userId, cancellationToken);
-        foreach (var workExperience in request.WorkExperiences)
+        foreach (var workExperience in request.ProfileData.WorkExperiences ?? [])
         {
             await _unitOfWork.WorkExperiences.AddAsync(
                 new WorkExperience(
@@ -77,7 +94,7 @@ public sealed class ApplyExtractedProfileCommandHandler : IRequestHandler<ApplyE
         }
 
         await _unitOfWork.Educations.DeleteByUserIdAsync(userId, cancellationToken);
-        foreach (var education in request.Educations)
+        foreach (var education in request.ProfileData.Educations ?? [])
         {
             await _unitOfWork.Educations.AddAsync(
                 new Education(

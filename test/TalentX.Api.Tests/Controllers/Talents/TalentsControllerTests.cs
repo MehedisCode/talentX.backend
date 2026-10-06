@@ -159,6 +159,16 @@ public class TalentsControllerTests
 
         const string payload = """
         {
+            "FullName": "Jane Doe",
+            "Tagline": "Senior Engineer",
+            "ShortBio": "A passionate engineer",
+            "Location": "San Francisco, CA",
+            "Phone": "+1234567890",
+            "LinkedInUrl": "https://linkedin.com/in/janedoe",
+            "AdditionalUrls": ["https://github.com/janedoe"],
+            "TotalYearsExperience": 5.0,
+            "ExpectedSalary": 120000.0,
+            "SkillPropositions": ["Quick learner"],
             "TechnicalSkills": ["C#"],
             "SoftSkills": ["Teamwork"],
             "ToolsAndPlatforms": ["Git"],
@@ -179,9 +189,19 @@ public class TalentsControllerTests
 
         actionResult.Should().BeOfType<NoContentResult>();
         capturedCommand.Should().NotBeNull();
-        capturedCommand!.TechnicalSkills.Should().BeEquivalentTo(["C#"]);
-        capturedCommand.SoftSkills.Should().BeEquivalentTo(["Teamwork"]);
-        capturedCommand.ToolsAndPlatforms.Should().BeEquivalentTo(["Git"]);
+        capturedCommand!.ProfileData.FullName.Should().Be("Jane Doe");
+        capturedCommand.ProfileData.Tagline.Should().Be("Senior Engineer");
+        capturedCommand.ProfileData.ShortBio.Should().Be("A passionate engineer");
+        capturedCommand.ProfileData.Location.Should().Be("San Francisco, CA");
+        capturedCommand.ProfileData.Phone.Should().Be("+1234567890");
+        capturedCommand.ProfileData.LinkedInUrl.Should().Be("https://linkedin.com/in/janedoe");
+        capturedCommand.ProfileData.AdditionalUrls.Should().BeEquivalentTo(["https://github.com/janedoe"]);
+        capturedCommand.ProfileData.TotalYearsExperience.Should().Be(5.0m);
+        capturedCommand.ProfileData.ExpectedSalary.Should().Be(120000.0m);
+        capturedCommand.ProfileData.SkillPropositions.Should().BeEquivalentTo(["Quick learner"]);
+        capturedCommand.ProfileData.TechnicalSkills.Should().BeEquivalentTo(["C#"]);
+        capturedCommand.ProfileData.SoftSkills.Should().BeEquivalentTo(["Teamwork"]);
+        capturedCommand.ProfileData.ToolsAndPlatforms.Should().BeEquivalentTo(["Git"]);
         capturedCommand.ResumeFile.FileName.Should().Be("resume.pdf");
         _sender.Verify(s => s.Send(It.IsAny<ApplyExtractedProfileCommand>(), It.IsAny<CancellationToken>()), Times.Once);
     }
