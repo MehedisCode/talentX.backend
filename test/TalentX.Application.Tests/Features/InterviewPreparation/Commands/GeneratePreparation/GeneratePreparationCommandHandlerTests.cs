@@ -123,7 +123,7 @@ public class GeneratePreparationCommandHandlerTests
             .Setup(r => r.GetByInvitationIdAsync(invitation.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(existingPreparation);
         _preparationRepository
-            .Setup(r => r.CountTodayByTalentAsync(TalentUserId, It.IsAny<CancellationToken>()))
+            .Setup(r => r.CountInitialGenerationsTodayByTalentAsync(TalentUserId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(todayCount);
         _jobRepository
             .Setup(r => r.GetByIdAsync(invitation.JobId, It.IsAny<CancellationToken>()))
@@ -173,6 +173,13 @@ public class GeneratePreparationCommandHandlerTests
 
         _preparationRepository.Verify(
             r => r.AddAsync(It.IsAny<InterviewPreparationEntity>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+        _preparationRepository.Verify(
+            r => r.AddGenerationAsync(
+                It.Is<InterviewPreparationGeneration>(g =>
+                    g.Kind == InterviewPreparationGenerationKind.Initial
+                    && g.TalentUserId == TalentUserId),
+                It.IsAny<CancellationToken>()),
             Times.Once);
         _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }

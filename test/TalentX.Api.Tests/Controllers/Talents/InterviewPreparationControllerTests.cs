@@ -14,6 +14,7 @@ using TalentX.Application.Features.InterviewPreparation.Commands.GeneratePrepara
 using TalentX.Application.Features.InterviewPreparation.Commands.RegeneratePreparation;
 using TalentX.Application.Features.InterviewPreparation.Commands.SaveAnswer;
 using TalentX.Application.Features.InterviewPreparation.DTOs;
+using TalentX.Application.Features.InterviewPreparation.Queries.GetInterviewPreparationQuota;
 using TalentX.Application.Features.InterviewPreparation.Queries.GetPreparation;
 using TalentX.Application.Features.InterviewPreparation.Queries.GetPreparationsByTalent;
 using Xunit;
@@ -150,6 +151,33 @@ public class InterviewPreparationControllerTests
             s => s.Send(
                 It.Is<GenerateAdditionalQuestionsCommand>(c => c.InvitationId == invitationId),
                 It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task GetPreparationQuota_SendsQueryAndReturnsOk()
+    {
+        var expected = new InterviewPreparationQuotaDto
+        {
+            DailyGenerateLimit = 5,
+            DailyGenerationLimit = 10,
+            MaxRegenerationCount = 3,
+            GeneratesUsedToday = 1,
+            GenerationsUsedToday = 2
+        };
+        _sender
+            .Setup(s => s.Send(
+                It.IsAny<GetInterviewPreparationQuotaQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expected);
+
+        var actionResult = await _controller.GetPreparationQuota(CancellationToken.None);
+
+        var okResult = actionResult.Should().BeOfType<OkObjectResult>().Subject;
+        okResult.StatusCode.Should().Be(StatusCodes.Status200OK);
+        okResult.Value.Should().BeEquivalentTo(expected);
+        _sender.Verify(
+            s => s.Send(
+                It.IsAny<GetInterviewPreparationQuotaQuery>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 

@@ -237,4 +237,21 @@ public class InterviewPreparationPromptBuilderTests
         prompt.Should().Contain("Judge ONLY the answer content provided");
         prompt.Should().Contain("Do not include entries for unanswered questions");
     }
+
+    [Fact]
+    public void BuildEvaluationSchema_ConstrainsScoreRangesAndRequiresEveryReportField()
+    {
+        var json = System.Text.Json.JsonSerializer.Serialize(
+            InterviewPreparationPromptBuilder.BuildEvaluationSchema());
+
+        json.Should().Contain("\"overallScore\"");
+        json.Should().Contain("\"questionFeedback\"");
+        json.Should().Contain("\"strengths\"");
+        json.Should().Contain("\"areasToImprove\"");
+        json.Should().Contain("\"summary\"");
+        json.Should().Contain("\"minimum\":0");
+        json.Should().Contain("\"maximum\":100");
+        json.Should().Contain(
+            "\"required\":[\"overallScore\",\"summary\",\"strengths\",\"areasToImprove\",\"questionFeedback\"]");
+    }
 }

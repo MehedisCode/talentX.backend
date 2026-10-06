@@ -1,3 +1,5 @@
+using TalentX.Domain.Enums;
+
 namespace TalentX.Domain.Entities;
 
 public sealed record CreateInterviewPreparationPayload(
@@ -44,4 +46,14 @@ public sealed record CreateEvaluationPayload(
     string AreasToImprove,
     string QuestionFeedback,
     int AnsweredCount,
-    int TotalCount);
+    int TotalCount,
+    string? ModelName = null,
+    string? PromptVersion = null,
+    long? LatencyMs = null,
+    int? InputTokenCount = null,
+    int? OutputTokenCount = null);
+
+public sealed record CreateGenerationPayload(
+    Guid InterviewPreparationId,
+    string TalentUserId,
+    InterviewPreparationGenerationKind Kind);
