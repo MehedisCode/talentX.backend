@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using TalentX.Application.Features.Auth.Constants;
 using TalentX.Application.Features.Users.Constants;
 using TalentX.Application.Identity.Interfaces;
 using TalentX.Application.Identity.Models;
@@ -75,6 +76,39 @@ public class TokenService : ITokenService
 
         if (!stored.IsActive)
         {
+            if (stored.RevokedAt.HasValue && (DateTime.UtcNow - stored.RevokedAt.Value) <= TimeSpan.FromSeconds(AuthConstants.TokenRotationGracePeriodSeconds))
+            {
+                var userGrace = await _userManager.FindByIdAsync(stored.ApplicationUserId);
+                if (userGrace is null)
+                    return IdentityResponse<TokenResponse>.Fail("User not found.");
+
+                var domainUserGrace = await _context.DomainUsers.AsNoTracking()
+                    .FirstOrDefaultAsync(u => u.UserId == stored.ApplicationUserId);
+                if (domainUserGrace is not null && domainUserGrace.Status == AccountStatus.Deactivated)
+                {
+                    return IdentityResponse<TokenResponse>.Fail(AccountStatusMessages.Deactivated);
+                }
+
+                var rolesGrace = await _userManager.GetRolesAsync(userGrace);
+                var newAccessTokenGrace = GenerateAccessToken(userGrace, rolesGrace, domainUserGrace?.Name);
+                var newRawRefreshTokenGrace = GenerateRawToken();
+                var newHashGrace = Hash(newRawRefreshTokenGrace);
+
+                _context.RefreshTokens.Add(new RefreshToken
+                {
+                    ApplicationUserId = userGrace.Id,
+                    TokenHash = newHashGrace,
+                    ExpiresAt = DateTime.UtcNow.AddDays(_jwtSettings.RefreshTokenExpiryDays)
+                });
+                await _context.SaveChangesAsync();
+
+                return IdentityResponse<TokenResponse>.Ok(new TokenResponse
+                {
+                    AccessToken = newAccessTokenGrace,
+                    RefreshToken = newRawRefreshTokenGrace
+                });
+            }
+
             await RevokeAllForUserAsync(stored.ApplicationUserId);
             return IdentityResponse<TokenResponse>.Fail("Refresh token reuse detected. All sessions have been revoked.");
         }

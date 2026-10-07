@@ -505,6 +505,12 @@ public class TokenServiceTests : IAsyncLifetime
         var firstRotation = await _tokenService.ValidateAndRotateAsync(oldRefreshToken);
         var newToken = firstRotation.Data!.RefreshToken;
 
+        // Push RevokedAt outside the grace period
+        var tokenHash = HashToken(oldRefreshToken);
+        var storedToken = await _context.RefreshTokens.FirstAsync(t => t.TokenHash == tokenHash);
+        storedToken.RevokedAt = DateTime.UtcNow.AddSeconds(-35);
+        await _context.SaveChangesAsync();
+
         // Attempt to use old token again (reuse detection)
         // Act
         var result = await _tokenService.ValidateAndRotateAsync(oldRefreshToken);
@@ -528,10 +534,10 @@ public class TokenServiceTests : IAsyncLifetime
         var createResult = await CreateInitialToken(userId, user);
         var refreshToken = createResult.RefreshToken;
 
-        // Manually revoke the token
+        // Manually revoke the token and push outside grace period
         var tokenHash = HashToken(refreshToken);
         var storedToken = await _context.RefreshTokens.FirstAsync(t => t.TokenHash == tokenHash);
-        storedToken.RevokedAt = DateTime.UtcNow;
+        storedToken.RevokedAt = DateTime.UtcNow.AddSeconds(-35);
         await _context.SaveChangesAsync();
 
         // Act
@@ -588,6 +594,68 @@ public class TokenServiceTests : IAsyncLifetime
         // Assert
         result.Success.Should().BeFalse();
         result.Errors.Should().Contain("Invalid refresh token.");
+    }
+
+    [Fact]
+    public async Task ValidateAndRotateAsync_WhenTokenRotatedWithinGracePeriod_IssuesNewTokensAndDoesNotRevokeSessions()
+    {
+        // Arrange
+        var userId = "user-123";
+        var user = new ApplicationUser { Id = userId, Email = "user@example.com", UserName = "testuser" };
+
+        var createResult = await CreateInitialToken(userId, user);
+        var refreshToken = createResult.RefreshToken;
+
+        // First rotation
+        await _tokenService.ValidateAndRotateAsync(refreshToken);
+
+        // Adjust RevokedAt to be within the grace period (e.g. 10s ago)
+        var tokenHash = HashToken(refreshToken);
+        var storedToken = await _context.RefreshTokens.FirstAsync(t => t.TokenHash == tokenHash);
+        storedToken.RevokedAt = DateTime.UtcNow.AddSeconds(-10);
+        await _context.SaveChangesAsync();
+
+        // Act - Rotate the old token again within grace period
+        var result = await _tokenService.ValidateAndRotateAsync(refreshToken);
+
+        // Assert
+        result.Success.Should().BeTrue();
+        result.Data.Should().NotBeNull();
+        
+        var allTokens = await _context.RefreshTokens.Where(t => t.ApplicationUserId == userId).ToListAsync();
+        // Original token (revoked), First rotation token (active), Grace period token (active)
+        allTokens.Should().HaveCount(3);
+        allTokens.Count(t => t.IsActive).Should().Be(2);
+    }
+
+    [Fact]
+    public async Task ValidateAndRotateAsync_WhenTokenRotatedOutsideGracePeriod_RevokesAllSessionsAndReturnsFailure()
+    {
+        // Arrange
+        var userId = "user-123";
+        var user = new ApplicationUser { Id = userId, Email = "user@example.com", UserName = "testuser" };
+
+        var createResult = await CreateInitialToken(userId, user);
+        var refreshToken = createResult.RefreshToken;
+
+        // First rotation
+        await _tokenService.ValidateAndRotateAsync(refreshToken);
+
+        // Adjust RevokedAt to be outside the grace period (e.g. 40s ago)
+        var tokenHash = HashToken(refreshToken);
+        var storedToken = await _context.RefreshTokens.FirstAsync(t => t.TokenHash == tokenHash);
+        storedToken.RevokedAt = DateTime.UtcNow.AddSeconds(-40);
+        await _context.SaveChangesAsync();
+
+        // Act - Rotate the old token again outside grace period
+        var result = await _tokenService.ValidateAndRotateAsync(refreshToken);
+
+        // Assert
+        result.Success.Should().BeFalse();
+        result.Errors.Should().Contain("Refresh token reuse detected. All sessions have been revoked.");
+
+        var allTokens = await _context.RefreshTokens.Where(t => t.ApplicationUserId == userId).ToListAsync();
+        allTokens.Should().AllSatisfy(t => t.IsActive.Should().BeFalse());
     }
 
     #endregion
