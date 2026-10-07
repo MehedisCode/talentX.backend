@@ -161,7 +161,7 @@ public class SaveResumeCommandHandlerTests
             .Setup(r => r.GetByUserIdAsync("user-1", It.IsAny<CancellationToken>()))
             .ReturnsAsync(talent);
         _resumeExtractionService
-            .Setup(s => s.ExtractAsync(It.IsAny<IUploadedFile>(), It.IsAny<CancellationToken>()))
+            .Setup(s => s.ExtractAsync(It.IsAny<IUploadedFile>(), ResumeExtractionPurpose.CandidateProfile, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ResumeExtractionResult
             {
                 FullName = "Jane Extraction",
@@ -205,7 +205,7 @@ public class SaveResumeCommandHandlerTests
             CancellationToken.None);
 
         result.IsDefault.Should().BeTrue();
-        talent.Name.Should().Be("Jane Doe"); // Existing name is not overwritten
+        talent.Name.Should().Be("Jane Extraction");
         talent.Tagline.Should().Be("Extracted Tagline");
         talent.ShortBio.Should().Be("Extracted Bio");
         talent.Location.Should().Be("New York, NY");
@@ -235,7 +235,7 @@ public class SaveResumeCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WithUpdateProfile_WhenTalentAlreadyHasProfileFields_PreservesExistingFields()
+    public async Task Handle_WithUpdateProfile_WhenTalentAlreadyHasProfileFields_OverridesExistingProfileFields()
     {
         var talent = new Talent("user-1", "Jane Doe", "jane@example.com");
         talent.UpdateProfile(
@@ -254,7 +254,7 @@ public class SaveResumeCommandHandlerTests
             .Setup(r => r.GetByUserIdAsync("user-1", It.IsAny<CancellationToken>()))
             .ReturnsAsync(talent);
         _resumeExtractionService
-            .Setup(s => s.ExtractAsync(It.IsAny<IUploadedFile>(), It.IsAny<CancellationToken>()))
+            .Setup(s => s.ExtractAsync(It.IsAny<IUploadedFile>(), ResumeExtractionPurpose.CandidateProfile, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ResumeExtractionResult
             {
                 FullName = "Extracted Name",
@@ -274,24 +274,25 @@ public class SaveResumeCommandHandlerTests
             new SaveResumeCommand(ValidFileMock().Object, null, UpdateProfile: true),
             CancellationToken.None);
 
-        talent.Name.Should().Be("Jane Doe");
-        talent.Tagline.Should().Be("Existing Tagline");
-        talent.ShortBio.Should().Be("Existing Bio");
-        talent.Location.Should().Be("Existing Location");
-        talent.Phone.Should().Be("Existing Phone");
-        talent.LinkedInUrl.Should().Be("https://linkedin.com/in/existing");
-        talent.AdditionalUrls.Should().Equal("https://existing.dev");
-        talent.TotalYearsExperience.Should().Be(10m);
-        talent.ExpectedSalary.Should().Be(150000m);
-        talent.SkillPropositions.Should().Equal("Existing Proposition");
+        talent.Name.Should().Be("Extracted Name");
+        talent.Tagline.Should().Be("Extracted Tagline");
+        talent.ShortBio.Should().Be("Extracted Bio");
+        talent.Location.Should().Be("Extracted Location");
+        talent.Phone.Should().Be("Extracted Phone");
+        talent.LinkedInUrl.Should().Be("https://linkedin.com/in/extracted");
+        talent.AdditionalUrls.Should().Equal("https://extracted.dev");
+        talent.TotalYearsExperience.Should().Be(2m);
+        talent.ExpectedSalary.Should().Be(50000m);
+        talent.SkillPropositions.Should().Equal("Extracted Proposition");
         talent.TechnicalSkills.Should().Equal("Python");
+        talent.Email.Should().Be("jane@example.com");
     }
 
     [Fact]
     public async Task Handle_WhenExtractionFails_ThrowsBadGateway_AndDoesNotSaveFile()
     {
         _resumeExtractionService
-            .Setup(s => s.ExtractAsync(It.IsAny<IUploadedFile>(), It.IsAny<CancellationToken>()))
+            .Setup(s => s.ExtractAsync(It.IsAny<IUploadedFile>(), ResumeExtractionPurpose.CandidateProfile, It.IsAny<CancellationToken>()))
             .ThrowsAsync(new Exception("AI down"));
 
         var act = () => _handler.Handle(

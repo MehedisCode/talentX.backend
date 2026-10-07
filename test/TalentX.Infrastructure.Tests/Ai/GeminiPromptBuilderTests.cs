@@ -1,5 +1,6 @@
 using System.Text.Json;
 using FluentAssertions;
+using TalentX.Application.Common.Models;
 using TalentX.Infrastructure.Ai.Helpers;
 using Xunit;
 
@@ -130,7 +131,8 @@ public class GeminiPromptBuilderTests
     [Fact]
     public void BuildRequestBody_SetsMaxOutputTokens()
     {
-        var body = GeminiPromptBuilder.BuildRequestBody("resume text", Array.Empty<string>(), null, null, 1234);
+        var options = new GeminiPromptBuildOptions(MaxOutputTokens: 1234);
+        var body = GeminiPromptBuilder.BuildRequestBody("resume text", Array.Empty<string>(), options);
         var json = JsonSerializer.Serialize(body);
 
         using var document = JsonDocument.Parse(json);
@@ -140,6 +142,28 @@ public class GeminiPromptBuilderTests
             .GetInt32();
 
         maxOutputTokens.Should().Be(1234);
+    }
+
+    [Fact]
+    public void BuildRequestBody_IncludesDeterministicContactInformation_WhenProvided()
+    {
+        var options = new GeminiPromptBuildOptions(
+            DeterministicEmail: "test@example.com",
+            DeterministicPhone: "+1234567890");
+
+        var body = GeminiPromptBuilder.BuildRequestBody("resume text", Array.Empty<string>(), options);
+        var json = JsonSerializer.Serialize(body);
+
+        using var document = JsonDocument.Parse(json);
+        var prompt = document.RootElement
+            .GetProperty("contents")[0]
+            .GetProperty("parts")[0]
+            .GetProperty("text")
+            .GetString();
+
+        prompt.Should().Contain("EXTRACTED CONTACT INFORMATION:");
+        prompt.Should().Contain("Email: test@example.com");
+        prompt.Should().Contain("Phone: +1234567890");
     }
 
     [Fact]
@@ -174,10 +198,14 @@ public class GeminiPromptBuilderTests
         prompt.Should().Contain("(December 2024 - Present)");
     }
 
-    [Fact]
-    public void BuildRequestBody_PromptIncludesNewExtractionFields()
+    [Theory]
+    [InlineData(ResumeExtractionPurpose.JobApplication)]
+    [InlineData(null)]
+    public void BuildRequestBody_WhenJobApplicationOrDefault_PromptDoesNotContainProfileFields(ResumeExtractionPurpose? purpose)
     {
-        var body = GeminiPromptBuilder.BuildRequestBody("resume text", Array.Empty<string>());
+        var body = purpose.HasValue
+            ? GeminiPromptBuilder.BuildRequestBody("resume text", Array.Empty<string>(), purpose.Value)
+            : GeminiPromptBuilder.BuildRequestBody("resume text", Array.Empty<string>());
         var json = JsonSerializer.Serialize(body);
 
         using var document = JsonDocument.Parse(json);
@@ -188,11 +216,46 @@ public class GeminiPromptBuilderTests
             .GetString();
 
         prompt.Should().NotBeNull();
-        prompt.Should().Contain("tagline: Headline / professional title");
-        prompt.Should().Contain("shortBio: Executive summary / about me / professional summary");
-        prompt.Should().Contain("totalYearsExperience: Total years of professional experience as a number");
-        prompt.Should().Contain("expectedSalary: Desired/expected salary or compensation");
-        prompt.Should().Contain("skillPropositions: Key strengths, value propositions");
+        prompt.Should().NotContain("tagline:");
+        prompt.Should().NotContain("shortBio:");
+        prompt.Should().NotContain("totalYearsExperience:");
+        prompt.Should().NotContain("expectedSalary:");
+        prompt.Should().NotContain("skillPropositions:");
+    }
+
+    [Theory]
+    [InlineData(ResumeExtractionPurpose.JobApplication)]
+    [InlineData(null)]
+    public void BuildRequestBody_WhenJobApplicationOrDefault_SchemaDoesNotContainProfileProperties(ResumeExtractionPurpose? purpose)
+    {
+        var body = purpose.HasValue
+            ? GeminiPromptBuilder.BuildRequestBody("resume text", Array.Empty<string>(), purpose.Value)
+            : GeminiPromptBuilder.BuildRequestBody("resume text", Array.Empty<string>());
+        var json = JsonSerializer.Serialize(body);
+
+        using var document = JsonDocument.Parse(json);
+        var properties = document.RootElement
+            .GetProperty("generationConfig")
+            .GetProperty("responseJsonSchema")
+            .GetProperty("properties");
+
+        properties.TryGetProperty("tagline", out _).Should().BeFalse();
+        properties.TryGetProperty("shortBio", out _).Should().BeFalse();
+        properties.TryGetProperty("totalYearsExperience", out _).Should().BeFalse();
+        properties.TryGetProperty("expectedSalary", out _).Should().BeFalse();
+        properties.TryGetProperty("skillPropositions", out _).Should().BeFalse();
+
+        properties.TryGetProperty("fullName", out _).Should().BeTrue();
+        properties.TryGetProperty("email", out _).Should().BeTrue();
+        properties.TryGetProperty("phone", out _).Should().BeTrue();
+        properties.TryGetProperty("location", out _).Should().BeTrue();
+        properties.TryGetProperty("linkedInUrl", out _).Should().BeTrue();
+        properties.TryGetProperty("portfolioUrls", out _).Should().BeTrue();
+        properties.TryGetProperty("workExperience", out _).Should().BeTrue();
+        properties.TryGetProperty("education", out _).Should().BeTrue();
+        properties.TryGetProperty("technicalSkills", out _).Should().BeTrue();
+        properties.TryGetProperty("softSkills", out _).Should().BeTrue();
+        properties.TryGetProperty("toolsAndPlatforms", out _).Should().BeTrue();
     }
 
     [Fact]
@@ -214,9 +277,36 @@ public class GeminiPromptBuilderTests
     }
 
     [Fact]
-    public void BuildRequestBody_SchemaIncludesNewProperties()
+    public void BuildRequestBody_WhenCandidateProfile_PromptContainsProfileFields()
     {
-        var body = GeminiPromptBuilder.BuildRequestBody("resume text", Array.Empty<string>());
+        var body = GeminiPromptBuilder.BuildRequestBody(
+            "resume text",
+            Array.Empty<string>(),
+            ResumeExtractionPurpose.CandidateProfile);
+        var json = JsonSerializer.Serialize(body);
+
+        using var document = JsonDocument.Parse(json);
+        var prompt = document.RootElement
+            .GetProperty("contents")[0]
+            .GetProperty("parts")[0]
+            .GetProperty("text")
+            .GetString();
+
+        prompt.Should().NotBeNull();
+        prompt.Should().Contain("tagline: Headline / professional title");
+        prompt.Should().Contain("shortBio: Executive summary / about me / professional summary");
+        prompt.Should().Contain("totalYearsExperience: Total years of professional experience as a number");
+        prompt.Should().Contain("expectedSalary: Desired/expected salary or compensation");
+        prompt.Should().Contain("skillPropositions: Key strengths, value propositions");
+    }
+
+    [Fact]
+    public void BuildRequestBody_WhenCandidateProfile_SchemaContainsProfileProperties()
+    {
+        var body = GeminiPromptBuilder.BuildRequestBody(
+            "resume text",
+            Array.Empty<string>(),
+            ResumeExtractionPurpose.CandidateProfile);
         var json = JsonSerializer.Serialize(body);
 
         using var document = JsonDocument.Parse(json);
