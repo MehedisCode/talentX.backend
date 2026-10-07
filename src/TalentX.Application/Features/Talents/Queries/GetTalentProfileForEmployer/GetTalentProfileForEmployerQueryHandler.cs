@@ -2,6 +2,7 @@ using AutoMapper;
 using MediatR;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
+using TalentX.Application.Features.Resumes;
 using TalentX.Application.Features.Talents.DTOs;
 using TalentX.Application.Features.Talents.Helpers;
 using TalentX.Application.Identity.Services;
@@ -71,6 +72,21 @@ public sealed class GetTalentProfileForEmployerQueryHandler
 
         var resumeOriginalFileName = TalentMediaStorageKeyGuard.ExtractOriginalFileName(rawResumeFileName);
 
+        string? resumeKind;
+        if (applicationResume is not null)
+        {
+            resumeKind = ResumeFileKindResolver.Resolve(applicationResume.ContentType, applicationResume.OriginalFileName);
+        }
+        else if (!string.IsNullOrWhiteSpace(application.ResumeStorageKey))
+        {
+            var uploadedFileName = TalentMediaStorageKeyGuard.ExtractOriginalFileName(application.ResumeStorageKey, string.Empty);
+            resumeKind = ResumeFileKindResolver.Resolve(null, uploadedFileName);
+        }
+        else
+        {
+            resumeKind = ResumeFileKindResolver.Resolve(profileResume?.ContentType, profileResume?.OriginalFileName);
+        }
+
         var mappedWorkExperiences = _mapper.Map<List<WorkExperienceItemDto>>(workExperiences);
         var sortedWorkExperiences = ChronologicalOrderingHelper.SortWorkExperiences(
             mappedWorkExperiences,
@@ -102,6 +118,7 @@ public sealed class GetTalentProfileForEmployerQueryHandler
             VideoIntroUrl: await videoIntroUrlTask,
             ResumeOriginalFileName: resumeOriginalFileName,
             ResumeUrl: await resumeUrlTask,
+            ResumeKind: resumeKind,
             ApplicationStatus: application.Status.ToString(),
             AiMatchScore: application.AiMatchScore,
             CoverLetter: application.CoverLetter,

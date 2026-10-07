@@ -158,6 +158,7 @@ public class GetTalentProfileForEmployerQueryHandlerTests
         result.VideoIntroUrl.Should().Be("https://storage.test/videos/jane_intro.mp4?expiry=60");
         result.ResumeUrl.Should().Be("https://storage.test/resumes/app_resume.pdf?expiry=60");
         result.ResumeOriginalFileName.Should().Be("app_resume.pdf");
+        result.ResumeKind.Should().Be("PDF");
         result.AiMatchScore.Should().Be(86m);
         result.CoverLetter.Should().Be("Cover letter text");
     }
@@ -313,6 +314,7 @@ public class GetTalentProfileForEmployerQueryHandlerTests
         var result = await _handler.Handle(query, CancellationToken.None);
 
         result.ResumeOriginalFileName.Should().Be("Backend Resume");
+        result.ResumeKind.Should().Be("PDF");
         result.ResumeUrl.Should().Be($"https://storage.test/{sharedKey}?expiry=60");
     }
 
@@ -350,7 +352,49 @@ public class GetTalentProfileForEmployerQueryHandlerTests
         var result = await _handler.Handle(query, CancellationToken.None);
 
         result.ResumeOriginalFileName.Should().Be("Backend Resume");
+        result.ResumeKind.Should().Be("PDF");
         result.ResumeUrl.Should().Be("https://storage.test/resumes/talent-1/used_cv.pdf?expiry=60");
+    }
+
+    [Fact]
+    public async Task Handle_WhenSavedResumeIsDocxWithGenericMime_ReturnsDocxKind()
+    {
+        var job = CreateJob("employer-1");
+        var prefixGuid = Guid.NewGuid();
+        var sharedKey = $"resumes/talent-1/{prefixGuid}_Naib Uddin CV Resume.docx";
+        var application = new JobApplication(
+            job.Id,
+            "talent-1",
+            "Jane Candidate",
+            "jane@example.com",
+            sharedKey,
+            "Cover letter text",
+            100000m,
+            5m,
+            "New York, USA");
+        var talent = CreateTalent("talent-1");
+        var resume = new Resume(
+            "talent-1",
+            sharedKey,
+            $"{prefixGuid}_Naib Uddin CV Resume.docx",
+            "application/octet-stream",
+            2048,
+            "Md_Mehedi_Hasan_Rafi_Senior_Software_Engineer_Full_Stack_DotNet_NextJS_React_TypeScript_JavaScript_P");
+
+        _jobApplicationRepository.Setup(r => r.GetByIdAsync(application.Id, It.IsAny<CancellationToken>())).ReturnsAsync(application);
+        _jobRepository.Setup(r => r.GetByIdAsync(job.Id, It.IsAny<CancellationToken>())).ReturnsAsync(job);
+        _talentRepository.Setup(r => r.GetByUserIdAsync("talent-1", It.IsAny<CancellationToken>())).ReturnsAsync(talent);
+        _workExperienceRepository.Setup(r => r.GetByUserIdAsync("talent-1", It.IsAny<CancellationToken>())).ReturnsAsync(new List<WorkExperience>());
+        _educationRepository.Setup(r => r.GetByUserIdAsync("talent-1", It.IsAny<CancellationToken>())).ReturnsAsync(new List<Education>());
+        _resumeRepository.Setup(r => r.GetAllByUserIdAsync("talent-1", It.IsAny<CancellationToken>())).ReturnsAsync(new List<Resume> { resume });
+
+        var query = new GetTalentProfileForEmployerQuery(application.Id);
+
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        result.ResumeKind.Should().Be("DOCX");
+        result.ResumeOriginalFileName.Should().Be(
+            "Md_Mehedi_Hasan_Rafi_Senior_Software_Engineer_Full_Stack_DotNet_NextJS_React_TypeScript_JavaScript_P");
     }
 
     [Fact]
@@ -384,6 +428,7 @@ public class GetTalentProfileForEmployerQueryHandlerTests
         var result = await _handler.Handle(query, CancellationToken.None);
 
         result.ResumeOriginalFileName.Should().Be("Official_Resume.pdf");
+        result.ResumeKind.Should().Be("PDF");
         result.ResumeUrl.Should().Be("https://storage.test/resumes/profile_cv.pdf?expiry=60");
     }
 
@@ -444,5 +489,6 @@ public class GetTalentProfileForEmployerQueryHandlerTests
         var result = await _handler.Handle(query, CancellationToken.None);
 
         result.ResumeOriginalFileName.Should().Be("Resume.pdf");
+        result.ResumeKind.Should().BeNull();
     }
 }
