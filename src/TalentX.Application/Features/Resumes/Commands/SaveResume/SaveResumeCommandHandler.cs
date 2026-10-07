@@ -103,7 +103,10 @@ public sealed class SaveResumeCommandHandler : IRequestHandler<SaveResumeCommand
     {
         try
         {
-            return await _resumeExtractionService.ExtractAsync(request.ResumeFile, cancellationToken);
+            return await _resumeExtractionService.ExtractAsync(
+                request.ResumeFile,
+                ResumeExtractionPurpose.CandidateProfile,
+                cancellationToken);
         }
         catch (UnprocessableEntityException)
         {
@@ -126,6 +129,18 @@ public sealed class SaveResumeCommandHandler : IRequestHandler<SaveResumeCommand
     {
         var talent = await _unitOfWork.Talents.GetByUserIdAsync(userId, cancellationToken)
             ?? throw new NotFoundException($"Talent profile for user '{userId}' was not found.");
+
+        talent.UpdateProfile(
+            !string.IsNullOrWhiteSpace(extractionResult.FullName) ? extractionResult.FullName : talent.Name,
+            !string.IsNullOrWhiteSpace(extractionResult.Tagline) ? extractionResult.Tagline : talent.Tagline,
+            !string.IsNullOrWhiteSpace(extractionResult.ShortBio) ? extractionResult.ShortBio : talent.ShortBio,
+            !string.IsNullOrWhiteSpace(extractionResult.Location) ? extractionResult.Location : talent.Location,
+            !string.IsNullOrWhiteSpace(extractionResult.Phone) ? extractionResult.Phone : talent.Phone,
+            !string.IsNullOrWhiteSpace(extractionResult.LinkedInUrl) ? extractionResult.LinkedInUrl : talent.LinkedInUrl,
+            extractionResult.PortfolioUrls is { Count: > 0 } ? extractionResult.PortfolioUrls : talent.AdditionalUrls,
+            extractionResult.TotalYearsExperience ?? talent.TotalYearsExperience,
+            extractionResult.ExpectedSalary ?? talent.ExpectedSalary,
+            extractionResult.SkillPropositions is { Count: > 0 } ? extractionResult.SkillPropositions : talent.SkillPropositions);
 
         talent.UpdateSkills(
             extractionResult.TechnicalSkills,
