@@ -23,6 +23,7 @@ public sealed record TalentPublicProfileResponse(
     string? VideoIntroUrl,
     string? ResumeOriginalFileName,
     string? ResumeUrl,
+    string? ResumeKind,
     string ApplicationStatus,
     decimal? AiMatchScore,
     string? CoverLetter,
