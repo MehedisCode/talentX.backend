@@ -69,12 +69,17 @@ public static class GeminiPromptBuilder
         "Return ONLY valid JSON matching the schema.\n\n" +
         "EXTRACTION & CLASSIFICATION GUIDELINES:\n" +
         "- fullName: Candidate's full name (usually located at the top/header of the resume).\n" +
+        "- tagline: Headline / professional title (e.g. 'Senior Full Stack Engineer'). Null if not found.\n" +
+        "- shortBio: Executive summary / about me / professional summary. Null if not found.\n" +
         "- location: Candidate's current residence/location (city, state/province, country). Do NOT use company locations as candidate location.\n" +
+        "- totalYearsExperience: Total years of professional experience as a number (e.g. 5, 8.5). Null if not found.\n" +
+        "- expectedSalary: Desired/expected salary or compensation if explicitly mentioned. Null if not found.\n" +
         "- workExperience: Extract EVERY work experience entry in the resume — full-time, part-time, internship, contract, and freelance roles. Do not merge or skip roles, and do not omit a role just because its dates are missing (leave the date fields empty instead). Only treat a role as CURRENT (set 'endDate' to 'Present' and 'isCurrent' to true) when the resume indicates it: a start date with no end date, or wording like Present / Current / till date. A range such as '(December 2024 - Present)' means startDate 'December 2024' and endDate 'Present' with 'isCurrent' true. If the resume gives NO dates for a role, leave both date fields empty and set 'isCurrent' to false — do not infer or invent 'Present'. For past roles, set 'isCurrent' to false and fill 'startDate' and 'endDate' from the resume.\n" +
         "- education: Extract all degrees, universities, and colleges. When the resume shows a date range (e.g. '2016 - 2020'), put the first year in 'startDate' and the second year in 'endDate'. For ongoing studies, set 'endDate' to 'Expected <Year>' or 'Present'. If the resume lists only a SINGLE year for a degree, treat that year as the completion/graduation year and put it in 'endDate' (leave 'startDate' empty). Do not invent dates that are not present.\n" +
         "- technicalSkills: Programming languages, frameworks, libraries, databases, and core technical proficiencies (e.g. C#, .NET, Python, React, PostgreSQL, REST APIs, GraphQL).\n" +
         "- toolsAndPlatforms: Developer tools, cloud providers, DevOps tools, version control, and infrastructure (e.g. Git, Docker, Kubernetes, AWS, Azure, GCP, Linux, Jira, Postman, CI/CD).\n" +
-        "- softSkills: Interpersonal, leadership, communication, management, and agile/scrum methodologies (e.g. Problem Solving, Team Leadership, Agile/Scrum, Collaboration).\n\n" +
+        "- softSkills: Interpersonal, leadership, communication, management, and agile/scrum methodologies (e.g. Problem Solving, Team Leadership, Agile/Scrum, Collaboration).\n" +
+        "- skillPropositions: Key strengths, value propositions, or summary highlights as a list of strings. Empty list if none.\n\n" +
         "IMPORTANT RULES FOR CONTACT & HYPERLINKS:\n" +
         "- Do NOT guess or invent email addresses or phone numbers if none are found.\n" +
         "- The 'ACTUAL DOCUMENT HYPERLINKS' section contains authoritative URLs extracted directly from the document's link annotations and structure.\n" +
@@ -115,9 +120,13 @@ public static class GeminiPromptBuilder
             properties = new
             {
                 fullName = new { type = "string" },
+                tagline = new { type = "string", description = "Professional title or headline" },
+                shortBio = new { type = "string", description = "Executive summary or professional bio" },
                 email = new { type = "string" },
                 phone = new { type = "string" },
                 location = new { type = "string" },
+                totalYearsExperience = new { type = "number", description = "Total years of professional experience" },
+                expectedSalary = new { type = "number", description = "Expected salary or compensation if stated" },
                 linkedInUrl = new { type = "string" },
                 portfolioUrls = new { type = "array", items = new { type = "string" } },
                 workExperience = new
@@ -155,7 +164,8 @@ public static class GeminiPromptBuilder
                 },
                 technicalSkills = new { type = "array", items = new { type = "string" } },
                 softSkills = new { type = "array", items = new { type = "string" } },
-                toolsAndPlatforms = new { type = "array", items = new { type = "string" } }
+                toolsAndPlatforms = new { type = "array", items = new { type = "string" } },
+                skillPropositions = new { type = "array", items = new { type = "string" }, description = "Key value propositions or skill highlights" }
             }
         }
     };

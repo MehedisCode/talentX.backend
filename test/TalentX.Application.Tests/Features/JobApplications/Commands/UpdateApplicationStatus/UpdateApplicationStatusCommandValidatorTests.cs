@@ -10,6 +10,7 @@ public class UpdateApplicationStatusCommandValidatorTests
     private readonly UpdateApplicationStatusCommandValidator _validator = new();
 
     [Theory]
+    [InlineData(ApplicationStatus.Applied)]
     [InlineData(ApplicationStatus.Reviewed)]
     [InlineData(ApplicationStatus.Shortlisted)]
     [InlineData(ApplicationStatus.Hired)]
@@ -24,7 +25,6 @@ public class UpdateApplicationStatusCommandValidatorTests
     }
 
     [Theory]
-    [InlineData(ApplicationStatus.Applied)]
     [InlineData(ApplicationStatus.PendingVerification)]
     [InlineData(ApplicationStatus.Interview)]
     [InlineData(ApplicationStatus.Invited)]

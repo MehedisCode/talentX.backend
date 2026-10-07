@@ -232,6 +232,51 @@ public class GetTalentProfileForEmployerQueryHandlerTests
     }
 
     [Fact]
+    public async Task Handle_WhenMultipleExperiencesAndEducationsExist_ReturnsThemInReverseChronologicalOrder()
+    {
+        var job = CreateJob("employer-1");
+        var application = CreateApplication(job.Id, "talent-multi");
+        var talent = CreateTalent("talent-multi");
+
+        var workExperiences = new List<WorkExperience>
+        {
+            new("talent-multi", "Company A", "Senior Software Test Engineer", "04/2022", "09/2025", false),
+            new("talent-multi", "Company B", "SQA Engineer (Old)", "04/2019", "01/2020", false),
+            new("talent-multi", "Company C", "Quality Excellence Lead", "09/2025", "Present", true),
+            new("talent-multi", "Company D", "SQA Engineer (Mid)", "02/2021", "02/2022", false)
+        };
+
+        var educations = new List<Education>
+        {
+            new("talent-multi", "State University", "B.Sc. Computer Science", "2016", "2020"),
+            new("talent-multi", "Research Institute", "Ph.D.", "2023", "Present"),
+            new("talent-multi", "Graduate School", "M.Sc. Software Engineering", "2020", "2022")
+        };
+
+        _jobApplicationRepository.Setup(r => r.GetByIdAsync(application.Id, It.IsAny<CancellationToken>())).ReturnsAsync(application);
+        _jobRepository.Setup(r => r.GetByIdAsync(job.Id, It.IsAny<CancellationToken>())).ReturnsAsync(job);
+        _talentRepository.Setup(r => r.GetByUserIdAsync("talent-multi", It.IsAny<CancellationToken>())).ReturnsAsync(talent);
+        _workExperienceRepository.Setup(r => r.GetByUserIdAsync("talent-multi", It.IsAny<CancellationToken>())).ReturnsAsync(workExperiences);
+        _educationRepository.Setup(r => r.GetByUserIdAsync("talent-multi", It.IsAny<CancellationToken>())).ReturnsAsync(educations);
+        _resumeRepository.Setup(r => r.GetByUserIdAsync("talent-multi", It.IsAny<CancellationToken>())).ReturnsAsync((Resume?)null);
+
+        var query = new GetTalentProfileForEmployerQuery(application.Id);
+
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        result.WorkExperiences.Select(item => item.JobTitle).Should().Equal(
+            "Quality Excellence Lead",
+            "Senior Software Test Engineer",
+            "SQA Engineer (Mid)",
+            "SQA Engineer (Old)");
+
+        result.Educations.Select(item => item.Degree).Should().Equal(
+            "Ph.D.",
+            "M.Sc. Software Engineering",
+            "B.Sc. Computer Science");
+    }
+
+    [Fact]
     public async Task Handle_WhenResumeOriginalFileNameHasGuidPrefix_StripsGuidPrefix()
     {
         var job = CreateJob("employer-1");

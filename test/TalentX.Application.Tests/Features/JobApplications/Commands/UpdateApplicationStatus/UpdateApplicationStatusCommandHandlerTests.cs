@@ -137,6 +137,70 @@ public class UpdateApplicationStatusCommandHandlerTests
         _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    [Theory]
+    [InlineData(ApplicationStatus.Shortlisted)]
+    [InlineData(ApplicationStatus.Hired)]
+    [InlineData(ApplicationStatus.Rejected)]
+    public async Task Handle_WhenRevertingManualStatusToApplied_UpdatesStatusAndRecordsHistory(ApplicationStatus currentStatus)
+    {
+        var job = CreateJob("employer-1");
+        var application = CreateApplication(job.Id, "talent-1");
+        application.UpdateStatus(currentStatus);
+
+        _jobApplicationRepository
+            .Setup(r => r.GetByIdAsync(application.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(application);
+
+        _jobRepository
+            .Setup(r => r.GetByIdAsync(job.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(job);
+
+        var command = new UpdateApplicationStatusCommand(application.Id, ApplicationStatus.Applied);
+
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        application.Status.Should().Be(ApplicationStatus.Applied);
+        _historyRepository.Verify(
+            r => r.AddAsync(
+                It.Is<JobApplicationStatusHistory>(h =>
+                    h.JobApplicationId == application.Id &&
+                    h.FromStatus == currentStatus &&
+                    h.ToStatus == ApplicationStatus.Applied &&
+                    h.ChangedByUserId == "employer-1"),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        result.Message.Should().Be("Application status updated to Applied.");
+    }
+
+    [Theory]
+    [InlineData(ApplicationStatus.PendingVerification)]
+    [InlineData(ApplicationStatus.Interview)]
+    [InlineData(ApplicationStatus.Invited)]
+    public async Task Handle_WhenRevertingNonRevertibleStatusToApplied_ThrowsValidationException(ApplicationStatus currentStatus)
+    {
+        var job = CreateJob("employer-1");
+        var application = CreateApplication(job.Id, "talent-1");
+        application.UpdateStatus(currentStatus);
+
+        _jobApplicationRepository
+            .Setup(r => r.GetByIdAsync(application.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(application);
+
+        _jobRepository
+            .Setup(r => r.GetByIdAsync(job.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(job);
+
+        var command = new UpdateApplicationStatusCommand(application.Id, ApplicationStatus.Applied);
+
+        var act = () => _handler.Handle(command, CancellationToken.None);
+
+        await act.Should().ThrowAsync<ValidationException>()
+            .WithMessage("Applied status can only be restored from Shortlisted, Hired, or Rejected.");
+        application.Status.Should().Be(currentStatus);
+        _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     [Fact]
     public async Task Handle_WhenCallerIsUnauthorized_ThrowsUnauthorizedException()
     {
