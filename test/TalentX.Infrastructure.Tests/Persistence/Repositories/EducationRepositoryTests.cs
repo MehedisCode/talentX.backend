@@ -117,4 +117,24 @@ public sealed class EducationRepositoryTests
         userEducations.Should().BeEmpty();
         otherEducations.Should().HaveCount(1);
     }
+
+    [Fact]
+    public async Task GetByUserIdAsync_ReturnsEducationsOrderedByStartDateDescendingThenId()
+    {
+        await using var context = CreateInMemoryContext();
+        var repository = new EducationRepository(context);
+
+        var oldest = new Education("user-1", "University A", "B.Sc.", "2014", "2018");
+        var newest = new Education("user-1", "University C", "Ph.D.", "2020", "2024");
+        var middle = new Education("user-1", "University B", "M.Sc.", "2018", "2020");
+
+        await repository.AddAsync(oldest);
+        await repository.AddAsync(newest);
+        await repository.AddAsync(middle);
+        await context.SaveChangesAsync();
+
+        var educations = await repository.GetByUserIdAsync("user-1");
+
+        educations.Select(e => e.Id).Should().ContainInOrder(newest.Id, middle.Id, oldest.Id);
+    }
 }

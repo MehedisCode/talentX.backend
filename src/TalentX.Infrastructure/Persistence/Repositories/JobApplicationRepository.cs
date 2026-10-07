@@ -120,6 +120,7 @@ public sealed class JobApplicationRepository : IJobApplicationRepository
     {
         return await _context.JobApplications
             .Where(application => application.JobId == jobId)
+            .OrderBy(application => application.Id)
             .ToListAsync(cancellationToken);
     }
 
@@ -150,7 +151,7 @@ public sealed class JobApplicationRepository : IJobApplicationRepository
                 application.ApplicantEmail.ToLower().Contains(searchLower));
         }
 
-        query = sortBy?.ToLowerInvariant() switch
+        var orderedQuery = sortBy?.ToLowerInvariant() switch
         {
             "appliedat" => sortOrder?.ToLowerInvariant() == "asc"
                 ? query.OrderBy(application => application.AppliedAt)
@@ -162,9 +163,11 @@ public sealed class JobApplicationRepository : IJobApplicationRepository
                 .ThenByDescending(application => application.AppliedAt)
         };
 
-        var totalCount = await query.CountAsync(cancellationToken);
+        orderedQuery = orderedQuery.ThenByDescending(application => application.Id);
 
-        var items = await query
+        var totalCount = await orderedQuery.CountAsync(cancellationToken);
+
+        var items = await orderedQuery
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync(cancellationToken);

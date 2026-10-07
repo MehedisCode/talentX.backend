@@ -18,6 +18,8 @@ public sealed class WorkExperienceRepository : IWorkExperienceRepository
     {
         return await _context.WorkExperiences
             .Where(workExperience => workExperience.UserId == userId)
+            .OrderByDescending(workExperience => workExperience.StartDate)
+            .ThenBy(workExperience => workExperience.Id)
             .ToListAsync(cancellationToken);
     }
 

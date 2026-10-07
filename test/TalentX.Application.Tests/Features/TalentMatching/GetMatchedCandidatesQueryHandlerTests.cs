@@ -76,4 +76,36 @@ public class GetMatchedCandidatesQueryHandlerTests
         result[1].Score.Should().Be(75.0m);
         result[1].HasActiveInvitation.Should().BeFalse();
     }
+
+    [Fact]
+    public async Task Handle_TiedScores_ReturnsCandidatesOrderedByTalentUserId()
+    {
+        var job = Job.Create(
+            CurrentEmployerId, "Dev", "Co", "Desc",
+            EmploymentType.FullTime, ExperienceLevel.MidLevel, "Remote",
+            WorkArrangement.FullRemote, new List<string> { "C#" }, 1,
+            DateTime.UtcNow.AddDays(30));
+
+        _jobRepo.Setup(r => r.GetByIdAsync(_jobId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(job);
+
+        var topZed = new JobTalentMatch(job.Id, "talent-zed", 80.0m, "Tied");
+        var topAbc = new JobTalentMatch(job.Id, "talent-abc", 80.0m, "Tied");
+        _matchRepo.Setup(r => r.GetByJobIdAsync(job.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<JobTalentMatch> { topZed, topAbc });
+
+        _talentRepo.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Talent>
+            {
+                new("talent-zed", "Zed", "zed@example.com"),
+                new("talent-abc", "Abc", "abc@example.com")
+            });
+
+        _invitationRepo.Setup(r => r.GetByJobIdAsync(job.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Invitation>());
+
+        var result = await _handler.Handle(new GetMatchedCandidatesQuery(_jobId), CancellationToken.None);
+
+        result.Select(c => c.TalentUserId).Should().ContainInOrder("talent-abc", "talent-zed");
+    }
 }

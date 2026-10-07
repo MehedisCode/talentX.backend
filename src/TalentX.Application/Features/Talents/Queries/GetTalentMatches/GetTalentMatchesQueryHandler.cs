@@ -105,6 +105,7 @@ public sealed class GetTalentMatchesQueryHandler
         // 4. Sort by best match first, then paginate in-memory
         var ordered = matches
             .OrderByDescending(m => m.MatchScore)
+            .ThenBy(m => m.JobId)
             .ToList();
 
         var totalCount = ordered.Count;

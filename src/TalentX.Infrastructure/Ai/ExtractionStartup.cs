@@ -25,6 +25,7 @@ public static class ExtractionStartup
 
         // AI talent matching prompt factory & versions
         services.AddSingleton<ITalentMatchingPrompt, V1>();
+        services.AddSingleton<ITalentMatchingPrompt, V2>();
         services.AddSingleton<ITalentMatchingPromptFactory, TalentMatchingPromptFactory>();
 
         // AI talent matching service

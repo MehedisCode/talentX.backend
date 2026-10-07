@@ -91,6 +91,8 @@ pipelines:
                 -e GEMINI_TEMPERATURE="${GEMINI_TEMPERATURE}" \
                 -e GEMINI_TOP_P="${GEMINI_TOP_P}" \
                 -e GEMINI_MAX_OUTPUT_TOKENS="${GEMINI_MAX_OUTPUT_TOKENS}" \
+                -e GEMINI_SEED="${GEMINI_SEED}" \
+                -e GEMINI_MATCH_BATCH_SIZE="${GEMINI_MATCH_BATCH_SIZE}" \
                 -e AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID}" \
                 -e AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY}" \
                 -e AWS_REGION="${AWS_REGION}" \
