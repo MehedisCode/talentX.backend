@@ -40,7 +40,12 @@ public class ExtractResumeCommandHandlerTests
         var act = () => _handler.Handle(new ExtractResumeCommand(fileMock.Object), CancellationToken.None);
 
         await act.Should().ThrowAsync<UnauthorizedException>();
-        _resumeExtractionService.Verify(e => e.ExtractAsync(It.IsAny<IUploadedFile>(), It.IsAny<CancellationToken>()), Times.Never);
+        _resumeExtractionService.Verify(
+            e => e.ExtractAsync(
+                It.IsAny<IUploadedFile>(),
+                It.IsAny<ResumeExtractionPurpose>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]
@@ -53,7 +58,7 @@ public class ExtractResumeCommandHandlerTests
         var extractionResult = new ResumeExtractionResult { FullName = "Jane Doe" };
 
         _resumeExtractionService
-            .Setup(e => e.ExtractAsync(fileMock.Object, It.IsAny<CancellationToken>()))
+            .Setup(e => e.ExtractAsync(fileMock.Object, ResumeExtractionPurpose.CandidateProfile, It.IsAny<CancellationToken>()))
             .ReturnsAsync(extractionResult);
 
         var result = await _handler.Handle(command, CancellationToken.None);
@@ -61,6 +66,9 @@ public class ExtractResumeCommandHandlerTests
         result.FullName.Should().Be("Jane Doe");
         result.ResumeUploadId.Should().NotBeEmpty();
         result.FileStorageKey.Should().BeEmpty();
+        _resumeExtractionService.Verify(
+            e => e.ExtractAsync(fileMock.Object, ResumeExtractionPurpose.CandidateProfile, It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
@@ -72,7 +80,7 @@ public class ExtractResumeCommandHandlerTests
         var command = new ExtractResumeCommand(fileMock.Object);
 
         _resumeExtractionService
-            .Setup(e => e.ExtractAsync(fileMock.Object, It.IsAny<CancellationToken>()))
+            .Setup(e => e.ExtractAsync(fileMock.Object, ResumeExtractionPurpose.CandidateProfile, It.IsAny<CancellationToken>()))
             .ThrowsAsync(new UnprocessableEntityException("No extractable text found."));
 
         var act = () => _handler.Handle(command, CancellationToken.None);
@@ -89,7 +97,7 @@ public class ExtractResumeCommandHandlerTests
         var command = new ExtractResumeCommand(fileMock.Object);
 
         _resumeExtractionService
-            .Setup(e => e.ExtractAsync(fileMock.Object, It.IsAny<CancellationToken>()))
+            .Setup(e => e.ExtractAsync(fileMock.Object, ResumeExtractionPurpose.CandidateProfile, It.IsAny<CancellationToken>()))
             .ThrowsAsync(new Exception("Gemini API timeout"));
 
         var act = () => _handler.Handle(command, CancellationToken.None);
