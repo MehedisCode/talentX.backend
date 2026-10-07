@@ -138,4 +138,126 @@ public class TalentMediaStorageKeyGuardTests
 
         act.Should().Throw<BadRequestException>();
     }
+
+    [Theory]
+    [InlineData("my_cv.pdf", "my_cv.pdf")]
+    [InlineData("resume.pdf", "resume.pdf")]
+    [InlineData("cv.docx", "cv.docx")]
+    public void ExtractOriginalFileName_WithPlainFileNameWithoutGuidPrefix_ReturnsPlainFileName(string input, string expected)
+    {
+        var result = TalentMediaStorageKeyGuard.ExtractOriginalFileName(input);
+
+        result.Should().Be(expected);
+    }
+
+    [Fact]
+    public void ExtractOriginalFileName_WithLeadingGuidPrefix_StripsGuidPrefixAndUnderscore()
+    {
+        var guid = Guid.NewGuid();
+        var input = $"{guid}_john_doe_resume.pdf";
+
+        var result = TalentMediaStorageKeyGuard.ExtractOriginalFileName(input);
+
+        result.Should().Be("john_doe_resume.pdf");
+    }
+
+    [Fact]
+    public void ExtractOriginalFileName_WithStorageKeyPathFolders_StripsPathAndGuidPrefix()
+    {
+        var guid = Guid.NewGuid();
+        var input = $"resumes/pending/{guid}_jane_resume.pdf";
+
+        var result = TalentMediaStorageKeyGuard.ExtractOriginalFileName(input);
+
+        result.Should().Be("jane_resume.pdf");
+    }
+
+    [Fact]
+    public void ExtractOriginalFileName_WithMultipleFoldersAndMultipleUnderscores_ExtractsOriginalNameCorrectly()
+    {
+        var guid = Guid.NewGuid();
+        var input = $"job-applications/user-1/{guid}_senior_software_engineer_cv.pdf";
+
+        var result = TalentMediaStorageKeyGuard.ExtractOriginalFileName(input);
+
+        result.Should().Be("senior_software_engineer_cv.pdf");
+    }
+
+    [Fact]
+    public void ExtractOriginalFileName_WithWindowsBackslashesInPath_ExtractsOriginalNameCorrectly()
+    {
+        var guid = Guid.NewGuid();
+        var input = $"job-applications\\user-1\\{guid}_jessica_cv.pdf";
+
+        var result = TalentMediaStorageKeyGuard.ExtractOriginalFileName(input);
+
+        result.Should().Be("jessica_cv.pdf");
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void ExtractOriginalFileName_WithNullEmptyOrWhitespace_ReturnsDefaultFallback(string? input)
+    {
+        var result = TalentMediaStorageKeyGuard.ExtractOriginalFileName(input);
+
+        result.Should().Be("Resume.pdf");
+    }
+
+    [Theory]
+    [InlineData(null, "Document.pdf")]
+    [InlineData("", "CustomFallback.docx")]
+    [InlineData("   ", "Attachment.pdf")]
+    public void ExtractOriginalFileName_WithCustomFallback_ReturnsCustomFallbackWhenInputEmpty(string? input, string fallback)
+    {
+        var result = TalentMediaStorageKeyGuard.ExtractOriginalFileName(input, fallback);
+
+        result.Should().Be(fallback);
+    }
+
+    [Theory]
+    [InlineData(".")]
+    [InlineData("..")]
+    [InlineData("folder/.")]
+    [InlineData("folder/..")]
+    [InlineData("folder\\..")]
+    public void ExtractOriginalFileName_WithDotSegments_ReturnsFallback(string input)
+    {
+        var result = TalentMediaStorageKeyGuard.ExtractOriginalFileName(input);
+
+        result.Should().Be("Resume.pdf");
+    }
+
+    [Fact]
+    public void ExtractOriginalFileName_WithInvalidGuidPrefixBeforeUnderscore_ReturnsFullSegment()
+    {
+        var input = "notaguid_file.pdf";
+
+        var result = TalentMediaStorageKeyGuard.ExtractOriginalFileName(input);
+
+        result.Should().Be("notaguid_file.pdf");
+    }
+
+    [Fact]
+    public void ExtractOriginalFileName_WithBareGuidFileNameWithoutUnderscore_ReturnsFullSegment()
+    {
+        var guid = Guid.NewGuid();
+        var input = $"{guid}.pdf";
+
+        var result = TalentMediaStorageKeyGuard.ExtractOriginalFileName(input);
+
+        result.Should().Be($"{guid}.pdf");
+    }
+
+    [Fact]
+    public void ExtractOriginalFileName_WithGuidAndTrailingUnderscoreOnly_ReturnsFallback()
+    {
+        var guid = Guid.NewGuid();
+        var input = $"{guid}_";
+
+        var result = TalentMediaStorageKeyGuard.ExtractOriginalFileName(input);
+
+        result.Should().Be("Resume.pdf");
+    }
 }

@@ -150,7 +150,7 @@ public sealed class VerifyGuestEmailCommandHandler : IRequestHandler<VerifyGuest
         if (string.IsNullOrWhiteSpace(application.ResumeStorageKey))
             return;
 
-        var originalFileName = Path.GetFileName(application.ResumeStorageKey);
+        var originalFileName = TalentMediaStorageKeyGuard.ExtractOriginalFileName(application.ResumeStorageKey);
         if (string.IsNullOrWhiteSpace(originalFileName))
             return;
 

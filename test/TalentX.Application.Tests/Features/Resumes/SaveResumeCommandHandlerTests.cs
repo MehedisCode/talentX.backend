@@ -161,9 +161,19 @@ public class SaveResumeCommandHandlerTests
             .Setup(r => r.GetByUserIdAsync("user-1", It.IsAny<CancellationToken>()))
             .ReturnsAsync(talent);
         _resumeExtractionService
-            .Setup(s => s.ExtractAsync(It.IsAny<IUploadedFile>(), It.IsAny<CancellationToken>()))
+            .Setup(s => s.ExtractAsync(It.IsAny<IUploadedFile>(), ResumeExtractionPurpose.CandidateProfile, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ResumeExtractionResult
             {
+                FullName = "Jane Extraction",
+                Tagline = "Extracted Tagline",
+                ShortBio = "Extracted Bio",
+                Location = "New York, NY",
+                Phone = "+12125551234",
+                LinkedInUrl = "https://linkedin.com/in/janeextracted",
+                PortfolioUrls = ["https://extracted.dev"],
+                TotalYearsExperience = 6m,
+                ExpectedSalary = 110000m,
+                SkillPropositions = ["Quick learner"],
                 TechnicalSkills = ["C#"],
                 SoftSkills = ["Communication"],
                 ToolsAndPlatforms = ["Git"],
@@ -195,6 +205,16 @@ public class SaveResumeCommandHandlerTests
             CancellationToken.None);
 
         result.IsDefault.Should().BeTrue();
+        talent.Name.Should().Be("Jane Extraction");
+        talent.Tagline.Should().Be("Extracted Tagline");
+        talent.ShortBio.Should().Be("Extracted Bio");
+        talent.Location.Should().Be("New York, NY");
+        talent.Phone.Should().Be("+12125551234");
+        talent.LinkedInUrl.Should().Be("https://linkedin.com/in/janeextracted");
+        talent.AdditionalUrls.Should().Equal("https://extracted.dev");
+        talent.TotalYearsExperience.Should().Be(6m);
+        talent.ExpectedSalary.Should().Be(110000m);
+        talent.SkillPropositions.Should().Equal("Quick learner");
         talent.TechnicalSkills.Should().Equal("C#");
         talent.SoftSkills.Should().Equal("Communication");
         talent.ToolsAndPlatforms.Should().Equal("Git");
@@ -215,10 +235,64 @@ public class SaveResumeCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_WithUpdateProfile_WhenTalentAlreadyHasProfileFields_OverridesExistingProfileFields()
+    {
+        var talent = new Talent("user-1", "Jane Doe", "jane@example.com");
+        talent.UpdateProfile(
+            "Jane Doe",
+            "Existing Tagline",
+            "Existing Bio",
+            "Existing Location",
+            "Existing Phone",
+            "https://linkedin.com/in/existing",
+            ["https://existing.dev"],
+            10m,
+            150000m,
+            ["Existing Proposition"]);
+
+        _talentRepository
+            .Setup(r => r.GetByUserIdAsync("user-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(talent);
+        _resumeExtractionService
+            .Setup(s => s.ExtractAsync(It.IsAny<IUploadedFile>(), ResumeExtractionPurpose.CandidateProfile, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ResumeExtractionResult
+            {
+                FullName = "Extracted Name",
+                Tagline = "Extracted Tagline",
+                ShortBio = "Extracted Bio",
+                Location = "Extracted Location",
+                Phone = "Extracted Phone",
+                LinkedInUrl = "https://linkedin.com/in/extracted",
+                PortfolioUrls = ["https://extracted.dev"],
+                TotalYearsExperience = 2m,
+                ExpectedSalary = 50000m,
+                SkillPropositions = ["Extracted Proposition"],
+                TechnicalSkills = ["Python"]
+            });
+
+        await _handler.Handle(
+            new SaveResumeCommand(ValidFileMock().Object, null, UpdateProfile: true),
+            CancellationToken.None);
+
+        talent.Name.Should().Be("Extracted Name");
+        talent.Tagline.Should().Be("Extracted Tagline");
+        talent.ShortBio.Should().Be("Extracted Bio");
+        talent.Location.Should().Be("Extracted Location");
+        talent.Phone.Should().Be("Extracted Phone");
+        talent.LinkedInUrl.Should().Be("https://linkedin.com/in/extracted");
+        talent.AdditionalUrls.Should().Equal("https://extracted.dev");
+        talent.TotalYearsExperience.Should().Be(2m);
+        talent.ExpectedSalary.Should().Be(50000m);
+        talent.SkillPropositions.Should().Equal("Extracted Proposition");
+        talent.TechnicalSkills.Should().Equal("Python");
+        talent.Email.Should().Be("jane@example.com");
+    }
+
+    [Fact]
     public async Task Handle_WhenExtractionFails_ThrowsBadGateway_AndDoesNotSaveFile()
     {
         _resumeExtractionService
-            .Setup(s => s.ExtractAsync(It.IsAny<IUploadedFile>(), It.IsAny<CancellationToken>()))
+            .Setup(s => s.ExtractAsync(It.IsAny<IUploadedFile>(), ResumeExtractionPurpose.CandidateProfile, It.IsAny<CancellationToken>()))
             .ThrowsAsync(new Exception("AI down"));
 
         var act = () => _handler.Handle(

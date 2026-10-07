@@ -49,4 +49,25 @@ public static class TalentMediaStorageKeyGuard
         if (segments[0] != expectedCategory || segments[1] != userId)
             throw new NotFoundException("The requested storage key was not found.");
     }
+
+    public static string ExtractOriginalFileName(string? storageKeyOrFileName, string fallback = "Resume.pdf")
+    {
+        if (string.IsNullOrWhiteSpace(storageKeyOrFileName))
+            return fallback;
+
+        var segment = SanitizeFileNameSegment(storageKeyOrFileName.Trim());
+
+        if (string.IsNullOrWhiteSpace(segment) || segment is "." or "..")
+            return fallback;
+
+        var firstUnderscoreIndex = segment.IndexOf('_');
+        if (firstUnderscoreIndex > 0 &&
+            Guid.TryParse(segment[..firstUnderscoreIndex], out _))
+        {
+            var extractedName = segment[(firstUnderscoreIndex + 1)..];
+            return string.IsNullOrWhiteSpace(extractedName) ? fallback : extractedName;
+        }
+
+        return segment;
+    }
 }

@@ -35,7 +35,7 @@ public static class GeminiResponseMapper
             var workExperience = (result.WorkExperience ?? [])
                 .Select(w =>
                 {
-                    var isCurrent = WorkExperienceNormalizer.IsCurrent(w.IsCurrent, w.EndDate);
+                    var isCurrent = WorkExperienceNormalizer.IsCurrent(w.IsCurrent, w.EndDate, w.StartDate);
 
                     return new WorkExperienceDto
                     {
@@ -63,12 +63,37 @@ public static class GeminiResponseMapper
                 })
                 .ToList();
 
+            var cleanTagline = string.IsNullOrWhiteSpace(result.Tagline)
+                ? null
+                : result.Tagline.Trim();
+
+            var cleanShortBio = string.IsNullOrWhiteSpace(result.ShortBio)
+                ? null
+                : result.ShortBio.Trim();
+
+            var cleanTotalYearsExperience = result.TotalYearsExperience is >= 0
+                ? result.TotalYearsExperience
+                : null;
+
+            var cleanExpectedSalary = result.ExpectedSalary is >= 0
+                ? result.ExpectedSalary
+                : null;
+
+            var cleanSkillPropositions = (result.SkillPropositions ?? [])
+                .Where(skillProposition => !string.IsNullOrWhiteSpace(skillProposition))
+                .Select(skillProposition => skillProposition.Trim())
+                .ToList();
+
             return new ResumeExtractionResult
             {
                 FullName = result.FullName,
+                Tagline = cleanTagline,
+                ShortBio = cleanShortBio,
                 Email = finalEmail,
                 Phone = finalPhone,
                 Location = result.Location,
+                TotalYearsExperience = cleanTotalYearsExperience,
+                ExpectedSalary = cleanExpectedSalary,
                 LinkedInUrl = result.LinkedInUrl,
                 PortfolioUrls = PortfolioUrlClassifier.Filter(
                     result.PortfolioUrls,
@@ -77,6 +102,7 @@ public static class GeminiResponseMapper
                 TechnicalSkills = result.TechnicalSkills ?? [],
                 SoftSkills = result.SoftSkills ?? [],
                 ToolsAndPlatforms = result.ToolsAndPlatforms ?? [],
+                SkillPropositions = cleanSkillPropositions,
                 WorkExperience = ResumeChronology.SortNewestFirst(
                     workExperience,
                     w => w.IsCurrent ? ResumeChronology.CurrentKey : ResumeChronology.ToSortKey(w.StartDate)),

@@ -39,6 +39,13 @@ public sealed class UpdateApplicationStatusCommandHandler : IRequestHandler<Upda
             return new StatusUpdateResponseDto($"Application status updated to {request.NewStatus}.");
         }
 
+        if (request.NewStatus == ApplicationStatus.Applied
+            && !JobApplicationRules.IsRevertibleFrom(application.Status))
+        {
+            throw new ValidationException(
+                "Applied status can only be restored from Shortlisted, Hired, or Rejected.");
+        }
+
         var fromStatus = application.Status;
         application.UpdateStatus(request.NewStatus);
         await _unitOfWork.JobApplicationStatusHistories.AddAsync(

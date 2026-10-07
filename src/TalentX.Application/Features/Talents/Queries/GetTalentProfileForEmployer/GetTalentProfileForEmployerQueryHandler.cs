@@ -3,6 +3,7 @@ using MediatR;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Features.Talents.DTOs;
+using TalentX.Application.Features.Talents.Helpers;
 using TalentX.Application.Identity.Services;
 
 namespace TalentX.Application.Features.Talents.Queries.GetTalentProfileForEmployer;
@@ -61,20 +62,21 @@ public sealed class GetTalentProfileForEmployerQueryHandler
 
         await Task.WhenAll(profilePictureUrlTask, videoIntroUrlTask, resumeUrlTask);
 
-        string? resumeOriginalFileName = resume?.OriginalFileName;
-        if (string.IsNullOrWhiteSpace(resumeOriginalFileName) && !string.IsNullOrWhiteSpace(application.ResumeStorageKey))
-        {
-            var fileNameSegment = Path.GetFileName(application.ResumeStorageKey);
-            var firstUnderscore = fileNameSegment.IndexOf('_');
-            if (firstUnderscore > 0 && firstUnderscore < fileNameSegment.Length - 1 && Guid.TryParse(fileNameSegment[..firstUnderscore], out _))
-            {
-                resumeOriginalFileName = fileNameSegment[(firstUnderscore + 1)..];
-            }
-            else
-            {
-                resumeOriginalFileName = fileNameSegment;
-            }
-        }
+        var rawResumeFileName = !string.IsNullOrWhiteSpace(resume?.OriginalFileName)
+            ? resume.OriginalFileName
+            : application.ResumeStorageKey;
+
+        var resumeOriginalFileName = TalentMediaStorageKeyGuard.ExtractOriginalFileName(rawResumeFileName);
+
+        var mappedWorkExperiences = _mapper.Map<List<WorkExperienceItemDto>>(workExperiences);
+        var sortedWorkExperiences = ChronologicalOrderingHelper.SortWorkExperiences(
+            mappedWorkExperiences,
+            experience => (experience.IsCurrent, experience.StartDate, experience.EndDate));
+
+        var mappedEducations = _mapper.Map<List<EducationItemDto>>(educations);
+        var sortedEducations = ChronologicalOrderingHelper.SortEducations(
+            mappedEducations,
+            education => (education.StartDate, education.EndDate));
 
         return new TalentPublicProfileResponse(
             ApplicationId: application.Id,
@@ -95,14 +97,14 @@ public sealed class GetTalentProfileForEmployerQueryHandler
             ToolsAndPlatforms: talent?.ToolsAndPlatforms ?? new List<string>(),
             ProfilePictureUrl: await profilePictureUrlTask,
             VideoIntroUrl: await videoIntroUrlTask,
-            ResumeOriginalFileName: resumeOriginalFileName ?? "Resume.pdf",
+            ResumeOriginalFileName: resumeOriginalFileName,
             ResumeUrl: await resumeUrlTask,
             ApplicationStatus: application.Status.ToString(),
             AiMatchScore: application.AiMatchScore,
             CoverLetter: application.CoverLetter,
             AppliedAt: application.AppliedAt,
-            WorkExperiences: _mapper.Map<List<WorkExperienceItemDto>>(workExperiences),
-            Educations: _mapper.Map<List<EducationItemDto>>(educations)
+            WorkExperiences: sortedWorkExperiences,
+            Educations: sortedEducations
         );
     }
 
