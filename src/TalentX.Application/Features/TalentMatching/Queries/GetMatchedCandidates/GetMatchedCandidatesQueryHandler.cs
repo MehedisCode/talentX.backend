@@ -90,6 +90,7 @@ public sealed class GetMatchedCandidatesQueryHandler
         return matches
             .Where(m => !appliedUserIds.Contains(m.TalentUserId))
             .OrderByDescending(m => m.Score)
+            .ThenBy(m => m.TalentUserId)
             .Select(m =>
             {
                 talentMap.TryGetValue(m.TalentUserId, out var talent);

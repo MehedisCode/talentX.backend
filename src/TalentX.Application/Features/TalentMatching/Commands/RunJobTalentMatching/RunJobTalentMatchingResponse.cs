@@ -5,4 +5,5 @@ namespace TalentX.Application.Features.TalentMatching.Commands.RunJobTalentMatch
 public sealed record RunJobTalentMatchingResponse(
     Guid JobId,
     int MatchedCount,
-    List<MatchedCandidateDto> Candidates);
+    List<MatchedCandidateDto> Candidates,
+    int ReusedCount = 0);

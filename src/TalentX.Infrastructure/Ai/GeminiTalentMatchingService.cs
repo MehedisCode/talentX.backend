@@ -20,6 +20,7 @@ public sealed class GeminiTalentMatchingService : ITalentMatchingService
     private readonly double _temperature;
     private readonly double _topP;
     private readonly int _maxOutputTokens;
+    private readonly int _seed;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -45,16 +46,19 @@ public sealed class GeminiTalentMatchingService : ITalentMatchingService
 
         _promptVersion = configuration["GEMINI_PROMPT_VERSION"]
             ?? configuration["Gemini:PromptVersion"]
-            ?? "v1";
+            ?? "v2";
 
         var tempStr = configuration["GEMINI_TEMPERATURE"] ?? configuration["Gemini:Temperature"];
         _temperature = double.TryParse(tempStr, out var tempVal) ? tempVal : 0.0;
 
         var topPStr = configuration["GEMINI_TOP_P"] ?? configuration["Gemini:TopP"];
-        _topP = double.TryParse(topPStr, out var topPVal) ? topPVal : 0.95;
+        _topP = double.TryParse(topPStr, out var topPVal) ? topPVal : 1.0;
 
         var maxTokensStr = configuration["GEMINI_MAX_OUTPUT_TOKENS"] ?? configuration["Gemini:MaxOutputTokens"];
         _maxOutputTokens = int.TryParse(maxTokensStr, out var maxTokensVal) ? maxTokensVal : 4096;
+
+        var seedStr = configuration["GEMINI_SEED"] ?? configuration["Gemini:Seed"];
+        _seed = int.TryParse(seedStr, out var seedVal) ? seedVal : 42;
     }
 
     public async Task<TalentMatchingResult> MatchAsync(
@@ -92,7 +96,10 @@ public sealed class GeminiTalentMatchingService : ITalentMatchingService
             {
                 temperature = _temperature,
                 top_p = _topP,
-                max_output_tokens = _maxOutputTokens
+                max_output_tokens = _maxOutputTokens,
+                seed = _seed,
+                response_mime_type = "application/json",
+                response_schema = BuildMatchesSchema()
             }
         };
 
@@ -123,6 +130,30 @@ public sealed class GeminiTalentMatchingService : ITalentMatchingService
 
         return ParseGeminiResponse(text);
     }
+
+    private static object BuildMatchesSchema() => new
+    {
+        type = "OBJECT",
+        properties = new
+        {
+            matches = new
+            {
+                type = "ARRAY",
+                items = new
+                {
+                    type = "OBJECT",
+                    properties = new
+                    {
+                        talentUserId = new { type = "STRING" },
+                        score = new { type = "NUMBER", minimum = 0, maximum = 100 },
+                        explanation = new { type = "STRING" }
+                    },
+                    required = new[] { "talentUserId", "score", "explanation" }
+                }
+            }
+        },
+        required = new[] { "matches" }
+    };
 
     private TalentMatchingResult ParseGeminiResponse(string rawText)
     {

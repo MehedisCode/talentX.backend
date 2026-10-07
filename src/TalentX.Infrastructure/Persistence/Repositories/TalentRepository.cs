@@ -36,6 +36,7 @@ public sealed class TalentRepository : ITalentRepository
     {
         return await _context.Talents
             .AsNoTracking()
+            .OrderBy(talent => talent.UserId)
             .ToListAsync(cancellationToken);
     }
 

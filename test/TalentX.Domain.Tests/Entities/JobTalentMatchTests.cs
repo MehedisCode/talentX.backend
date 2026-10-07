@@ -44,4 +44,40 @@ public class JobTalentMatchTests
         match.UpdatedAt.Should().NotBeNull();
         match.UpdatedAt!.Value.Should().BeOnOrAfter(before).And.BeOnOrBefore(after);
     }
+
+    [Fact]
+    public void Constructor_WithoutInputHash_LeavesInputHashNull()
+    {
+        var match = new JobTalentMatch(Guid.NewGuid(), "talent-999", 70.0m, "Initial");
+
+        match.InputHash.Should().BeNull();
+    }
+
+    [Fact]
+    public void Constructor_WithInputHash_PersistsInputHash()
+    {
+        var match = new JobTalentMatch(Guid.NewGuid(), "talent-999", 70.0m, "Initial", "abc123");
+
+        match.InputHash.Should().Be("abc123");
+    }
+
+    [Fact]
+    public void UpdateScore_WithoutInputHash_ClearsInputHash()
+    {
+        var match = new JobTalentMatch(Guid.NewGuid(), "talent-999", 70.0m, "Initial", "abc123");
+
+        match.UpdateScore(80.0m, "Updated");
+
+        match.InputHash.Should().BeNull();
+    }
+
+    [Fact]
+    public void UpdateScore_WithInputHash_ReplacesInputHash()
+    {
+        var match = new JobTalentMatch(Guid.NewGuid(), "talent-999", 70.0m, "Initial", "abc123");
+
+        match.UpdateScore(80.0m, "Updated", "def456");
+
+        match.InputHash.Should().Be("def456");
+    }
 }

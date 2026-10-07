@@ -17,6 +17,7 @@ public sealed class JobApplication : BaseEntity
     public string? Location { get; private set; }
     public ApplicationStatus Status { get; private set; }
     public decimal? AiMatchScore { get; private set; }
+    public string? AiScoreInputHash { get; private set; }
     public DateTime AppliedAt { get; private set; }
     public string? ExtractedTechnicalSkillsJson { get; private set; }
     public string? ExtractedSoftSkillsJson { get; private set; }
@@ -112,9 +113,10 @@ public sealed class JobApplication : BaseEntity
         UpdatedAt = DateTime.UtcNow;
     }
 
-    public void SetAiMatchScore(decimal? score)
+    public void SetAiMatchScore(decimal? score, string? inputHash = null)
     {
         AiMatchScore = score;
+        AiScoreInputHash = inputHash;
     }
 
     public void LinkTalentUser(string talentUserId)
