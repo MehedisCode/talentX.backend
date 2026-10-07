@@ -8,32 +8,25 @@ public static class GeminiPromptBuilder
     public static object BuildRequestBody(
         string plainText,
         IReadOnlyList<string> links,
-        ResumeExtractionPurpose purpose,
-        int maxOutputTokens = 8192)
+        ResumeExtractionPurpose purpose)
     {
         return BuildRequestBody(
             plainText,
             links,
-            deterministicEmail: null,
-            deterministicPhone: null,
-            maxOutputTokens,
-            purpose);
+            new GeminiPromptBuildOptions(Purpose: purpose));
     }
 
     public static object BuildRequestBody(
         string plainText,
         IReadOnlyList<string> links,
-        string? deterministicEmail = null,
-        string? deterministicPhone = null,
-        int maxOutputTokens = 8192,
-        ResumeExtractionPurpose purpose = ResumeExtractionPurpose.JobApplication)
+        GeminiPromptBuildOptions? options = null)
     {
+        var promptOptions = options ?? new GeminiPromptBuildOptions();
+
         var promptPayload = FormatPromptPayload(
             plainText,
             links,
-            deterministicEmail,
-            deterministicPhone,
-            purpose);
+            promptOptions);
 
         return new
         {
@@ -47,34 +40,32 @@ public static class GeminiPromptBuilder
                     }
                 }
             },
-            generationConfig = BuildGenerationConfig(maxOutputTokens, purpose)
+            generationConfig = BuildGenerationConfig(promptOptions.MaxOutputTokens, promptOptions.Purpose)
         };
     }
 
     private static string FormatPromptPayload(
         string plainText,
         IReadOnlyList<string> links,
-        string? deterministicEmail,
-        string? deterministicPhone,
-        ResumeExtractionPurpose purpose)
+        GeminiPromptBuildOptions options)
     {
         var stringBuilder = new StringBuilder();
-        stringBuilder.AppendLine(BuildPrompt(purpose));
+        stringBuilder.AppendLine(BuildPrompt(options.Purpose));
         stringBuilder.AppendLine();
         stringBuilder.AppendLine("RESUME TEXT:");
         stringBuilder.AppendLine(plainText);
 
-        if (!string.IsNullOrWhiteSpace(deterministicEmail) || !string.IsNullOrWhiteSpace(deterministicPhone))
+        if (!string.IsNullOrWhiteSpace(options.DeterministicEmail) || !string.IsNullOrWhiteSpace(options.DeterministicPhone))
         {
             stringBuilder.AppendLine();
             stringBuilder.AppendLine("EXTRACTED CONTACT INFORMATION:");
-            if (!string.IsNullOrWhiteSpace(deterministicEmail))
+            if (!string.IsNullOrWhiteSpace(options.DeterministicEmail))
             {
-                stringBuilder.AppendLine($"Email: {deterministicEmail}");
+                stringBuilder.AppendLine($"Email: {options.DeterministicEmail}");
             }
-            if (!string.IsNullOrWhiteSpace(deterministicPhone))
+            if (!string.IsNullOrWhiteSpace(options.DeterministicPhone))
             {
-                stringBuilder.AppendLine($"Phone: {deterministicPhone}");
+                stringBuilder.AppendLine($"Phone: {options.DeterministicPhone}");
             }
         }
 

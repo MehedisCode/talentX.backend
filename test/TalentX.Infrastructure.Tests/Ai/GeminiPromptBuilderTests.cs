@@ -131,7 +131,8 @@ public class GeminiPromptBuilderTests
     [Fact]
     public void BuildRequestBody_SetsMaxOutputTokens()
     {
-        var body = GeminiPromptBuilder.BuildRequestBody("resume text", Array.Empty<string>(), null, null, 1234);
+        var options = new GeminiPromptBuildOptions(MaxOutputTokens: 1234);
+        var body = GeminiPromptBuilder.BuildRequestBody("resume text", Array.Empty<string>(), options);
         var json = JsonSerializer.Serialize(body);
 
         using var document = JsonDocument.Parse(json);
@@ -141,6 +142,28 @@ public class GeminiPromptBuilderTests
             .GetInt32();
 
         maxOutputTokens.Should().Be(1234);
+    }
+
+    [Fact]
+    public void BuildRequestBody_IncludesDeterministicContactInformation_WhenProvided()
+    {
+        var options = new GeminiPromptBuildOptions(
+            DeterministicEmail: "test@example.com",
+            DeterministicPhone: "+1234567890");
+
+        var body = GeminiPromptBuilder.BuildRequestBody("resume text", Array.Empty<string>(), options);
+        var json = JsonSerializer.Serialize(body);
+
+        using var document = JsonDocument.Parse(json);
+        var prompt = document.RootElement
+            .GetProperty("contents")[0]
+            .GetProperty("parts")[0]
+            .GetProperty("text")
+            .GetString();
+
+        prompt.Should().Contain("EXTRACTED CONTACT INFORMATION:");
+        prompt.Should().Contain("Email: test@example.com");
+        prompt.Should().Contain("Phone: +1234567890");
     }
 
     [Fact]

@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Common.Models;
+using TalentX.Infrastructure.Ai.Constants;
 using TalentX.Infrastructure.Ai.Helpers;
 using TalentX.Infrastructure.Ai.Models;
 using TalentX.Infrastructure.TextExtraction;
@@ -40,7 +41,7 @@ public sealed class GeminiExtractionService : IResumeExtractionService
         var maxTokensValue = Environment.GetEnvironmentVariable("GEMINI_MAX_OUTPUT_TOKENS");
         _maxOutputTokens = int.TryParse(maxTokensValue, out var maxTokens) && maxTokens > 0
             ? maxTokens
-            : 8192;
+            : GeminiConstants.DefaultMaxOutputTokens;
     }
 
     private const int MaxAttempts = 3;
@@ -84,10 +85,11 @@ public sealed class GeminiExtractionService : IResumeExtractionService
         var requestBody = GeminiPromptBuilder.BuildRequestBody(
             plainText,
             combinedLinks,
-            deterministicEmail,
-            deterministicPhone,
-            _maxOutputTokens,
-            purpose);
+            new GeminiPromptBuildOptions(
+                deterministicEmail,
+                deterministicPhone,
+                _maxOutputTokens,
+                purpose));
 
         var (modelName, apiKey) = await _aiConfigProvider.GetConfigAsync(cancellationToken);
         if (string.IsNullOrWhiteSpace(apiKey))

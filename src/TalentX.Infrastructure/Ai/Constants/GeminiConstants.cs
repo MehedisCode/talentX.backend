@@ -7,4 +7,5 @@ public static class GeminiConstants
 
     public const double EvaluationTemperature = 0.3;
     public const int EvaluationMinOutputTokens = 8192;
+    public const int DefaultMaxOutputTokens = 8192;
 }
