@@ -1,4 +1,5 @@
 using System.Text;
+using TalentX.Application.Common.Models;
 
 namespace TalentX.Infrastructure.Ai.Helpers;
 
@@ -7,11 +8,32 @@ public static class GeminiPromptBuilder
     public static object BuildRequestBody(
         string plainText,
         IReadOnlyList<string> links,
-        string? deterministicEmail = null,
-        string? deterministicPhone = null,
+        ResumeExtractionPurpose purpose,
         int maxOutputTokens = 8192)
     {
-        var promptPayload = FormatPromptPayload(plainText, links, deterministicEmail, deterministicPhone);
+        return BuildRequestBody(
+            plainText,
+            links,
+            deterministicEmail: null,
+            deterministicPhone: null,
+            maxOutputTokens,
+            purpose);
+    }
+
+    public static object BuildRequestBody(
+        string plainText,
+        IReadOnlyList<string> links,
+        string? deterministicEmail = null,
+        string? deterministicPhone = null,
+        int maxOutputTokens = 8192,
+        ResumeExtractionPurpose purpose = ResumeExtractionPurpose.JobApplication)
+    {
+        var promptPayload = FormatPromptPayload(
+            plainText,
+            links,
+            deterministicEmail,
+            deterministicPhone,
+            purpose);
 
         return new
         {
@@ -25,7 +47,7 @@ public static class GeminiPromptBuilder
                     }
                 }
             },
-            generationConfig = BuildGenerationConfig(maxOutputTokens)
+            generationConfig = BuildGenerationConfig(maxOutputTokens, purpose)
         };
     }
 
@@ -33,78 +55,102 @@ public static class GeminiPromptBuilder
         string plainText,
         IReadOnlyList<string> links,
         string? deterministicEmail,
-        string? deterministicPhone)
+        string? deterministicPhone,
+        ResumeExtractionPurpose purpose)
     {
-        var sb = new StringBuilder();
-        sb.AppendLine(BuildPrompt());
-        sb.AppendLine();
-        sb.AppendLine("RESUME TEXT:");
-        sb.AppendLine(plainText);
+        var stringBuilder = new StringBuilder();
+        stringBuilder.AppendLine(BuildPrompt(purpose));
+        stringBuilder.AppendLine();
+        stringBuilder.AppendLine("RESUME TEXT:");
+        stringBuilder.AppendLine(plainText);
 
         if (!string.IsNullOrWhiteSpace(deterministicEmail) || !string.IsNullOrWhiteSpace(deterministicPhone))
         {
-            sb.AppendLine();
-            sb.AppendLine("EXTRACTED CONTACT INFORMATION:");
+            stringBuilder.AppendLine();
+            stringBuilder.AppendLine("EXTRACTED CONTACT INFORMATION:");
             if (!string.IsNullOrWhiteSpace(deterministicEmail))
-                sb.AppendLine($"Email: {deterministicEmail}");
+            {
+                stringBuilder.AppendLine($"Email: {deterministicEmail}");
+            }
             if (!string.IsNullOrWhiteSpace(deterministicPhone))
-                sb.AppendLine($"Phone: {deterministicPhone}");
+            {
+                stringBuilder.AppendLine($"Phone: {deterministicPhone}");
+            }
         }
 
         if (links.Count > 0)
         {
-            sb.AppendLine();
-            sb.AppendLine("ACTUAL DOCUMENT HYPERLINKS:");
+            stringBuilder.AppendLine();
+            stringBuilder.AppendLine("ACTUAL DOCUMENT HYPERLINKS:");
             foreach (var link in links)
             {
-                sb.AppendLine(link);
+                stringBuilder.AppendLine(link);
             }
         }
 
-        return sb.ToString();
+        return stringBuilder.ToString();
     }
 
-    private static string BuildPrompt() =>
-        "Extract structured resume information from the provided resume.\n" +
-        "Return ONLY valid JSON matching the schema.\n\n" +
-        "EXTRACTION & CLASSIFICATION GUIDELINES:\n" +
-        "- fullName: Candidate's full name (usually located at the top/header of the resume).\n" +
-        "- tagline: Headline / professional title (e.g. 'Senior Full Stack Engineer'). Null if not found.\n" +
-        "- shortBio: Executive summary / about me / professional summary. Null if not found.\n" +
-        "- location: Candidate's current residence/location (city, state/province, country). Do NOT use company locations as candidate location.\n" +
-        "- totalYearsExperience: Total years of professional experience as a number (e.g. 5, 8.5). Null if not found.\n" +
-        "- expectedSalary: Desired/expected salary or compensation if explicitly mentioned. Null if not found.\n" +
-        "- workExperience: Extract EVERY work experience entry in the resume — full-time, part-time, internship, contract, and freelance roles. Do not merge or skip roles, and do not omit a role just because its dates are missing (leave the date fields empty instead). Only treat a role as CURRENT (set 'endDate' to 'Present' and 'isCurrent' to true) when the resume indicates it: a start date with no end date, or wording like Present / Current / till date. A range such as '(December 2024 - Present)' means startDate 'December 2024' and endDate 'Present' with 'isCurrent' true. If the resume gives NO dates for a role, leave both date fields empty and set 'isCurrent' to false — do not infer or invent 'Present'. For past roles, set 'isCurrent' to false and fill 'startDate' and 'endDate' from the resume.\n" +
-        "- education: Extract all degrees, universities, and colleges. When the resume shows a date range (e.g. '2016 - 2020'), put the first year in 'startDate' and the second year in 'endDate'. For ongoing studies, set 'endDate' to 'Expected <Year>' or 'Present'. If the resume lists only a SINGLE year for a degree, treat that year as the completion/graduation year and put it in 'endDate' (leave 'startDate' empty). Do not invent dates that are not present.\n" +
-        "- technicalSkills: Programming languages, frameworks, libraries, databases, and core technical proficiencies (e.g. C#, .NET, Python, React, PostgreSQL, REST APIs, GraphQL).\n" +
-        "- toolsAndPlatforms: Developer tools, cloud providers, DevOps tools, version control, and infrastructure (e.g. Git, Docker, Kubernetes, AWS, Azure, GCP, Linux, Jira, Postman, CI/CD).\n" +
-        "- softSkills: Interpersonal, leadership, communication, management, and agile/scrum methodologies (e.g. Problem Solving, Team Leadership, Agile/Scrum, Collaboration).\n" +
-        "- skillPropositions: Key strengths, value propositions, or summary highlights as a list of strings. Empty list if none.\n\n" +
-        "IMPORTANT RULES FOR CONTACT & HYPERLINKS:\n" +
-        "- Do NOT guess or invent email addresses or phone numbers if none are found.\n" +
-        "- The 'ACTUAL DOCUMENT HYPERLINKS' section contains authoritative URLs extracted directly from the document's link annotations and structure.\n" +
-        "- Preserve the URLs EXACTLY as provided (do not alter, truncate, or rewrite them) — the only exception is adding an 'https://' prefix when a URL is written without a scheme.\n" +
-        "- Candidate URLs may appear either in the 'ACTUAL DOCUMENT HYPERLINKS' list or as plain text in the resume (e.g. a personal portfolio domain such as 'aparnakhatri.com'). If a link is written without a scheme, output it with an 'https://' prefix; do not invent or change the host name.\n" +
-        "- NEVER invent, reconstruct, guess, or fabricate any URL.\n" +
-        "- NEVER replace an extracted URL with a guessed URL.\n" +
-        "- linkedInUrl: ONLY the candidate's LinkedIn profile URL (e.g. linkedin.com/in/username). Leave it empty if the resume has no LinkedIn URL.\n" +
-        "- portfolioUrls: ONLY the candidate's OWN portfolio, personal website, personal blog, or design portfolio (e.g. Behance, Dribbble, a *.github.io site, a personal domain, or a GitHub/GitLab profile).\n" +
-        "- Do NOT add any of the following to portfolioUrls: LinkedIn, social media (Facebook, X/Twitter, Instagram, TikTok, YouTube), job boards or freelance marketplaces, company or university websites, link shorteners, or email/messaging links.\n" +
-        "- Do NOT treat every URL as a portfolio. When you are unsure whether a URL is the candidate's personal portfolio, OMIT it — an empty list is better than an unrelated link.\n" +
-        "- If the resume contains multiple LinkedIn URLs, extract ONLY the primary one (usually the one in the header or contact section).\n" +
-        "- If information appears redacted or masked (e.g. 'Confidential', 'XXX', '[REDACTED]'), leave the field empty rather than guessing.\n" +
-        "- Do not extract invalid or impossible dates (e.g. month > 12, day > 31, February 30th).\n" +
-        "- Your job is strictly to extract semantic information and classify the extracted URLs into the appropriate fields.";
+    private static string BuildPrompt(ResumeExtractionPurpose purpose)
+    {
+        var stringBuilder = new StringBuilder();
+        stringBuilder.AppendLine("Extract structured resume information from the provided resume.");
+        stringBuilder.AppendLine("Return ONLY valid JSON matching the schema.");
+        stringBuilder.AppendLine();
+        stringBuilder.AppendLine("EXTRACTION & CLASSIFICATION GUIDELINES:");
+        stringBuilder.AppendLine("- fullName: Candidate's full name (usually located at the top/header of the resume).");
 
-    private static object BuildGenerationConfig(int maxOutputTokens) => new
+        if (purpose == ResumeExtractionPurpose.CandidateProfile)
+        {
+            stringBuilder.AppendLine("- tagline: Headline / professional title (e.g. 'Senior Full Stack Engineer'). Null if not found.");
+            stringBuilder.AppendLine("- shortBio: Executive summary / about me / professional summary. Null if not found.");
+        }
+
+        stringBuilder.AppendLine("- location: Candidate's current residence/location (city, state/province, country). Do NOT use company locations as candidate location.");
+
+        if (purpose == ResumeExtractionPurpose.CandidateProfile)
+        {
+            stringBuilder.AppendLine("- totalYearsExperience: Total years of professional experience as a number (e.g. 5, 8.5). Null if not found.");
+            stringBuilder.AppendLine("- expectedSalary: Desired/expected salary or compensation if explicitly mentioned. Null if not found.");
+        }
+
+        stringBuilder.AppendLine("- workExperience: Extract EVERY work experience entry in the resume — full-time, part-time, internship, contract, and freelance roles. Do not merge or skip roles, and do not omit a role just because its dates are missing (leave the date fields empty instead). Only treat a role as CURRENT (set 'endDate' to 'Present' and 'isCurrent' to true) when the resume indicates it: a start date with no end date, or wording like Present / Current / till date. A range such as '(December 2024 - Present)' means startDate 'December 2024' and endDate 'Present' with 'isCurrent' true. If the resume gives NO dates for a role, leave both date fields empty and set 'isCurrent' to false — do not infer or invent 'Present'. For past roles, set 'isCurrent' to false and fill 'startDate' and 'endDate' from the resume.");
+        stringBuilder.AppendLine("- education: Extract all degrees, universities, and colleges. When the resume shows a date range (e.g. '2016 - 2020'), put the first year in 'startDate' and the second year in 'endDate'. For ongoing studies, set 'endDate' to 'Expected <Year>' or 'Present'. If the resume lists only a SINGLE year for a degree, treat that year as the completion/graduation year and put it in 'endDate' (leave 'startDate' empty). Do not invent dates that are not present.");
+        stringBuilder.AppendLine("- technicalSkills: Programming languages, frameworks, libraries, databases, and core technical proficiencies (e.g. C#, .NET, Python, React, PostgreSQL, REST APIs, GraphQL).");
+        stringBuilder.AppendLine("- toolsAndPlatforms: Developer tools, cloud providers, DevOps tools, version control, and infrastructure (e.g. Git, Docker, Kubernetes, AWS, Azure, GCP, Linux, Jira, Postman, CI/CD).");
+        stringBuilder.AppendLine("- softSkills: Interpersonal, leadership, communication, management, and agile/scrum methodologies (e.g. Problem Solving, Team Leadership, Agile/Scrum, Collaboration).");
+
+        if (purpose == ResumeExtractionPurpose.CandidateProfile)
+        {
+            stringBuilder.AppendLine("- skillPropositions: Key strengths, value propositions, or summary highlights as a list of strings. Empty list if none.");
+        }
+
+        stringBuilder.AppendLine();
+        stringBuilder.AppendLine("IMPORTANT RULES FOR CONTACT & HYPERLINKS:");
+        stringBuilder.AppendLine("- Do NOT guess or invent email addresses or phone numbers if none are found.");
+        stringBuilder.AppendLine("- The 'ACTUAL DOCUMENT HYPERLINKS' section contains authoritative URLs extracted directly from the document's link annotations and structure.");
+        stringBuilder.AppendLine("- Preserve the URLs EXACTLY as provided (do not alter, truncate, or rewrite them) — the only exception is adding an 'https://' prefix when a URL is written without a scheme.");
+        stringBuilder.AppendLine("- Candidate URLs may appear either in the 'ACTUAL DOCUMENT HYPERLINKS' list or as plain text in the resume (e.g. a personal portfolio domain such as 'aparnakhatri.com'). If a link is written without a scheme, output it with an 'https://' prefix; do not invent or change the host name.");
+        stringBuilder.AppendLine("- NEVER invent, reconstruct, guess, or fabricate any URL.");
+        stringBuilder.AppendLine("- NEVER replace an extracted URL with a guessed URL.");
+        stringBuilder.AppendLine("- linkedInUrl: ONLY the candidate's LinkedIn profile URL (e.g. linkedin.com/in/username). Leave it empty if the resume has no LinkedIn URL.");
+        stringBuilder.AppendLine("- portfolioUrls: ONLY the candidate's OWN portfolio, personal website, personal blog, or design portfolio (e.g. Behance, Dribbble, a *.github.io site, a personal domain, or a GitHub/GitLab profile).");
+        stringBuilder.AppendLine("- Do NOT add any of the following to portfolioUrls: LinkedIn, social media (Facebook, X/Twitter, Instagram, TikTok, YouTube), job boards or freelance marketplaces, company or university websites, link shorteners, or email/messaging links.");
+        stringBuilder.AppendLine("- Do NOT treat every URL as a portfolio. When you are unsure whether a URL is the candidate's personal portfolio, OMIT it — an empty list is better than an unrelated link.");
+        stringBuilder.AppendLine("- If the resume contains multiple LinkedIn URLs, extract ONLY the primary one (usually the one in the header or contact section).");
+        stringBuilder.AppendLine("- If information appears redacted or masked (e.g. 'Confidential', 'XXX', '[REDACTED]'), leave the field empty rather than guessing.");
+        stringBuilder.AppendLine("- Do not extract invalid or impossible dates (e.g. month > 12, day > 31, February 30th).");
+        stringBuilder.Append("- Your job is strictly to extract semantic information and classify the extracted URLs into the appropriate fields.");
+
+        return stringBuilder.ToString();
+    }
+
+    private static object BuildGenerationConfig(int maxOutputTokens, ResumeExtractionPurpose purpose) => new
     {
         temperature = 0.0,
         top_p = 0.95,
         max_output_tokens = maxOutputTokens,
         response_mime_type = "application/json",
-        // Gemini 3 thinking models mishandle the OpenAPI-style `response_schema`
-        // (arrays of objects are truncated to a single item). JSON-Schema format
-        // produces complete results.
         responseJsonSchema = new
         {
             type = "object",
@@ -117,7 +163,55 @@ public static class GeminiPromptBuilder
                 "softSkills",
                 "toolsAndPlatforms"
             },
-            properties = new
+            properties = BuildProperties(purpose)
+        }
+    };
+
+    private static object BuildProperties(ResumeExtractionPurpose purpose)
+    {
+        var workExperience = new
+        {
+            type = "array",
+            items = new
+            {
+                type = "object",
+                required = new[] { "companyName", "jobTitle" },
+                properties = new
+                {
+                    companyName = new { type = "string" },
+                    jobTitle = new { type = "string" },
+                    startDate = new { type = "string" },
+                    endDate = new { type = "string" },
+                    isCurrent = new { type = "boolean" }
+                }
+            }
+        };
+
+        var education = new
+        {
+            type = "array",
+            items = new
+            {
+                type = "object",
+                required = new[] { "institution", "degree" },
+                properties = new
+                {
+                    institution = new { type = "string" },
+                    degree = new { type = "string" },
+                    startDate = new { type = "string" },
+                    endDate = new { type = "string" }
+                }
+            }
+        };
+
+        var technicalSkills = new { type = "array", items = new { type = "string" } };
+        var softSkills = new { type = "array", items = new { type = "string" } };
+        var toolsAndPlatforms = new { type = "array", items = new { type = "string" } };
+        var portfolioUrls = new { type = "array", items = new { type = "string" } };
+
+        if (purpose == ResumeExtractionPurpose.CandidateProfile)
+        {
+            return new
             {
                 fullName = new { type = "string" },
                 tagline = new { type = "string", description = "Professional title or headline" },
@@ -128,45 +222,29 @@ public static class GeminiPromptBuilder
                 totalYearsExperience = new { type = "number", description = "Total years of professional experience" },
                 expectedSalary = new { type = "number", description = "Expected salary or compensation if stated" },
                 linkedInUrl = new { type = "string" },
-                portfolioUrls = new { type = "array", items = new { type = "string" } },
-                workExperience = new
-                {
-                    type = "array",
-                    items = new
-                    {
-                        type = "object",
-                        required = new[] { "companyName", "jobTitle" },
-                        properties = new
-                        {
-                            companyName = new { type = "string" },
-                            jobTitle = new { type = "string" },
-                            startDate = new { type = "string" },
-                            endDate = new { type = "string" },
-                            isCurrent = new { type = "boolean" }
-                        }
-                    }
-                },
-                education = new
-                {
-                    type = "array",
-                    items = new
-                    {
-                        type = "object",
-                        required = new[] { "institution", "degree" },
-                        properties = new
-                        {
-                            institution = new { type = "string" },
-                            degree = new { type = "string" },
-                            startDate = new { type = "string" },
-                            endDate = new { type = "string" }
-                        }
-                    }
-                },
-                technicalSkills = new { type = "array", items = new { type = "string" } },
-                softSkills = new { type = "array", items = new { type = "string" } },
-                toolsAndPlatforms = new { type = "array", items = new { type = "string" } },
+                portfolioUrls,
+                workExperience,
+                education,
+                technicalSkills,
+                softSkills,
+                toolsAndPlatforms,
                 skillPropositions = new { type = "array", items = new { type = "string" }, description = "Key value propositions or skill highlights" }
-            }
+            };
         }
-    };
+
+        return new
+        {
+            fullName = new { type = "string" },
+            email = new { type = "string" },
+            phone = new { type = "string" },
+            location = new { type = "string" },
+            linkedInUrl = new { type = "string" },
+            portfolioUrls,
+            workExperience,
+            education,
+            technicalSkills,
+            softSkills,
+            toolsAndPlatforms
+        };
+    }
 }

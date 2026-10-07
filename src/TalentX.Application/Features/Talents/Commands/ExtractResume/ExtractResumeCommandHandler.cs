@@ -33,7 +33,10 @@ public sealed class ExtractResumeCommandHandler : IRequestHandler<ExtractResumeC
         ResumeExtractionResult extractionResult;
         try
         {
-            extractionResult = await _resumeExtractionService.ExtractAsync(request.File, cancellationToken);
+            extractionResult = await _resumeExtractionService.ExtractAsync(
+                request.File,
+                ResumeExtractionPurpose.CandidateProfile,
+                cancellationToken);
         }
         catch (UnprocessableEntityException)
         {

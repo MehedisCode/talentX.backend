@@ -127,21 +127,6 @@ public sealed class SaveResumeCommandHandler : IRequestHandler<SaveResumeCommand
         var talent = await _unitOfWork.Talents.GetByUserIdAsync(userId, cancellationToken)
             ?? throw new NotFoundException($"Talent profile for user '{userId}' was not found.");
 
-        talent.UpdateProfile(
-            string.IsNullOrWhiteSpace(talent.Name) && !string.IsNullOrWhiteSpace(extractionResult.FullName)
-                ? extractionResult.FullName
-                : talent.Name,
-            talent.Tagline ?? extractionResult.Tagline,
-            talent.ShortBio ?? extractionResult.ShortBio,
-            talent.Location ?? extractionResult.Location,
-            talent.Phone ?? extractionResult.Phone,
-            talent.LinkedInUrl ?? extractionResult.LinkedInUrl,
-            talent.AdditionalUrls.Count == 0 ? extractionResult.PortfolioUrls : talent.AdditionalUrls,
-            talent.TotalYearsExperience ?? extractionResult.TotalYearsExperience,
-            talent.ExpectedSalary ?? extractionResult.ExpectedSalary,
-            talent.SkillPropositions.Count == 0 ? extractionResult.SkillPropositions : talent.SkillPropositions
-        );
-
         talent.UpdateSkills(
             extractionResult.TechnicalSkills,
             extractionResult.SoftSkills,

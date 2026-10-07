@@ -45,8 +45,16 @@ public sealed class GeminiExtractionService : IResumeExtractionService
 
     private const int MaxAttempts = 3;
 
+    public Task<ResumeExtractionResult> ExtractAsync(
+        IUploadedFile file,
+        CancellationToken cancellationToken = default)
+    {
+        return ExtractAsync(file, ResumeExtractionPurpose.JobApplication, cancellationToken);
+    }
+
     public async Task<ResumeExtractionResult> ExtractAsync(
         IUploadedFile file,
+        ResumeExtractionPurpose purpose,
         CancellationToken cancellationToken = default)
     {
         var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
@@ -78,7 +86,8 @@ public sealed class GeminiExtractionService : IResumeExtractionService
             combinedLinks,
             deterministicEmail,
             deterministicPhone,
-            _maxOutputTokens);
+            _maxOutputTokens,
+            purpose);
 
         var (modelName, apiKey) = await _aiConfigProvider.GetConfigAsync(cancellationToken);
         if (string.IsNullOrWhiteSpace(apiKey))

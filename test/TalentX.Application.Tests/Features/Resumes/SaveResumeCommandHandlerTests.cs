@@ -205,16 +205,9 @@ public class SaveResumeCommandHandlerTests
             CancellationToken.None);
 
         result.IsDefault.Should().BeTrue();
-        talent.Name.Should().Be("Jane Doe"); // Existing name is not overwritten
-        talent.Tagline.Should().Be("Extracted Tagline");
-        talent.ShortBio.Should().Be("Extracted Bio");
-        talent.Location.Should().Be("New York, NY");
-        talent.Phone.Should().Be("+12125551234");
-        talent.LinkedInUrl.Should().Be("https://linkedin.com/in/janeextracted");
-        talent.AdditionalUrls.Should().Equal("https://extracted.dev");
-        talent.TotalYearsExperience.Should().Be(6m);
-        talent.ExpectedSalary.Should().Be(110000m);
-        talent.SkillPropositions.Should().Equal("Quick learner");
+        talent.Name.Should().Be("Jane Doe");
+        talent.Tagline.Should().BeNull();
+        talent.ShortBio.Should().BeNull();
         talent.TechnicalSkills.Should().Equal("C#");
         talent.SoftSkills.Should().Equal("Communication");
         talent.ToolsAndPlatforms.Should().Equal("Git");
