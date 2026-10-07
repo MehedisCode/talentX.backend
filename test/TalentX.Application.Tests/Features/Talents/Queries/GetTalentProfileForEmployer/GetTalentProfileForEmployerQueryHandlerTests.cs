@@ -132,7 +132,7 @@ public class GetTalentProfileForEmployerQueryHandlerTests
         _talentRepository.Setup(r => r.GetByUserIdAsync("talent-1", It.IsAny<CancellationToken>())).ReturnsAsync(talent);
         _workExperienceRepository.Setup(r => r.GetByUserIdAsync("talent-1", It.IsAny<CancellationToken>())).ReturnsAsync(new List<WorkExperience> { workExp });
         _educationRepository.Setup(r => r.GetByUserIdAsync("talent-1", It.IsAny<CancellationToken>())).ReturnsAsync(new List<Education> { education });
-        _resumeRepository.Setup(r => r.GetByUserIdAsync("talent-1", It.IsAny<CancellationToken>())).ReturnsAsync(resume);
+        _resumeRepository.Setup(r => r.GetAllByUserIdAsync("talent-1", It.IsAny<CancellationToken>())).ReturnsAsync(new List<Resume> { resume });
 
         var query = new GetTalentProfileForEmployerQuery(application.Id);
 
@@ -157,7 +157,7 @@ public class GetTalentProfileForEmployerQueryHandlerTests
         result.ProfilePictureUrl.Should().Be("https://storage.test/pictures/jane.jpg?expiry=60");
         result.VideoIntroUrl.Should().Be("https://storage.test/videos/jane_intro.mp4?expiry=60");
         result.ResumeUrl.Should().Be("https://storage.test/resumes/app_resume.pdf?expiry=60");
-        result.ResumeOriginalFileName.Should().Be("Official_Resume.pdf");
+        result.ResumeOriginalFileName.Should().Be("app_resume.pdf");
         result.AiMatchScore.Should().Be(86m);
         result.CoverLetter.Should().Be("Cover letter text");
     }
@@ -217,7 +217,7 @@ public class GetTalentProfileForEmployerQueryHandlerTests
         _talentRepository.Setup(r => r.GetByUserIdAsync("talent-missing", It.IsAny<CancellationToken>())).ReturnsAsync((Talent?)null);
         _workExperienceRepository.Setup(r => r.GetByUserIdAsync("talent-missing", It.IsAny<CancellationToken>())).ReturnsAsync(new List<WorkExperience>());
         _educationRepository.Setup(r => r.GetByUserIdAsync("talent-missing", It.IsAny<CancellationToken>())).ReturnsAsync(new List<Education>());
-        _resumeRepository.Setup(r => r.GetByUserIdAsync("talent-missing", It.IsAny<CancellationToken>())).ReturnsAsync((Resume?)null);
+        _resumeRepository.Setup(r => r.GetAllByUserIdAsync("talent-missing", It.IsAny<CancellationToken>())).ReturnsAsync(new List<Resume>());
 
         var query = new GetTalentProfileForEmployerQuery(application.Id);
 
@@ -258,7 +258,7 @@ public class GetTalentProfileForEmployerQueryHandlerTests
         _talentRepository.Setup(r => r.GetByUserIdAsync("talent-multi", It.IsAny<CancellationToken>())).ReturnsAsync(talent);
         _workExperienceRepository.Setup(r => r.GetByUserIdAsync("talent-multi", It.IsAny<CancellationToken>())).ReturnsAsync(workExperiences);
         _educationRepository.Setup(r => r.GetByUserIdAsync("talent-multi", It.IsAny<CancellationToken>())).ReturnsAsync(educations);
-        _resumeRepository.Setup(r => r.GetByUserIdAsync("talent-multi", It.IsAny<CancellationToken>())).ReturnsAsync((Resume?)null);
+        _resumeRepository.Setup(r => r.GetAllByUserIdAsync("talent-multi", It.IsAny<CancellationToken>())).ReturnsAsync(new List<Resume>());
 
         var query = new GetTalentProfileForEmployerQuery(application.Id);
 
@@ -277,26 +277,114 @@ public class GetTalentProfileForEmployerQueryHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WhenResumeOriginalFileNameHasGuidPrefix_StripsGuidPrefix()
+    public async Task Handle_WhenApplicationUsesSavedResume_ShowsItsDisplayName()
     {
         var job = CreateJob("employer-1");
-        var application = CreateApplication(job.Id, "talent-1");
-        var talent = CreateTalent("talent-1");
         var prefixGuid = Guid.NewGuid();
-        var resume = new Resume("talent-1", "resumes/profile_cv.pdf", $"{prefixGuid}_candidate_resume.pdf", "application/pdf", 1024);
+        var sharedKey = $"resumes/talent-1/{prefixGuid}_candidate_resume.pdf";
+        var application = new JobApplication(
+            job.Id,
+            "talent-1",
+            "Jane Candidate",
+            "jane@example.com",
+            sharedKey,
+            "Cover letter text",
+            100000m,
+            5m,
+            "New York, USA");
+        var talent = CreateTalent("talent-1");
+        var resume = new Resume(
+            "talent-1",
+            sharedKey,
+            $"{prefixGuid}_candidate_resume.pdf",
+            "application/pdf",
+            1024,
+            "Backend Resume");
 
         _jobApplicationRepository.Setup(r => r.GetByIdAsync(application.Id, It.IsAny<CancellationToken>())).ReturnsAsync(application);
         _jobRepository.Setup(r => r.GetByIdAsync(job.Id, It.IsAny<CancellationToken>())).ReturnsAsync(job);
         _talentRepository.Setup(r => r.GetByUserIdAsync("talent-1", It.IsAny<CancellationToken>())).ReturnsAsync(talent);
         _workExperienceRepository.Setup(r => r.GetByUserIdAsync("talent-1", It.IsAny<CancellationToken>())).ReturnsAsync(new List<WorkExperience>());
         _educationRepository.Setup(r => r.GetByUserIdAsync("talent-1", It.IsAny<CancellationToken>())).ReturnsAsync(new List<Education>());
-        _resumeRepository.Setup(r => r.GetByUserIdAsync("talent-1", It.IsAny<CancellationToken>())).ReturnsAsync(resume);
+        _resumeRepository.Setup(r => r.GetAllByUserIdAsync("talent-1", It.IsAny<CancellationToken>())).ReturnsAsync(new List<Resume> { resume });
 
         var query = new GetTalentProfileForEmployerQuery(application.Id);
 
         var result = await _handler.Handle(query, CancellationToken.None);
 
-        result.ResumeOriginalFileName.Should().Be("candidate_resume.pdf");
+        result.ResumeOriginalFileName.Should().Be("Backend Resume");
+        result.ResumeUrl.Should().Be($"https://storage.test/{sharedKey}?expiry=60");
+    }
+
+    [Fact]
+    public async Task Handle_WhenApplicationUsesNonDefaultSavedResume_ShowsThatResumesDisplayName()
+    {
+        var job = CreateJob("employer-1");
+        var defaultResume = new Resume(
+            "talent-1", "resumes/talent-1/default_cv.pdf", "Profile_CV.pdf", "application/pdf", 1024,
+            "Default Resume", isDefault: true);
+        var usedResume = new Resume(
+            "talent-1", "resumes/talent-1/used_cv.pdf", "Used_CV.pdf", "application/pdf", 2048,
+            "Backend Resume");
+        var application = new JobApplication(
+            job.Id,
+            "talent-1",
+            "Jane Candidate",
+            "jane@example.com",
+            "resumes/talent-1/used_cv.pdf",
+            "Cover letter text",
+            100000m,
+            5m,
+            "New York, USA");
+        var talent = CreateTalent("talent-1");
+
+        _jobApplicationRepository.Setup(r => r.GetByIdAsync(application.Id, It.IsAny<CancellationToken>())).ReturnsAsync(application);
+        _jobRepository.Setup(r => r.GetByIdAsync(job.Id, It.IsAny<CancellationToken>())).ReturnsAsync(job);
+        _talentRepository.Setup(r => r.GetByUserIdAsync("talent-1", It.IsAny<CancellationToken>())).ReturnsAsync(talent);
+        _workExperienceRepository.Setup(r => r.GetByUserIdAsync("talent-1", It.IsAny<CancellationToken>())).ReturnsAsync(new List<WorkExperience>());
+        _educationRepository.Setup(r => r.GetByUserIdAsync("talent-1", It.IsAny<CancellationToken>())).ReturnsAsync(new List<Education>());
+        _resumeRepository.Setup(r => r.GetAllByUserIdAsync("talent-1", It.IsAny<CancellationToken>())).ReturnsAsync(new List<Resume> { defaultResume, usedResume });
+
+        var query = new GetTalentProfileForEmployerQuery(application.Id);
+
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        result.ResumeOriginalFileName.Should().Be("Backend Resume");
+        result.ResumeUrl.Should().Be("https://storage.test/resumes/talent-1/used_cv.pdf?expiry=60");
+    }
+
+    [Fact]
+    public async Task Handle_WhenApplicationHasNoResumeStorageKey_FallsBackToProfileResume()
+    {
+        var job = CreateJob("employer-1");
+        var application = new JobApplication(
+            job.Id,
+            "talent-1",
+            "Jane Candidate",
+            "jane@example.com",
+            string.Empty,
+            "Cover letter text",
+            100000m,
+            5m,
+            "New York, USA");
+        var talent = CreateTalent("talent-1");
+        var resume = new Resume(
+            "talent-1", "resumes/profile_cv.pdf", "Official_Resume.pdf", "application/pdf", 1024,
+            isDefault: true);
+
+        _jobApplicationRepository.Setup(r => r.GetByIdAsync(application.Id, It.IsAny<CancellationToken>())).ReturnsAsync(application);
+        _jobRepository.Setup(r => r.GetByIdAsync(job.Id, It.IsAny<CancellationToken>())).ReturnsAsync(job);
+        _talentRepository.Setup(r => r.GetByUserIdAsync("talent-1", It.IsAny<CancellationToken>())).ReturnsAsync(talent);
+        _workExperienceRepository.Setup(r => r.GetByUserIdAsync("talent-1", It.IsAny<CancellationToken>())).ReturnsAsync(new List<WorkExperience>());
+        _educationRepository.Setup(r => r.GetByUserIdAsync("talent-1", It.IsAny<CancellationToken>())).ReturnsAsync(new List<Education>());
+        _resumeRepository.Setup(r => r.GetAllByUserIdAsync("talent-1", It.IsAny<CancellationToken>())).ReturnsAsync(new List<Resume> { resume });
+
+        var query = new GetTalentProfileForEmployerQuery(application.Id);
+
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        result.ResumeOriginalFileName.Should().Be("Official_Resume.pdf");
+        result.ResumeUrl.Should().Be("https://storage.test/resumes/profile_cv.pdf?expiry=60");
     }
 
     [Fact]
@@ -320,7 +408,7 @@ public class GetTalentProfileForEmployerQueryHandlerTests
         _talentRepository.Setup(r => r.GetByUserIdAsync("talent-1", It.IsAny<CancellationToken>())).ReturnsAsync((Talent?)null);
         _workExperienceRepository.Setup(r => r.GetByUserIdAsync("talent-1", It.IsAny<CancellationToken>())).ReturnsAsync(new List<WorkExperience>());
         _educationRepository.Setup(r => r.GetByUserIdAsync("talent-1", It.IsAny<CancellationToken>())).ReturnsAsync(new List<Education>());
-        _resumeRepository.Setup(r => r.GetByUserIdAsync("talent-1", It.IsAny<CancellationToken>())).ReturnsAsync((Resume?)null);
+        _resumeRepository.Setup(r => r.GetAllByUserIdAsync("talent-1", It.IsAny<CancellationToken>())).ReturnsAsync(new List<Resume>());
 
         var query = new GetTalentProfileForEmployerQuery(application.Id);
 
@@ -349,7 +437,7 @@ public class GetTalentProfileForEmployerQueryHandlerTests
         _talentRepository.Setup(r => r.GetByUserIdAsync("talent-1", It.IsAny<CancellationToken>())).ReturnsAsync((Talent?)null);
         _workExperienceRepository.Setup(r => r.GetByUserIdAsync("talent-1", It.IsAny<CancellationToken>())).ReturnsAsync(new List<WorkExperience>());
         _educationRepository.Setup(r => r.GetByUserIdAsync("talent-1", It.IsAny<CancellationToken>())).ReturnsAsync(new List<Education>());
-        _resumeRepository.Setup(r => r.GetByUserIdAsync("talent-1", It.IsAny<CancellationToken>())).ReturnsAsync((Resume?)null);
+        _resumeRepository.Setup(r => r.GetAllByUserIdAsync("talent-1", It.IsAny<CancellationToken>())).ReturnsAsync(new List<Resume>());
 
         var query = new GetTalentProfileForEmployerQuery(application.Id);
 

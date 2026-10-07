@@ -49,12 +49,14 @@ public sealed class GetTalentProfileForEmployerQueryHandler
         var talent = await _unitOfWork.Talents.GetByUserIdAsync(application.TalentUserId, cancellationToken);
         var workExperiences = await _unitOfWork.WorkExperiences.GetByUserIdAsync(application.TalentUserId, cancellationToken);
         var educations = await _unitOfWork.Educations.GetByUserIdAsync(application.TalentUserId, cancellationToken);
-        var resume = await _unitOfWork.Resumes.GetByUserIdAsync(application.TalentUserId, cancellationToken);
+        var resumes = await _unitOfWork.Resumes.GetAllByUserIdAsync(application.TalentUserId, cancellationToken);
+        var applicationResume = resumes.FirstOrDefault(resume => resume.StorageKey == application.ResumeStorageKey);
+        var profileResume = resumes.FirstOrDefault(resume => resume.IsDefault) ?? resumes.FirstOrDefault();
 
         // Resume URL prioritizing application resume, falling back to profile resume
         string? resumeStorageKey = !string.IsNullOrWhiteSpace(application.ResumeStorageKey)
             ? application.ResumeStorageKey
-            : resume?.StorageKey;
+            : profileResume?.StorageKey;
 
         var profilePictureUrlTask = CreateDownloadUrlOrNullAsync(talent?.ProfilePictureStorageKey, cancellationToken);
         var videoIntroUrlTask = CreateDownloadUrlOrNullAsync(talent?.VideoIntroStorageKey, cancellationToken);
@@ -62,9 +64,10 @@ public sealed class GetTalentProfileForEmployerQueryHandler
 
         await Task.WhenAll(profilePictureUrlTask, videoIntroUrlTask, resumeUrlTask);
 
-        var rawResumeFileName = !string.IsNullOrWhiteSpace(resume?.OriginalFileName)
-            ? resume.OriginalFileName
-            : application.ResumeStorageKey;
+        var rawResumeFileName = applicationResume?.DisplayName
+            ?? (!string.IsNullOrWhiteSpace(application.ResumeStorageKey)
+                ? application.ResumeStorageKey
+                : profileResume?.OriginalFileName ?? profileResume?.StorageKey);
 
         var resumeOriginalFileName = TalentMediaStorageKeyGuard.ExtractOriginalFileName(rawResumeFileName);
 
