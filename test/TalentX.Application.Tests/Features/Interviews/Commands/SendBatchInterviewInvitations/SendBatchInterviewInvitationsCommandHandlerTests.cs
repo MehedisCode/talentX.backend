@@ -186,18 +186,10 @@ public class SendBatchInterviewInvitationsCommandHandlerTests
     }
 
     [Fact]
-<<<<<<< HEAD
-    public async Task Handle_WhenForceTrueAgainstRejectedApplication_InvitesSuccessfully()
-    {
-        var job = CreateJob("employer-1");
-        var application = CreateApplication(job.Id, "talent-1");
-        application.UpdateStatus(ApplicationStatus.Rejected);
-=======
     public async Task Handle_WhenInviteIsSent_PublishesInterviewInvitationReceivedNotification()
     {
         var job = CreateJob("employer-1");
         var application = CreateApplication(job.Id, "talent-1");
->>>>>>> e06d5a7beb5b31a499b701afcabd54c3c2976bf0
 
         _jobRepository.Setup(r => r.GetByIdAsync(job.Id, It.IsAny<CancellationToken>())).ReturnsAsync(job);
         _jobApplicationRepository
@@ -209,7 +201,41 @@ public class SendBatchInterviewInvitationsCommandHandlerTests
             job.Id,
             new List<Guid> { application.Id },
             InterviewType.OnCall,
-<<<<<<< HEAD
+            LocationOrLink: "https://meet.example.com/room");
+
+        await _handler.Handle(command, CancellationToken.None);
+
+        _notificationService.Verify(
+            service => service.PublishAsync(
+                It.Is<PublishNotificationParameters>(parameters =>
+                    parameters.RecipientUserId == application.TalentUserId &&
+                    parameters.Type == NotificationType.InterviewInvitationReceived &&
+                    parameters.Title == "Interview Invitation" &&
+                    parameters.Body == $"{job.CompanyName} invited you to interview for {job.Title}." &&
+                    parameters.Metadata!.Contains(job.Id.ToString()) &&
+                    parameters.Metadata.Contains(job.Title) &&
+                    parameters.Metadata.Contains(job.CompanyName)),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_WhenForceTrueAgainstRejectedApplication_InvitesSuccessfully()
+    {
+        var job = CreateJob("employer-1");
+        var application = CreateApplication(job.Id, "talent-1");
+        application.UpdateStatus(ApplicationStatus.Rejected);
+
+        _jobRepository.Setup(r => r.GetByIdAsync(job.Id, It.IsAny<CancellationToken>())).ReturnsAsync(job);
+        _jobApplicationRepository
+            .Setup(r => r.GetByIdAsync(application.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(application);
+        SetUpNoExistingInvite(application.Id);
+
+        var command = new SendBatchInterviewInvitationsCommand(
+            job.Id,
+            new List<Guid> { application.Id },
+            InterviewType.OnCall,
             LocationOrLink: "https://meet.example.com/room",
             Force: true);
 
@@ -437,23 +463,6 @@ public class SendBatchInterviewInvitationsCommandHandlerTests
         pendingInvite.Status.Should().Be(InterviewInvitationStatus.Cancelled);
         _interviewInvitationRepository.Verify(
             r => r.AddAsync(It.IsAny<InterviewInvitation>(), It.IsAny<CancellationToken>()),
-=======
-            LocationOrLink: "https://meet.example.com/room");
-
-        await _handler.Handle(command, CancellationToken.None);
-
-        _notificationService.Verify(
-            service => service.PublishAsync(
-                It.Is<PublishNotificationParameters>(parameters =>
-                    parameters.RecipientUserId == application.TalentUserId &&
-                    parameters.Type == NotificationType.InterviewInvitationReceived &&
-                    parameters.Title == "Interview Invitation" &&
-                    parameters.Body == $"{job.CompanyName} invited you to interview for {job.Title}." &&
-                    parameters.Metadata!.Contains(job.Id.ToString()) &&
-                    parameters.Metadata.Contains(job.Title) &&
-                    parameters.Metadata.Contains(job.CompanyName)),
-                It.IsAny<CancellationToken>()),
->>>>>>> e06d5a7beb5b31a499b701afcabd54c3c2976bf0
             Times.Once);
     }
 }

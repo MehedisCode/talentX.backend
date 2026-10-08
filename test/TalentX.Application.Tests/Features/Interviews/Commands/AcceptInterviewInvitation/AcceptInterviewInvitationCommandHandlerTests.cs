@@ -141,7 +141,6 @@ public class AcceptInterviewInvitationCommandHandlerTests
         invitation.Status.Should().Be(InterviewInvitationStatus.Pending);
     }
 
-<<<<<<< HEAD
     [Theory]
     [InlineData(InterviewInvitationStatus.Accepted)]
     [InlineData(InterviewInvitationStatus.Declined)]
@@ -161,7 +160,20 @@ public class AcceptInterviewInvitationCommandHandlerTests
                 invitation.Cancel();
                 break;
         }
-=======
+
+        _interviewInvitationRepository
+            .Setup(r => r.GetByIdWithTimeslotsAsync(invitation.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(invitation);
+
+        var command = new AcceptInterviewInvitationCommand(invitation.Id, timeslotId);
+
+        var act = () => _handler.Handle(command, CancellationToken.None);
+
+        await act.Should().ThrowAsync<ConflictException>();
+        invitation.Status.Should().Be(existingStatus);
+        _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     [Fact]
     public async Task Handle_WhenInvitationAccepted_PublishesInterviewInvitationAcceptedNotification()
     {
@@ -173,21 +185,10 @@ public class AcceptInterviewInvitationCommandHandlerTests
             "Jane Doe",
             "jane@example.com",
             "resumes/jane.pdf");
->>>>>>> e06d5a7beb5b31a499b701afcabd54c3c2976bf0
 
         _interviewInvitationRepository
             .Setup(r => r.GetByIdWithTimeslotsAsync(invitation.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(invitation);
-<<<<<<< HEAD
-
-        var command = new AcceptInterviewInvitationCommand(invitation.Id, timeslotId);
-
-        var act = () => _handler.Handle(command, CancellationToken.None);
-
-        await act.Should().ThrowAsync<ConflictException>();
-        invitation.Status.Should().Be(existingStatus);
-        _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
-=======
         _jobRepository
             .Setup(r => r.GetByIdAsync(invitation.JobId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(job);
@@ -226,6 +227,5 @@ public class AcceptInterviewInvitationCommandHandlerTests
             new List<string> { ".NET" },
             1,
             DateTime.UtcNow.AddDays(30));
->>>>>>> e06d5a7beb5b31a499b701afcabd54c3c2976bf0
     }
 }

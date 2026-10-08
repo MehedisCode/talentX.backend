@@ -201,15 +201,11 @@ public sealed class SendBatchInterviewInvitationsCommandHandler
                 candidateEmail,
                 Success: true,
                 InvitationId: invitation.Id,
-<<<<<<< HEAD
                 SkipReason: null,
                 CanForceSend: false,
                 HasDanglingPendingInvite: false));
-=======
-                SkipReason: null));
 
             successfulInvitations.Add((invitation, application));
->>>>>>> e06d5a7beb5b31a499b701afcabd54c3c2976bf0
         }
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
