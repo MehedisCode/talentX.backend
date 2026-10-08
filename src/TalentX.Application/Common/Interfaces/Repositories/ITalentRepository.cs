@@ -6,6 +6,7 @@ public interface ITalentRepository
 {
     Task<Talent?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<Talent?> GetByUserIdAsync(string userId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<Talent>> GetByUserIdsAsync(IReadOnlyCollection<string> userIds, CancellationToken cancellationToken = default);
     Task<Talent?> GetByEmailAsync(string email, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Talent>> GetAllAsync(CancellationToken cancellationToken = default);
 

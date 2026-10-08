@@ -4,6 +4,7 @@ using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Common.Models;
 using TalentX.Application.Features.JobApplications.DTOs;
 using TalentX.Application.Identity.Services;
+using TalentX.Domain;
 
 namespace TalentX.Application.Features.JobApplications.Queries.GetJobApplicants;
 
@@ -15,7 +16,6 @@ public sealed class GetJobApplicantsQueryHandler
     private readonly IPresignedUrlService _presignedUrlService;
 
     private static readonly TimeSpan PresignedUrlExpiry = TimeSpan.FromHours(1);
-
     public GetJobApplicantsQueryHandler(
         IUnitOfWork unitOfWork,
         ICurrentUserService currentUserService,
@@ -62,20 +62,42 @@ public sealed class GetJobApplicantsQueryHandler
 
         var resumeUrls = await Task.WhenAll(urlTasks);
 
+        // List shows the applicant's CURRENT profile identity (mirrors the candidate-profile
+        // endpoint's `talent?.Name ?? application.ApplicantName` fallback); the denormalized
+        // JobApplication.ApplicantName/ApplicantEmail is only a fallback for talents whose
+        // profile row is missing.
+        var talentUserIds = paginatedApplications.Items
+            .Select(app => app.TalentUserId)
+            .Where(userId => !string.IsNullOrWhiteSpace(userId))
+            .Distinct()
+            .ToList();
+        var talentsByUserId = new Dictionary<string, Talent>();
+        foreach (var talent in await _unitOfWork.Talents.GetByUserIdsAsync(talentUserIds, cancellationToken))
+        {
+            talentsByUserId[talent.UserId] = talent;
+        }
+
         var results = paginatedApplications.Items
-            .Select((app, index) => new JobApplicantListItemDto(
-                app.Id,
-                app.JobId,
-                app.TalentUserId,
-                app.ApplicantName,
-                app.ApplicantEmail,
-                resumeUrls[index],
-                app.Status.ToString(),
-                app.AiMatchScore,
-                app.ExpectedSalary,
-                app.TotalYearsExperience,
-                app.Location,
-                app.AppliedAt))
+            .Select((app, index) =>
+            {
+                var talent = string.IsNullOrWhiteSpace(app.TalentUserId)
+                    ? null
+                    : talentsByUserId.GetValueOrDefault(app.TalentUserId);
+
+                return new JobApplicantListItemDto(
+                    app.Id,
+                    app.JobId,
+                    app.TalentUserId,
+                    talent?.Name ?? app.ApplicantName,
+                    talent?.Email ?? app.ApplicantEmail,
+                    resumeUrls[index],
+                    app.Status.ToString(),
+                    app.AiMatchScore,
+                    app.ExpectedSalary,
+                    app.TotalYearsExperience,
+                    app.Location,
+                    app.AppliedAt);
+            })
             .ToList();
 
         return new PaginatedList<JobApplicantListItemDto>(

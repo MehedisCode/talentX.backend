@@ -17,6 +17,7 @@ public class GetJobApplicantsQueryHandlerTests
 {
     private readonly Mock<IJobRepository> _jobRepository = new();
     private readonly Mock<IJobApplicationRepository> _jobApplicationRepository = new();
+    private readonly Mock<ITalentRepository> _talentRepository = new();
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
     private readonly Mock<ICurrentUserService> _currentUserService = new();
     private readonly Mock<IPresignedUrlService> _presignedUrlService = new();
@@ -26,6 +27,10 @@ public class GetJobApplicantsQueryHandlerTests
     {
         _unitOfWork.Setup(u => u.Jobs).Returns(_jobRepository.Object);
         _unitOfWork.Setup(u => u.JobApplications).Returns(_jobApplicationRepository.Object);
+        _unitOfWork.Setup(u => u.Talents).Returns(_talentRepository.Object);
+        _talentRepository
+            .Setup(r => r.GetByUserIdsAsync(It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
         _currentUserService.SetupGet(u => u.UserId).Returns("employer-1");
         _presignedUrlService
             .Setup(p => p.CreateDownloadUrlAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
@@ -201,5 +206,62 @@ public class GetJobApplicantsQueryHandlerTests
         var result = await _handler.Handle(query, CancellationToken.None);
 
         result.Items.First().ResumeDownloadUrl.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Handle_WhenTalentRenamedAfterApply_ShowsCurrentTalentName()
+    {
+        var job = CreateJob("employer-1");
+        var app = CreateApplication(job.Id, "user-1", "Old Name", "alice@example.com");
+        var paginated = new PaginatedList<JobApplication>(new List<JobApplication> { app }, 1, 10, 1);
+
+        _jobRepository
+            .Setup(r => r.GetByIdAsync(job.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(job);
+
+        _jobApplicationRepository
+            .Setup(r => r.GetByJobIdPaginatedAsync(job.Id, null, null, null, null, 1, 10, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(paginated);
+
+        var renamedTalent = new Talent("user-1", "Alice Renamed", "alice@example.com");
+        _talentRepository
+            .Setup(r => r.GetByUserIdsAsync(new List<string> { "user-1" }, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([renamedTalent]);
+
+        var result = await _handler.Handle(new GetJobApplicantsQuery(job.Id), CancellationToken.None);
+
+        var item = result.Items.First();
+        item.ApplicantName.Should().Be("Alice Renamed");
+        item.ApplicantEmail.Should().Be("alice@example.com");
+    }
+
+    [Fact]
+    public async Task Handle_WhenTalentProfileIsMissing_FallsBackToDenormalizedApplicationName()
+    {
+        var job = CreateJob("employer-1");
+        var app1 = CreateApplication(job.Id, "user-1", "Alice Smith", "alice@example.com");
+        var app2 = CreateApplication(job.Id, "user-2", "Bob Jones", "bob@example.com");
+        var paginated = new PaginatedList<JobApplication>(new List<JobApplication> { app1, app2 }, 1, 10, 2);
+
+        _jobRepository
+            .Setup(r => r.GetByIdAsync(job.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(job);
+
+        _jobApplicationRepository
+            .Setup(r => r.GetByJobIdPaginatedAsync(job.Id, null, null, null, null, 1, 10, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(paginated);
+
+        var onlyFirstTalent = new Talent("user-1", "Alice Smith", "alice@example.com");
+        _talentRepository
+            .Setup(r => r.GetByUserIdsAsync(It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([onlyFirstTalent]);
+
+        var result = await _handler.Handle(new GetJobApplicantsQuery(job.Id), CancellationToken.None);
+
+        var item1 = result.Items.First(i => i.Id == app1.Id);
+        var item2 = result.Items.First(i => i.Id == app2.Id);
+        item1.ApplicantName.Should().Be("Alice Smith");
+        item2.ApplicantName.Should().Be("Bob Jones");
+        item2.ApplicantEmail.Should().Be("bob@example.com");
     }
 }
