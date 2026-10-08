@@ -73,8 +73,6 @@ public sealed class SendBatchInterviewInvitationsCommandHandler
 
             if (string.IsNullOrWhiteSpace(application.TalentUserId))
             {
-                // No registered talent account to invite into the portal (e.g. a guest
-                // application awaiting email verification) — nothing to link the invitation to.
                 results.Add(new CandidateInvitationResultDto(
                     applicationId,
                     candidateName,
@@ -87,16 +85,11 @@ public sealed class SendBatchInterviewInvitationsCommandHandler
                 continue;
             }
 
-            // Looked up once, up front, so a dangling pending invite can be reported alongside
-            // whichever skip reason ultimately fires (e.g. a Rejected application that also has
-            // a live pending invite) rather than only when it is the primary reason.
             var existingInvite = await _unitOfWork.InterviewInvitations.GetByApplicationIdAsync(applicationId, cancellationToken);
             var hasDanglingPendingInvite = existingInvite?.Status == InterviewInvitationStatus.Pending;
 
             if (application.Status == ApplicationStatus.Hired)
             {
-                // Hired is deliberately never overridable, even with Force — re-inviting a hired
-                // candidate doesn't make sense as a workflow.
                 results.Add(new CandidateInvitationResultDto(
                     applicationId,
                     candidateName,
@@ -113,8 +106,6 @@ public sealed class SendBatchInterviewInvitationsCommandHandler
             {
                 if (!request.Force)
                 {
-                    // Already resolved; don't let a re-invite silently overwrite a rejection
-                    // decision unless the employer explicitly forces it.
                     results.Add(new CandidateInvitationResultDto(
                         applicationId,
                         candidateName,
@@ -136,8 +127,6 @@ public sealed class SendBatchInterviewInvitationsCommandHandler
             {
                 if (!request.Force)
                 {
-                    // A pending invitation already exists for this application; don't send a
-                    // duplicate unless the employer explicitly forces it.
                     results.Add(new CandidateInvitationResultDto(
                         applicationId,
                         candidateName,

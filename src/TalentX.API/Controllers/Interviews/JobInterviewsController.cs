@@ -13,20 +13,8 @@ namespace TalentX.API.Controllers.Interviews;
 [Authorize(Roles = nameof(UserRole.Employer))]
 public sealed class JobInterviewsController : BaseApiController
 {
-    /// <summary>
-    /// Sends interview invitations to a batch of job applications. Each candidate is processed
-    /// independently and reported in the response as either invited or skipped with a reason —
-    /// an application not found for this job, or a candidate with no registered talent account,
-    /// is always skipped; an already-Hired application is always skipped and never overridable;
-    /// an already-Rejected application or one with an existing pending invitation is skipped
-    /// unless <c>command.Force</c> is set, in which case the rejection is overridden (or the
-    /// existing pending invitation is cancelled) and a new invitation is sent.
-    /// </summary>
     /// <param name="jobId">The job to send invitations for.</param>
     /// <param name="command">
-    /// The invitation details and target application ids. <c>Force</c> (default <c>false</c>)
-    /// bypasses the Rejected-application and pending-invite skip rules for this request, but
-    /// never the Hired skip rule.
     /// </param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The per-candidate invite/skip results and summary counts.</returns>
