@@ -35,6 +35,7 @@ public sealed class DeclineInterviewInvitationCommandHandler
         }
 
         InterviewRules.EnsureNotExpired(invitation, DateTime.UtcNow);
+        InterviewRules.EnsureIsPending(invitation);
 
         invitation.Decline(request.Reason);
         await _unitOfWork.SaveChangesAsync(cancellationToken);

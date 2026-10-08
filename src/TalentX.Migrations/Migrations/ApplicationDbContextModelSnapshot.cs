@@ -593,7 +593,10 @@ namespace TalentX.Migrations.Migrations
 
                     b.HasIndex("EmployerUserId");
 
-                    b.HasIndex("JobApplicationId");
+                    b.HasIndex("JobApplicationId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_InterviewInvitations_JobApplicationId_Pending_Unique")
+                        .HasFilter("\"Status\" = 'Pending'");
 
                     b.HasIndex("JobId");
 

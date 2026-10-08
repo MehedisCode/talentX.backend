@@ -40,6 +40,7 @@ public sealed class AcceptInterviewInvitationCommandHandler
         }
 
         InterviewRules.EnsureNotExpired(invitation, DateTime.UtcNow);
+        InterviewRules.EnsureIsPending(invitation);
 
         DateTime? scheduledAt = null;
         string? bookedMeetingUrl = null;

@@ -121,10 +121,16 @@ public class SendBatchInterviewInvitationsCommandHandlerTests
 
         var result = await _handler.Handle(command, CancellationToken.None);
 
+        var expectedCanForceSend = existingStatus == ApplicationStatus.Rejected;
+
         result.TotalProcessed.Should().Be(1);
         result.InvitedCount.Should().Be(0);
         result.SkippedCount.Should().Be(1);
-        result.Results.Should().ContainSingle(r => !r.Success && r.SkipReason != null && r.SkipReason.Contains(existingStatus.ToString()));
+        result.Results.Should().ContainSingle(r =>
+            !r.Success
+            && r.SkipReason != null && r.SkipReason.Contains(existingStatus.ToString())
+            && r.CanForceSend == expectedCanForceSend
+            && !r.HasDanglingPendingInvite);
         application.Status.Should().Be(existingStatus);
         _interviewInvitationRepository.Verify(
             r => r.AddAsync(It.IsAny<InterviewInvitation>(), It.IsAny<CancellationToken>()),
@@ -163,9 +169,260 @@ public class SendBatchInterviewInvitationsCommandHandlerTests
         result.TotalProcessed.Should().Be(1);
         result.InvitedCount.Should().Be(0);
         result.SkippedCount.Should().Be(1);
-        result.Results.Should().ContainSingle(r => !r.Success && r.SkipReason != null && r.SkipReason.Contains("pending interview invitation"));
+        result.Results.Should().ContainSingle(r =>
+            !r.Success
+            && r.SkipReason != null && r.SkipReason.Contains("pending interview invitation")
+            && r.CanForceSend
+            && !r.HasDanglingPendingInvite);
         _interviewInvitationRepository.Verify(
             r => r.AddAsync(It.IsAny<InterviewInvitation>(), It.IsAny<CancellationToken>()),
             Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_WhenForceTrueAgainstRejectedApplication_InvitesSuccessfully()
+    {
+        var job = CreateJob("employer-1");
+        var application = CreateApplication(job.Id, "talent-1");
+        application.UpdateStatus(ApplicationStatus.Rejected);
+
+        _jobRepository.Setup(r => r.GetByIdAsync(job.Id, It.IsAny<CancellationToken>())).ReturnsAsync(job);
+        _jobApplicationRepository
+            .Setup(r => r.GetByIdAsync(application.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(application);
+        SetUpNoExistingInvite(application.Id);
+
+        var command = new SendBatchInterviewInvitationsCommand(
+            job.Id,
+            new List<Guid> { application.Id },
+            InterviewType.OnCall,
+            LocationOrLink: "https://meet.example.com/room",
+            Force: true);
+
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        result.InvitedCount.Should().Be(1);
+        result.SkippedCount.Should().Be(0);
+        result.Results.Should().ContainSingle(r => r.Success && r.ApplicationId == application.Id);
+        application.Status.Should().Be(ApplicationStatus.Invited);
+        _interviewInvitationRepository.Verify(
+            r => r.AddAsync(It.IsAny<InterviewInvitation>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_WhenForceTrueAgainstHiredApplication_StillSkips()
+    {
+        var job = CreateJob("employer-1");
+        var application = CreateApplication(job.Id, "talent-1");
+        application.UpdateStatus(ApplicationStatus.Hired);
+
+        _jobRepository.Setup(r => r.GetByIdAsync(job.Id, It.IsAny<CancellationToken>())).ReturnsAsync(job);
+        _jobApplicationRepository
+            .Setup(r => r.GetByIdAsync(application.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(application);
+        SetUpNoExistingInvite(application.Id);
+
+        var command = new SendBatchInterviewInvitationsCommand(
+            job.Id,
+            new List<Guid> { application.Id },
+            InterviewType.OnCall,
+            LocationOrLink: "https://meet.example.com/room",
+            Force: true);
+
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        result.InvitedCount.Should().Be(0);
+        result.SkippedCount.Should().Be(1);
+        result.Results.Should().ContainSingle(r =>
+            !r.Success
+            && r.SkipReason != null && r.SkipReason.Contains("Hired")
+            && !r.CanForceSend);
+        application.Status.Should().Be(ApplicationStatus.Hired);
+        _interviewInvitationRepository.Verify(
+            r => r.AddAsync(It.IsAny<InterviewInvitation>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_WhenForceTrueAgainstExistingPendingInvite_CancelsOldAndCreatesNew()
+    {
+        var job = CreateJob("employer-1");
+        var application = CreateApplication(job.Id, "talent-1");
+        var pendingInvite = new InterviewInvitation(
+            job.Id,
+            application.Id,
+            "employer-1",
+            "talent-1",
+            InterviewType.OnCall,
+            locationOrLink: "https://meet.example.com/room");
+
+        _jobRepository.Setup(r => r.GetByIdAsync(job.Id, It.IsAny<CancellationToken>())).ReturnsAsync(job);
+        _jobApplicationRepository
+            .Setup(r => r.GetByIdAsync(application.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(application);
+        _interviewInvitationRepository
+            .Setup(r => r.GetByApplicationIdAsync(application.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(pendingInvite);
+
+        var command = new SendBatchInterviewInvitationsCommand(
+            job.Id,
+            new List<Guid> { application.Id },
+            InterviewType.OnCall,
+            LocationOrLink: "https://meet.example.com/room",
+            Force: true);
+
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        result.InvitedCount.Should().Be(1);
+        result.SkippedCount.Should().Be(0);
+        pendingInvite.Status.Should().Be(InterviewInvitationStatus.Cancelled);
+        application.Status.Should().Be(ApplicationStatus.Invited);
+        _interviewInvitationRepository.Verify(
+            r => r.AddAsync(It.IsAny<InterviewInvitation>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_WhenApplicationNotFound_StillSkipsRegardlessOfForce()
+    {
+        var job = CreateJob("employer-1");
+        var missingApplicationId = Guid.NewGuid();
+
+        _jobRepository.Setup(r => r.GetByIdAsync(job.Id, It.IsAny<CancellationToken>())).ReturnsAsync(job);
+        _jobApplicationRepository
+            .Setup(r => r.GetByIdAsync(missingApplicationId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((JobApplication?)null);
+
+        var command = new SendBatchInterviewInvitationsCommand(
+            job.Id,
+            new List<Guid> { missingApplicationId },
+            InterviewType.OnCall,
+            LocationOrLink: "https://meet.example.com/room",
+            Force: true);
+
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        result.SkippedCount.Should().Be(1);
+        result.Results.Should().ContainSingle(r =>
+            !r.Success
+            && r.SkipReason != null && r.SkipReason.Contains("was not found")
+            && !r.CanForceSend
+            && !r.HasDanglingPendingInvite);
+    }
+
+    [Fact]
+    public async Task Handle_WhenCandidateHasNoTalentAccount_StillSkipsRegardlessOfForce()
+    {
+        var job = CreateJob("employer-1");
+        var application = JobApplication.CreateGuestApplication(
+            job.Id,
+            "Alex Smith",
+            "alex@example.com",
+            "resumes/alex.pdf");
+
+        _jobRepository.Setup(r => r.GetByIdAsync(job.Id, It.IsAny<CancellationToken>())).ReturnsAsync(job);
+        _jobApplicationRepository
+            .Setup(r => r.GetByIdAsync(application.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(application);
+
+        var command = new SendBatchInterviewInvitationsCommand(
+            job.Id,
+            new List<Guid> { application.Id },
+            InterviewType.OnCall,
+            LocationOrLink: "https://meet.example.com/room",
+            Force: true);
+
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        result.SkippedCount.Should().Be(1);
+        result.Results.Should().ContainSingle(r =>
+            !r.Success
+            && r.SkipReason != null && r.SkipReason.Contains("registered talent account")
+            && !r.CanForceSend
+            && !r.HasDanglingPendingInvite);
+        _interviewInvitationRepository.Verify(
+            r => r.GetByApplicationIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_WhenForceFalseAgainstRejectedApplicationWithDanglingPendingInvite_ReportsBoth()
+    {
+        var job = CreateJob("employer-1");
+        var application = CreateApplication(job.Id, "talent-1");
+        application.UpdateStatus(ApplicationStatus.Rejected);
+        var pendingInvite = new InterviewInvitation(
+            job.Id,
+            application.Id,
+            "employer-1",
+            "talent-1",
+            InterviewType.OnCall,
+            locationOrLink: "https://meet.example.com/room");
+
+        _jobRepository.Setup(r => r.GetByIdAsync(job.Id, It.IsAny<CancellationToken>())).ReturnsAsync(job);
+        _jobApplicationRepository
+            .Setup(r => r.GetByIdAsync(application.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(application);
+        _interviewInvitationRepository
+            .Setup(r => r.GetByApplicationIdAsync(application.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(pendingInvite);
+
+        var command = new SendBatchInterviewInvitationsCommand(
+            job.Id,
+            new List<Guid> { application.Id },
+            InterviewType.OnCall,
+            LocationOrLink: "https://meet.example.com/room");
+
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        result.SkippedCount.Should().Be(1);
+        result.Results.Should().ContainSingle(r =>
+            !r.Success
+            && r.SkipReason != null && r.SkipReason.Contains("Rejected")
+            && r.CanForceSend
+            && r.HasDanglingPendingInvite);
+        pendingInvite.Status.Should().Be(InterviewInvitationStatus.Pending);
+        application.Status.Should().Be(ApplicationStatus.Rejected);
+    }
+
+    [Fact]
+    public async Task Handle_WhenForceTrueAgainstRejectedApplicationWithDanglingPendingInvite_InvitesAndCancelsDangling()
+    {
+        var job = CreateJob("employer-1");
+        var application = CreateApplication(job.Id, "talent-1");
+        application.UpdateStatus(ApplicationStatus.Rejected);
+        var pendingInvite = new InterviewInvitation(
+            job.Id,
+            application.Id,
+            "employer-1",
+            "talent-1",
+            InterviewType.OnCall,
+            locationOrLink: "https://meet.example.com/room");
+
+        _jobRepository.Setup(r => r.GetByIdAsync(job.Id, It.IsAny<CancellationToken>())).ReturnsAsync(job);
+        _jobApplicationRepository
+            .Setup(r => r.GetByIdAsync(application.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(application);
+        _interviewInvitationRepository
+            .Setup(r => r.GetByApplicationIdAsync(application.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(pendingInvite);
+
+        var command = new SendBatchInterviewInvitationsCommand(
+            job.Id,
+            new List<Guid> { application.Id },
+            InterviewType.OnCall,
+            LocationOrLink: "https://meet.example.com/room",
+            Force: true);
+
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        result.InvitedCount.Should().Be(1);
+        result.SkippedCount.Should().Be(0);
+        application.Status.Should().Be(ApplicationStatus.Invited);
+        pendingInvite.Status.Should().Be(InterviewInvitationStatus.Cancelled);
+        _interviewInvitationRepository.Verify(
+            r => r.AddAsync(It.IsAny<InterviewInvitation>(), It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 }

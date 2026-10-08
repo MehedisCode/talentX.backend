@@ -119,4 +119,37 @@ public class DeclineInterviewInvitationCommandHandlerTests
         await act.Should().ThrowAsync<BadRequestException>();
         invitation.Status.Should().Be(InterviewInvitationStatus.Pending);
     }
+
+    [Theory]
+    [InlineData(InterviewInvitationStatus.Accepted)]
+    [InlineData(InterviewInvitationStatus.Declined)]
+    [InlineData(InterviewInvitationStatus.Cancelled)]
+    public async Task Handle_WhenInvitationIsNotPending_ThrowsConflict(InterviewInvitationStatus existingStatus)
+    {
+        var invitation = CreateOnCallInvitationWithTimeslot(DateTime.UtcNow.AddHours(1));
+        switch (existingStatus)
+        {
+            case InterviewInvitationStatus.Accepted:
+                invitation.Accept(invitation.Timeslots[0].Id, DateTime.UtcNow.AddHours(1));
+                break;
+            case InterviewInvitationStatus.Declined:
+                invitation.Decline();
+                break;
+            case InterviewInvitationStatus.Cancelled:
+                invitation.Cancel();
+                break;
+        }
+
+        _interviewInvitationRepository
+            .Setup(r => r.GetByIdWithTimeslotsAsync(invitation.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(invitation);
+
+        var command = new DeclineInterviewInvitationCommand(invitation.Id);
+
+        var act = () => _handler.Handle(command, CancellationToken.None);
+
+        await act.Should().ThrowAsync<ConflictException>();
+        invitation.Status.Should().Be(existingStatus);
+        _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
 }
