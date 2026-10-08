@@ -1130,6 +1130,10 @@ namespace TalentX.Migrations.Migrations
                         .HasPrecision(5, 2)
                         .HasColumnType("numeric(5,2)");
 
+                    b.Property<string>("AiScoreInputHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
                     b.Property<string>("ApplicantEmail")
                         .IsRequired()
                         .HasMaxLength(255)
@@ -1365,6 +1369,10 @@ namespace TalentX.Migrations.Migrations
                     b.Property<string>("CriteriaSnapshot")
                         .HasMaxLength(4000)
                         .HasColumnType("character varying(4000)");
+
+                    b.Property<string>("InputHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
 
                     b.Property<Guid>("JobId")
                         .HasColumnType("uuid");

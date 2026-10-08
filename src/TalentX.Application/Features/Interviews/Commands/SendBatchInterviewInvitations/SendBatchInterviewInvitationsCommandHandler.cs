@@ -1,6 +1,9 @@
+using System.Text.Json;
 using MediatR;
+using Microsoft.Extensions.Logging;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
+using TalentX.Application.Common.Models;
 using TalentX.Application.Identity.Services;
 using TalentX.Domain.Entities;
 using TalentX.Domain.Enums;
@@ -13,15 +16,21 @@ public sealed class SendBatchInterviewInvitationsCommandHandler
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUserService;
     private readonly IEmailService _emailService;
+    private readonly INotificationService _notificationService;
+    private readonly ILogger<SendBatchInterviewInvitationsCommandHandler> _logger;
 
     public SendBatchInterviewInvitationsCommandHandler(
         IUnitOfWork unitOfWork,
         ICurrentUserService currentUserService,
-        IEmailService emailService)
+        IEmailService emailService,
+        INotificationService notificationService,
+        ILogger<SendBatchInterviewInvitationsCommandHandler> logger)
     {
         _unitOfWork = unitOfWork;
         _currentUserService = currentUserService;
         _emailService = emailService;
+        _notificationService = notificationService;
+        _logger = logger;
     }
 
     public async Task<SendBatchInterviewInvitationsResult> Handle(
@@ -40,14 +49,13 @@ public sealed class SendBatchInterviewInvitationsCommandHandler
         }
 
         var results = new List<CandidateInvitationResultDto>();
+        var successfulInvitations = new List<(InterviewInvitation Invitation, JobApplication Application)>();
 
         foreach (var applicationId in request.ApplicationIds)
         {
             var application = await _unitOfWork.JobApplications.GetByIdAsync(applicationId, cancellationToken);
-            Console.WriteLine($"Processing application {applicationId} for job {request.JobId}.");
             if (application is null || application.JobId != request.JobId)
             {
-                Console.WriteLine($"Skipping application {applicationId}: not found or does not belong to job {request.JobId}.");
                 results.Add(new CandidateInvitationResultDto(
                     applicationId,
                     "Unknown Candidate",
@@ -149,7 +157,7 @@ public sealed class SendBatchInterviewInvitationsCommandHandler
                 request.JobId,
                 applicationId,
                 userId,
-                application.TalentUserId ?? application.ApplicantEmail,
+                application.TalentUserId!,
                 request.Type,
                 request.AssessmentUrl,
                 request.AssessmentDeadline,
@@ -193,12 +201,53 @@ public sealed class SendBatchInterviewInvitationsCommandHandler
                 candidateEmail,
                 Success: true,
                 InvitationId: invitation.Id,
+<<<<<<< HEAD
                 SkipReason: null,
                 CanForceSend: false,
                 HasDanglingPendingInvite: false));
+=======
+                SkipReason: null));
+
+            successfulInvitations.Add((invitation, application));
+>>>>>>> e06d5a7beb5b31a499b701afcabd54c3c2976bf0
         }
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        foreach (var (invitation, application) in successfulInvitations)
+        {
+            if (string.IsNullOrWhiteSpace(application.TalentUserId))
+            {
+                continue;
+            }
+
+            try
+            {
+                var metadata = JsonSerializer.Serialize(new
+                {
+                    invitationId = invitation.Id,
+                    jobId = job.Id,
+                    jobTitle = job.Title,
+                    companyName = job.CompanyName
+                });
+
+                await _notificationService.PublishAsync(
+                    new PublishNotificationParameters(
+                        RecipientUserId: application.TalentUserId,
+                        Type: NotificationType.InterviewInvitationReceived,
+                        Title: "Interview Invitation",
+                        Body: $"{job.CompanyName} invited you to interview for {job.Title}.",
+                        Metadata: metadata),
+                    cancellationToken);
+            }
+            catch (Exception exception)
+            {
+                _logger.LogWarning(
+                    exception,
+                    "Failed to publish interview invitation notification for invitation {InvitationId}",
+                    invitation.Id);
+            }
+        }
 
         var invitedCount = results.Count(r => r.Success);
         var skippedCount = results.Count(r => !r.Success);

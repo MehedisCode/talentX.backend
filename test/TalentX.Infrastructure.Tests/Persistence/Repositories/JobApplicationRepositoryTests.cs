@@ -393,4 +393,50 @@ public sealed class JobApplicationRepositoryTests
         job.MarkAsPublished();
         return job;
     }
+
+    [Fact]
+    public async Task GetByJobIdAsync_ReturnsApplicationsOrderedByIdAscending()
+    {
+        await using var context = NewContext();
+        var repository = new JobApplicationRepository(context);
+        var jobId = Guid.NewGuid();
+
+        var first = NewApplication(jobId);
+        var second = NewApplication(jobId);
+        var third = NewApplication(jobId);
+        await repository.AddAsync(third);
+        await repository.AddAsync(first);
+        await repository.AddAsync(second);
+        await context.SaveChangesAsync();
+
+        var applications = await repository.GetByJobIdAsync(jobId);
+
+        applications.Select(a => a.Id).Should().ContainInOrder(
+            new[] { first.Id, second.Id, third.Id }.OrderBy(id => id));
+    }
+
+    [Fact]
+    public async Task GetByJobIdPaginatedAsync_TiedSortKeys_BreakTiesByIdDescending()
+    {
+        await using var context = NewContext();
+        var repository = new JobApplicationRepository(context);
+        var jobId = Guid.NewGuid();
+
+        var first = NewApplication(jobId);
+        var second = NewApplication(jobId);
+        var third = NewApplication(jobId);
+        await repository.AddAsync(second);
+        await repository.AddAsync(third);
+        await repository.AddAsync(first);
+        await context.SaveChangesAsync();
+
+        var page = await repository.GetByJobIdPaginatedAsync(
+            jobId, search: null, status: null, sortBy: "status", sortOrder: "asc",
+            page: 1, pageSize: 10);
+
+        var expectedIds = new[] { first.Id, second.Id, third.Id }
+            .OrderByDescending(id => id)
+            .ToArray();
+        page.Items.Select(a => a.Id).Should().ContainInOrder(expectedIds);
+    }
 }

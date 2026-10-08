@@ -20,6 +20,7 @@ public sealed class JobTalentMatchRepository : IJobTalentMatchRepository
             .AsNoTracking()
             .Where(x => x.JobId == jobId)
             .OrderByDescending(x => x.Score)
+            .ThenBy(x => x.TalentUserId)
             .ToListAsync(cancellationToken);
     }
 

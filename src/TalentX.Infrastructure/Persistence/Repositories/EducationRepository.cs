@@ -18,6 +18,8 @@ public sealed class EducationRepository : IEducationRepository
     {
         return await _context.Educations
             .Where(education => education.UserId == userId)
+            .OrderByDescending(education => education.StartDate)
+            .ThenBy(education => education.Id)
             .ToListAsync(cancellationToken);
     }
 

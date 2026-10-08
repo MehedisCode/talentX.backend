@@ -118,4 +118,32 @@ public sealed class WorkExperienceRepositoryTests
         userExperiences.Should().BeEmpty();
         otherExperiences.Should().HaveCount(1);
     }
+
+    [Fact]
+    public async Task GetByUserIdAsync_ReturnsExperiencesOrderedByStartDateDescendingThenId()
+    {
+        await using var context = CreateInMemoryContext();
+        var repository = new WorkExperienceRepository(context);
+
+        var oldest = new WorkExperience("user-1", "Company A", "Engineer", "2016", "2018", false);
+        var newest = new WorkExperience("user-1", "Company C", "Lead", "2022", null, true);
+        var middle = new WorkExperience("user-1", "Company B", "Senior Engineer", "2020", "2022", false);
+        var tiedOlder = new WorkExperience("user-1", "Company D", "Junior", "2016", "2017", false);
+
+        await repository.AddAsync(oldest);
+        await repository.AddAsync(newest);
+        await repository.AddAsync(middle);
+        await repository.AddAsync(tiedOlder);
+        await context.SaveChangesAsync();
+
+        var experiences = await repository.GetByUserIdAsync("user-1");
+
+        experiences.Should().HaveCount(4);
+        experiences[0].Id.Should().Be(newest.Id);
+        experiences[1].Id.Should().Be(middle.Id);
+
+        var expectedTieOrder = new[] { oldest.Id, tiedOlder.Id }.OrderBy(id => id).ToArray();
+        experiences[2].Id.Should().Be(expectedTieOrder[0]);
+        experiences[3].Id.Should().Be(expectedTieOrder[1]);
+    }
 }

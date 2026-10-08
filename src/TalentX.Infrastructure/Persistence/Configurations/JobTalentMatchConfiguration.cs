@@ -25,6 +25,9 @@ public sealed class JobTalentMatchConfiguration : IEntityTypeConfiguration<JobTa
         builder.Property(match => match.CriteriaSnapshot)
             .HasMaxLength(4000);
 
+        builder.Property(match => match.InputHash)
+            .HasMaxLength(64);
+
         builder.Property(match => match.MatchedAt)
             .IsRequired();
 

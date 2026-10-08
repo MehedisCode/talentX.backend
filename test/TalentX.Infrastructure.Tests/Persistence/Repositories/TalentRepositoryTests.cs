@@ -104,4 +104,20 @@ public sealed class TalentRepositoryTests
         updatedTalent!.Tagline.Should().Be("Senior Cloud Architect");
         updatedTalent.TotalYearsExperience.Should().Be(10m);
     }
+
+    [Fact]
+    public async Task GetAllAsync_ReturnsTalentsOrderedByUserId()
+    {
+        await using var context = CreateInMemoryContext();
+        var repository = new TalentRepository(context);
+
+        await repository.AddAsync(new Talent("user-zed", "Zed Talent", "zed@example.com"));
+        await repository.AddAsync(new Talent("user-abc", "Abc Talent", "abc@example.com"));
+        await repository.AddAsync(new Talent("user-mid", "Mid Talent", "mid@example.com"));
+        await context.SaveChangesAsync();
+
+        var talents = await repository.GetAllAsync();
+
+        talents.Select(t => t.UserId).Should().ContainInOrder("user-abc", "user-mid", "user-zed");
+    }
 }

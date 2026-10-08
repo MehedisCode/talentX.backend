@@ -1,6 +1,9 @@
+using System.Text.Json;
 using MediatR;
+using Microsoft.Extensions.Logging;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
+using TalentX.Application.Common.Models;
 using TalentX.Application.Identity.Services;
 using TalentX.Domain.Entities;
 using TalentX.Domain.Enums;
@@ -13,15 +16,21 @@ public sealed class SendJobInvitationCommandHandler
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUserService;
     private readonly IEmailService _emailService;
+    private readonly INotificationService _notificationService;
+    private readonly ILogger<SendJobInvitationCommandHandler> _logger;
 
     public SendJobInvitationCommandHandler(
         IUnitOfWork unitOfWork,
         ICurrentUserService currentUserService,
-        IEmailService emailService)
+        IEmailService emailService,
+        INotificationService notificationService,
+        ILogger<SendJobInvitationCommandHandler> logger)
     {
         _unitOfWork = unitOfWork;
         _currentUserService = currentUserService;
         _emailService = emailService;
+        _notificationService = notificationService;
+        _logger = logger;
     }
 
     public async Task<SendJobInvitationResponse> Handle(
@@ -65,7 +74,10 @@ public sealed class SendJobInvitationCommandHandler
             var baseUrl = GetFrontendBaseUrl();
             var jobUrl = $"{baseUrl}/jobs/{job.Id}?invitation={invitation.Token}";
 
-            Console.WriteLine($"[Invitation] Invite link for {talent.Email}: {jobUrl}");
+            _logger.LogInformation(
+                "Sending job invitation email for job {JobId} to recipient {TalentUserId}",
+                job.Id,
+                request.TalentUserId);
 
             await _emailService.SendJobInvitationEmailAsync(
                 talent.Email,
@@ -74,6 +86,34 @@ public sealed class SendJobInvitationCommandHandler
                 job.CompanyName ?? "TalentX Employer",
                 jobUrl,
                 cancellationToken);
+        }
+
+        try
+        {
+            var metadata = JsonSerializer.Serialize(new
+            {
+                invitationId = invitation.Id,
+                jobId = job.Id,
+                jobTitle = job.Title,
+                companyName = job.CompanyName ?? "TalentX Employer",
+                token = invitation.Token
+            });
+
+            await _notificationService.PublishAsync(
+                new PublishNotificationParameters(
+                    RecipientUserId: request.TalentUserId,
+                    Type: NotificationType.JobInvitationReceived,
+                    Title: "Job Invitation",
+                    Body: $"{job.CompanyName ?? "An employer"} invited you to apply for {job.Title}.",
+                    Metadata: metadata),
+                cancellationToken);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogWarning(
+                exception,
+                "Failed to publish job invitation notification for invitation {InvitationId}",
+                invitation.Id);
         }
 
         return new SendJobInvitationResponse(

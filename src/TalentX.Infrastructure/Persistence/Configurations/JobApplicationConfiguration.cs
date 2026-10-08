@@ -51,6 +51,9 @@ public sealed class JobApplicationConfiguration : IEntityTypeConfiguration<JobAp
         builder.Property(application => application.AiMatchScore)
             .HasPrecision(5, 2);
 
+        builder.Property(application => application.AiScoreInputHash)
+            .HasMaxLength(64);
+
         builder.Property(application => application.AppliedAt)
             .IsRequired();
 
