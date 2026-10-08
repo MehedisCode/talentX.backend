@@ -47,5 +47,10 @@ public sealed class InterviewInvitationConfiguration : IEntityTypeConfiguration<
         builder.HasIndex(x => x.EmployerUserId);
         builder.HasIndex(x => x.TalentUserId);
         builder.HasIndex(x => new { x.JobApplicationId, x.Status });
+
+        builder.HasIndex(x => x.JobApplicationId)
+            .IsUnique()
+            .HasFilter("\"Status\" = 'Pending'")
+            .HasDatabaseName("IX_InterviewInvitations_JobApplicationId_Pending_Unique");
     }
 }

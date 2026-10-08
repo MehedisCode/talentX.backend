@@ -11,7 +11,9 @@ public sealed record CandidateInvitationResultDto(
     string CandidateEmail,
     bool Success,
     Guid? InvitationId = null,
-    string? SkipReason = null
+    string? SkipReason = null,
+    bool CanForceSend = false,
+    bool HasDanglingPendingInvite = false
 );
 
 public sealed record SendBatchInterviewInvitationsResult(
@@ -29,5 +31,6 @@ public sealed record SendBatchInterviewInvitationsCommand(
     DateTime? AssessmentDeadline = null,
     string? LocationOrLink = null,
     string? Instructions = null,
-    List<TimeslotInput>? Timeslots = null
+    List<TimeslotInput>? Timeslots = null,
+    bool Force = false
 ) : IRequest<SendBatchInterviewInvitationsResult>;
