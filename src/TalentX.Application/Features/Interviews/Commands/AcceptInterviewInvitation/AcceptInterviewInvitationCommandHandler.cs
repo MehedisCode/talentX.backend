@@ -1,6 +1,9 @@
+using System.Text.Json;
 using MediatR;
+using Microsoft.Extensions.Logging;
 using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
+using TalentX.Application.Common.Models;
 using TalentX.Application.Identity.Services;
 using TalentX.Domain.Entities;
 using TalentX.Domain.Enums;
@@ -13,15 +16,21 @@ public sealed class AcceptInterviewInvitationCommandHandler
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUserService;
     private readonly IEmailService _emailService;
+    private readonly INotificationService _notificationService;
+    private readonly ILogger<AcceptInterviewInvitationCommandHandler> _logger;
 
     public AcceptInterviewInvitationCommandHandler(
         IUnitOfWork unitOfWork,
         ICurrentUserService currentUserService,
-        IEmailService emailService)
+        IEmailService emailService,
+        INotificationService notificationService,
+        ILogger<AcceptInterviewInvitationCommandHandler> logger)
     {
         _unitOfWork = unitOfWork;
         _currentUserService = currentUserService;
         _emailService = emailService;
+        _notificationService = notificationService;
+        _logger = logger;
     }
 
     public async Task Handle(
@@ -74,6 +83,37 @@ public sealed class AcceptInterviewInvitationCommandHandler
         await StageConfirmationEmailAsync(invitation, application, scheduledAt, bookedMeetingUrl, cancellationToken);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        try
+        {
+            var job = await _unitOfWork.Jobs.GetByIdAsync(invitation.JobId, cancellationToken);
+            var candidateName = application?.ApplicantName ?? "Candidate";
+            var jobTitle = job?.Title ?? "Job Position";
+            var metadata = JsonSerializer.Serialize(new
+            {
+                invitationId = invitation.Id,
+                jobId = invitation.JobId,
+                applicationId = invitation.JobApplicationId,
+                candidateName,
+                jobTitle
+            });
+
+            await _notificationService.PublishAsync(
+                new PublishNotificationParameters(
+                    RecipientUserId: invitation.EmployerUserId,
+                    Type: NotificationType.InterviewInvitationAccepted,
+                    Title: "Interview Accepted",
+                    Body: $"{candidateName} accepted the interview invitation for {jobTitle}.",
+                    Metadata: metadata),
+                cancellationToken);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogWarning(
+                exception,
+                "Failed to publish interview accepted notification for invitation {InvitationId}",
+                invitation.Id);
+        }
     }
 
     private async Task StageConfirmationEmailAsync(
