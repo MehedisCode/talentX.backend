@@ -10,6 +10,9 @@ using TalentX.Domain.Entities;
 using TalentX.Domain.Enums;
 using Xunit;
 
+using Microsoft.Extensions.Logging;
+using TalentX.Application.Common.Models;
+
 namespace TalentX.Application.Tests.Features.Invitations;
 
 public class SendJobInvitationCommandHandlerTests
@@ -20,6 +23,8 @@ public class SendJobInvitationCommandHandlerTests
     private readonly Mock<IInvitationRepository> _invitationRepo = new();
     private readonly Mock<ICurrentUserService> _currentUserService = new();
     private readonly Mock<IEmailService> _emailService = new();
+    private readonly Mock<INotificationService> _notificationService = new();
+    private readonly Mock<ILogger<SendJobInvitationCommandHandler>> _logger = new();
     private readonly SendJobInvitationCommandHandler _handler;
 
     private const string CurrentEmployerId = "employer-1";
@@ -34,7 +39,12 @@ public class SendJobInvitationCommandHandlerTests
         _unitOfWork.SetupGet(u => u.Talents).Returns(_talentRepo.Object);
         _unitOfWork.SetupGet(u => u.Invitations).Returns(_invitationRepo.Object);
 
-        _handler = new SendJobInvitationCommandHandler(_unitOfWork.Object, _currentUserService.Object, _emailService.Object);
+        _handler = new SendJobInvitationCommandHandler(
+            _unitOfWork.Object,
+            _currentUserService.Object,
+            _emailService.Object,
+            _notificationService.Object,
+            _logger.Object);
     }
 
     [Fact]
@@ -72,6 +82,48 @@ public class SendJobInvitationCommandHandlerTests
         createdInvitation.Should().NotBeNull();
         createdInvitation!.JobId.Should().Be(job.Id);
         _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+
+        _notificationService.Verify(
+            s => s.PublishAsync(
+                It.Is<PublishNotificationParameters>(p =>
+                    p.RecipientUserId == TalentUserId &&
+                    p.Type == NotificationType.JobInvitationReceived &&
+                    p.Title == "Job Invitation" &&
+                    p.Body.Contains("Acme") &&
+                    p.Metadata != null &&
+                    p.Metadata.Contains(job.Id.ToString())),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_WhenNotificationPublishThrows_StillReturnsSuccess()
+    {
+        var job = Job.Create(
+            CurrentEmployerId, "Backend Engineer", "Acme", "Desc",
+            EmploymentType.FullTime, ExperienceLevel.SeniorLevel, "Remote",
+            WorkArrangement.FullRemote, new List<string> { "C#" }, 2,
+            DateTime.UtcNow.AddDays(30));
+        job.MarkAsPublished();
+
+        _jobRepo.Setup(r => r.GetByIdAsync(_jobId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(job);
+
+        var talent = new Talent(TalentUserId, "Bob", "bob@example.com");
+        _talentRepo.Setup(r => r.GetByUserIdAsync(TalentUserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(talent);
+
+        _invitationRepo.Setup(r => r.ExistsActiveAsync(_jobId, TalentUserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        _notificationService
+            .Setup(s => s.PublishAsync(It.IsAny<PublishNotificationParameters>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("SignalR connection down"));
+
+        var result = await _handler.Handle(new SendJobInvitationCommand(_jobId, TalentUserId), CancellationToken.None);
+
+        result.Should().NotBeNull();
+        result.IsActive.Should().BeTrue();
     }
 
     [Fact]

@@ -1,7 +1,9 @@
 using FluentAssertions;
+using Microsoft.Extensions.Logging;
 using Moq;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Common.Interfaces.Repositories;
+using TalentX.Application.Common.Models;
 using TalentX.Application.Features.Interviews.Commands.SendBatchInterviewInvitations;
 using TalentX.Application.Identity.Services;
 using TalentX.Domain.Entities;
@@ -20,6 +22,8 @@ public class SendBatchInterviewInvitationsCommandHandlerTests
     private readonly Mock<IJobApplicationStatusHistoryRepository> _historyRepository = new();
     private readonly Mock<ICurrentUserService> _currentUserService = new();
     private readonly Mock<IEmailService> _emailService = new();
+    private readonly Mock<INotificationService> _notificationService = new();
+    private readonly Mock<ILogger<SendBatchInterviewInvitationsCommandHandler>> _logger = new();
     private readonly SendBatchInterviewInvitationsCommandHandler _handler;
 
     public SendBatchInterviewInvitationsCommandHandlerTests()
@@ -34,7 +38,9 @@ public class SendBatchInterviewInvitationsCommandHandlerTests
         _handler = new SendBatchInterviewInvitationsCommandHandler(
             _unitOfWork.Object,
             _currentUserService.Object,
-            _emailService.Object);
+            _emailService.Object,
+            _notificationService.Object,
+            _logger.Object);
     }
 
     private static Job CreateJob(string employerId)
@@ -167,5 +173,39 @@ public class SendBatchInterviewInvitationsCommandHandlerTests
         _interviewInvitationRepository.Verify(
             r => r.AddAsync(It.IsAny<InterviewInvitation>(), It.IsAny<CancellationToken>()),
             Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_WhenInviteIsSent_PublishesInterviewInvitationReceivedNotification()
+    {
+        var job = CreateJob("employer-1");
+        var application = CreateApplication(job.Id, "talent-1");
+
+        _jobRepository.Setup(r => r.GetByIdAsync(job.Id, It.IsAny<CancellationToken>())).ReturnsAsync(job);
+        _jobApplicationRepository
+            .Setup(r => r.GetByIdAsync(application.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(application);
+        SetUpNoExistingInvite(application.Id);
+
+        var command = new SendBatchInterviewInvitationsCommand(
+            job.Id,
+            new List<Guid> { application.Id },
+            InterviewType.OnCall,
+            LocationOrLink: "https://meet.example.com/room");
+
+        await _handler.Handle(command, CancellationToken.None);
+
+        _notificationService.Verify(
+            service => service.PublishAsync(
+                It.Is<PublishNotificationParameters>(parameters =>
+                    parameters.RecipientUserId == application.TalentUserId &&
+                    parameters.Type == NotificationType.InterviewInvitationReceived &&
+                    parameters.Title == "Interview Invitation" &&
+                    parameters.Body == $"{job.CompanyName} invited you to interview for {job.Title}." &&
+                    parameters.Metadata!.Contains(job.Id.ToString()) &&
+                    parameters.Metadata.Contains(job.Title) &&
+                    parameters.Metadata.Contains(job.CompanyName)),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 }
