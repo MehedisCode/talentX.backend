@@ -12,5 +12,8 @@ public enum NotificationType
     JobReportDismissed,
     JobDeactivated,
     JobReactivated,
-    JobResubmittedForReview
+    JobResubmittedForReview,
+    InterviewInvitationReceived,
+    InterviewInvitationAccepted,
+    JobInvitationReceived
 }
