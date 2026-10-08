@@ -102,6 +102,41 @@ public class InterviewRulesTests
     }
 
     [Fact]
+    public void EnsureIsPending_WhenPending_DoesNotThrow()
+    {
+        var invitation = CreateOnlineAssessmentInvitation(DateTime.UtcNow.AddHours(1));
+
+        var act = () => InterviewRules.EnsureIsPending(invitation);
+
+        act.Should().NotThrow();
+    }
+
+    [Theory]
+    [InlineData(InterviewInvitationStatus.Accepted)]
+    [InlineData(InterviewInvitationStatus.Declined)]
+    [InlineData(InterviewInvitationStatus.Cancelled)]
+    public void EnsureIsPending_WhenNotPending_ThrowsConflict(InterviewInvitationStatus status)
+    {
+        var invitation = CreateOnCallInvitation(DateTime.UtcNow.AddHours(1));
+        switch (status)
+        {
+            case InterviewInvitationStatus.Accepted:
+                invitation.Accept(invitation.Timeslots[0].Id, DateTime.UtcNow.AddHours(1));
+                break;
+            case InterviewInvitationStatus.Declined:
+                invitation.Decline();
+                break;
+            case InterviewInvitationStatus.Cancelled:
+                invitation.Cancel();
+                break;
+        }
+
+        var act = () => InterviewRules.EnsureIsPending(invitation);
+
+        act.Should().Throw<ConflictException>();
+    }
+
+    [Fact]
     public void IsPast_UsesScheduledAt_WhenInvitationHasBeenAccepted()
     {
         var now = DateTime.UtcNow;

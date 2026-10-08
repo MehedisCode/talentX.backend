@@ -23,6 +23,14 @@ public static class InterviewRules
         }
     }
 
+    public static void EnsureIsPending(InterviewInvitation invitation)
+    {
+        if (invitation.Status != InterviewInvitationStatus.Pending)
+        {
+            throw new ConflictException($"This interview invitation is no longer active (status: {invitation.Status}).");
+        }
+    }
+
     // Mirrors the talent portal's own isPast check (modules/talent-interviews/utils/interview.utils.ts)
     // so the "My Interviews" list order and the card's own expired/completed badge never disagree.
     public static bool IsPast(InterviewInvitation invitation, DateTime utcNow)

@@ -126,6 +126,7 @@ public class JobApplicationDetailsControllerTests
             VideoIntroUrl: null,
             ResumeOriginalFileName: "Resume.pdf",
             ResumeUrl: "https://storage.test/resume.pdf",
+            ResumeKind: null,
             ApplicationStatus: "Applied",
             AiMatchScore: 86m,
             CoverLetter: null,
