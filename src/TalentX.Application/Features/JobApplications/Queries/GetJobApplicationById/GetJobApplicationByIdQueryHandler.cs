@@ -3,6 +3,7 @@ using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Features.JobApplications.DTOs;
 using TalentX.Application.Identity.Services;
+using TalentX.Domain;
 
 namespace TalentX.Application.Features.JobApplications.Queries.GetJobApplicationById;
 
@@ -52,10 +53,16 @@ public sealed class GetJobApplicationByIdQueryHandler
                 cancellationToken);
         }
 
+        // Show the talent's CURRENT profile name (mirrors the candidate-profile endpoint);
+        // the frozen application.ApplicantName is the fallback for guests / missing talent rows.
+        var talent = string.IsNullOrWhiteSpace(application.TalentUserId)
+            ? null
+            : await _unitOfWork.Talents.GetByUserIdAsync(application.TalentUserId, cancellationToken);
+
         return new JobApplicationDetailsDto(
             application.Id,
             application.JobId,
-            application.ApplicantName,
+            talent?.Name ?? application.ApplicantName,
             application.ApplicantEmail,
             application.ResumeStorageKey,
             resumeDownloadUrl,
