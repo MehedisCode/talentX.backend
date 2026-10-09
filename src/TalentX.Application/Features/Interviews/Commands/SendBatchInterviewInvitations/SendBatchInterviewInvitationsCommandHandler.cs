@@ -63,7 +63,9 @@ public sealed class SendBatchInterviewInvitationsCommandHandler
                     "",
                     Success: false,
                     InvitationId: null,
-                    SkipReason: "Job application was not found or does not belong to this job."));
+                    SkipReason: "Job application was not found or does not belong to this job.",
+                    CanForceSend: false,
+                    HasDanglingPendingInvite: false));
                 continue;
             }
 
@@ -81,43 +83,73 @@ public sealed class SendBatchInterviewInvitationsCommandHandler
 
             if (string.IsNullOrWhiteSpace(application.TalentUserId))
             {
-                // No registered talent account to invite into the portal (e.g. a guest
-                // application awaiting email verification) — nothing to link the invitation to.
                 results.Add(new CandidateInvitationResultDto(
                     applicationId,
                     candidateName,
                     candidateEmail,
                     Success: false,
                     InvitationId: null,
-                    SkipReason: "Candidate does not have a registered talent account to receive portal invitations."));
-                continue;
-            }
-
-            if (application.Status is ApplicationStatus.Hired or ApplicationStatus.Rejected)
-            {
-                // Already resolved; don't let a re-invite silently overwrite a hiring/rejection decision.
-                results.Add(new CandidateInvitationResultDto(
-                    applicationId,
-                    candidateName,
-                    candidateEmail,
-                    Success: false,
-                    InvitationId: null,
-                    SkipReason: $"Candidate application is already resolved ({application.Status})."));
+                    SkipReason: "Candidate does not have a registered talent account to receive portal invitations.",
+                    CanForceSend: false,
+                    HasDanglingPendingInvite: false));
                 continue;
             }
 
             var existingInvite = await _unitOfWork.InterviewInvitations.GetByApplicationIdAsync(applicationId, cancellationToken);
-            if (existingInvite is not null && existingInvite.Status == InterviewInvitationStatus.Pending)
+            var hasDanglingPendingInvite = existingInvite?.Status == InterviewInvitationStatus.Pending;
+
+            if (application.Status == ApplicationStatus.Hired)
             {
-                // A pending invitation already exists for this application; don't send a duplicate.
                 results.Add(new CandidateInvitationResultDto(
                     applicationId,
                     candidateName,
                     candidateEmail,
                     Success: false,
                     InvitationId: null,
-                    SkipReason: "Candidate already has a pending interview invitation for this position."));
+                    SkipReason: $"Candidate application is already resolved ({application.Status}).",
+                    CanForceSend: false,
+                    HasDanglingPendingInvite: hasDanglingPendingInvite));
                 continue;
+            }
+
+            if (application.Status == ApplicationStatus.Rejected)
+            {
+                if (!request.Force)
+                {
+                    results.Add(new CandidateInvitationResultDto(
+                        applicationId,
+                        candidateName,
+                        candidateEmail,
+                        Success: false,
+                        InvitationId: null,
+                        SkipReason: $"Candidate application is already resolved ({application.Status}).",
+                        CanForceSend: true,
+                        HasDanglingPendingInvite: hasDanglingPendingInvite));
+                    continue;
+                }
+
+                if (hasDanglingPendingInvite)
+                {
+                    existingInvite!.Cancel();
+                }
+            }
+            else if (hasDanglingPendingInvite)
+            {
+                if (!request.Force)
+                {
+                    results.Add(new CandidateInvitationResultDto(
+                        applicationId,
+                        candidateName,
+                        candidateEmail,
+                        Success: false,
+                        InvitationId: null,
+                        SkipReason: "Candidate already has a pending interview invitation for this position.",
+                        CanForceSend: true,
+                        HasDanglingPendingInvite: false));
+                    continue;
+                }
+
+                existingInvite!.Cancel();
             }
 
             var invitation = new InterviewInvitation(
@@ -168,7 +200,9 @@ public sealed class SendBatchInterviewInvitationsCommandHandler
                 candidateEmail,
                 Success: true,
                 InvitationId: invitation.Id,
-                SkipReason: null));
+                SkipReason: null,
+                CanForceSend: false,
+                HasDanglingPendingInvite: false));
 
             successfulInvitations.Add((invitation, application));
         }

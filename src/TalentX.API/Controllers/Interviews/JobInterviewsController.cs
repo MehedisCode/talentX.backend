@@ -13,7 +13,18 @@ namespace TalentX.API.Controllers.Interviews;
 [Authorize(Roles = nameof(UserRole.Employer))]
 public sealed class JobInterviewsController : BaseApiController
 {
+    /// <param name="jobId">The job to send invitations for.</param>
+    /// <param name="command">
+    /// </param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The per-candidate invite/skip results and summary counts.</returns>
     [HttpPost("{jobId:guid}/interviews/send-batch")]
+    [ProducesResponseType(typeof(SendBatchInterviewInvitationsResult), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> SendBatchInterviewInvitations(
         Guid jobId,
         [FromBody] SendBatchInterviewInvitationsCommand command,
