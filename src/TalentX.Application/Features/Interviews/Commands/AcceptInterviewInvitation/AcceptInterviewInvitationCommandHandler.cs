@@ -5,6 +5,7 @@ using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Common.Models;
 using TalentX.Application.Identity.Services;
+using TalentX.Domain;
 using TalentX.Domain.Entities;
 using TalentX.Domain.Enums;
 
@@ -80,21 +81,23 @@ public sealed class AcceptInterviewInvitationCommandHandler
                 cancellationToken);
         }
 
-        await StageConfirmationEmailAsync(invitation, application, scheduledAt, bookedMeetingUrl, cancellationToken);
+        var candidateDisplayName = await ResolveDisplayNameAsync(application, cancellationToken);
+
+        await StageConfirmationEmailAsync(invitation, application, candidateDisplayName, scheduledAt, bookedMeetingUrl, cancellationToken);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         try
         {
             var job = await _unitOfWork.Jobs.GetByIdAsync(invitation.JobId, cancellationToken);
-            var candidateName = application?.ApplicantName ?? "Candidate";
+            var acceptedCandidateName = candidateDisplayName;
             var jobTitle = job?.Title ?? "Job Position";
             var metadata = JsonSerializer.Serialize(new
             {
                 invitationId = invitation.Id,
                 jobId = invitation.JobId,
                 applicationId = invitation.JobApplicationId,
-                candidateName,
+                candidateName = acceptedCandidateName,
                 jobTitle
             });
 
@@ -103,7 +106,7 @@ public sealed class AcceptInterviewInvitationCommandHandler
                     RecipientUserId: invitation.EmployerUserId,
                     Type: NotificationType.InterviewInvitationAccepted,
                     Title: "Interview Accepted",
-                    Body: $"{candidateName} accepted the interview invitation for {jobTitle}.",
+                    Body: $"{acceptedCandidateName} accepted the interview invitation for {jobTitle}.",
                     Metadata: metadata),
                 cancellationToken);
         }
@@ -116,9 +119,26 @@ public sealed class AcceptInterviewInvitationCommandHandler
         }
     }
 
+    private async Task<string> ResolveDisplayNameAsync(Domain.Entities.JobApplication? application, CancellationToken cancellationToken)
+    {
+        // Show the talent's CURRENT profile name; the frozen application.ApplicantName is the
+        // fallback for guests / missing talent rows.
+        if (!string.IsNullOrWhiteSpace(application?.TalentUserId))
+        {
+            var talent = await _unitOfWork.Talents.GetByUserIdAsync(application.TalentUserId, cancellationToken);
+            if (!string.IsNullOrWhiteSpace(talent?.Name))
+            {
+                return talent!.Name;
+            }
+        }
+
+        return string.IsNullOrWhiteSpace(application?.ApplicantName) ? "Candidate" : application.ApplicantName;
+    }
+
     private async Task StageConfirmationEmailAsync(
         InterviewInvitation invitation,
         Domain.Entities.JobApplication? application,
+        string recipientName,
         DateTime? scheduledAt,
         string? bookedMeetingUrl,
         CancellationToken cancellationToken)
@@ -130,7 +150,6 @@ public sealed class AcceptInterviewInvitationCommandHandler
         }
 
         var job = await _unitOfWork.Jobs.GetByIdAsync(invitation.JobId, cancellationToken);
-        var recipientName = application?.ApplicantName ?? "Candidate";
         var jobTitle = job?.Title ?? "Job Position";
         var companyName = job?.CompanyName ?? "Employer";
 

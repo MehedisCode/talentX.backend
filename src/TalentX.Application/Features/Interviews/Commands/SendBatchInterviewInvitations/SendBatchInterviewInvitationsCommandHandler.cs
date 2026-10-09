@@ -5,6 +5,7 @@ using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Common.Models;
 using TalentX.Application.Identity.Services;
+using TalentX.Domain;
 using TalentX.Domain.Entities;
 using TalentX.Domain.Enums;
 
@@ -66,7 +67,16 @@ public sealed class SendBatchInterviewInvitationsCommandHandler
                 continue;
             }
 
-            var candidateName = string.IsNullOrWhiteSpace(application.ApplicantName) ? "Candidate" : application.ApplicantName;
+            // Greet with the talent's CURRENT profile name (mirrors the applicants list);
+            // the frozen application.ApplicantName is the fallback for guests / missing rows.
+            string? talentName = null;
+            if (!string.IsNullOrWhiteSpace(application.TalentUserId))
+            {
+                talentName = (await _unitOfWork.Talents.GetByUserIdAsync(application.TalentUserId!, cancellationToken))?.Name;
+            }
+            var candidateName = talentName
+                ?? (string.IsNullOrWhiteSpace(application.ApplicantName) ? null : application.ApplicantName)
+                ?? "Candidate";
             var candidateEmail = application.ApplicantEmail ?? "";
 
             if (string.IsNullOrWhiteSpace(application.TalentUserId))
@@ -140,12 +150,12 @@ public sealed class SendBatchInterviewInvitationsCommandHandler
             {
                 var subject = $"New Interview Invitation: {job.Title} at {job.CompanyName}";
                 var htmlBody = await _emailService.RenderInterviewInvitationEmailAsync(
-                    application.ApplicantName, job.Title, job.CompanyName, cancellationToken);
+                    candidateName, job.Title, job.CompanyName, cancellationToken);
 
                 await _unitOfWork.EmailDispatchLogs.AddAsync(
                     new EmailDispatchLog(
                         application.ApplicantEmail,
-                        application.ApplicantName,
+                        candidateName,
                         subject,
                         htmlBody,
                         "InterviewInvitation"),

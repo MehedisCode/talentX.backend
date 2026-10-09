@@ -5,6 +5,7 @@ using TalentX.Application.Common.Interfaces.Repositories;
 using TalentX.Application.Common.Models;
 using TalentX.Application.Features.Interviews.DTOs;
 using TalentX.Application.Identity.Services;
+using TalentX.Domain;
 
 namespace TalentX.Application.Features.Interviews.Queries.GetEmployerJobInterviews;
 
@@ -43,6 +44,19 @@ public sealed class GetEmployerJobInterviewsQueryHandler
         var invitations = await _unitOfWork.InterviewInvitations.GetByJobIdPaginatedAsync(
             request.JobId, filter, page, pageSize, cancellationToken);
 
+        // Show the applicant's CURRENT profile name (mirrors the applicants list); the frozen
+        // JobApplication.ApplicantName is only a fallback for talents whose profile row is missing.
+        var talentUserIds = invitations.Items
+            .Where(invite => !string.IsNullOrWhiteSpace(invite.TalentUserId))
+            .Select(invite => invite.TalentUserId)
+            .Distinct()
+            .ToList();
+        var talentsByUserId = new Dictionary<string, Talent>();
+        foreach (var talent in await _unitOfWork.Talents.GetByUserIdsAsync(talentUserIds, cancellationToken))
+        {
+            talentsByUserId[talent.UserId] = talent;
+        }
+
         var result = new List<EmployerInterviewDto>();
 
         foreach (var invite in invitations.Items)
@@ -54,12 +68,14 @@ public sealed class GetEmployerJobInterviewsQueryHandler
                 t.IsBooked,
                 t.MeetingUrl)).ToList();
 
+            var talent = talentsByUserId.GetValueOrDefault(invite.TalentUserId);
+
             result.Add(new EmployerInterviewDto(
                 invite.Id,
                 invite.JobId,
                 invite.JobApplicationId,
                 invite.TalentUserId,
-                invite.JobApplication?.ApplicantName ?? "Candidate",
+                talent?.Name ?? invite.JobApplication?.ApplicantName ?? "Candidate",
                 invite.JobApplication?.ApplicantEmail ?? "",
                 invite.Type.ToString(),
                 invite.Status.ToString(),
