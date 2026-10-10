@@ -148,6 +148,7 @@ public class AuthController : BaseApiController
     }
 
     [Authorize(Roles = $"{nameof(UserRole.Employer)},{nameof(UserRole.Talent)}")]
+    [EnableRateLimiting("DeleteAccountOtp")]
     [HttpPost("delete-account/send-otp")]
     public async Task<IActionResult> SendDeleteAccountOtp(CancellationToken cancellationToken)
     {

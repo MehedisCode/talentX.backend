@@ -4,6 +4,7 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using TalentX.API.Controllers.Auth;
@@ -139,6 +140,25 @@ public sealed class AuthControllerTests
 
         attribute.Should().NotBeNull();
         attribute!.Roles.Should().Be("Employer,Talent");
+    }
+
+    [Fact]
+    public void SendDeleteAccountOtp_IsRateLimitedWithDeleteAccountOtpPolicy()
+    {
+        var method = typeof(AuthController).GetMethod(nameof(AuthController.SendDeleteAccountOtp));
+        var rateLimit = method?.GetCustomAttribute<EnableRateLimitingAttribute>(inherit: false);
+
+        rateLimit.Should().NotBeNull();
+        rateLimit!.PolicyName.Should().Be("DeleteAccountOtp");
+    }
+
+    [Fact]
+    public void DeleteAccount_HasNoRateLimitingPolicy()
+    {
+        var method = typeof(AuthController).GetMethod(nameof(AuthController.DeleteAccount));
+        var rateLimit = method?.GetCustomAttribute<EnableRateLimitingAttribute>(inherit: false);
+
+        rateLimit.Should().BeNull();
     }
 
     [Fact]

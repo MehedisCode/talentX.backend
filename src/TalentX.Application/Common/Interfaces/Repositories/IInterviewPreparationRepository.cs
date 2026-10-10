@@ -9,6 +9,8 @@ public interface IInterviewPreparationRepository
         Guid interviewInvitationId, CancellationToken ct = default);
     Task<IReadOnlyList<InterviewPreparation>> GetByTalentUserIdAsync(
         string talentUserId, CancellationToken ct = default);
+    Task DeleteByTalentUserIdAsync(string talentUserId, CancellationToken ct = default);
+    Task DeleteByJobIdsAsync(IEnumerable<Guid> jobIds, CancellationToken ct = default);
     Task AddAsync(InterviewPreparation entity, CancellationToken ct = default);
     void Update(InterviewPreparation entity);
 
