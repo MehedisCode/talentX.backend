@@ -37,6 +37,41 @@ public sealed class InterviewPreparationRepository : IInterviewPreparationReposi
             .ToListAsync(ct);
     }
 
+    public async Task DeleteByTalentUserIdAsync(string talentUserId, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(talentUserId))
+        {
+            return;
+        }
+
+        var preparations = await _context.InterviewPreparations
+            .Where(p => p.TalentUserId == talentUserId)
+            .ToListAsync(ct);
+
+        if (preparations.Count > 0)
+        {
+            _context.InterviewPreparations.RemoveRange(preparations);
+        }
+    }
+
+    public async Task DeleteByJobIdsAsync(IEnumerable<Guid> jobIds, CancellationToken ct = default)
+    {
+        var ids = jobIds.Distinct().ToList();
+        if (ids.Count == 0)
+        {
+            return;
+        }
+
+        var preparations = await _context.InterviewPreparations
+            .Where(p => ids.Contains(p.JobId))
+            .ToListAsync(ct);
+
+        if (preparations.Count > 0)
+        {
+            _context.InterviewPreparations.RemoveRange(preparations);
+        }
+    }
+
     public async Task AddAsync(InterviewPreparation entity, CancellationToken ct = default)
     {
         await _context.InterviewPreparations.AddAsync(entity, ct);

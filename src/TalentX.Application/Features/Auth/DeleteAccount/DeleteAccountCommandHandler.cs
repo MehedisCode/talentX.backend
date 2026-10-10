@@ -156,7 +156,11 @@ public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountC
                 resumeStorageKeys.AddRange(await _unitOfWork.JobApplications
                     .GetResumeStorageKeysByJobIdsAsync(jobIds, cancellationToken));
 
+                // Jobs' Restrict-FK children (moderation histories, reports, interview
+                // preparations) must be deleted before the jobs or the delete fails 23503.
                 await _unitOfWork.JobModerationHistories.DeleteByJobIdsAsync(jobIds, cancellationToken);
+                await _unitOfWork.JobReports.DeleteByJobIdsAsync(jobIds, cancellationToken);
+                await _unitOfWork.InterviewPreparations.DeleteByJobIdsAsync(jobIds, cancellationToken);
                 _unitOfWork.Jobs.RemoveRange(jobs);
             }
 
@@ -182,6 +186,11 @@ public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountC
             // Reviews first: they reference the job applications deleted next.
             await _unitOfWork.CompanyReviews.DeleteByTalentUserIdAsync(identityUserId, cancellationToken);
             await _unitOfWork.JobApplications.DeleteByTalentUserIdAsync(identityUserId, cancellationToken);
+
+            // Preparations reference their invitation by cascade FK; deleting them
+            // first keeps audit rows explicit. Job reports have no FK on ReporterUserId.
+            await _unitOfWork.InterviewPreparations.DeleteByTalentUserIdAsync(identityUserId, cancellationToken);
+            await _unitOfWork.JobReports.DeleteByReporterUserIdAsync(identityUserId, cancellationToken);
             await _unitOfWork.InterviewInvitations.DeleteByTalentUserIdAsync(identityUserId, cancellationToken);
             await _unitOfWork.Invitations.DeleteByTalentUserIdAsync(identityUserId, cancellationToken);
             await _unitOfWork.JobTalentMatches.DeleteByTalentUserIdAsync(identityUserId, cancellationToken);

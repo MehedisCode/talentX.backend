@@ -21,4 +21,7 @@ public interface IJobReportRepository
         int page,
         int pageSize,
         CancellationToken cancellationToken = default);
+
+    Task DeleteByJobIdsAsync(IEnumerable<Guid> jobIds, CancellationToken cancellationToken = default);
+    Task DeleteByReporterUserIdAsync(string reporterUserId, CancellationToken cancellationToken = default);
 }

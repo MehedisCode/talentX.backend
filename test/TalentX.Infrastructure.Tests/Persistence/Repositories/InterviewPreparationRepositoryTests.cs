@@ -20,13 +20,14 @@ public sealed class InterviewPreparationRepositoryTests
 
     private static InterviewPreparation NewPreparation(
         string talentUserId = "talent-1",
-        Guid? interviewInvitationId = null)
+        Guid? interviewInvitationId = null,
+        Guid? jobId = null)
     {
         return InterviewPreparation.Create(
             new CreateInterviewPreparationPayload(
                 InterviewInvitationId: interviewInvitationId ?? Guid.NewGuid(),
                 TalentUserId: talentUserId,
-                JobId: Guid.NewGuid(),
+                JobId: jobId ?? Guid.NewGuid(),
                 JobTitle: "Backend Engineer",
                 CompanyName: "Acme Corp",
                 InterviewType: "Technical",
@@ -266,5 +267,68 @@ public sealed class InterviewPreparationRepositoryTests
         stored!.InterviewPreparationId.Should().Be(preparation.Id);
         stored.Kind.Should().Be(
             TalentX.Domain.Enums.InterviewPreparationGenerationKind.Initial);
+    }
+
+    [Fact]
+    public async Task DeleteByTalentUserIdAsync_DeletesOnlyThatTalentsPreparations()
+    {
+        await using var context = NewContext();
+        var repository = new InterviewPreparationRepository(context);
+        var preparation = NewPreparation(talentUserId: "talent-1");
+        var otherTalent = NewPreparation(talentUserId: "talent-2");
+        context.InterviewPreparations.AddRange(preparation, otherTalent);
+        await context.SaveChangesAsync();
+
+        await repository.DeleteByTalentUserIdAsync("talent-1");
+        await context.SaveChangesAsync();
+
+        context.InterviewPreparations.Should().ContainSingle(x => x.TalentUserId == "talent-2");
+    }
+
+    [Fact]
+    public async Task DeleteByTalentUserIdAsync_WhenTalentHasNoPreparations_DoesNothing()
+    {
+        await using var context = NewContext();
+        var repository = new InterviewPreparationRepository(context);
+        context.InterviewPreparations.Add(NewPreparation(talentUserId: "talent-1"));
+        await context.SaveChangesAsync();
+
+        await repository.DeleteByTalentUserIdAsync("talent-unknown");
+        await context.SaveChangesAsync();
+
+        context.InterviewPreparations.Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task DeleteByJobIdsAsync_DeletesPreparationsMatchingJobIds()
+    {
+        await using var context = NewContext();
+        var repository = new InterviewPreparationRepository(context);
+        var jobId1 = Guid.NewGuid();
+        var jobId2 = Guid.NewGuid();
+        var preparation1 = NewPreparation(jobId: jobId1);
+        var preparation2 = NewPreparation(jobId: jobId2);
+        var otherJob = NewPreparation();
+        context.InterviewPreparations.AddRange(preparation1, preparation2, otherJob);
+        await context.SaveChangesAsync();
+
+        await repository.DeleteByJobIdsAsync(new[] { jobId1, jobId2 });
+        await context.SaveChangesAsync();
+
+        context.InterviewPreparations.Should().ContainSingle(x => x.Id == otherJob.Id);
+    }
+
+    [Fact]
+    public async Task DeleteByJobIdsAsync_WhenIdsEmpty_DoesNothing()
+    {
+        await using var context = NewContext();
+        var repository = new InterviewPreparationRepository(context);
+        context.InterviewPreparations.Add(NewPreparation());
+        await context.SaveChangesAsync();
+
+        await repository.DeleteByJobIdsAsync(Array.Empty<Guid>());
+        await context.SaveChangesAsync();
+
+        context.InterviewPreparations.Should().ContainSingle();
     }
 }

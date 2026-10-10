@@ -247,7 +247,7 @@ Verifies a guest candidate's job application email using the verification link t
 
 ## 10. Send Delete Account OTP
 
-Emails a 6-digit, single-use verification code to the **authenticated** user's own address, used to confirm a permanent account deletion. No email is accepted in the request body, so the code can only ever be sent to the caller. Codes are keyed separately from signup OTPs, expire after 10 minutes, and are invalidated for 10 minutes after 5 failed verification attempts.
+Emails a 6-digit, single-use verification code to the **authenticated** user's own address, used to confirm a permanent account deletion. No email is accepted in the request body, so the code can only ever be sent to the caller. Codes are keyed separately from signup OTPs, expire after 2 minutes, and are invalidated for 10 minutes after 5 failed verification attempts. A resend is rejected for 60 seconds after a successful send, and the endpoint is rate-limited to **5 requests per 10 minutes per authenticated user** (ASP.NET fixed-window limiter, policy `DeleteAccountOtp`).
 
 * **Method**: `POST`
 * **Route**: `/api/v1/auth/delete-account/send-otp`
@@ -260,14 +260,16 @@ None.
 * `204 No Content`: Code generated and dispatched.
 
 ### Error Responses
+* `400 Bad Request`: A code was sent within the last 60 seconds (`Please wait {n} seconds…`).
 * `401 Unauthorized`: Missing or invalid access token.
 * `403 Forbidden`: Caller is neither `Employer` nor `Talent`.
+* `429 Too Many Requests`: Rate limit (`DeleteAccountOtp`) exceeded; includes a `Retry-After` header. No OTP is generated or emailed.
 
 ---
 
 ## 11. Delete Account
 
-Permanently (hard) deletes the authenticated user's account and all owned domain data — profile, resume, work experience, education, saved jobs, applications, invitations, interview invitations, matches, and (for employers) every job posting including soft-deleted ones, along with its cascaded applications. The identity row is then removed, all refresh tokens are revoked, and a confirmation email is sent. The operation is single-use per code; a second call requires a new code.
+Permanently (hard) deletes the authenticated user's account and all owned domain data — profile, resume, work experience, education, saved jobs, applications, invitations, interview invitations, interview preparations, job reports, company reviews, company, and (for employers) every job posting including soft-deleted ones, along with moderator histories, reports, and preparations attached to those jobs. The identity row is then removed, all refresh tokens are revoked, and a confirmation email is sent. The operation is single-use per code; a second call requires a new code.
 
 * **Method**: `POST`
 * **Route**: `/api/v1/auth/delete-account`
