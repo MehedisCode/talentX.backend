@@ -439,4 +439,46 @@ public sealed class JobApplicationRepositoryTests
             .ToArray();
         page.Items.Select(a => a.Id).Should().ContainInOrder(expectedIds);
     }
+
+    [Fact]
+    public async Task GetByJobIdPaginatedAsync_ExcludesPendingVerificationApplications()
+    {
+        await using var context = NewContext();
+        var repository = new JobApplicationRepository(context);
+        var jobId = Guid.NewGuid();
+
+        var verified = NewApplication(jobId, talentUserId: "talent-1");
+        var unverifiedGuest = NewApplication(jobId, talentUserId: null);
+        await repository.AddAsync(verified);
+        await repository.AddAsync(unverifiedGuest);
+        await context.SaveChangesAsync();
+
+        unverifiedGuest.Status.Should().Be(ApplicationStatus.PendingVerification);
+
+        var page = await repository.GetByJobIdPaginatedAsync(
+            jobId, search: null, status: null, sortBy: null, sortOrder: null,
+            page: 1, pageSize: 10);
+
+        page.Items.Should().ContainSingle()
+            .Which.Id.Should().Be(verified.Id);
+        page.TotalCount.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task GetByJobIdPaginatedAsync_ExplicitPendingVerificationFilter_ReturnsNothing()
+    {
+        await using var context = NewContext();
+        var repository = new JobApplicationRepository(context);
+        var jobId = Guid.NewGuid();
+
+        await repository.AddAsync(NewApplication(jobId, talentUserId: null));
+        await context.SaveChangesAsync();
+
+        var page = await repository.GetByJobIdPaginatedAsync(
+            jobId, search: null, status: ApplicationStatus.PendingVerification, sortBy: null, sortOrder: null,
+            page: 1, pageSize: 10);
+
+        page.Items.Should().BeEmpty();
+        page.TotalCount.Should().Be(0);
+    }
 }

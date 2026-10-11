@@ -40,8 +40,10 @@ public sealed class ScoreJobApplicantsCommandHandler
         var batchSize = MatchingBatch.ResolveSize(_configuration);
         var job = await GetAndValidateJobAsync(request.JobId, cancellationToken);
 
-        var applications = await _unitOfWork.JobApplications
-            .GetByJobIdAsync(job.Id, cancellationToken);
+        var applications = (await _unitOfWork.JobApplications
+            .GetByJobIdAsync(job.Id, cancellationToken))
+            .Where(application => application.Status != ApplicationStatus.PendingVerification)
+            .ToList();
 
         if (applications.Count == 0)
         {
