@@ -72,4 +72,39 @@ public sealed class JobReportRepository : IJobReportRepository
 
         return new PaginatedList<JobReport>(items, page, pageSize, totalCount);
     }
+
+    public async Task DeleteByJobIdsAsync(IEnumerable<Guid> jobIds, CancellationToken cancellationToken = default)
+    {
+        var ids = jobIds.Distinct().ToList();
+        if (ids.Count == 0)
+        {
+            return;
+        }
+
+        var reports = await _context.JobReports
+            .Where(r => ids.Contains(r.JobId))
+            .ToListAsync(cancellationToken);
+
+        if (reports.Count > 0)
+        {
+            _context.JobReports.RemoveRange(reports);
+        }
+    }
+
+    public async Task DeleteByReporterUserIdAsync(string reporterUserId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(reporterUserId))
+        {
+            return;
+        }
+
+        var reports = await _context.JobReports
+            .Where(r => r.ReporterUserId == reporterUserId)
+            .ToListAsync(cancellationToken);
+
+        if (reports.Count > 0)
+        {
+            _context.JobReports.RemoveRange(reports);
+        }
+    }
 }

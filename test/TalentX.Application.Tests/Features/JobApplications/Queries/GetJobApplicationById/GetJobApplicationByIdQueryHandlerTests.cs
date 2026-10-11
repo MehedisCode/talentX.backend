@@ -15,6 +15,7 @@ public class GetJobApplicationByIdQueryHandlerTests
 {
     private readonly Mock<IJobRepository> _jobRepository = new();
     private readonly Mock<IJobApplicationRepository> _jobApplicationRepository = new();
+    private readonly Mock<ITalentRepository> _talentRepository = new();
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
     private readonly Mock<ICurrentUserService> _currentUserService = new();
     private readonly Mock<IPresignedUrlService> _presignedUrlService = new();
@@ -24,6 +25,10 @@ public class GetJobApplicationByIdQueryHandlerTests
     {
         _unitOfWork.Setup(u => u.Jobs).Returns(_jobRepository.Object);
         _unitOfWork.Setup(u => u.JobApplications).Returns(_jobApplicationRepository.Object);
+        _unitOfWork.Setup(u => u.Talents).Returns(_talentRepository.Object);
+        _talentRepository
+            .Setup(r => r.GetByUserIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Talent?)null);
         _currentUserService.SetupGet(u => u.UserId).Returns("talent-1");
         _presignedUrlService.Setup(p => p.CreateDownloadUrlAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync("https://s3.amazonaws.com/test-bucket/resumes/abc_cv.pdf?signature");
@@ -133,6 +138,26 @@ public class GetJobApplicationByIdQueryHandlerTests
         var act = () => _handler.Handle(new GetJobApplicationByIdQuery(Guid.NewGuid()), CancellationToken.None);
 
         await act.Should().ThrowAsync<NotFoundException>();
+    }
+
+    [Fact]
+    public async Task Handle_WhenTalentRenamedAfterApply_ReturnsCurrentNameWithoutChangingEmail()
+    {
+        var jobId = Guid.NewGuid();
+        var application = ApplicationBy("talent-1", jobId);
+        var renamedTalent = new Talent("talent-1", "Jane Renamed", "jane-renamed@example.com");
+
+        _jobApplicationRepository
+            .Setup(r => r.GetByIdAsync(application.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(application);
+        _talentRepository
+            .Setup(r => r.GetByUserIdAsync("talent-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(renamedTalent);
+
+        var result = await _handler.Handle(new GetJobApplicationByIdQuery(application.Id), CancellationToken.None);
+
+        result.ApplicantName.Should().Be("Jane Renamed");
+        result.ApplicantEmail.Should().Be("jane@example.com");
     }
 
     [Fact]

@@ -26,6 +26,21 @@ public sealed class TalentRepository : ITalentRepository
             .FirstOrDefaultAsync(talent => talent.UserId == userId, cancellationToken);
     }
 
+    public async Task<IReadOnlyList<Talent>> GetByUserIdsAsync(
+        IReadOnlyCollection<string> userIds,
+        CancellationToken cancellationToken = default)
+    {
+        if (userIds.Count == 0)
+        {
+            return [];
+        }
+
+        return await _context.Talents
+            .AsNoTracking()
+            .Where(talent => userIds.Contains(talent.UserId))
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<Talent?> GetByEmailAsync(string email, CancellationToken cancellationToken = default)
     {
         return await _context.Talents

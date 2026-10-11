@@ -7,6 +7,7 @@ using TalentX.Application.Common.Interfaces.Repositories;
 using TalentX.Application.Common.Models;
 using TalentX.Application.Features.Interviews.Commands.AcceptInterviewInvitation;
 using TalentX.Application.Identity.Services;
+using TalentX.Domain;
 using TalentX.Domain.Entities;
 using TalentX.Domain.Enums;
 using Xunit;
@@ -23,6 +24,7 @@ public class AcceptInterviewInvitationCommandHandlerTests
     private readonly Mock<IJobApplicationRepository> _jobApplicationRepository = new();
     private readonly Mock<IJobApplicationStatusHistoryRepository> _historyRepository = new();
     private readonly Mock<IEmailDispatchLogRepository> _emailDispatchLogRepository = new();
+    private readonly Mock<ITalentRepository> _talentRepository = new();
     private readonly Mock<ICurrentUserService> _currentUserService = new();
     private readonly Mock<IEmailService> _emailService = new();
     private readonly Mock<INotificationService> _notificationService = new();
@@ -36,6 +38,10 @@ public class AcceptInterviewInvitationCommandHandlerTests
         _unitOfWork.SetupGet(u => u.JobApplications).Returns(_jobApplicationRepository.Object);
         _unitOfWork.SetupGet(u => u.JobApplicationStatusHistories).Returns(_historyRepository.Object);
         _unitOfWork.SetupGet(u => u.EmailDispatchLogs).Returns(_emailDispatchLogRepository.Object);
+        _unitOfWork.SetupGet(u => u.Talents).Returns(_talentRepository.Object);
+        _talentRepository
+            .Setup(r => r.GetByUserIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Talent?)null);
         _currentUserService.SetupGet(u => u.UserId).Returns(TalentUserId);
         _currentUserService.SetupGet(u => u.Email).Returns((string?)null);
         _jobApplicationRepository
@@ -209,6 +215,54 @@ public class AcceptInterviewInvitationCommandHandlerTests
                     parameters.Body == "Jane Doe accepted the interview invitation for Senior Backend Engineer." &&
                     parameters.Metadata!.Contains(invitation.Id.ToString()) &&
                     parameters.Metadata.Contains("Jane Doe")),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_WhenTalentRenamedAfterApply_GreetsWithCurrentName()
+    {
+        var invitation = CreateOnlineAssessmentInvitation(DateTime.UtcNow.AddHours(1));
+        var job = CreateJob(invitation.EmployerUserId);
+        var application = new JobApplication(
+            invitation.JobId,
+            TalentUserId,
+            "Jane Doe",
+            "jane@example.com",
+            "resumes/jane.pdf");
+        var renamedTalent = new Talent(TalentUserId, "Jane Renamed", "jane@example.com");
+
+        _interviewInvitationRepository
+            .Setup(r => r.GetByIdWithTimeslotsAsync(invitation.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(invitation);
+        _jobRepository
+            .Setup(r => r.GetByIdAsync(invitation.JobId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(job);
+        _jobApplicationRepository
+            .Setup(r => r.GetByIdAsync(invitation.JobApplicationId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(application);
+        _talentRepository
+            .Setup(r => r.GetByUserIdAsync(TalentUserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(renamedTalent);
+
+        await _handler.Handle(new AcceptInterviewInvitationCommand(invitation.Id), CancellationToken.None);
+
+        invitation.Status.Should().Be(InterviewInvitationStatus.Accepted);
+        _emailService.Verify(
+            service => service.RenderInterviewConfirmationEmailAsync(
+                "Jane Renamed",
+                job.Title,
+                job.CompanyName,
+                invitation.Type.ToString(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string?>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        _notificationService.Verify(
+            service => service.PublishAsync(
+                It.Is<PublishNotificationParameters>(parameters =>
+                    parameters.Body == "Jane Renamed accepted the interview invitation for Senior Backend Engineer."),
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }
