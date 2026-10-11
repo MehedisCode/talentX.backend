@@ -134,9 +134,12 @@ public sealed class JobApplicationRepository : IJobApplicationRepository
         int pageSize,
         CancellationToken cancellationToken = default)
     {
+        // Unverified guests (PendingVerification) stay invisible to employers until their
+        // email is verified and the application flips to Applied.
         var query = _context.JobApplications
             .AsNoTracking()
-            .Where(application => application.JobId == jobId);
+            .Where(application => application.JobId == jobId
+                && application.Status != ApplicationStatus.PendingVerification);
 
         if (status.HasValue)
         {

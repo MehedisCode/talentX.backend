@@ -160,7 +160,9 @@ public sealed class JobRepository : RepositoryBase<Job>, IJobRepository
                 job.CreatedAt,
                 job.ExpireAt,
                 job.Vacancies,
-                ApplicantCount = Context.JobApplications.Count(application => application.JobId == job.Id)
+                ApplicantCount = Context.JobApplications.Count(application =>
+                    application.JobId == job.Id &&
+                    application.Status != ApplicationStatus.PendingVerification)
             })
             .ToListAsync(cancellationToken);
 
@@ -252,7 +254,9 @@ public sealed class JobRepository : RepositoryBase<Job>, IJobRepository
                 job.SalaryCurrency,
                 job.SalaryPeriod,
                 job.DeactivationReason,
-                ApplicantCount = Context.JobApplications.Count(application => application.JobId == job.Id)
+                ApplicantCount = Context.JobApplications.Count(application =>
+                    application.JobId == job.Id &&
+                    application.Status != ApplicationStatus.PendingVerification)
             })
             .ToListAsync(cancellationToken);
 
@@ -340,7 +344,9 @@ public sealed class JobRepository : RepositoryBase<Job>, IJobRepository
                 row.Job.FirstPublishedAt,
                 row.Job.ExpireAt,
                 row.Job.DeactivatedAt,
-                ApplicantCount = Context.JobApplications.Count(application => application.JobId == row.Job.Id)
+                ApplicantCount = Context.JobApplications.Count(application =>
+                    application.JobId == row.Job.Id &&
+                    application.Status != ApplicationStatus.PendingVerification)
             })
             .ToListAsync(cancellationToken);
 

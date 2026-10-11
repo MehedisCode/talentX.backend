@@ -711,6 +711,26 @@ public class JobRepositoryTests
     }
 
     [Fact]
+    public async Task GetEmployerJobsPaginatedAsync_ExcludesPendingVerificationFromApplicantCount()
+    {
+        await using var context = NewContext();
+        var repository = new JobRepository(context);
+
+        var job = MakeCustomJob("employer-1", "Engineering Manager", JobStatus.Published, daysUntilExpiry: 15);
+        context.Jobs.Add(job);
+        await context.SaveChangesAsync();
+
+        context.JobApplications.Add(MakeJobApplication(job.Id, "talent-1"));
+        context.JobApplications.Add(MakeJobApplication(job.Id, talentUserId: null));
+        await context.SaveChangesAsync();
+
+        var result = await repository.GetEmployerJobsPaginatedAsync("employer-1", null, null, page: 1, pageSize: 10);
+
+        result.Items.Should().HaveCount(1);
+        result.Items[0].ApplicantCount.Should().Be(1);
+    }
+
+    [Fact]
     public async Task GetEmployerJobsPaginatedAsync_WhenSearchTermProvided_FiltersByTitleAndCompanyNameCaseInsensitively()
     {
         await using var context = NewContext();
@@ -903,7 +923,7 @@ public class JobRepositoryTests
         return job;
     }
 
-    private static JobApplication MakeJobApplication(Guid jobId, string talentUserId = "talent-1")
+    private static JobApplication MakeJobApplication(Guid jobId, string? talentUserId = "talent-1")
     {
         return new JobApplication(
             jobId,

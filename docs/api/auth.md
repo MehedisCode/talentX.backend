@@ -239,9 +239,12 @@ Verifies a guest candidate's job application email using the verification link t
   "userId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
   "email": "candidate@example.com",
   "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6...",
-  "refreshToken": "4a71b2d0..."
+  "refreshToken": "4a71b2d0...",
+  "requiresPasswordChange": true
 }
 ```
+
+`requiresPasswordChange` is `true` when a new Guest account was provisioned for this email — a temporary password was dispatched via the credentials email, and the client must force the user through the change-password flow before granting normal access. It is `false` when the candidate already had an account (re-verification of an already-provisioned user).
 
 ---
 

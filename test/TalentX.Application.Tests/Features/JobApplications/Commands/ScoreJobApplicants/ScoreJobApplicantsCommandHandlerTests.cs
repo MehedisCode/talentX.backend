@@ -79,7 +79,17 @@ public class ScoreJobApplicantsCommandHandlerTests
             .ReturnsAsync(applications.ToList());
     }
 
-    private static JobApplication CreateGuestApp(Guid jobId, string name = "Jane Doe") =>
+    private static JobApplication CreateGuestApp(Guid jobId, string name = "Jane Doe")
+    {
+        var application = JobApplication.CreateGuestApplication(
+            jobId, name, $"{name.Replace(" ", ".")}@example.com", "resume-key");
+        // Unverified guests (PendingVerification) are filtered out before scoring; the
+        // scoring pipeline only ever sees applications that passed email verification.
+        application.UpdateStatus(ApplicationStatus.Applied);
+        return application;
+    }
+
+    private static JobApplication CreatePendingGuestApp(Guid jobId, string name = "Jane Doe") =>
         JobApplication.CreateGuestApplication(jobId, name, $"{name.Replace(" ", ".")}@example.com", "resume-key");
 
     private static JobProfileForMatching BuildJobProfile(Job job) => new()
@@ -311,5 +321,43 @@ public class ScoreJobApplicantsCommandHandlerTests
         apps[1].AiMatchScore.Should().Be(61m);
         apps[2].AiMatchScore.Should().BeNull();
         apps[3].AiMatchScore.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Handle_PendingVerificationApplications_AreExcludedFromScoring()
+    {
+        var job = CreatePublishedJob();
+        var verified = CreateGuestApp(job.Id, "Jane Doe");
+        var pendingGuest = CreatePendingGuestApp(job.Id, "John Smith");
+        ArrangeJob(job, verified, pendingGuest);
+
+        SetupMatchingEcho();
+
+        var response = await _handler.Handle(new ScoreJobApplicantsCommand(job.Id), CancellationToken.None);
+
+        pendingGuest.Status.Should().Be(ApplicationStatus.PendingVerification);
+        pendingGuest.AiMatchScore.Should().BeNull();
+        verified.AiMatchScore.Should().Be(60m);
+        _capturedRequests.Should().ContainSingle();
+        _capturedRequests[0].Candidates.Should().ContainSingle();
+        _capturedRequests[0].Candidates[0].TalentUserId.Should().Be($"guest-{verified.Id}");
+        response.ScoredCount.Should().Be(1);
+        response.ReusedCount.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Handle_OnlyPendingVerificationApplications_SkipsMatchingServiceEntirely()
+    {
+        var job = CreatePublishedJob();
+        ArrangeJob(job, CreatePendingGuestApp(job.Id, "John Smith"));
+
+        var response = await _handler.Handle(new ScoreJobApplicantsCommand(job.Id), CancellationToken.None);
+
+        _matchingService.Verify(
+            s => s.MatchAsync(It.IsAny<TalentMatchingRequest>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+        response.ScoredCount.Should().Be(0);
+        response.ReusedCount.Should().Be(0);
     }
 }
