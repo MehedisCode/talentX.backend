@@ -47,11 +47,21 @@ public sealed class GetTalentProfileForEmployerQueryHandler
             throw new ForbiddenException("You do not have permission to view candidate profile for this job.");
         }
 
-        var talent = await _unitOfWork.Talents.GetByUserIdAsync(application.TalentUserId, cancellationToken);
-        var workExperiences = await _unitOfWork.WorkExperiences.GetByUserIdAsync(application.TalentUserId, cancellationToken);
-        var educations = await _unitOfWork.Educations.GetByUserIdAsync(application.TalentUserId, cancellationToken);
-        var projects = await _unitOfWork.Projects.GetByUserIdAsync(application.TalentUserId, cancellationToken);
-        var resumes = await _unitOfWork.Resumes.GetAllByUserIdAsync(application.TalentUserId, cancellationToken);
+        var talent = !string.IsNullOrWhiteSpace(application.TalentUserId)
+            ? await _unitOfWork.Talents.GetByUserIdAsync(application.TalentUserId, cancellationToken)
+            : null;
+        var workExperiences = !string.IsNullOrWhiteSpace(application.TalentUserId)
+            ? await _unitOfWork.WorkExperiences.GetByUserIdAsync(application.TalentUserId, cancellationToken)
+            : [];
+        var educations = !string.IsNullOrWhiteSpace(application.TalentUserId)
+            ? await _unitOfWork.Educations.GetByUserIdAsync(application.TalentUserId, cancellationToken)
+            : [];
+        var projects = !string.IsNullOrWhiteSpace(application.TalentUserId)
+            ? await _unitOfWork.Projects.GetByUserIdAsync(application.TalentUserId, cancellationToken)
+            : [];
+        var resumes = !string.IsNullOrWhiteSpace(application.TalentUserId)
+            ? await _unitOfWork.Resumes.GetAllByUserIdAsync(application.TalentUserId, cancellationToken)
+            : [];
         var applicationResume = resumes.FirstOrDefault(resume => resume.StorageKey == application.ResumeStorageKey);
         var profileResume = resumes.FirstOrDefault(resume => resume.IsDefault) ?? resumes.FirstOrDefault();
 
