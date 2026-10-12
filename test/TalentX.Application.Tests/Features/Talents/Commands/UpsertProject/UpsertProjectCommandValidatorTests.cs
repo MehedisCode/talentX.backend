@@ -47,7 +47,7 @@ public class UpsertProjectCommandValidatorTests
         var command = CreateValidCommand() with { ProjectType = "Volunteer" };
         var result = _validator.Validate(command);
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.PropertyName == nameof(UpsertProjectCommand.ProjectType));
+        result.Errors.Should().Contain(failure => failure.PropertyName == nameof(UpsertProjectCommand.ProjectType));
     }
 
     [Theory]
@@ -59,7 +59,7 @@ public class UpsertProjectCommandValidatorTests
         var command = CreateValidCommand() with { ProjectName = projectName! };
         var result = _validator.Validate(command);
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.PropertyName == nameof(UpsertProjectCommand.ProjectName));
+        result.Errors.Should().Contain(failure => failure.PropertyName == nameof(UpsertProjectCommand.ProjectName));
     }
 
     [Fact]
@@ -68,7 +68,7 @@ public class UpsertProjectCommandValidatorTests
         var command = CreateValidCommand() with { ProjectName = new string('A', ProjectConstants.MaxProjectNameLength + 1) };
         var result = _validator.Validate(command);
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.PropertyName == nameof(UpsertProjectCommand.ProjectName));
+        result.Errors.Should().Contain(failure => failure.PropertyName == nameof(UpsertProjectCommand.ProjectName));
     }
 
     [Theory]
@@ -80,7 +80,7 @@ public class UpsertProjectCommandValidatorTests
         var command = CreateValidCommand() with { Role = role! };
         var result = _validator.Validate(command);
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.PropertyName == nameof(UpsertProjectCommand.Role));
+        result.Errors.Should().Contain(failure => failure.PropertyName == nameof(UpsertProjectCommand.Role));
     }
 
     [Fact]
@@ -89,7 +89,7 @@ public class UpsertProjectCommandValidatorTests
         var command = CreateValidCommand() with { Role = new string('A', ProjectConstants.MaxRoleLength + 1) };
         var result = _validator.Validate(command);
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.PropertyName == nameof(UpsertProjectCommand.Role));
+        result.Errors.Should().Contain(failure => failure.PropertyName == nameof(UpsertProjectCommand.Role));
     }
 
     [Theory]
@@ -101,7 +101,7 @@ public class UpsertProjectCommandValidatorTests
         var command = CreateValidCommand() with { StartDate = startDate! };
         var result = _validator.Validate(command);
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.PropertyName == nameof(UpsertProjectCommand.StartDate));
+        result.Errors.Should().Contain(failure => failure.PropertyName == nameof(UpsertProjectCommand.StartDate));
     }
 
     [Theory]
@@ -113,7 +113,7 @@ public class UpsertProjectCommandValidatorTests
         var command = CreateValidCommand() with { Description = description! };
         var result = _validator.Validate(command);
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.PropertyName == nameof(UpsertProjectCommand.Description));
+        result.Errors.Should().Contain(failure => failure.PropertyName == nameof(UpsertProjectCommand.Description));
     }
 
     [Fact]
@@ -122,7 +122,7 @@ public class UpsertProjectCommandValidatorTests
         var command = CreateValidCommand() with { Description = new string('A', ProjectConstants.MaxDescriptionLength + 1) };
         var result = _validator.Validate(command);
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.PropertyName == nameof(UpsertProjectCommand.Description));
+        result.Errors.Should().Contain(failure => failure.PropertyName == nameof(UpsertProjectCommand.Description));
     }
 
     [Fact]
@@ -132,7 +132,7 @@ public class UpsertProjectCommandValidatorTests
         var command = CreateValidCommand() with { TechnologiesUsed = technologies };
         var result = _validator.Validate(command);
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.PropertyName == nameof(UpsertProjectCommand.TechnologiesUsed));
+        result.Errors.Should().Contain(failure => failure.PropertyName == nameof(UpsertProjectCommand.TechnologiesUsed));
     }
 
     [Fact]
@@ -141,7 +141,7 @@ public class UpsertProjectCommandValidatorTests
         var command = CreateValidCommand() with { TechnologiesUsed = [new string('X', ProjectConstants.MaxTechnologyTagLength + 1)] };
         var result = _validator.Validate(command);
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.PropertyName.StartsWith(nameof(UpsertProjectCommand.TechnologiesUsed)));
+        result.Errors.Should().Contain(failure => failure.PropertyName.StartsWith(nameof(UpsertProjectCommand.TechnologiesUsed)));
     }
 
     [Theory]
@@ -153,7 +153,7 @@ public class UpsertProjectCommandValidatorTests
         var command = CreateValidCommand() with { ProjectUrl = url };
         var result = _validator.Validate(command);
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.PropertyName == nameof(UpsertProjectCommand.ProjectUrl));
+        result.Errors.Should().Contain(failure => failure.PropertyName == nameof(UpsertProjectCommand.ProjectUrl));
     }
 
     [Theory]

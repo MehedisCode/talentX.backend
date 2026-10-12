@@ -18,8 +18,8 @@ public class DeleteProjectCommandHandlerTests
 
     public DeleteProjectCommandHandlerTests()
     {
-        _unitOfWork.SetupGet(u => u.Projects).Returns(_projectRepository.Object);
-        _currentUserService.SetupGet(u => u.UserId).Returns("user-1");
+        _unitOfWork.SetupGet(unitOfWork => unitOfWork.Projects).Returns(_projectRepository.Object);
+        _currentUserService.SetupGet(userService => userService.UserId).Returns("user-1");
         _handler = new DeleteProjectCommandHandler(_unitOfWork.Object, _currentUserService.Object);
     }
 
@@ -28,12 +28,12 @@ public class DeleteProjectCommandHandlerTests
     {
         var project = new Project(
             "user-1", "My Project", "Role", "Professional", "2023", null, true, "Desc", [], null);
-        _projectRepository.Setup(r => r.GetByIdAsync(project.Id, It.IsAny<CancellationToken>())).ReturnsAsync(project);
+        _projectRepository.Setup(repository => repository.GetByIdAsync(project.Id, It.IsAny<CancellationToken>())).ReturnsAsync(project);
 
         await _handler.Handle(new DeleteProjectCommand(project.Id), CancellationToken.None);
 
-        _projectRepository.Verify(r => r.Delete(project), Times.Once);
-        _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _projectRepository.Verify(repository => repository.Delete(project), Times.Once);
+        _unitOfWork.Verify(unitOfWork => unitOfWork.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -41,19 +41,19 @@ public class DeleteProjectCommandHandlerTests
     {
         var project = new Project(
             "someone-else", "Other Project", "Role", "Professional", "2023", null, true, "Desc", [], null);
-        _projectRepository.Setup(r => r.GetByIdAsync(project.Id, It.IsAny<CancellationToken>())).ReturnsAsync(project);
+        _projectRepository.Setup(repository => repository.GetByIdAsync(project.Id, It.IsAny<CancellationToken>())).ReturnsAsync(project);
 
         var act = () => _handler.Handle(new DeleteProjectCommand(project.Id), CancellationToken.None);
 
         await act.Should().ThrowAsync<NotFoundException>();
-        _projectRepository.Verify(r => r.Delete(It.IsAny<Project>()), Times.Never);
+        _projectRepository.Verify(repository => repository.Delete(It.IsAny<Project>()), Times.Never);
     }
 
     [Fact]
     public async Task Handle_WhenRowDoesNotExist_ThrowsNotFoundException()
     {
         var missingId = Guid.NewGuid();
-        _projectRepository.Setup(r => r.GetByIdAsync(missingId, It.IsAny<CancellationToken>())).ReturnsAsync((Project?)null);
+        _projectRepository.Setup(repository => repository.GetByIdAsync(missingId, It.IsAny<CancellationToken>())).ReturnsAsync((Project?)null);
 
         var act = () => _handler.Handle(new DeleteProjectCommand(missingId), CancellationToken.None);
 
@@ -63,7 +63,7 @@ public class DeleteProjectCommandHandlerTests
     [Fact]
     public async Task Handle_WhenUserNotAuthenticated_ThrowsUnauthorizedException()
     {
-        _currentUserService.SetupGet(u => u.UserId).Returns((string?)null);
+        _currentUserService.SetupGet(userService => userService.UserId).Returns((string?)null);
 
         var act = () => _handler.Handle(new DeleteProjectCommand(Guid.NewGuid()), CancellationToken.None);
 

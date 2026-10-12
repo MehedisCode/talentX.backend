@@ -446,7 +446,7 @@ public class TalentsControllerTests
         var actionResult = await controller.UpdateProject(id, command, CancellationToken.None);
 
         actionResult.Should().BeOfType<NoContentResult>();
-        _sender.Verify(s => s.Send(It.Is<UpsertProjectCommand>(c => c.Id == id), It.IsAny<CancellationToken>()), Times.Once);
+        _sender.Verify(sender => sender.Send(It.Is<UpsertProjectCommand>(commandItem => commandItem.Id == id), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -458,7 +458,7 @@ public class TalentsControllerTests
         var actionResult = await controller.DeleteProject(id, CancellationToken.None);
 
         actionResult.Should().BeOfType<NoContentResult>();
-        _sender.Verify(s => s.Send(It.Is<DeleteProjectCommand>(c => c.Id == id), It.IsAny<CancellationToken>()), Times.Once);
+        _sender.Verify(sender => sender.Send(It.Is<DeleteProjectCommand>(commandItem => commandItem.Id == id), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]

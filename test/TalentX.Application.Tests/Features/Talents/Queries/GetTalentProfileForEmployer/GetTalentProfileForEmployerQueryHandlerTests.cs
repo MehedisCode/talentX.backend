@@ -330,7 +330,7 @@ public class GetTalentProfileForEmployerQueryHandlerTests
 
         var result = await _handler.Handle(query, CancellationToken.None);
 
-        result.Projects.Select(p => p.ProjectName).Should().Equal(
+        result.Projects.Select(project => project.ProjectName).Should().Equal(
             "Current Flagship",
             "Recent App",
             "Legacy Portal");

@@ -18,8 +18,8 @@ public class UpsertProjectCommandHandlerTests
 
     public UpsertProjectCommandHandlerTests()
     {
-        _unitOfWork.SetupGet(u => u.Projects).Returns(_projectRepository.Object);
-        _currentUserService.SetupGet(u => u.UserId).Returns("user-1");
+        _unitOfWork.SetupGet(unitOfWork => unitOfWork.Projects).Returns(_projectRepository.Object);
+        _currentUserService.SetupGet(userService => userService.UserId).Returns("user-1");
         _handler = new UpsertProjectCommandHandler(_unitOfWork.Object, _currentUserService.Object);
     }
 
@@ -42,18 +42,18 @@ public class UpsertProjectCommandHandlerTests
         var id = await _handler.Handle(command, CancellationToken.None);
 
         id.Should().NotBeEmpty();
-        _projectRepository.Verify(r => r.AddAsync(It.IsAny<Project>(), It.IsAny<CancellationToken>()), Times.Once);
-        _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _projectRepository.Verify(repository => repository.AddAsync(It.IsAny<Project>(), It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWork.Verify(unitOfWork => unitOfWork.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
     public async Task Handle_WhenIdBelongsToCallingUser_UpdatesExistingRow()
     {
-        var existing = new Project(
+        var existingProject = new Project(
             "user-1", "Old Project", "Dev", "Personal", "2022", null, false, "Old desc", [], null);
         var command = new UpsertProjectCommand
         {
-            Id = existing.Id,
+            Id = existingProject.Id,
             ProjectName = "Updated Project",
             Role = "Lead",
             ProjectType = "Professional",
@@ -64,33 +64,33 @@ public class UpsertProjectCommandHandlerTests
             TechnologiesUsed = ["React"],
             ProjectUrl = "https://example.com"
         };
-        _projectRepository.Setup(r => r.GetByIdAsync(existing.Id, It.IsAny<CancellationToken>())).ReturnsAsync(existing);
+        _projectRepository.Setup(repository => repository.GetByIdAsync(existingProject.Id, It.IsAny<CancellationToken>())).ReturnsAsync(existingProject);
 
         var id = await _handler.Handle(command, CancellationToken.None);
 
-        id.Should().Be(existing.Id);
-        existing.ProjectName.Should().Be("Updated Project");
-        existing.Role.Should().Be("Lead");
-        existing.ProjectType.Should().Be("Professional");
-        existing.IsOngoing.Should().BeTrue();
-        _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        id.Should().Be(existingProject.Id);
+        existingProject.ProjectName.Should().Be("Updated Project");
+        existingProject.Role.Should().Be("Lead");
+        existingProject.ProjectType.Should().Be("Professional");
+        existingProject.IsOngoing.Should().BeTrue();
+        _unitOfWork.Verify(unitOfWork => unitOfWork.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
     public async Task Handle_WhenIdBelongsToAnotherUser_ThrowsNotFoundException()
     {
-        var existing = new Project(
+        var existingProject = new Project(
             "someone-else", "Foreign Project", "Dev", "Personal", "2022", null, false, "Foreign desc", [], null);
         var command = new UpsertProjectCommand
         {
-            Id = existing.Id,
+            Id = existingProject.Id,
             ProjectName = "Hacked Project",
             Role = "Lead",
             ProjectType = "Professional",
             StartDate = "2023",
             Description = "Hacked desc"
         };
-        _projectRepository.Setup(r => r.GetByIdAsync(existing.Id, It.IsAny<CancellationToken>())).ReturnsAsync(existing);
+        _projectRepository.Setup(repository => repository.GetByIdAsync(existingProject.Id, It.IsAny<CancellationToken>())).ReturnsAsync(existingProject);
 
         var act = () => _handler.Handle(command, CancellationToken.None);
 
@@ -110,7 +110,7 @@ public class UpsertProjectCommandHandlerTests
             StartDate = "2023",
             Description = "Missing desc"
         };
-        _projectRepository.Setup(r => r.GetByIdAsync(missingId, It.IsAny<CancellationToken>())).ReturnsAsync((Project?)null);
+        _projectRepository.Setup(repository => repository.GetByIdAsync(missingId, It.IsAny<CancellationToken>())).ReturnsAsync((Project?)null);
 
         var act = () => _handler.Handle(command, CancellationToken.None);
 
@@ -120,7 +120,7 @@ public class UpsertProjectCommandHandlerTests
     [Fact]
     public async Task Handle_WhenUserNotAuthenticated_ThrowsUnauthorizedException()
     {
-        _currentUserService.SetupGet(u => u.UserId).Returns((string?)null);
+        _currentUserService.SetupGet(userService => userService.UserId).Returns((string?)null);
         var command = new UpsertProjectCommand
         {
             ProjectName = "Unauth Project",

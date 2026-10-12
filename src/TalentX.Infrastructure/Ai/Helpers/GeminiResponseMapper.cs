@@ -137,7 +137,7 @@ public static class GeminiResponseMapper
                     e => ResumeChronology.ToSortKey(e.EndDate) ?? ResumeChronology.ToSortKey(e.StartDate)),
                 Projects = ResumeChronology.SortNewestFirst(
                     projects,
-                    p => p.IsOngoing ? ResumeChronology.CurrentKey : (ResumeChronology.ToSortKey(p.EndDate) ?? ResumeChronology.ToSortKey(p.StartDate)))
+                    project => project.IsOngoing ? ResumeChronology.CurrentKey : (ResumeChronology.ToSortKey(project.EndDate) ?? ResumeChronology.ToSortKey(project.StartDate)))
             };
         }
         catch (JsonException ex)
