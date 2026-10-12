@@ -27,6 +27,7 @@ public sealed record TalentProfileResponse(
     IReadOnlyList<SavedResumeDto> Resumes,
     IReadOnlyList<WorkExperienceItemDto> WorkExperiences,
     IReadOnlyList<EducationItemDto> Educations,
+    IReadOnlyList<ProjectItemDto> Projects,
     DateTime CreatedAt,
     DateTime? UpdatedAt
 );

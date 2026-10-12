@@ -20,6 +20,7 @@ public class GetTalentProfileQueryHandlerTests
     private readonly Mock<IResumeRepository> _resumeRepository = new();
     private readonly Mock<IWorkExperienceRepository> _workExperienceRepository = new();
     private readonly Mock<IEducationRepository> _educationRepository = new();
+    private readonly Mock<IProjectRepository> _projectRepository = new();
     private readonly Mock<IPresignedUrlService> _presignedUrlService = new();
     private readonly Mock<ICurrentUserService> _currentUserService = new();
     private readonly IMapper _mapper;
@@ -31,6 +32,7 @@ public class GetTalentProfileQueryHandlerTests
         _unitOfWork.SetupGet(u => u.Resumes).Returns(_resumeRepository.Object);
         _unitOfWork.SetupGet(u => u.WorkExperiences).Returns(_workExperienceRepository.Object);
         _unitOfWork.SetupGet(u => u.Educations).Returns(_educationRepository.Object);
+        _unitOfWork.SetupGet(u => u.Projects).Returns(_projectRepository.Object);
 
         var mapperConfiguration = new MapperConfiguration(cfg =>
         {
@@ -83,6 +85,9 @@ public class GetTalentProfileQueryHandlerTests
         _educationRepository
             .Setup(r => r.GetByUserIdAsync("user-1", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Education>());
+        _projectRepository
+            .Setup(r => r.GetByUserIdAsync("user-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Project>());
         _resumeRepository
             .Setup(r => r.GetAllByUserIdAsync("user-1", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Resume>());
@@ -94,6 +99,7 @@ public class GetTalentProfileQueryHandlerTests
         response.ResumeUrl.Should().BeNull();
         response.ResumeOriginalFileName.Should().BeNull();
         response.Resumes.Should().BeEmpty();
+        response.Projects.Should().BeEmpty();
         _presignedUrlService.Verify(
             s => s.CreateDownloadUrlAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()),
             Times.Never);
@@ -109,6 +115,9 @@ public class GetTalentProfileQueryHandlerTests
 
         var workExperience = new WorkExperience("user-2", "Acme Corp", "Engineer", "2020", "Present", true);
         var education = new Education("user-2", "State University", "B.Sc. Computer Science", "2016", "2020");
+        var project = new Project(
+            "user-2", "TalentX Platform", "Tech Lead", "Professional",
+            "2023", "Present", true, "Description", ["C#", ".NET"], "https://talentx.ai");
         var resume = new Resume(
             "user-2", "resumes/user-2.pdf", "resume.pdf", "application/pdf", 1024,
             displayName: "Primary Resume", isDefault: true);
@@ -122,6 +131,9 @@ public class GetTalentProfileQueryHandlerTests
         _educationRepository
             .Setup(r => r.GetByUserIdAsync("user-2", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Education> { education });
+        _projectRepository
+            .Setup(r => r.GetByUserIdAsync("user-2", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Project> { project });
         _resumeRepository
             .Setup(r => r.GetAllByUserIdAsync("user-2", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Resume> { resume });
@@ -139,6 +151,7 @@ public class GetTalentProfileQueryHandlerTests
             resumeDto.DisplayName == "Primary Resume" && resumeDto.IsDefault);
         response.WorkExperiences.Should().ContainSingle(item => item.CompanyName == "Acme Corp");
         response.Educations.Should().ContainSingle(item => item.Institution == "State University");
+        response.Projects.Should().ContainSingle(item => item.ProjectName == "TalentX Platform");
     }
 
     [Fact]
@@ -164,6 +177,9 @@ public class GetTalentProfileQueryHandlerTests
         _educationRepository
             .Setup(r => r.GetByUserIdAsync("user-3", It.IsAny<CancellationToken>()))
             .Returns(() => TrackOverlapAsync(concurrentCallCount, (IReadOnlyList<Education>)new List<Education>()));
+        _projectRepository
+            .Setup(r => r.GetByUserIdAsync("user-3", It.IsAny<CancellationToken>()))
+            .Returns(() => TrackOverlapAsync(concurrentCallCount, (IReadOnlyList<Project>)new List<Project>()));
         _resumeRepository
             .Setup(r => r.GetAllByUserIdAsync("user-3", It.IsAny<CancellationToken>()))
             .Returns(() => TrackOverlapAsync(concurrentCallCount, (IReadOnlyList<Resume>)new List<Resume>()));
@@ -194,6 +210,13 @@ public class GetTalentProfileQueryHandlerTests
             new("user-sorted", "Graduate School", "M.Sc. Software Engineering", "2020", "2022")
         };
 
+        var projects = new List<Project>
+        {
+            new("user-sorted", "Project Alpha", "Developer", "Personal", "2021", "2022", false, "Desc A", [], null),
+            new("user-sorted", "Project Beta", "Architect", "Professional", "2023", "Present", true, "Desc B", [], null),
+            new("user-sorted", "Project Gamma", "Lead", "Academic", "2022", "2023", false, "Desc C", [], null)
+        };
+
         _talentRepository
             .Setup(r => r.GetByUserIdAsync("user-sorted", It.IsAny<CancellationToken>()))
             .ReturnsAsync(talent);
@@ -203,6 +226,9 @@ public class GetTalentProfileQueryHandlerTests
         _educationRepository
             .Setup(r => r.GetByUserIdAsync("user-sorted", It.IsAny<CancellationToken>()))
             .ReturnsAsync(educations);
+        _projectRepository
+            .Setup(r => r.GetByUserIdAsync("user-sorted", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(projects);
         _resumeRepository
             .Setup(r => r.GetAllByUserIdAsync("user-sorted", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Resume>());
@@ -219,6 +245,11 @@ public class GetTalentProfileQueryHandlerTests
             "Ph.D.",
             "M.Sc. Software Engineering",
             "B.Sc. Computer Science");
+
+        response.Projects.Select(item => item.ProjectName).Should().Equal(
+            "Project Beta",
+            "Project Gamma",
+            "Project Alpha");
     }
 
     private static async Task<T> TrackOverlapAsync<T>(int[] concurrentCallCount, T result)

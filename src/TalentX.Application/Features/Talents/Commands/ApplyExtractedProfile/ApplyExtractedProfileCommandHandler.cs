@@ -106,6 +106,29 @@ public sealed class ApplyExtractedProfileCommandHandler : IRequestHandler<ApplyE
                 cancellationToken);
         }
 
+        await _unitOfWork.Projects.DeleteByUserIdAsync(userId, cancellationToken);
+        foreach (var project in request.ProfileData.Projects ?? [])
+        {
+            if (string.IsNullOrWhiteSpace(project.ProjectName))
+            {
+                continue;
+            }
+
+            await _unitOfWork.Projects.AddAsync(
+                new Project(
+                    userId,
+                    project.ProjectName,
+                    project.Role,
+                    string.IsNullOrWhiteSpace(project.ProjectType) ? "Professional" : project.ProjectType,
+                    project.StartDate,
+                    project.EndDate,
+                    project.IsOngoing,
+                    project.Description,
+                    project.TechnologiesUsed ?? [],
+                    project.ProjectUrl),
+                cancellationToken);
+        }
+
         var existingResume = await _unitOfWork.Resumes.GetByUserIdAsync(userId, cancellationToken);
         var previousResumeStorageKey = existingResume?.StorageKey;
 

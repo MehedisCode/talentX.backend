@@ -119,7 +119,8 @@ public class ApplyToJobCommandHandler : IRequestHandler<ApplyToJobCommand, Apply
             extractedSoftSkillsJson: request.ExtractedSoftSkillsJson,
             extractedToolsAndPlatformsJson: request.ExtractedToolsAndPlatformsJson,
             extractedWorkExperienceJson: request.ExtractedWorkExperienceJson,
-            extractedEducationJson: request.ExtractedEducationJson);
+            extractedEducationJson: request.ExtractedEducationJson,
+            extractedProjectsJson: request.ExtractedProjectsJson);
 
         await _jobApplicationRepository.AddAsync(application, cancellationToken);
         await _unitOfWork.JobApplicationStatusHistories.AddAsync(

@@ -185,6 +185,29 @@ public sealed class SaveResumeCommandHandler : IRequestHandler<SaveResumeCommand
                     education.EndDate),
                 cancellationToken);
         }
+
+        await _unitOfWork.Projects.DeleteByUserIdAsync(userId, cancellationToken);
+        foreach (var project in extractionResult.Projects)
+        {
+            if (string.IsNullOrWhiteSpace(project.ProjectName))
+            {
+                continue;
+            }
+
+            await _unitOfWork.Projects.AddAsync(
+                new Project(
+                    userId,
+                    project.ProjectName,
+                    project.Role ?? string.Empty,
+                    string.IsNullOrWhiteSpace(project.ProjectType) ? "Professional" : project.ProjectType,
+                    project.StartDate ?? string.Empty,
+                    project.EndDate,
+                    project.IsOngoing,
+                    project.Description ?? string.Empty,
+                    project.TechnologiesUsed ?? [],
+                    project.ProjectUrl),
+                cancellationToken);
+        }
     }
 
     private async Task TryDeleteStoredFileAsync(

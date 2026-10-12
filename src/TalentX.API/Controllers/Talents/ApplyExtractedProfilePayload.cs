@@ -17,5 +17,6 @@ public sealed record ApplyExtractedProfilePayload(
     List<string>? SoftSkills,
     List<string>? ToolsAndPlatforms,
     List<ApplyExtractedWorkExperienceItem>? WorkExperiences,
-    List<ApplyExtractedEducationItem>? Educations
+    List<ApplyExtractedEducationItem>? Educations,
+    List<ApplyExtractedProjectItem>? Projects = null
 );

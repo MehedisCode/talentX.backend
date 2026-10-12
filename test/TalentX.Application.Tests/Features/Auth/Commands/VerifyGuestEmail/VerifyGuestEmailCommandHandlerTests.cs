@@ -27,6 +27,7 @@ public class VerifyGuestEmailCommandHandlerTests
     private readonly Mock<IResumeRepository> _resumeRepository = new();
     private readonly Mock<IWorkExperienceRepository> _workExperienceRepository = new();
     private readonly Mock<IEducationRepository> _educationRepository = new();
+    private readonly Mock<IProjectRepository> _projectRepository = new();
     private readonly Mock<IJobApplicationStatusHistoryRepository> _historyRepository = new();
     private readonly Mock<ILogger<VerifyGuestEmailCommandHandler>> _logger = new();
 
@@ -38,6 +39,7 @@ public class VerifyGuestEmailCommandHandlerTests
         _unitOfWork.Setup(u => u.Resumes).Returns(_resumeRepository.Object);
         _unitOfWork.Setup(u => u.WorkExperiences).Returns(_workExperienceRepository.Object);
         _unitOfWork.Setup(u => u.Educations).Returns(_educationRepository.Object);
+        _unitOfWork.Setup(u => u.Projects).Returns(_projectRepository.Object);
         _unitOfWork.Setup(u => u.JobApplicationStatusHistories).Returns(_historyRepository.Object);
 
         _resumeRepository
@@ -49,6 +51,9 @@ public class VerifyGuestEmailCommandHandlerTests
         _educationRepository
             .Setup(r => r.GetByUserIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Education>());
+        _projectRepository
+            .Setup(r => r.GetByUserIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Project>());
         _tokenService
             .Setup(t => t.CreateAsync(It.IsAny<string>()))
             .ReturnsAsync(IdentityResponse<TokenResponse>.Ok(new TokenResponse
@@ -269,5 +274,64 @@ public class VerifyGuestEmailCommandHandlerTests
 
         await act.Should().ThrowAsync<ValidationException>()
             .WithMessage("*already been used*");
+    }
+
+    [Fact]
+    public async Task Handle_WithNewGuest_WhenApplicationHasExtractedProjects_CreatesProjectsForGuest()
+    {
+        // Arrange
+        const string token = "valid-token";
+        const string email = "guest-projects@example.com";
+        var applicationId = Guid.NewGuid();
+        var tokenEntity = new EmailVerificationToken(token, email, applicationId, TimeSpan.FromMinutes(30));
+        var projectsJson = """
+        [
+            {
+                "projectName": "TalentX Platform",
+                "role": "Backend Lead",
+                "projectType": "Professional",
+                "startDate": "2023",
+                "endDate": null,
+                "isOngoing": true,
+                "description": "AI marketplace",
+                "technologiesUsed": ["C#", ".NET", "PostgreSQL"],
+                "projectUrl": "https://talentx.ai"
+            }
+        ]
+        """;
+        var application = JobApplication.CreateGuestApplication(
+            Guid.NewGuid(), "Guest User", email, "resumes/r.pdf",
+            extractedProjectsJson: projectsJson);
+
+        _tokenRepository
+            .Setup(r => r.GetByTokenAsync(token, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(tokenEntity);
+
+        _jobAppRepository
+            .Setup(r => r.GetByIdAsync(applicationId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(application);
+
+        _talentRepository
+            .Setup(r => r.GetByEmailAsync(email, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Talent?)null);
+
+        _identityService
+            .Setup(i => i.CreateApplicationUserAsync(email, It.IsAny<string>(), UserRole.Guest))
+            .ReturnsAsync(IdentityResponse<CreateUserResult>.Ok(new CreateUserResult { UserId = "user-new-proj" }));
+
+        _jobAppRepository
+            .Setup(r => r.GetPendingByEmailAsync(email, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<JobApplication> { application });
+
+        // Act
+        var result = await _handler.Handle(new VerifyGuestEmailCommand(token), CancellationToken.None);
+
+        // Assert
+        result.UserId.Should().Be("user-new-proj");
+        _projectRepository.Verify(
+            r => r.AddAsync(
+                It.Is<Project>(p => p.UserId == "user-new-proj" && p.ProjectName == "TalentX Platform" && p.Role == "Backend Lead"),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 }
