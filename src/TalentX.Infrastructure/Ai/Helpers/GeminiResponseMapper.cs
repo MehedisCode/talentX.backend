@@ -63,6 +63,32 @@ public static class GeminiResponseMapper
                 })
                 .ToList();
 
+            var projects = (result.Projects ?? [])
+                .Select(geminiProject =>
+                {
+                    var isOngoing = geminiProject.IsOngoing ||
+                        (!string.IsNullOrWhiteSpace(geminiProject.EndDate) &&
+                         WorkExperienceNormalizer.IsCurrent(geminiProject.IsOngoing, geminiProject.EndDate, geminiProject.StartDate));
+
+                    return new ExtractedProjectDto
+                    {
+                        ProjectName = string.IsNullOrWhiteSpace(geminiProject.ProjectName) ? null : geminiProject.ProjectName.Trim(),
+                        Role = string.IsNullOrWhiteSpace(geminiProject.Role) ? null : geminiProject.Role.Trim(),
+                        ProjectType = NormalizeProjectType(geminiProject.ProjectType),
+                        StartDate = string.IsNullOrWhiteSpace(geminiProject.StartDate) ? null : geminiProject.StartDate.Trim(),
+                        EndDate = WorkExperienceNormalizer.NormalizeEndDate(geminiProject.EndDate, isOngoing),
+                        IsOngoing = isOngoing,
+                        Description = string.IsNullOrWhiteSpace(geminiProject.Description) ? null : geminiProject.Description.Trim(),
+                        TechnologiesUsed = (geminiProject.TechnologiesUsed ?? [])
+                            .Where(technology => !string.IsNullOrWhiteSpace(technology))
+                            .Select(technology => technology.Trim())
+                            .Distinct(StringComparer.OrdinalIgnoreCase)
+                            .ToList(),
+                        ProjectUrl = string.IsNullOrWhiteSpace(geminiProject.ProjectUrl) ? null : geminiProject.ProjectUrl.Trim()
+                    };
+                })
+                .ToList();
+
             var cleanTagline = string.IsNullOrWhiteSpace(result.Tagline)
                 ? null
                 : result.Tagline.Trim();
@@ -108,7 +134,10 @@ public static class GeminiResponseMapper
                     w => w.IsCurrent ? ResumeChronology.CurrentKey : ResumeChronology.ToSortKey(w.StartDate)),
                 Education = ResumeChronology.SortNewestFirst(
                     education,
-                    e => ResumeChronology.ToSortKey(e.EndDate) ?? ResumeChronology.ToSortKey(e.StartDate))
+                    e => ResumeChronology.ToSortKey(e.EndDate) ?? ResumeChronology.ToSortKey(e.StartDate)),
+                Projects = ResumeChronology.SortNewestFirst(
+                    projects,
+                    p => p.IsOngoing ? ResumeChronology.CurrentKey : (ResumeChronology.ToSortKey(p.EndDate) ?? ResumeChronology.ToSortKey(p.StartDate)))
             };
         }
         catch (JsonException ex)
@@ -116,5 +145,31 @@ public static class GeminiResponseMapper
             logger.LogError(ex, "Failed to parse structured JSON from Gemini: {JsonText}", jsonText);
             throw;
         }
+    }
+
+    private static string? NormalizeProjectType(string? projectType)
+    {
+        if (string.IsNullOrWhiteSpace(projectType))
+        {
+            return null;
+        }
+
+        var trimmedType = projectType.Trim();
+        if (string.Equals(trimmedType, "Professional", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Professional";
+        }
+
+        if (string.Equals(trimmedType, "Personal", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Personal";
+        }
+
+        if (string.Equals(trimmedType, "Academic", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Academic";
+        }
+
+        return trimmedType;
     }
 }

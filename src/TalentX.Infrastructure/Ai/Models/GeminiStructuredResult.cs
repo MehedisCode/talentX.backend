@@ -18,4 +18,5 @@ public sealed class GeminiStructuredResult
     public List<string>? SkillPropositions { get; init; }
     public List<GeminiWorkExperience>? WorkExperience { get; set; }
     public List<GeminiEducation>? Education { get; set; }
+    public List<GeminiProject>? Projects { get; set; }
 }

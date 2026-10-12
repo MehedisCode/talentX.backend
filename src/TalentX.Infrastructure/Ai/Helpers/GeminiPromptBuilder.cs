@@ -92,6 +92,7 @@ public static class GeminiPromptBuilder
         - location: Candidate's current residence/location (city, state/province, country). Do NOT use company locations as candidate location.
         - workExperience: Extract EVERY work experience entry in the resume — full-time, part-time, internship, contract, and freelance roles. Do not merge or skip roles, and do not omit a role just because its dates are missing (leave the date fields empty instead). Only treat a role as CURRENT (set 'endDate' to 'Present' and 'isCurrent' to true) when the resume indicates it: a start date with no end date, or wording like Present / Current / till date. A range such as '(December 2024 - Present)' means startDate 'December 2024' and endDate 'Present' with 'isCurrent' true. If the resume gives NO dates for a role, leave both date fields empty and set 'isCurrent' to false — do not infer or invent 'Present'. For past roles, set 'isCurrent' to false and fill 'startDate' and 'endDate' from the resume.
         - education: Extract all degrees, universities, and colleges. When the resume shows a date range (e.g. '2016 - 2020'), put the first year in 'startDate' and the second year in 'endDate'. For ongoing studies, set 'endDate' to 'Expected <Year>' or 'Present'. If the resume lists only a SINGLE year for a degree, treat that year as the completion/graduation year and put it in 'endDate' (leave 'startDate' empty). Do not invent dates that are not present.
+        - projects: Extract notable projects into the projects field: array of { projectName, role, projectType ("Professional"|"Personal"|"Academic"), startDate, endDate, isOngoing, description, technologiesUsed (array of string tags), projectUrl }.
         - technicalSkills: Programming languages, frameworks, libraries, databases, and core technical proficiencies (e.g. C#, .NET, Python, React, PostgreSQL, REST APIs, GraphQL).
         - toolsAndPlatforms: Developer tools, cloud providers, DevOps tools, version control, and infrastructure (e.g. Git, Docker, Kubernetes, AWS, Azure, GCP, Linux, Jira, Postman, CI/CD).
         - softSkills: Interpersonal, leadership, communication, management, and agile/scrum methodologies (e.g. Problem Solving, Team Leadership, Agile/Scrum, Collaboration).
@@ -127,6 +128,7 @@ public static class GeminiPromptBuilder
         - expectedSalary: Desired/expected salary or compensation if explicitly mentioned. Null if not found.
         - workExperience: Extract EVERY work experience entry in the resume — full-time, part-time, internship, contract, and freelance roles. Do not merge or skip roles, and do not omit a role just because its dates are missing (leave the date fields empty instead). Only treat a role as CURRENT (set 'endDate' to 'Present' and 'isCurrent' to true) when the resume indicates it: a start date with no end date, or wording like Present / Current / till date. A range such as '(December 2024 - Present)' means startDate 'December 2024' and endDate 'Present' with 'isCurrent' true. If the resume gives NO dates for a role, leave both date fields empty and set 'isCurrent' to false — do not infer or invent 'Present'. For past roles, set 'isCurrent' to false and fill 'startDate' and 'endDate' from the resume.
         - education: Extract all degrees, universities, and colleges. When the resume shows a date range (e.g. '2016 - 2020'), put the first year in 'startDate' and the second year in 'endDate'. For ongoing studies, set 'endDate' to 'Expected <Year>' or 'Present'. If the resume lists only a SINGLE year for a degree, treat that year as the completion/graduation year and put it in 'endDate' (leave 'startDate' empty). Do not invent dates that are not present.
+        - projects: Extract notable projects into the projects field: array of { projectName, role, projectType ("Professional"|"Personal"|"Academic"), startDate, endDate, isOngoing, description, technologiesUsed (array of string tags), projectUrl }.
         - technicalSkills: Programming languages, frameworks, libraries, databases, and core technical proficiencies (e.g. C#, .NET, Python, React, PostgreSQL, REST APIs, GraphQL).
         - toolsAndPlatforms: Developer tools, cloud providers, DevOps tools, version control, and infrastructure (e.g. Git, Docker, Kubernetes, AWS, Azure, GCP, Linux, Jira, Postman, CI/CD).
         - softSkills: Interpersonal, leadership, communication, management, and agile/scrum methodologies (e.g. Problem Solving, Team Leadership, Agile/Scrum, Collaboration).
@@ -213,6 +215,28 @@ public static class GeminiPromptBuilder
             }
         };
 
+        var projects = new
+        {
+            type = "array",
+            items = new
+            {
+                type = "object",
+                required = new[] { "projectName" },
+                properties = new
+                {
+                    projectName = new { type = "string" },
+                    role = new { type = "string" },
+                    projectType = new { type = "string", description = "Professional, Personal, or Academic" },
+                    startDate = new { type = "string" },
+                    endDate = new { type = "string" },
+                    isOngoing = new { type = "boolean" },
+                    description = new { type = "string" },
+                    technologiesUsed = new { type = "array", items = new { type = "string" } },
+                    projectUrl = new { type = "string" }
+                }
+            }
+        };
+
         var technicalSkills = new { type = "array", items = new { type = "string" } };
         var softSkills = new { type = "array", items = new { type = "string" } };
         var toolsAndPlatforms = new { type = "array", items = new { type = "string" } };
@@ -234,6 +258,7 @@ public static class GeminiPromptBuilder
                 portfolioUrls,
                 workExperience,
                 education,
+                projects,
                 technicalSkills,
                 softSkills,
                 toolsAndPlatforms,
@@ -251,6 +276,7 @@ public static class GeminiPromptBuilder
             portfolioUrls,
             workExperience,
             education,
+            projects,
             technicalSkills,
             softSkills,
             toolsAndPlatforms

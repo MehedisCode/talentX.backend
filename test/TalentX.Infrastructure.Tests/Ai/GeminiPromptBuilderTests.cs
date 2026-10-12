@@ -336,4 +336,55 @@ public class GeminiPromptBuilderTests
         propositionsProperty.GetProperty("items").GetProperty("type").GetString().Should().Be("string");
         propositionsProperty.GetProperty("description").GetString().Should().Be("Key value propositions or skill highlights");
     }
+
+    [Fact]
+    public void BuildRequestBody_PromptIncludesProjectsGuidelines()
+    {
+        var body = GeminiPromptBuilder.BuildRequestBody("resume text", Array.Empty<string>());
+        var json = JsonSerializer.Serialize(body);
+
+        using var document = JsonDocument.Parse(json);
+        var prompt = document.RootElement
+            .GetProperty("contents")[0]
+            .GetProperty("parts")[0]
+            .GetProperty("text")
+            .GetString();
+
+        prompt.Should().Contain("projects: Extract notable projects into the projects field");
+    }
+
+    [Theory]
+    [InlineData(ResumeExtractionPurpose.JobApplication)]
+    [InlineData(ResumeExtractionPurpose.CandidateProfile)]
+    public void BuildRequestBody_SchemaContainsProjectsProperties(ResumeExtractionPurpose purpose)
+    {
+        var body = GeminiPromptBuilder.BuildRequestBody("resume text", Array.Empty<string>(), purpose);
+        var json = JsonSerializer.Serialize(body);
+
+        using var document = JsonDocument.Parse(json);
+        var properties = document.RootElement
+            .GetProperty("generationConfig")
+            .GetProperty("responseJsonSchema")
+            .GetProperty("properties");
+
+        properties.TryGetProperty("projects", out var projectsProperty).Should().BeTrue();
+        projectsProperty.GetProperty("type").GetString().Should().Be("array");
+
+        var items = projectsProperty.GetProperty("items");
+        items.GetProperty("type").GetString().Should().Be("object");
+
+        var required = items.GetProperty("required").EnumerateArray().Select(element => element.GetString()).ToList();
+        required.Should().Contain("projectName");
+
+        var itemProperties = items.GetProperty("properties");
+        itemProperties.TryGetProperty("projectName", out _).Should().BeTrue();
+        itemProperties.TryGetProperty("role", out _).Should().BeTrue();
+        itemProperties.TryGetProperty("projectType", out _).Should().BeTrue();
+        itemProperties.TryGetProperty("startDate", out _).Should().BeTrue();
+        itemProperties.TryGetProperty("endDate", out _).Should().BeTrue();
+        itemProperties.TryGetProperty("isOngoing", out _).Should().BeTrue();
+        itemProperties.TryGetProperty("description", out _).Should().BeTrue();
+        itemProperties.TryGetProperty("technologiesUsed", out _).Should().BeTrue();
+        itemProperties.TryGetProperty("projectUrl", out _).Should().BeTrue();
+    }
 }
