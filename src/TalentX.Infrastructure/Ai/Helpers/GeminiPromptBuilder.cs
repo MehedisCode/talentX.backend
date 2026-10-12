@@ -119,7 +119,7 @@ public static class GeminiPromptBuilder
         - Your job is strictly to extract semantic information and classify the extracted URLs into the appropriate fields.
         """;
 
-    private static string GetPrompt(ResumeExtractionPurpose purpose = ResumeExtractionPurpose.JobApplication) =>
+    private static string GetPrompt(ResumeExtractionPurpose purpose) =>
         ResumeExtractionPrompt;
 
     private static object BuildGenerationConfig(int maxOutputTokens, ResumeExtractionPurpose purpose) => new
@@ -144,7 +144,7 @@ public static class GeminiPromptBuilder
         }
     };
 
-    private static object BuildProperties(ResumeExtractionPurpose purpose = ResumeExtractionPurpose.JobApplication)
+    private static object BuildProperties(ResumeExtractionPurpose purpose)
     {
         var workExperience = new
         {
