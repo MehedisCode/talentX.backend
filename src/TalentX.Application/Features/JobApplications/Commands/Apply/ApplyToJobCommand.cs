@@ -17,5 +17,6 @@ public record ApplyToJobCommand(
     string? ExtractedToolsAndPlatformsJson = null,
     string? ExtractedWorkExperienceJson = null,
     string? ExtractedEducationJson = null,
-    string? ExtractedProjectsJson = null
+    string? ExtractedProjectsJson = null,
+    string? ExtractedProfileJson = null
 ) : IRequest<ApplyToJobResponse>;

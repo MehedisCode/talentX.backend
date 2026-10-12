@@ -114,19 +114,20 @@ public sealed class VerifyGuestEmailCommandHandler : IRequestHandler<VerifyGuest
         }
 
         var talentUserId = createResult.Data.UserId;
+        var profilePayload = application.GetExtractedProfile();
 
         var talent = new Talent(talentUserId, applicantName, email);
         talent.UpdateProfile(
             name: applicantName,
-            tagline: null,
-            shortBio: null,
+            tagline: profilePayload?.Tagline,
+            shortBio: profilePayload?.ShortBio,
             location: application.Location,
-            phone: null,
-            linkedInUrl: null,
-            additionalUrls: null,
+            phone: profilePayload?.Phone,
+            linkedInUrl: profilePayload?.LinkedInUrl,
+            additionalUrls: profilePayload?.PortfolioUrls,
             totalYearsExperience: application.TotalYearsExperience,
             expectedSalary: application.ExpectedSalary,
-            skillPropositions: null);
+            skillPropositions: profilePayload?.SkillPropositions);
 
         var technicalSkills = application.GetExtractedTechnicalSkills();
         var softSkills = application.GetExtractedSoftSkills();

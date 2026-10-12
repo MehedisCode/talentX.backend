@@ -15,4 +15,5 @@ public sealed record ApplyToJobRequestDto(
     string? ExtractedToolsAndPlatforms = null,
     string? ExtractedWorkExperience = null,
     string? ExtractedEducation = null,
-    string? ExtractedProjects = null);
+    string? ExtractedProjects = null,
+    string? ExtractedProfile = null);

@@ -334,4 +334,72 @@ public class VerifyGuestEmailCommandHandlerTests
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }
+
+    [Fact]
+    public async Task Handle_WithNewGuest_WhenApplicationHasExtractedProfile_PopulatesTalentProfileFields()
+    {
+        const string token = "valid-token";
+        const string email = "guest-profile@example.com";
+        var applicationId = Guid.NewGuid();
+        var tokenEntity = new EmailVerificationToken(token, email, applicationId, TimeSpan.FromMinutes(30));
+        var profileJson = """
+        {
+            "tagline": "Senior AI Architect",
+            "shortBio": "Building next-generation intelligent platforms.",
+            "phone": "+1-555-0199",
+            "linkedInUrl": "https://linkedin.com/in/guestai",
+            "portfolioUrls": ["https://github.com/guestai", "https://guest.dev"],
+            "skillPropositions": ["Enterprise AI Architecture", "Distributed Systems"]
+        }
+        """;
+        var application = JobApplication.CreateGuestApplication(
+            Guid.NewGuid(),
+            "Guest User",
+            email,
+            "resumes/r.pdf",
+            location: "San Francisco, CA",
+            expectedSalary: 160000,
+            totalYearsExperience: 8,
+            extractedProfileJson: profileJson);
+
+        _tokenRepository
+            .Setup(r => r.GetByTokenAsync(token, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(tokenEntity);
+
+        _jobAppRepository
+            .Setup(r => r.GetByIdAsync(applicationId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(application);
+
+        _talentRepository
+            .Setup(r => r.GetByEmailAsync(email, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Talent?)null);
+
+        _identityService
+            .Setup(i => i.CreateApplicationUserAsync(email, It.IsAny<string>(), UserRole.Guest))
+            .ReturnsAsync(IdentityResponse<CreateUserResult>.Ok(new CreateUserResult { UserId = "user-new-profile" }));
+
+        _jobAppRepository
+            .Setup(r => r.GetPendingByEmailAsync(email, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<JobApplication> { application });
+
+        Talent? createdTalent = null;
+        _talentRepository
+            .Setup(r => r.AddAsync(It.IsAny<Talent>(), It.IsAny<CancellationToken>()))
+            .Callback<Talent, CancellationToken>((talent, _) => createdTalent = talent)
+            .Returns(Task.CompletedTask);
+
+        var result = await _handler.Handle(new VerifyGuestEmailCommand(token), CancellationToken.None);
+
+        result.UserId.Should().Be("user-new-profile");
+        createdTalent.Should().NotBeNull();
+        createdTalent!.Tagline.Should().Be("Senior AI Architect");
+        createdTalent.ShortBio.Should().Be("Building next-generation intelligent platforms.");
+        createdTalent.Location.Should().Be("San Francisco, CA");
+        createdTalent.Phone.Should().Be("+1-555-0199");
+        createdTalent.LinkedInUrl.Should().Be("https://linkedin.com/in/guestai");
+        createdTalent.AdditionalUrls.Should().Equal("https://github.com/guestai", "https://guest.dev");
+        createdTalent.SkillPropositions.Should().Equal("Enterprise AI Architecture", "Distributed Systems");
+        createdTalent.TotalYearsExperience.Should().Be(8);
+        createdTalent.ExpectedSalary.Should().Be(160000);
+    }
 }
