@@ -1161,6 +1161,9 @@ namespace TalentX.Migrations.Migrations
                     b.Property<string>("ExtractedEducationJson")
                         .HasColumnType("text");
 
+                    b.Property<string>("ExtractedProfileJson")
+                        .HasColumnType("text");
+
                     b.Property<string>("ExtractedProjectsJson")
                         .HasColumnType("text");
 
