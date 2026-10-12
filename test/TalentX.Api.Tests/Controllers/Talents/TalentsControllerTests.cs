@@ -205,8 +205,38 @@ public class TalentsControllerTests
         capturedCommand.ProfileData.TechnicalSkills.Should().BeEquivalentTo(["C#"]);
         capturedCommand.ProfileData.SoftSkills.Should().BeEquivalentTo(["Teamwork"]);
         capturedCommand.ProfileData.ToolsAndPlatforms.Should().BeEquivalentTo(["Git"]);
-        capturedCommand.ResumeFile.FileName.Should().Be("resume.pdf");
-        _sender.Verify(s => s.Send(It.IsAny<ApplyExtractedProfileCommand>(), It.IsAny<CancellationToken>()), Times.Once);
+        capturedCommand.ResumeFile.Should().NotBeNull();
+        capturedCommand.ResumeFile!.FileName.Should().Be("resume.pdf");
+        _sender.Verify(sender => sender.Send(It.IsAny<ApplyExtractedProfileCommand>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ApplyExtractedProfile_WhenFileIsNull_SendsCommandWithNullResumeFile_AndReturnsNoContent()
+    {
+        const string payload = """
+        {
+            "FullName": "Jane Doe",
+            "TechnicalSkills": ["C#"],
+            "WorkExperiences": [],
+            "Educations": []
+        }
+        """;
+
+        ApplyExtractedProfileCommand? capturedCommand = null;
+        _sender
+            .Setup(sender => sender.Send(It.IsAny<ApplyExtractedProfileCommand>(), It.IsAny<CancellationToken>()))
+            .Callback<ApplyExtractedProfileCommand, CancellationToken>((request, _) => capturedCommand = request)
+            .Returns(Task.CompletedTask);
+
+        var controller = CreateController();
+
+        var actionResult = await controller.ApplyExtractedProfile(null, payload, CancellationToken.None);
+
+        actionResult.Should().BeOfType<NoContentResult>();
+        capturedCommand.Should().NotBeNull();
+        capturedCommand!.ProfileData.FullName.Should().Be("Jane Doe");
+        capturedCommand.ResumeFile.Should().BeNull();
+        _sender.Verify(sender => sender.Send(It.IsAny<ApplyExtractedProfileCommand>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
