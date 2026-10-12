@@ -50,6 +50,7 @@ public sealed class GetTalentProfileForEmployerQueryHandler
         var talent = await _unitOfWork.Talents.GetByUserIdAsync(application.TalentUserId, cancellationToken);
         var workExperiences = await _unitOfWork.WorkExperiences.GetByUserIdAsync(application.TalentUserId, cancellationToken);
         var educations = await _unitOfWork.Educations.GetByUserIdAsync(application.TalentUserId, cancellationToken);
+        var projects = await _unitOfWork.Projects.GetByUserIdAsync(application.TalentUserId, cancellationToken);
         var resumes = await _unitOfWork.Resumes.GetAllByUserIdAsync(application.TalentUserId, cancellationToken);
         var applicationResume = resumes.FirstOrDefault(resume => resume.StorageKey == application.ResumeStorageKey);
         var profileResume = resumes.FirstOrDefault(resume => resume.IsDefault) ?? resumes.FirstOrDefault();
@@ -97,6 +98,22 @@ public sealed class GetTalentProfileForEmployerQueryHandler
             mappedEducations,
             education => (education.StartDate, education.EndDate));
 
+        var mappedProjects = projects.Select(project => new ProjectItemDto(
+            project.Id,
+            project.ProjectName,
+            project.Role,
+            project.ProjectType,
+            project.StartDate,
+            project.EndDate,
+            project.IsOngoing,
+            project.Description,
+            project.TechnologiesUsed,
+            project.ProjectUrl)).ToList();
+
+        var sortedProjects = ChronologicalOrderingHelper.SortWorkExperiences(
+            mappedProjects,
+            project => (project.IsOngoing, project.StartDate, project.EndDate));
+
         return new TalentPublicProfileResponse(
             ApplicationId: application.Id,
             JobId: application.JobId,
@@ -124,7 +141,8 @@ public sealed class GetTalentProfileForEmployerQueryHandler
             CoverLetter: application.CoverLetter,
             AppliedAt: application.AppliedAt,
             WorkExperiences: sortedWorkExperiences,
-            Educations: sortedEducations
+            Educations: sortedEducations,
+            Projects: sortedProjects
         );
     }
 

@@ -132,7 +132,8 @@ public class JobApplicationDetailsControllerTests
             CoverLetter: null,
             AppliedAt: DateTime.UtcNow,
             WorkExperiences: new List<WorkExperienceItemDto>(),
-            Educations: new List<EducationItemDto>()
+            Educations: new List<EducationItemDto>(),
+            Projects: new List<ProjectItemDto>()
         );
 
         _sender

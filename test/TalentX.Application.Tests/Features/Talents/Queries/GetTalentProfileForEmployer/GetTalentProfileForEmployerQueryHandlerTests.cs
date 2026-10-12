@@ -22,6 +22,7 @@ public class GetTalentProfileForEmployerQueryHandlerTests
     private readonly Mock<ITalentRepository> _talentRepository = new();
     private readonly Mock<IWorkExperienceRepository> _workExperienceRepository = new();
     private readonly Mock<IEducationRepository> _educationRepository = new();
+    private readonly Mock<IProjectRepository> _projectRepository = new();
     private readonly Mock<IResumeRepository> _resumeRepository = new();
     private readonly Mock<IPresignedUrlService> _presignedUrlService = new();
     private readonly Mock<ICurrentUserService> _currentUserService = new();
@@ -35,7 +36,12 @@ public class GetTalentProfileForEmployerQueryHandlerTests
         _unitOfWork.SetupGet(u => u.Talents).Returns(_talentRepository.Object);
         _unitOfWork.SetupGet(u => u.WorkExperiences).Returns(_workExperienceRepository.Object);
         _unitOfWork.SetupGet(u => u.Educations).Returns(_educationRepository.Object);
+        _unitOfWork.SetupGet(u => u.Projects).Returns(_projectRepository.Object);
         _unitOfWork.SetupGet(u => u.Resumes).Returns(_resumeRepository.Object);
+
+        _projectRepository
+            .Setup(r => r.GetByUserIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Project>());
 
         _currentUserService.SetupGet(u => u.UserId).Returns("employer-1");
 
@@ -127,11 +133,24 @@ public class GetTalentProfileForEmployerQueryHandlerTests
 
         var resume = new Resume("talent-1", "resumes/profile_cv.pdf", "Official_Resume.pdf", "application/pdf", 1024);
 
+        var project = new Project(
+            "talent-1",
+            "TalentX Platform",
+            "Lead Architect",
+            "Commercial",
+            "2023-01-01",
+            null,
+            true,
+            "Built core microservices and AI pipelines",
+            new List<string> { ".NET 10", "Next.js", "PostgreSQL" },
+            "https://talentx.ai");
+
         _jobApplicationRepository.Setup(r => r.GetByIdAsync(application.Id, It.IsAny<CancellationToken>())).ReturnsAsync(application);
         _jobRepository.Setup(r => r.GetByIdAsync(job.Id, It.IsAny<CancellationToken>())).ReturnsAsync(job);
         _talentRepository.Setup(r => r.GetByUserIdAsync("talent-1", It.IsAny<CancellationToken>())).ReturnsAsync(talent);
         _workExperienceRepository.Setup(r => r.GetByUserIdAsync("talent-1", It.IsAny<CancellationToken>())).ReturnsAsync(new List<WorkExperience> { workExp });
         _educationRepository.Setup(r => r.GetByUserIdAsync("talent-1", It.IsAny<CancellationToken>())).ReturnsAsync(new List<Education> { education });
+        _projectRepository.Setup(r => r.GetByUserIdAsync("talent-1", It.IsAny<CancellationToken>())).ReturnsAsync(new List<Project> { project });
         _resumeRepository.Setup(r => r.GetAllByUserIdAsync("talent-1", It.IsAny<CancellationToken>())).ReturnsAsync(new List<Resume> { resume });
 
         var query = new GetTalentProfileForEmployerQuery(application.Id);
@@ -154,6 +173,14 @@ public class GetTalentProfileForEmployerQueryHandlerTests
         result.WorkExperiences.First().CompanyName.Should().Be("Tech Corp");
         result.Educations.Should().HaveCount(1);
         result.Educations.First().Institution.Should().Be("MIT");
+        result.Projects.Should().HaveCount(1);
+        var firstProject = result.Projects.First();
+        firstProject.ProjectName.Should().Be("TalentX Platform");
+        firstProject.Role.Should().Be("Lead Architect");
+        firstProject.ProjectType.Should().Be("Commercial");
+        firstProject.IsOngoing.Should().BeTrue();
+        firstProject.TechnologiesUsed.Should().Contain(new[] { ".NET 10", "Next.js", "PostgreSQL" });
+        firstProject.ProjectUrl.Should().Be("https://talentx.ai");
         result.ProfilePictureUrl.Should().Be("https://storage.test/pictures/jane.jpg?expiry=60");
         result.VideoIntroUrl.Should().Be("https://storage.test/videos/jane_intro.mp4?expiry=60");
         result.ResumeUrl.Should().Be("https://storage.test/resumes/app_resume.pdf?expiry=60");
@@ -275,6 +302,38 @@ public class GetTalentProfileForEmployerQueryHandlerTests
             "Ph.D.",
             "M.Sc. Software Engineering",
             "B.Sc. Computer Science");
+    }
+
+    [Fact]
+    public async Task Handle_WhenMultipleProjectsExist_ReturnsThemInReverseChronologicalOrder()
+    {
+        var job = CreateJob("employer-1");
+        var application = CreateApplication(job.Id, "talent-projects");
+        var talent = CreateTalent("talent-projects");
+
+        var projects = new List<Project>
+        {
+            new("talent-projects", "Legacy Portal", "Developer", "Client", "2019", "2020", false, "Description", new List<string>(), null),
+            new("talent-projects", "Current Flagship", "Lead", "Internal", "2024", null, true, "Description", new List<string>(), null),
+            new("talent-projects", "Recent App", "Engineer", "OpenSource", "2022", "2023", false, "Description", new List<string>(), null)
+        };
+
+        _jobApplicationRepository.Setup(r => r.GetByIdAsync(application.Id, It.IsAny<CancellationToken>())).ReturnsAsync(application);
+        _jobRepository.Setup(r => r.GetByIdAsync(job.Id, It.IsAny<CancellationToken>())).ReturnsAsync(job);
+        _talentRepository.Setup(r => r.GetByUserIdAsync("talent-projects", It.IsAny<CancellationToken>())).ReturnsAsync(talent);
+        _workExperienceRepository.Setup(r => r.GetByUserIdAsync("talent-projects", It.IsAny<CancellationToken>())).ReturnsAsync(new List<WorkExperience>());
+        _educationRepository.Setup(r => r.GetByUserIdAsync("talent-projects", It.IsAny<CancellationToken>())).ReturnsAsync(new List<Education>());
+        _projectRepository.Setup(r => r.GetByUserIdAsync("talent-projects", It.IsAny<CancellationToken>())).ReturnsAsync(projects);
+        _resumeRepository.Setup(r => r.GetAllByUserIdAsync("talent-projects", It.IsAny<CancellationToken>())).ReturnsAsync(new List<Resume>());
+
+        var query = new GetTalentProfileForEmployerQuery(application.Id);
+
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        result.Projects.Select(p => p.ProjectName).Should().Equal(
+            "Current Flagship",
+            "Recent App",
+            "Legacy Portal");
     }
 
     [Fact]
