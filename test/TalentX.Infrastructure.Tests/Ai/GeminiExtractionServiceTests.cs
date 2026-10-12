@@ -123,6 +123,87 @@ public class GeminiExtractionServiceTests
     }
 
     [Fact]
+    public async Task ExtractAsync_DefaultOverload_ExtractsFullProfileFields()
+    {
+        var fakeHandler = new FakeHttpMessageHandler();
+        const string validJson = """
+        {
+            "fullName": "Jane Doe",
+            "tagline": "Senior .NET Architect",
+            "shortBio": "Over 10 years of experience building distributed systems.",
+            "email": "jane@example.com",
+            "phone": "+1234567890",
+            "location": "New York, NY",
+            "totalYearsExperience": 10.5,
+            "expectedSalary": 150000,
+            "linkedInUrl": "https://linkedin.com/in/janedoe",
+            "portfolioUrls": ["https://janedoe.dev"],
+            "technicalSkills": ["C#", ".NET 10"],
+            "softSkills": ["Leadership"],
+            "toolsAndPlatforms": ["Docker", "AWS"],
+            "skillPropositions": ["Cloud Native Architecture"],
+            "workExperience": [
+                {
+                    "companyName": "Tech Corp",
+                    "jobTitle": "Lead Developer",
+                    "startDate": "2020-01",
+                    "endDate": "Present",
+                    "isCurrent": true
+                }
+            ],
+            "education": [
+                {
+                    "institution": "MIT",
+                    "degree": "B.S. Computer Science",
+                    "startDate": "2012",
+                    "endDate": "2016"
+                }
+            ],
+            "projects": [
+                {
+                    "projectName": "Cloud Marketplace",
+                    "role": "Lead",
+                    "projectType": "Professional",
+                    "startDate": "2022-01",
+                    "endDate": "2023-01",
+                    "isOngoing": false,
+                    "description": "High-throughput marketplace",
+                    "technologiesUsed": ["C#", ".NET"],
+                    "projectUrl": "https://github.com/example/proj"
+                }
+            ]
+        }
+        """;
+        fakeHandler.Enqueue(CreateGeminiSuccessResponse(validJson));
+
+        var httpClient = new HttpClient(fakeHandler) { BaseAddress = new Uri("https://generativelanguage.googleapis.com") };
+        var configProviderMock = new Mock<IAiConfigurationProvider>();
+        configProviderMock.Setup(c => c.GetConfigAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(("gemini-2.5-flash", "test-key"));
+
+        var config = new ConfigurationBuilder().Build();
+        var service = new GeminiExtractionService(
+            httpClient,
+            configProviderMock.Object,
+            config,
+            NullLogger<GeminiExtractionService>.Instance);
+
+        var file = CreateMockFile("Jane Doe - Senior .NET Architect with 10 years experience.");
+
+        var result = await service.ExtractAsync(file.Object);
+
+        result.Should().NotBeNull();
+        result.FullName.Should().Be("Jane Doe");
+        result.Tagline.Should().Be("Senior .NET Architect");
+        result.ShortBio.Should().Be("Over 10 years of experience building distributed systems.");
+        result.TotalYearsExperience.Should().Be(10.5m);
+        result.ExpectedSalary.Should().Be(150000m);
+        result.SkillPropositions.Should().ContainSingle("Cloud Native Architecture");
+        result.Projects.Should().HaveCount(1);
+        result.Projects[0].ProjectName.Should().Be("Cloud Marketplace");
+    }
+
+    [Fact]
     public async Task ExtractAsync_WhenFirstAttemptReturnsEmptyData_ThrowsImmediately()
     {
         var fakeHandler = new FakeHttpMessageHandler();
