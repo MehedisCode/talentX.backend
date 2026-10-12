@@ -15,6 +15,7 @@ using TalentX.Application.Features.Talents.Commands.ApplyExtractedProfile;
 using TalentX.Application.Features.Talents.Commands.CompleteMediaMultipartUpload;
 using TalentX.Application.Features.Talents.Commands.ConfirmProfileMediaUpload;
 using TalentX.Application.Features.Talents.Commands.DeleteEducation;
+using TalentX.Application.Features.Talents.Commands.DeleteProject;
 using TalentX.Application.Features.Talents.Commands.DeleteWorkExperience;
 using TalentX.Application.Features.Talents.Commands.ExtractResume;
 using TalentX.Application.Features.Talents.Commands.InitiateMediaMultipartUpload;
@@ -22,6 +23,7 @@ using TalentX.Application.Features.Talents.Commands.RequestMediaMultipartPartUrl
 using TalentX.Application.Features.Talents.Commands.RequestProfileMediaUploadUrl;
 using TalentX.Application.Features.Talents.Commands.UpdateTalentProfile;
 using TalentX.Application.Features.Talents.Commands.UpsertEducation;
+using TalentX.Application.Features.Talents.Commands.UpsertProject;
 using TalentX.Application.Features.Talents.Commands.UpsertWorkExperience;
 using TalentX.Application.Features.Talents.Queries.GetTalentApplicationPrefill;
 using TalentX.Application.Features.Talents.Queries.GetTalentProfile;
@@ -169,7 +171,8 @@ public sealed class TalentsController : BaseApiController
             parsedPayload.SoftSkills,
             parsedPayload.ToolsAndPlatforms,
             parsedPayload.WorkExperiences,
-            parsedPayload.Educations);
+            parsedPayload.Educations,
+            parsedPayload.Projects);
 
         var command = new ApplyExtractedProfileCommand(
             profileData,
@@ -292,6 +295,32 @@ public sealed class TalentsController : BaseApiController
     public async Task<IActionResult> DeleteEducation(Guid id, CancellationToken cancellationToken)
     {
         await Sender.Send(new DeleteEducationCommand(id), cancellationToken);
+        return NoContent();
+    }
+
+    [HttpPost("me/projects")]
+    public async Task<IActionResult> CreateProject(
+        [FromBody] UpsertProjectCommand command,
+        CancellationToken cancellationToken)
+    {
+        var id = await Sender.Send(command, cancellationToken);
+        return StatusCode(StatusCodes.Status201Created, new { id });
+    }
+
+    [HttpPut("me/projects/{id:guid}")]
+    public async Task<IActionResult> UpdateProject(
+        Guid id,
+        [FromBody] UpsertProjectCommand command,
+        CancellationToken cancellationToken)
+    {
+        await Sender.Send(command with { Id = id }, cancellationToken);
+        return NoContent();
+    }
+
+    [HttpDelete("me/projects/{id:guid}")]
+    public async Task<IActionResult> DeleteProject(Guid id, CancellationToken cancellationToken)
+    {
+        await Sender.Send(new DeleteProjectCommand(id), cancellationToken);
         return NoContent();
     }
 }

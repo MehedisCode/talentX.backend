@@ -1,4 +1,5 @@
 using System.Text.Json;
+using TalentX.Domain;
 using TalentX.Domain.Common;
 using TalentX.Domain.Enums;
 
@@ -24,10 +25,13 @@ public sealed class JobApplication : BaseEntity
     public string? ExtractedToolsAndPlatformsJson { get; private set; }
     public string? ExtractedWorkExperienceJson { get; private set; }
     public string? ExtractedEducationJson { get; private set; }
+    public string? ExtractedProjectsJson { get; private set; }
+    public string? ExtractedProfileJson { get; private set; }
 
     private static readonly JsonSerializerOptions s_jsonOptions = new()
     {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        PropertyNameCaseInsensitive = true
     };
 
     private JobApplication() { }
@@ -70,7 +74,9 @@ public sealed class JobApplication : BaseEntity
         string? extractedSoftSkillsJson = null,
         string? extractedToolsAndPlatformsJson = null,
         string? extractedWorkExperienceJson = null,
-        string? extractedEducationJson = null)
+        string? extractedEducationJson = null,
+        string? extractedProjectsJson = null,
+        string? extractedProfileJson = null)
     {
         var application = new JobApplication(
             jobId,
@@ -88,6 +94,8 @@ public sealed class JobApplication : BaseEntity
         application.ExtractedToolsAndPlatformsJson = extractedToolsAndPlatformsJson;
         application.ExtractedWorkExperienceJson = extractedWorkExperienceJson;
         application.ExtractedEducationJson = extractedEducationJson;
+        application.ExtractedProjectsJson = extractedProjectsJson;
+        application.ExtractedProfileJson = extractedProfileJson;
 
         return application;
     }
@@ -106,6 +114,14 @@ public sealed class JobApplication : BaseEntity
 
     public List<ExtractedEducationItem> GetExtractedEducation() =>
         DeserializeList<ExtractedEducationItem>(ExtractedEducationJson);
+
+    public List<ExtractedProjectItem> GetExtractedProjects() =>
+        DeserializeList<ExtractedProjectItem>(ExtractedProjectsJson);
+
+    public ExtractedProfilePayload? GetExtractedProfile() =>
+        string.IsNullOrWhiteSpace(ExtractedProfileJson)
+            ? null
+            : JsonSerializer.Deserialize<ExtractedProfilePayload>(ExtractedProfileJson, s_jsonOptions);
 
     public void UpdateStatus(ApplicationStatus status)
     {

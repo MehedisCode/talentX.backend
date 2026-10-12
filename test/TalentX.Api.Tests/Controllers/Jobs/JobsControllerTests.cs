@@ -324,4 +324,31 @@ public class JobsControllerTests
         var okResult = actionResult.Should().BeOfType<OkObjectResult>().Subject;
         okResult.Value.Should().BeEquivalentTo(expectedResponse);
     }
+
+    [Fact]
+    public async Task Apply_WithExtractedProfile_PassesExtractedProfileJsonInCommand()
+    {
+        var routeId = Guid.NewGuid();
+        var requestDto = new ApplyToJobRequestDto(
+            "Jane Doe",
+            "jane@example.com",
+            ResumeFile: null,
+            "Cover letter",
+            85000,
+            6,
+            "Dhaka",
+            ExtractedProfile: """{"tagline":"Lead Engineer"}"""
+        );
+        ApplyToJobCommand? sentCommand = null;
+        var response = new ApplyToJobResponse(Guid.NewGuid(), routeId);
+        _sender
+            .Setup(s => s.Send(It.IsAny<ApplyToJobCommand>(), It.IsAny<CancellationToken>()))
+            .Callback<IRequest<ApplyToJobResponse>, CancellationToken>((mediatrRequest, _) => sentCommand = (ApplyToJobCommand)mediatrRequest)
+            .ReturnsAsync(response);
+
+        await _controller.Apply(routeId, requestDto, CancellationToken.None);
+
+        sentCommand.Should().NotBeNull();
+        sentCommand!.ExtractedProfileJson.Should().Be("""{"tagline":"Lead Engineer"}""");
+    }
 }

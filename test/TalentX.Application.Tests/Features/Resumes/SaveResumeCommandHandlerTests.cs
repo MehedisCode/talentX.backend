@@ -20,6 +20,7 @@ public class SaveResumeCommandHandlerTests
     private readonly Mock<IResumeRepository> _resumeRepository = new();
     private readonly Mock<IWorkExperienceRepository> _workExperienceRepository = new();
     private readonly Mock<IEducationRepository> _educationRepository = new();
+    private readonly Mock<IProjectRepository> _projectRepository = new();
     private readonly Mock<IFileStorageService> _fileStorageService = new();
     private readonly Mock<IResumeExtractionService> _resumeExtractionService = new();
     private readonly Mock<ICurrentUserService> _currentUserService = new();
@@ -32,6 +33,7 @@ public class SaveResumeCommandHandlerTests
         _unitOfWork.SetupGet(u => u.Resumes).Returns(_resumeRepository.Object);
         _unitOfWork.SetupGet(u => u.WorkExperiences).Returns(_workExperienceRepository.Object);
         _unitOfWork.SetupGet(u => u.Educations).Returns(_educationRepository.Object);
+        _unitOfWork.SetupGet(u => u.Projects).Returns(_projectRepository.Object);
         _currentUserService.SetupGet(u => u.UserId).Returns("user-1");
 
         _unitOfWork
@@ -197,6 +199,21 @@ public class SaveResumeCommandHandlerTests
                         StartDate = "2016",
                         EndDate = "2020"
                     }
+                ],
+                Projects =
+                [
+                    new ExtractedProjectDto
+                    {
+                        ProjectName = "TalentX Platform",
+                        Role = "Backend Engineer",
+                        ProjectType = "Professional",
+                        StartDate = "2023",
+                        EndDate = "Present",
+                        IsOngoing = true,
+                        Description = "AI Platform",
+                        TechnologiesUsed = ["C#", ".NET"],
+                        ProjectUrl = "https://talentx.ai"
+                    }
                 ]
             });
 
@@ -230,6 +247,13 @@ public class SaveResumeCommandHandlerTests
         _educationRepository.Verify(
             r => r.AddAsync(
                 It.Is<Education>(e => e.Institution == "State University"),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        _projectRepository.Verify(
+            r => r.DeleteByUserIdAsync("user-1", It.IsAny<CancellationToken>()), Times.Once);
+        _projectRepository.Verify(
+            r => r.AddAsync(
+                It.Is<Project>(p => p.ProjectName == "TalentX Platform" && p.Role == "Backend Engineer"),
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }

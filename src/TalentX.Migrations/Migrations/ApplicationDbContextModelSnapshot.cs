@@ -1161,6 +1161,12 @@ namespace TalentX.Migrations.Migrations
                     b.Property<string>("ExtractedEducationJson")
                         .HasColumnType("text");
 
+                    b.Property<string>("ExtractedProfileJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ExtractedProjectsJson")
+                        .HasColumnType("text");
+
                     b.Property<string>("ExtractedSoftSkillsJson")
                         .HasColumnType("text");
 
@@ -1493,6 +1499,70 @@ namespace TalentX.Migrations.Migrations
                         .IsUnique();
 
                     b.ToTable("PreparationAnswers", (string)null);
+                });
+
+            modelBuilder.Entity("TalentX.Domain.Entities.Project", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<string>("EndDate")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<bool>("IsOngoing")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("ProjectName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("ProjectType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("ProjectUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<string>("StartDate")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("TechnologiesUsed")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Projects", (string)null);
                 });
 
             modelBuilder.Entity("TalentX.Domain.Entities.Resume", b =>

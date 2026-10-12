@@ -155,7 +155,9 @@ public class JobsController : BaseApiController
             request.ExtractedSoftSkills,
             request.ExtractedToolsAndPlatforms,
             request.ExtractedWorkExperience,
-            request.ExtractedEducation);
+            request.ExtractedEducation,
+            request.ExtractedProjects,
+            ExtractedProfileJson: request.ExtractedProfile);
 
         var response = await Sender.Send(command, cancellationToken);
         return Ok(response);

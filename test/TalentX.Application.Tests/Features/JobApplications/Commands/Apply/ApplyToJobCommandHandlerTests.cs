@@ -345,4 +345,32 @@ public class ApplyToJobCommandHandlerTests
             s => s.SaveAsync(It.IsAny<IUploadedFile>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
+
+    [Fact]
+    public async Task Handle_WithExtractedProfileJson_SavesExtractedProfileJsonOnApplication()
+    {
+        SetupPublishedJob();
+        _jobApplicationRepository
+            .Setup(r => r.ExistsPendingByJobIdAndEmailAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        JobApplication? addedApplication = null;
+        _jobApplicationRepository
+            .Setup(r => r.AddAsync(It.IsAny<JobApplication>(), It.IsAny<CancellationToken>()))
+            .Callback<JobApplication, CancellationToken>((application, _) => addedApplication = application)
+            .Returns(Task.CompletedTask);
+
+        _verificationTokenRepository
+            .Setup(r => r.AddAsync(It.IsAny<EmailVerificationToken>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        const string extractedProfileJson = """{"tagline":"Staff Engineer","shortBio":"Bio text","phone":"+1234567890","linkedInUrl":"https://linkedin.com/in/jane"}""";
+        var command = ValidCommand() with { ExtractedProfileJson = extractedProfileJson };
+
+        var response = await _handler.Handle(command, CancellationToken.None);
+
+        addedApplication.Should().NotBeNull();
+        addedApplication!.ExtractedProfileJson.Should().Be(extractedProfileJson);
+        response.ApplicationId.Should().Be(addedApplication.Id);
+    }
 }

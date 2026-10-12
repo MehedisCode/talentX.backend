@@ -29,5 +29,6 @@ public sealed record TalentPublicProfileResponse(
     string? CoverLetter,
     DateTime AppliedAt,
     IReadOnlyList<WorkExperienceItemDto> WorkExperiences,
-    IReadOnlyList<EducationItemDto> Educations
+    IReadOnlyList<EducationItemDto> Educations,
+    IReadOnlyList<ProjectItemDto> Projects
 );

@@ -114,19 +114,20 @@ public sealed class VerifyGuestEmailCommandHandler : IRequestHandler<VerifyGuest
         }
 
         var talentUserId = createResult.Data.UserId;
+        var profilePayload = application.GetExtractedProfile();
 
         var talent = new Talent(talentUserId, applicantName, email);
         talent.UpdateProfile(
             name: applicantName,
-            tagline: null,
-            shortBio: null,
+            tagline: profilePayload?.Tagline,
+            shortBio: profilePayload?.ShortBio,
             location: application.Location,
-            phone: null,
-            linkedInUrl: null,
-            additionalUrls: null,
+            phone: profilePayload?.Phone,
+            linkedInUrl: profilePayload?.LinkedInUrl,
+            additionalUrls: profilePayload?.PortfolioUrls,
             totalYearsExperience: application.TotalYearsExperience,
             expectedSalary: application.ExpectedSalary,
-            skillPropositions: null);
+            skillPropositions: profilePayload?.SkillPropositions);
 
         var technicalSkills = application.GetExtractedTechnicalSkills();
         var softSkills = application.GetExtractedSoftSkills();
@@ -138,6 +139,7 @@ public sealed class VerifyGuestEmailCommandHandler : IRequestHandler<VerifyGuest
         await CreateResumeForGuestAsync(talentUserId, application, cancellationToken);
         await CreateWorkExperienceForGuestAsync(talentUserId, application, cancellationToken);
         await CreateEducationForGuestAsync(talentUserId, application, cancellationToken);
+        await CreateProjectsForGuestAsync(talentUserId, application, cancellationToken);
 
         return (talentUserId, temporaryPassword, true);
     }
@@ -225,6 +227,37 @@ public sealed class VerifyGuestEmailCommandHandler : IRequestHandler<VerifyGuest
         }
     }
 
+    private async Task CreateProjectsForGuestAsync(
+        string talentUserId,
+        JobApplication application,
+        CancellationToken cancellationToken)
+    {
+        var existingProjects = await _unitOfWork.Projects.GetByUserIdAsync(talentUserId, cancellationToken);
+        if (existingProjects.Count > 0)
+            return;
+
+        var projects = application.GetExtractedProjects();
+        foreach (var project in projects)
+        {
+            if (string.IsNullOrWhiteSpace(project.ProjectName))
+                continue;
+
+            await _unitOfWork.Projects.AddAsync(
+                new Project(
+                    talentUserId,
+                    project.ProjectName,
+                    project.Role ?? string.Empty,
+                    string.IsNullOrWhiteSpace(project.ProjectType) ? "Professional" : project.ProjectType,
+                    project.StartDate ?? string.Empty,
+                    project.EndDate,
+                    project.IsOngoing,
+                    project.Description ?? string.Empty,
+                    project.TechnologiesUsed ?? [],
+                    project.ProjectUrl),
+                cancellationToken);
+        }
+    }
+
     private async Task LinkApplicationsToTalentAsync(
         string email,
         string talentUserId,
@@ -282,6 +315,7 @@ public sealed class VerifyGuestEmailCommandHandler : IRequestHandler<VerifyGuest
             await CreateResumeForGuestAsync(talentUserId, application, cancellationToken);
             await CreateWorkExperienceForGuestAsync(talentUserId, application, cancellationToken);
             await CreateEducationForGuestAsync(talentUserId, application, cancellationToken);
+            await CreateProjectsForGuestAsync(talentUserId, application, cancellationToken);
         }
 
         var otherPending = await _jobApplicationRepository.GetPendingByEmailAsync(email, cancellationToken);

@@ -1,4 +1,5 @@
 using FluentAssertions;
+using TalentX.Domain;
 using TalentX.Domain.Entities;
 using TalentX.Domain.Enums;
 using Xunit;
@@ -124,4 +125,90 @@ public sealed class JobApplicationTests
         application.UpdatedAt.Should().NotBeNull();
         application.UpdatedAt!.Value.Should().BeOnOrAfter(beforeUpdate).And.BeOnOrBefore(afterUpdate);
     }
+
+    [Fact]
+    public void CreateGuestApplication_WithExtractedProfileJson_SetsExtractedProfileJson()
+    {
+        const string extractedProfileJson = """
+            {
+                "tagline": "Senior Cloud Architect",
+                "shortBio": "Experienced engineer with 10+ years in distributed systems.",
+                "phone": "+1234567890",
+                "linkedInUrl": "https://linkedin.com/in/alexsmith",
+                "portfolioUrls": ["https://alexsmith.dev"],
+                "skillPropositions": ["Cloud Architecture", "Kubernetes"]
+            }
+            """;
+
+        var application = JobApplication.CreateGuestApplication(
+            Guid.NewGuid(),
+            "Alex Smith",
+            "alex@example.com",
+            "resumes/alex.pdf",
+            extractedProfileJson: extractedProfileJson);
+
+        application.ExtractedProfileJson.Should().Be(extractedProfileJson);
+    }
+
+    [Fact]
+    public void GetExtractedProfile_WhenExtractedProfileJsonIsNull_ReturnsNull()
+    {
+        var application = JobApplication.CreateGuestApplication(
+            Guid.NewGuid(),
+            "Alex Smith",
+            "alex@example.com",
+            "resumes/alex.pdf");
+
+        application.ExtractedProfileJson.Should().BeNull();
+        application.GetExtractedProfile().Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData(" ")]
+    [InlineData("   \t\n ")]
+    public void GetExtractedProfile_WhenExtractedProfileJsonIsWhitespace_ReturnsNull(string whitespaceJson)
+    {
+        var application = JobApplication.CreateGuestApplication(
+            Guid.NewGuid(),
+            "Alex Smith",
+            "alex@example.com",
+            "resumes/alex.pdf",
+            extractedProfileJson: whitespaceJson);
+
+        application.GetExtractedProfile().Should().BeNull();
+    }
+
+    [Fact]
+    public void GetExtractedProfile_WhenExtractedProfileJsonIsValid_ReturnsDeserializedPayload()
+    {
+        const string extractedProfileJson = """
+            {
+                "tagline": "Senior Cloud Architect",
+                "shortBio": "Experienced engineer with 10+ years in distributed systems.",
+                "phone": "+1234567890",
+                "linkedInUrl": "https://linkedin.com/in/alexsmith",
+                "portfolioUrls": ["https://alexsmith.dev"],
+                "skillPropositions": ["Cloud Architecture", "Kubernetes"]
+            }
+            """;
+
+        var application = JobApplication.CreateGuestApplication(
+            Guid.NewGuid(),
+            "Alex Smith",
+            "alex@example.com",
+            "resumes/alex.pdf",
+            extractedProfileJson: extractedProfileJson);
+
+        var payload = application.GetExtractedProfile();
+
+        payload.Should().NotBeNull();
+        payload!.Tagline.Should().Be("Senior Cloud Architect");
+        payload.ShortBio.Should().Be("Experienced engineer with 10+ years in distributed systems.");
+        payload.Phone.Should().Be("+1234567890");
+        payload.LinkedInUrl.Should().Be("https://linkedin.com/in/alexsmith");
+        payload.PortfolioUrls.Should().ContainSingle().Which.Should().Be("https://alexsmith.dev");
+        payload.SkillPropositions.Should().BeEquivalentTo(["Cloud Architecture", "Kubernetes"]);
+    }
 }
+

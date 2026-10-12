@@ -19,6 +19,7 @@ public class ApplyExtractedProfileCommandHandlerTests
     private readonly Mock<IResumeRepository> _resumeRepository = new();
     private readonly Mock<IWorkExperienceRepository> _workExperienceRepository = new();
     private readonly Mock<IEducationRepository> _educationRepository = new();
+    private readonly Mock<IProjectRepository> _projectRepository = new();
     private readonly Mock<IFileStorageService> _fileStorageService = new();
     private readonly Mock<ICurrentUserService> _currentUserService = new();
     private readonly Mock<ILogger<ApplyExtractedProfileCommandHandler>> _logger = new();
@@ -30,6 +31,7 @@ public class ApplyExtractedProfileCommandHandlerTests
         _unitOfWork.SetupGet(u => u.Resumes).Returns(_resumeRepository.Object);
         _unitOfWork.SetupGet(u => u.WorkExperiences).Returns(_workExperienceRepository.Object);
         _unitOfWork.SetupGet(u => u.Educations).Returns(_educationRepository.Object);
+        _unitOfWork.SetupGet(u => u.Projects).Returns(_projectRepository.Object);
         _currentUserService.SetupGet(u => u.UserId).Returns("user-1");
 
         _unitOfWork
@@ -67,7 +69,8 @@ public class ApplyExtractedProfileCommandHandlerTests
         ["Communication"],
         ["Git"],
         [new ApplyExtractedWorkExperienceItem("Acme", "Engineer", "2020", "Present", true)],
-        [new ApplyExtractedEducationItem("State University", "BSc", "2016", "2020")]
+        [new ApplyExtractedEducationItem("State University", "BSc", "2016", "2020")],
+        [new ApplyExtractedProjectItem("Alpha", "Lead", "Professional", "2023", null, true, "Desc", ["C#"], "https://example.com")]
     );
 
     private static ApplyExtractedProfileCommand ValidCommand(IUploadedFile file) => new(
@@ -256,6 +259,8 @@ public class ApplyExtractedProfileCommandHandlerTests
         _workExperienceRepository.Verify(r => r.AddAsync(It.Is<WorkExperience>(w => w.CompanyName == "Acme" && w.IsCurrent), It.IsAny<CancellationToken>()), Times.Once);
         _educationRepository.Verify(r => r.DeleteByUserIdAsync("user-1", It.IsAny<CancellationToken>()), Times.Once);
         _educationRepository.Verify(r => r.AddAsync(It.Is<Education>(e => e.Institution == "State University"), It.IsAny<CancellationToken>()), Times.Once);
+        _projectRepository.Verify(r => r.DeleteByUserIdAsync("user-1", It.IsAny<CancellationToken>()), Times.Once);
+        _projectRepository.Verify(r => r.AddAsync(It.Is<Project>(p => p.ProjectName == "Alpha" && p.IsOngoing), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]

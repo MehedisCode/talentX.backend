@@ -21,6 +21,7 @@ using TalentX.Application.Features.Talents.Commands.ApplyExtractedProfile;
 using TalentX.Application.Features.Talents.Commands.CompleteMediaMultipartUpload;
 using TalentX.Application.Features.Talents.Commands.ConfirmProfileMediaUpload;
 using TalentX.Application.Features.Talents.Commands.DeleteEducation;
+using TalentX.Application.Features.Talents.Commands.DeleteProject;
 using TalentX.Application.Features.Talents.Commands.DeleteWorkExperience;
 using TalentX.Application.Features.Talents.Commands.ExtractResume;
 using TalentX.Application.Features.Talents.Commands.InitiateMediaMultipartUpload;
@@ -28,6 +29,7 @@ using TalentX.Application.Features.Talents.Commands.RequestMediaMultipartPartUrl
 using TalentX.Application.Features.Talents.Commands.RequestProfileMediaUploadUrl;
 using TalentX.Application.Features.Talents.Commands.UpdateTalentProfile;
 using TalentX.Application.Features.Talents.Commands.UpsertEducation;
+using TalentX.Application.Features.Talents.Commands.UpsertProject;
 using TalentX.Application.Features.Talents.Commands.UpsertWorkExperience;
 using TalentX.Application.Features.Talents.DTOs;
 using TalentX.Application.Features.Talents.Queries.GetTalentApplicationPrefill;
@@ -77,6 +79,7 @@ public class TalentsControllerTests
             null, null, null, null,
             new List<SavedResumeDto>(),
             new List<WorkExperienceItemDto>(), new List<EducationItemDto>(),
+            new List<ProjectItemDto>(),
             DateTime.UtcNow, null);
 
         _sender
@@ -401,6 +404,61 @@ public class TalentsControllerTests
 
         actionResult.Should().BeOfType<NoContentResult>();
         _sender.Verify(s => s.Send(It.Is<DeleteEducationCommand>(c => c.Id == id), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateProject_SendsCommand_AndReturnsCreated()
+    {
+        var command = new UpsertProjectCommand
+        {
+            ProjectName = "TalentX Platform",
+            Role = "Full Stack Engineer",
+            ProjectType = "Professional",
+            StartDate = "2023",
+            Description = "AI-powered job portal"
+        };
+        var id = Guid.NewGuid();
+        _sender.Setup(s => s.Send(command, It.IsAny<CancellationToken>())).ReturnsAsync(id);
+
+        var controller = CreateController();
+
+        var actionResult = await controller.CreateProject(command, CancellationToken.None);
+
+        var objectResult = actionResult.Should().BeOfType<ObjectResult>().Subject;
+        objectResult.StatusCode.Should().Be(StatusCodes.Status201Created);
+    }
+
+    [Fact]
+    public async Task UpdateProject_SendsCommandWithRouteId_AndReturnsNoContent()
+    {
+        var id = Guid.NewGuid();
+        var command = new UpsertProjectCommand
+        {
+            ProjectName = "TalentX Platform",
+            Role = "Full Stack Engineer",
+            ProjectType = "Professional",
+            StartDate = "2023",
+            Description = "AI-powered job portal"
+        };
+
+        var controller = CreateController();
+
+        var actionResult = await controller.UpdateProject(id, command, CancellationToken.None);
+
+        actionResult.Should().BeOfType<NoContentResult>();
+        _sender.Verify(sender => sender.Send(It.Is<UpsertProjectCommand>(commandItem => commandItem.Id == id), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task DeleteProject_SendsCommand_AndReturnsNoContent()
+    {
+        var id = Guid.NewGuid();
+        var controller = CreateController();
+
+        var actionResult = await controller.DeleteProject(id, CancellationToken.None);
+
+        actionResult.Should().BeOfType<NoContentResult>();
+        _sender.Verify(sender => sender.Send(It.Is<DeleteProjectCommand>(commandItem => commandItem.Id == id), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]

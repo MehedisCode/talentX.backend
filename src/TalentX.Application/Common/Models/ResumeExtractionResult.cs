@@ -15,6 +15,7 @@ public sealed class ResumeExtractionResult
     public List<string> PortfolioUrls { get; init; } = [];
     public List<WorkExperienceDto> WorkExperience { get; init; } = [];
     public List<EducationDto> Education { get; init; } = [];
+    public List<ExtractedProjectDto> Projects { get; init; } = [];
     public List<string> TechnicalSkills { get; init; } = [];
     public List<string> SoftSkills { get; init; } = [];
     public List<string> ToolsAndPlatforms { get; init; } = [];

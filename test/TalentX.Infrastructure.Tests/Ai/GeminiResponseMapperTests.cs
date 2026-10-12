@@ -435,4 +435,98 @@ public class GeminiResponseMapperTests
         extractionResult.TotalYearsExperience.Should().Be(0m);
         extractionResult.ExpectedSalary.Should().Be(0m);
     }
+
+    [Fact]
+    public void MapToResult_ShouldMapProjects_WhenProjectsPresent()
+    {
+        var json = """
+        {
+          "fullName": "Bob Builder",
+          "projects": [
+            {
+              "projectName": "  Talent Platform  ",
+              "role": "  Lead Architect  ",
+              "projectType": "professional",
+              "startDate": "2023-01",
+              "endDate": "Present",
+              "isOngoing": true,
+              "description": "  Built a scalable hiring marketplace.  ",
+              "technologiesUsed": [" C# ", " .NET 10 ", ".NET 10", "PostgreSQL"],
+              "projectUrl": "  https://github.com/example/talent-platform  "
+            }
+          ]
+        }
+        """;
+
+        var result = GeminiResponseMapper.MapToResult(json, null, null, NullLogger.Instance);
+
+        result.Projects.Should().HaveCount(1);
+        var project = result.Projects[0];
+        project.ProjectName.Should().Be("Talent Platform");
+        project.Role.Should().Be("Lead Architect");
+        project.ProjectType.Should().Be("Professional");
+        project.StartDate.Should().Be("2023-01");
+        project.EndDate.Should().Be("Present");
+        project.IsOngoing.Should().BeTrue();
+        project.Description.Should().Be("Built a scalable hiring marketplace.");
+        project.TechnologiesUsed.Should().ContainInOrder("C#", ".NET 10", "PostgreSQL");
+        project.ProjectUrl.Should().Be("https://github.com/example/talent-platform");
+    }
+
+    [Fact]
+    public void MapToResult_ShouldSortProjects_NewestAndOngoingFirst()
+    {
+        var json = """
+        {
+          "fullName": "Bob Builder",
+          "projects": [
+            {
+              "projectName": "Old Academic Project",
+              "startDate": "2019-01",
+              "endDate": "2019-12",
+              "isOngoing": false
+            },
+            {
+              "projectName": "Current Ongoing Project",
+              "startDate": "2024-01",
+              "endDate": "Present",
+              "isOngoing": true
+            },
+            {
+              "projectName": "Recent Finished Project",
+              "startDate": "2022-01",
+              "endDate": "2023-06",
+              "isOngoing": false
+            },
+            {
+              "projectName": "Undated Project"
+            }
+          ]
+        }
+        """;
+
+        var result = GeminiResponseMapper.MapToResult(json, null, null, NullLogger.Instance);
+
+        result.Projects.Should().HaveCount(4);
+        result.Projects[0].ProjectName.Should().Be("Current Ongoing Project");
+        result.Projects[1].ProjectName.Should().Be("Recent Finished Project");
+        result.Projects[2].ProjectName.Should().Be("Old Academic Project");
+        result.Projects[3].ProjectName.Should().Be("Undated Project");
+    }
+
+    [Fact]
+    public void MapToResult_ShouldHandleNullOrEmptyProjectsGracefully()
+    {
+        var json = """
+        {
+          "fullName": "Bob Builder",
+          "projects": null
+        }
+        """;
+
+        var result = GeminiResponseMapper.MapToResult(json, null, null, NullLogger.Instance);
+
+        result.Projects.Should().NotBeNull();
+        result.Projects.Should().BeEmpty();
+    }
 }

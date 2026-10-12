@@ -40,6 +40,7 @@ public sealed class GetTalentProfileQueryHandler : IRequestHandler<GetTalentProf
 
         var workExperiences = await _unitOfWork.WorkExperiences.GetByUserIdAsync(userId, cancellationToken);
         var educations = await _unitOfWork.Educations.GetByUserIdAsync(userId, cancellationToken);
+        var projects = await _unitOfWork.Projects.GetByUserIdAsync(userId, cancellationToken);
         var resumes = await _unitOfWork.Resumes.GetAllByUserIdAsync(userId, cancellationToken);
         var resume = resumes.FirstOrDefault(item => item.IsDefault) ?? resumes.FirstOrDefault();
 
@@ -62,6 +63,23 @@ public sealed class GetTalentProfileQueryHandler : IRequestHandler<GetTalentProf
         var sortedEducations = ChronologicalOrderingHelper.SortEducations(
             mappedEducations,
             education => (education.StartDate, education.EndDate));
+
+        var mappedProjects = projects.Select(project => new ProjectItemDto(
+            project.Id,
+            project.ProjectName,
+            project.Role,
+            project.ProjectType,
+            project.StartDate,
+            project.EndDate,
+            project.IsOngoing,
+            project.Description,
+            project.TechnologiesUsed,
+            project.ProjectUrl
+        )).ToList();
+
+        var sortedProjects = ChronologicalOrderingHelper.SortWorkExperiences(
+            mappedProjects,
+            project => (project.IsOngoing, project.StartDate, project.EndDate));
 
         return new TalentProfileResponse(
             talent.Id,
@@ -87,6 +105,7 @@ public sealed class GetTalentProfileQueryHandler : IRequestHandler<GetTalentProf
             resumes.Select(SavedResumeDto.FromEntity).ToList(),
             sortedWorkExperiences,
             sortedEducations,
+            sortedProjects,
             talent.CreatedAt,
             talent.UpdatedAt
         );
