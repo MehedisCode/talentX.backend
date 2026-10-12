@@ -45,12 +45,6 @@ public sealed class SaveResumeCommandHandler : IRequestHandler<SaveResumeCommand
                 $"You can save up to {Resume.MaxPerUser} resumes. Delete one before adding another.");
         }
 
-        ResumeExtractionResult? extractionResult = null;
-        if (request.UpdateProfile)
-        {
-            extractionResult = await ExtractAsync(request, cancellationToken);
-        }
-
         var sanitizedFileName = TalentMediaStorageKeyGuard.SanitizeFileNameSegment(request.ResumeFile.FileName);
         var storageFileName = TalentMediaStorageKeyGuard.BuildStorageKey(
             "resumes",
@@ -79,9 +73,28 @@ public sealed class SaveResumeCommandHandler : IRequestHandler<SaveResumeCommand
 
         await _unitOfWork.Resumes.AddAsync(resume, cancellationToken);
 
-        if (extractionResult is not null)
+        ResumeExtractionResult? extractedProfile = null;
+        var aiServiceUnavailable = false;
+
+        if (request.UpdateProfile)
         {
-            await ApplyExtractionToProfileAsync(userId, extractionResult, cancellationToken);
+            try
+            {
+                var extractionResult = await _resumeExtractionService.ExtractAsync(
+                    request.ResumeFile,
+                    ResumeExtractionPurpose.CandidateProfile,
+                    cancellationToken);
+                extractedProfile = extractionResult;
+                extractedProfile.ResumeUploadId = resume.Id;
+            }
+            catch (Exception exception)
+            {
+                _logger.LogWarning(
+                    exception,
+                    "AI extraction service unavailable while saving resume {FileName}; resume saved without profile prefill",
+                    sanitizedFileName);
+                aiServiceUnavailable = true;
+            }
         }
 
         try
@@ -94,120 +107,7 @@ public sealed class SaveResumeCommandHandler : IRequestHandler<SaveResumeCommand
             throw;
         }
 
-        return SavedResumeDto.FromEntity(resume);
-    }
-
-    private async Task<ResumeExtractionResult> ExtractAsync(
-        SaveResumeCommand request,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            return await _resumeExtractionService.ExtractAsync(
-                request.ResumeFile,
-                ResumeExtractionPurpose.CandidateProfile,
-                cancellationToken);
-        }
-        catch (UnprocessableEntityException)
-        {
-            throw;
-        }
-        catch (Exception exception)
-        {
-            _logger.LogError(
-                exception,
-                "Failed to extract candidate info from resume {FileName}",
-                request.ResumeFile.FileName);
-            throw new BadGatewayException("AI extraction service is temporarily unavailable.");
-        }
-    }
-
-    private async Task ApplyExtractionToProfileAsync(
-        string userId,
-        ResumeExtractionResult extractionResult,
-        CancellationToken cancellationToken)
-    {
-        var talent = await _unitOfWork.Talents.GetByUserIdAsync(userId, cancellationToken)
-            ?? throw new NotFoundException($"Talent profile for user '{userId}' was not found.");
-
-        talent.UpdateProfile(
-            !string.IsNullOrWhiteSpace(extractionResult.FullName) ? extractionResult.FullName : talent.Name,
-            !string.IsNullOrWhiteSpace(extractionResult.Tagline) ? extractionResult.Tagline : talent.Tagline,
-            !string.IsNullOrWhiteSpace(extractionResult.ShortBio) ? extractionResult.ShortBio : talent.ShortBio,
-            !string.IsNullOrWhiteSpace(extractionResult.Location) ? extractionResult.Location : talent.Location,
-            !string.IsNullOrWhiteSpace(extractionResult.Phone) ? extractionResult.Phone : talent.Phone,
-            !string.IsNullOrWhiteSpace(extractionResult.LinkedInUrl) ? extractionResult.LinkedInUrl : talent.LinkedInUrl,
-            extractionResult.PortfolioUrls is { Count: > 0 } ? extractionResult.PortfolioUrls : talent.AdditionalUrls,
-            extractionResult.TotalYearsExperience ?? talent.TotalYearsExperience,
-            extractionResult.ExpectedSalary ?? talent.ExpectedSalary,
-            extractionResult.SkillPropositions is { Count: > 0 } ? extractionResult.SkillPropositions : talent.SkillPropositions);
-
-        talent.UpdateSkills(
-            extractionResult.TechnicalSkills,
-            extractionResult.SoftSkills,
-            extractionResult.ToolsAndPlatforms);
-
-        await _unitOfWork.WorkExperiences.DeleteByUserIdAsync(userId, cancellationToken);
-        foreach (var workExperience in extractionResult.WorkExperience)
-        {
-            if (string.IsNullOrWhiteSpace(workExperience.CompanyName) &&
-                string.IsNullOrWhiteSpace(workExperience.JobTitle))
-            {
-                continue;
-            }
-
-            await _unitOfWork.WorkExperiences.AddAsync(
-                new WorkExperience(
-                    userId,
-                    workExperience.CompanyName ?? string.Empty,
-                    workExperience.JobTitle ?? string.Empty,
-                    workExperience.StartDate,
-                    workExperience.EndDate,
-                    workExperience.IsCurrent),
-                cancellationToken);
-        }
-
-        await _unitOfWork.Educations.DeleteByUserIdAsync(userId, cancellationToken);
-        foreach (var education in extractionResult.Education)
-        {
-            if (string.IsNullOrWhiteSpace(education.Institution) &&
-                string.IsNullOrWhiteSpace(education.Degree))
-            {
-                continue;
-            }
-
-            await _unitOfWork.Educations.AddAsync(
-                new Education(
-                    userId,
-                    education.Institution ?? string.Empty,
-                    education.Degree ?? string.Empty,
-                    education.StartDate,
-                    education.EndDate),
-                cancellationToken);
-        }
-
-        await _unitOfWork.Projects.DeleteByUserIdAsync(userId, cancellationToken);
-        foreach (var project in extractionResult.Projects)
-        {
-            if (string.IsNullOrWhiteSpace(project.ProjectName))
-            {
-                continue;
-            }
-
-            await _unitOfWork.Projects.AddAsync(
-                new Project(
-                    userId,
-                    project.ProjectName,
-                    project.Role ?? string.Empty,
-                    string.IsNullOrWhiteSpace(project.ProjectType) ? "Professional" : project.ProjectType,
-                    project.StartDate ?? string.Empty,
-                    project.EndDate,
-                    project.IsOngoing,
-                    project.Description ?? string.Empty,
-                    project.TechnologiesUsed ?? [],
-                    project.ProjectUrl),
-                cancellationToken);
-        }
+        return SavedResumeDto.FromEntity(resume, extractedProfile, aiServiceUnavailable);
     }
 
     private async Task TryDeleteStoredFileAsync(

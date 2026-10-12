@@ -137,7 +137,7 @@ public sealed class TalentsController : BaseApiController
     [Consumes("multipart/form-data")]
     [RequestSizeLimit(5 * 1024 * 1024)]
     public async Task<IActionResult> ApplyExtractedProfile(
-        IFormFile file,
+        IFormFile? file,
         [FromForm] string payload,
         CancellationToken cancellationToken)
     {
@@ -176,7 +176,7 @@ public sealed class TalentsController : BaseApiController
 
         var command = new ApplyExtractedProfileCommand(
             profileData,
-            new FormFileUploadedFile(file));
+            file is not null ? new FormFileUploadedFile(file) : null);
 
         await Sender.Send(command, cancellationToken);
         return NoContent();

@@ -32,29 +32,34 @@ public sealed class ApplyExtractedProfileCommandHandler : IRequestHandler<ApplyE
         var userId = _currentUserService.UserId
             ?? throw new UnauthorizedException("You must be signed in to update your profile.");
 
-        // The original filename must be sanitized to a bare basename BEFORE the
-        // uniquifying GUID is prepended — BuildStorageKey's own sanitization strips
-        // everything up to the LAST path separator in whatever string it is given,
-        // so composing "{guid}_{rawFileName}" first and sanitizing only afterwards
-        // would silently swallow the GUID prefix whenever the original filename
-        // contains a '/' or '\'. Sanitizing here keeps that invariant safe; the
-        // sanitize call inside BuildStorageKey is then a no-op pass-through for the
-        // already-clean composite, not a second, divergent transformation.
-        var sanitizedResumeFileName = TalentMediaStorageKeyGuard.SanitizeFileNameSegment(request.ResumeFile.FileName);
-        var storageFileName = TalentMediaStorageKeyGuard.BuildStorageKey(
-            "resumes",
-            userId,
-            $"{Guid.NewGuid()}_{sanitizedResumeFileName}");
+        string? resumeStorageKey = null;
+        string? sanitizedResumeFileName = null;
 
-        string resumeStorageKey;
-        try
+        if (request.ResumeFile is not null)
         {
-            resumeStorageKey = await _fileStorageService.SaveAsync(request.ResumeFile, storageFileName, cancellationToken);
-        }
-        catch (Exception exception)
-        {
-            _logger.LogError(exception, "Failed to save resume {FileName} to storage", sanitizedResumeFileName);
-            throw new BadGatewayException("File storage is temporarily unavailable.");
+            // The original filename must be sanitized to a bare basename BEFORE the
+            // uniquifying GUID is prepended — BuildStorageKey's own sanitization strips
+            // everything up to the LAST path separator in whatever string it is given,
+            // so composing "{guid}_{rawFileName}" first and sanitizing only afterwards
+            // would silently swallow the GUID prefix whenever the original filename
+            // contains a '/' or '\'. Sanitizing here keeps that invariant safe; the
+            // sanitize call inside BuildStorageKey is then a no-op pass-through for the
+            // already-clean composite, not a second, divergent transformation.
+            sanitizedResumeFileName = TalentMediaStorageKeyGuard.SanitizeFileNameSegment(request.ResumeFile.FileName);
+            var storageFileName = TalentMediaStorageKeyGuard.BuildStorageKey(
+                "resumes",
+                userId,
+                $"{Guid.NewGuid()}_{sanitizedResumeFileName}");
+
+            try
+            {
+                resumeStorageKey = await _fileStorageService.SaveAsync(request.ResumeFile, storageFileName, cancellationToken);
+            }
+            catch (Exception exception)
+            {
+                _logger.LogError(exception, "Failed to save resume {FileName} to storage", sanitizedResumeFileName);
+                throw new BadGatewayException("File storage is temporarily unavailable.");
+            }
         }
 
         var talent = await _unitOfWork.Talents.GetByUserIdAsync(userId, cancellationToken)
@@ -129,28 +134,32 @@ public sealed class ApplyExtractedProfileCommandHandler : IRequestHandler<ApplyE
                 cancellationToken);
         }
 
-        var existingResume = await _unitOfWork.Resumes.GetByUserIdAsync(userId, cancellationToken);
-        var previousResumeStorageKey = existingResume?.StorageKey;
-
-        if (existingResume is null)
+        string? previousResumeStorageKey = null;
+        if (request.ResumeFile is not null && resumeStorageKey is not null && sanitizedResumeFileName is not null)
         {
-            await _unitOfWork.Resumes.AddAsync(
-                new Resume(
-                    userId,
+            var existingResume = await _unitOfWork.Resumes.GetByUserIdAsync(userId, cancellationToken);
+            previousResumeStorageKey = existingResume?.StorageKey;
+
+            if (existingResume is null)
+            {
+                await _unitOfWork.Resumes.AddAsync(
+                    new Resume(
+                        userId,
+                        resumeStorageKey,
+                        sanitizedResumeFileName,
+                        request.ResumeFile.ContentType,
+                        request.ResumeFile.Length,
+                        isDefault: true),
+                    cancellationToken);
+            }
+            else
+            {
+                existingResume.UpdateFile(
                     resumeStorageKey,
                     sanitizedResumeFileName,
                     request.ResumeFile.ContentType,
-                    request.ResumeFile.Length,
-                    isDefault: true),
-                cancellationToken);
-        }
-        else
-        {
-            existingResume.UpdateFile(
-                resumeStorageKey,
-                sanitizedResumeFileName,
-                request.ResumeFile.ContentType,
-                request.ResumeFile.Length);
+                    request.ResumeFile.Length);
+            }
         }
 
         try
@@ -163,11 +172,15 @@ public sealed class ApplyExtractedProfileCommandHandler : IRequestHandler<ApplyE
             // before committing, reversed from the old order). If the commit itself fails,
             // that brand-new file would otherwise be orphaned — best-effort clean it up
             // before rethrowing, mirroring this codebase's existing cleanup-on-failure pattern.
-            await TryDeleteStoredFileAsync(resumeStorageKey, sanitizedResumeFileName, cancellationToken);
+            if (resumeStorageKey is not null && sanitizedResumeFileName is not null)
+            {
+                await TryDeleteStoredFileAsync(resumeStorageKey, sanitizedResumeFileName, cancellationToken);
+            }
             throw;
         }
 
-        if (!string.IsNullOrWhiteSpace(previousResumeStorageKey) &&
+        if (request.ResumeFile is not null &&
+            !string.IsNullOrWhiteSpace(previousResumeStorageKey) &&
             previousResumeStorageKey != resumeStorageKey)
         {
             await _fileStorageService.DeleteAsync(previousResumeStorageKey, cancellationToken);

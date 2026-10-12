@@ -83,7 +83,10 @@ public sealed class ApplyExtractedProfileCommandValidator : AbstractValidator<Ap
             });
         });
 
-        this.ApplyResumeFileValidationRules(command => command.ResumeFile);
+        When(command => command.ResumeFile is not null, () =>
+        {
+            this.ApplyResumeFileValidationRules(command => command.ResumeFile, required: false);
+        });
     }
 
     private static bool BeAValidAbsoluteUrl(string? url) =>

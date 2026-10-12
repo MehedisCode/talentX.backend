@@ -377,4 +377,57 @@ public class ApplyExtractedProfileCommandHandlerTests
 
         talent.Name.Should().Be("Original Name");
     }
+
+    [Fact]
+    public async Task Handle_WhenResumeFileIsNull_UpdatesProfileAndChildCollectionsWithoutTouchingResumeStorageOrEntity()
+    {
+        var talent = new Talent("user-1", "Jane Doe", "jane@example.com");
+        _talentRepository.Setup(r => r.GetByUserIdAsync("user-1", It.IsAny<CancellationToken>())).ReturnsAsync(talent);
+
+        var command = new ApplyExtractedProfileCommand(ValidProfileData(), null);
+
+        await _handler.Handle(command, CancellationToken.None);
+
+        _fileStorageService.Verify(
+            s => s.SaveAsync(It.IsAny<IUploadedFile>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        _resumeRepository.Verify(
+            r => r.GetByUserIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        _resumeRepository.Verify(
+            r => r.AddAsync(It.IsAny<Resume>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        _fileStorageService.Verify(
+            s => s.DeleteAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+
+        talent.Name.Should().Be("Jane Smith");
+        talent.Tagline.Should().Be("Senior Cloud Architect");
+        talent.TechnicalSkills.Should().BeEquivalentTo(["C#", ".NET"]);
+
+        _workExperienceRepository.Verify(
+            r => r.DeleteByUserIdAsync("user-1", It.IsAny<CancellationToken>()),
+            Times.Once);
+        _workExperienceRepository.Verify(
+            r => r.AddAsync(It.IsAny<WorkExperience>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        _educationRepository.Verify(
+            r => r.DeleteByUserIdAsync("user-1", It.IsAny<CancellationToken>()),
+            Times.Once);
+        _educationRepository.Verify(
+            r => r.AddAsync(It.IsAny<Education>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        _projectRepository.Verify(
+            r => r.DeleteByUserIdAsync("user-1", It.IsAny<CancellationToken>()),
+            Times.Once);
+        _projectRepository.Verify(
+            r => r.AddAsync(It.IsAny<Project>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        _unitOfWork.Verify(
+            u => u.SaveChangesAsync(It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
 }

@@ -216,13 +216,13 @@ public class ApplyExtractedProfileCommandValidatorTests
     }
 
     [Fact]
-    public async Task Validate_WhenResumeFileIsNull_HasError()
+    public async Task Validate_WhenResumeFileIsNull_Passes()
     {
-        var command = ValidCommand() with { ResumeFile = null! };
+        var command = ValidCommand() with { ResumeFile = null };
 
         var result = await _validator.ValidateAsync(command);
 
-        result.IsValid.Should().BeFalse();
+        result.IsValid.Should().BeTrue();
     }
 
     [Fact]
