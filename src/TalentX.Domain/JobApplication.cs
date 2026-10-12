@@ -1,4 +1,5 @@
 using System.Text.Json;
+using TalentX.Domain;
 using TalentX.Domain.Common;
 using TalentX.Domain.Enums;
 
@@ -24,6 +25,7 @@ public sealed class JobApplication : BaseEntity
     public string? ExtractedToolsAndPlatformsJson { get; private set; }
     public string? ExtractedWorkExperienceJson { get; private set; }
     public string? ExtractedEducationJson { get; private set; }
+    public string? ExtractedProjectsJson { get; private set; }
 
     private static readonly JsonSerializerOptions s_jsonOptions = new()
     {
@@ -70,7 +72,8 @@ public sealed class JobApplication : BaseEntity
         string? extractedSoftSkillsJson = null,
         string? extractedToolsAndPlatformsJson = null,
         string? extractedWorkExperienceJson = null,
-        string? extractedEducationJson = null)
+        string? extractedEducationJson = null,
+        string? extractedProjectsJson = null)
     {
         var application = new JobApplication(
             jobId,
@@ -88,6 +91,7 @@ public sealed class JobApplication : BaseEntity
         application.ExtractedToolsAndPlatformsJson = extractedToolsAndPlatformsJson;
         application.ExtractedWorkExperienceJson = extractedWorkExperienceJson;
         application.ExtractedEducationJson = extractedEducationJson;
+        application.ExtractedProjectsJson = extractedProjectsJson;
 
         return application;
     }
@@ -106,6 +110,9 @@ public sealed class JobApplication : BaseEntity
 
     public List<ExtractedEducationItem> GetExtractedEducation() =>
         DeserializeList<ExtractedEducationItem>(ExtractedEducationJson);
+
+    public List<ExtractedProjectItem> GetExtractedProjects() =>
+        DeserializeList<ExtractedProjectItem>(ExtractedProjectsJson);
 
     public void UpdateStatus(ApplicationStatus status)
     {

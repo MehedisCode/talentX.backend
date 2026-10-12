@@ -23,6 +23,8 @@ public sealed class UnitOfWork : IUnitOfWork
     public IResumeRepository Resumes { get; }
     public IWorkExperienceRepository WorkExperiences { get; }
     public IEducationRepository Educations { get; }
+    private IProjectRepository? _projects;
+    public IProjectRepository Projects => _projects ??= new ProjectRepository(_context);
     public ISavedJobRepository SavedJobs { get; }
     public IInterviewInvitationRepository InterviewInvitations { get; }
     public IEmailDispatchLogRepository EmailDispatchLogs { get; }

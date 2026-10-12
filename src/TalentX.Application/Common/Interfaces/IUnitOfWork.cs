@@ -17,6 +17,7 @@ public interface IUnitOfWork : IDisposable, IAsyncDisposable
     IResumeRepository Resumes { get; }
     IWorkExperienceRepository WorkExperiences { get; }
     IEducationRepository Educations { get; }
+    IProjectRepository Projects { get; }
     IInvitationRepository Invitations { get; }
     ISavedJobRepository SavedJobs { get; }
     IInterviewInvitationRepository InterviewInvitations { get; }
