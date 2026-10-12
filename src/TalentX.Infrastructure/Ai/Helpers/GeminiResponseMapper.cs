@@ -131,18 +131,18 @@ public static class GeminiResponseMapper
                 SkillPropositions = cleanSkillPropositions,
                 WorkExperience = ResumeChronology.SortNewestFirst(
                     workExperience,
-                    w => w.IsCurrent ? ResumeChronology.CurrentKey : ResumeChronology.ToSortKey(w.StartDate)),
+                    experienceItem => experienceItem.IsCurrent ? ResumeChronology.CurrentKey : ResumeChronology.ToSortKey(experienceItem.StartDate)),
                 Education = ResumeChronology.SortNewestFirst(
                     education,
-                    e => ResumeChronology.ToSortKey(e.EndDate) ?? ResumeChronology.ToSortKey(e.StartDate)),
+                    educationItem => ResumeChronology.ToSortKey(educationItem.EndDate) ?? ResumeChronology.ToSortKey(educationItem.StartDate)),
                 Projects = ResumeChronology.SortNewestFirst(
                     projects,
                     project => project.IsOngoing ? ResumeChronology.CurrentKey : (ResumeChronology.ToSortKey(project.EndDate) ?? ResumeChronology.ToSortKey(project.StartDate)))
             };
         }
-        catch (JsonException ex)
+        catch (JsonException jsonException)
         {
-            logger.LogError(ex, "Failed to parse structured JSON from Gemini: {JsonText}", jsonText);
+            logger.LogError(jsonException, "Failed to parse structured JSON from Gemini: {JsonText}", jsonText);
             throw;
         }
     }

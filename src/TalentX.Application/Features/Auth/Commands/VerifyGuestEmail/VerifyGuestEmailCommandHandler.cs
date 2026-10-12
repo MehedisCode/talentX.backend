@@ -232,8 +232,8 @@ public sealed class VerifyGuestEmailCommandHandler : IRequestHandler<VerifyGuest
         JobApplication application,
         CancellationToken cancellationToken)
     {
-        var existing = await _unitOfWork.Projects.GetByUserIdAsync(talentUserId, cancellationToken);
-        if (existing.Count > 0)
+        var existingProjects = await _unitOfWork.Projects.GetByUserIdAsync(talentUserId, cancellationToken);
+        if (existingProjects.Count > 0)
             return;
 
         var projects = application.GetExtractedProjects();

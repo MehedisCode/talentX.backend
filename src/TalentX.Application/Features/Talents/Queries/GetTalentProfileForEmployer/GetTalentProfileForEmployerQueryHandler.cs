@@ -127,7 +127,7 @@ public sealed class GetTalentProfileForEmployerQueryHandler
         return new TalentPublicProfileResponse(
             ApplicationId: application.Id,
             JobId: application.JobId,
-            TalentUserId: application.TalentUserId,
+            TalentUserId: application.TalentUserId ?? string.Empty,
             Name: talent?.Name ?? application.ApplicantName,
             Email: talent?.Email ?? application.ApplicantEmail,
             Tagline: talent?.Tagline,
