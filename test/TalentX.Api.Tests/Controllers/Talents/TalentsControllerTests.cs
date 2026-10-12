@@ -207,7 +207,7 @@ public class TalentsControllerTests
         capturedCommand.ProfileData.ToolsAndPlatforms.Should().BeEquivalentTo(["Git"]);
         capturedCommand.ResumeFile.Should().NotBeNull();
         capturedCommand.ResumeFile!.FileName.Should().Be("resume.pdf");
-        _sender.Verify(s => s.Send(It.IsAny<ApplyExtractedProfileCommand>(), It.IsAny<CancellationToken>()), Times.Once);
+        _sender.Verify(sender => sender.Send(It.IsAny<ApplyExtractedProfileCommand>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -224,7 +224,7 @@ public class TalentsControllerTests
 
         ApplyExtractedProfileCommand? capturedCommand = null;
         _sender
-            .Setup(s => s.Send(It.IsAny<ApplyExtractedProfileCommand>(), It.IsAny<CancellationToken>()))
+            .Setup(sender => sender.Send(It.IsAny<ApplyExtractedProfileCommand>(), It.IsAny<CancellationToken>()))
             .Callback<ApplyExtractedProfileCommand, CancellationToken>((request, _) => capturedCommand = request)
             .Returns(Task.CompletedTask);
 
@@ -236,7 +236,7 @@ public class TalentsControllerTests
         capturedCommand.Should().NotBeNull();
         capturedCommand!.ProfileData.FullName.Should().Be("Jane Doe");
         capturedCommand.ResumeFile.Should().BeNull();
-        _sender.Verify(s => s.Send(It.IsAny<ApplyExtractedProfileCommand>(), It.IsAny<CancellationToken>()), Times.Once);
+        _sender.Verify(sender => sender.Send(It.IsAny<ApplyExtractedProfileCommand>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]

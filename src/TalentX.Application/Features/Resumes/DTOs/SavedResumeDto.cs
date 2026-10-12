@@ -19,8 +19,8 @@ public sealed record SavedResumeDto(
 
     public static SavedResumeDto FromEntity(
         Resume resume,
-        ResumeExtractionResult? extractedProfile = null,
-        bool aiServiceUnavailable = false) => new(
+        ResumeExtractionResult? extractedProfile,
+        bool aiServiceUnavailable) => new(
         resume.Id,
         resume.DisplayName,
         resume.OriginalFileName,

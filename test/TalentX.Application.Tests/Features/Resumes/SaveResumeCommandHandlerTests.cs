@@ -217,30 +217,30 @@ public class SaveResumeCommandHandlerTests
                 ]
             });
 
-        var result = await _handler.Handle(
+        var savedResumeDto = await _handler.Handle(
             new SaveResumeCommand(ValidFileMock().Object, null, UpdateProfile: true),
             CancellationToken.None);
 
-        result.IsDefault.Should().BeTrue();
-        result.ExtractedProfile.Should().NotBeNull();
-        result.ExtractedProfile!.FullName.Should().Be("Jane Extraction");
-        result.ExtractedProfile.ResumeUploadId.Should().Be(result.Id);
-        result.AiServiceUnavailable.Should().BeFalse();
+        savedResumeDto.IsDefault.Should().BeTrue();
+        savedResumeDto.ExtractedProfile.Should().NotBeNull();
+        savedResumeDto.ExtractedProfile!.FullName.Should().Be("Jane Extraction");
+        savedResumeDto.ExtractedProfile.ResumeUploadId.Should().Be(savedResumeDto.Id);
+        savedResumeDto.AiServiceUnavailable.Should().BeFalse();
 
         _talentRepository.Verify(
-            r => r.GetByUserIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+            repository => repository.GetByUserIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
         _workExperienceRepository.Verify(
-            r => r.DeleteByUserIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+            repository => repository.DeleteByUserIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
         _workExperienceRepository.Verify(
-            r => r.AddAsync(It.IsAny<WorkExperience>(), It.IsAny<CancellationToken>()), Times.Never);
+            repository => repository.AddAsync(It.IsAny<WorkExperience>(), It.IsAny<CancellationToken>()), Times.Never);
         _educationRepository.Verify(
-            r => r.DeleteByUserIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+            repository => repository.DeleteByUserIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
         _educationRepository.Verify(
-            r => r.AddAsync(It.IsAny<Education>(), It.IsAny<CancellationToken>()), Times.Never);
+            repository => repository.AddAsync(It.IsAny<Education>(), It.IsAny<CancellationToken>()), Times.Never);
         _projectRepository.Verify(
-            r => r.DeleteByUserIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+            repository => repository.DeleteByUserIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
         _projectRepository.Verify(
-            r => r.AddAsync(It.IsAny<Project>(), It.IsAny<CancellationToken>()), Times.Never);
+            repository => repository.AddAsync(It.IsAny<Project>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -279,12 +279,12 @@ public class SaveResumeCommandHandlerTests
                 TechnicalSkills = ["Python"]
             });
 
-        var result = await _handler.Handle(
+        var savedResumeDto = await _handler.Handle(
             new SaveResumeCommand(ValidFileMock().Object, null, UpdateProfile: true),
             CancellationToken.None);
 
-        result.ExtractedProfile.Should().NotBeNull();
-        result.ExtractedProfile!.FullName.Should().Be("Extracted Name");
+        savedResumeDto.ExtractedProfile.Should().NotBeNull();
+        savedResumeDto.ExtractedProfile!.FullName.Should().Be("Extracted Name");
         talent.Name.Should().Be("Jane Doe");
         talent.Tagline.Should().Be("Existing Tagline");
         talent.ShortBio.Should().Be("Existing Bio");
@@ -295,38 +295,38 @@ public class SaveResumeCommandHandlerTests
         talent.TotalYearsExperience.Should().Be(10m);
         talent.ExpectedSalary.Should().Be(150000m);
         talent.SkillPropositions.Should().Equal("Existing Proposition");
-        _talentRepository.Verify(r => r.GetByUserIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        _talentRepository.Verify(repository => repository.GetByUserIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
     public async Task Handle_WhenExtractionFails_SavesResumeSuccessfully_AndSetsAiServiceUnavailableFlag()
     {
         _resumeExtractionService
-            .Setup(s => s.ExtractAsync(It.IsAny<IUploadedFile>(), ResumeExtractionPurpose.CandidateProfile, It.IsAny<CancellationToken>()))
+            .Setup(service => service.ExtractAsync(It.IsAny<IUploadedFile>(), ResumeExtractionPurpose.CandidateProfile, It.IsAny<CancellationToken>()))
             .ThrowsAsync(new Exception("AI down"));
 
-        Resume? added = null;
+        Resume? addedResume = null;
         _resumeRepository
-            .Setup(r => r.AddAsync(It.IsAny<Resume>(), It.IsAny<CancellationToken>()))
-            .Callback<Resume, CancellationToken>((resume, _) => added = resume)
+            .Setup(repository => repository.AddAsync(It.IsAny<Resume>(), It.IsAny<CancellationToken>()))
+            .Callback<Resume, CancellationToken>((resume, _) => addedResume = resume)
             .Returns(Task.CompletedTask);
 
-        var result = await _handler.Handle(
+        var savedResumeDto = await _handler.Handle(
             new SaveResumeCommand(ValidFileMock().Object, null, UpdateProfile: true),
             CancellationToken.None);
 
         _fileStorageService.Verify(
-            s => s.SaveAsync(It.IsAny<IUploadedFile>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            service => service.SaveAsync(It.IsAny<IUploadedFile>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Once);
         _resumeRepository.Verify(
-            r => r.AddAsync(It.IsAny<Resume>(), It.IsAny<CancellationToken>()),
+            repository => repository.AddAsync(It.IsAny<Resume>(), It.IsAny<CancellationToken>()),
             Times.Once);
         _unitOfWork.Verify(
-            u => u.SaveChangesAsync(It.IsAny<CancellationToken>()),
+            unitOfWork => unitOfWork.SaveChangesAsync(It.IsAny<CancellationToken>()),
             Times.Once);
-        result.Should().NotBeNull();
-        result.AiServiceUnavailable.Should().BeTrue();
-        result.ExtractedProfile.Should().BeNull();
-        added.Should().NotBeNull();
+        savedResumeDto.Should().NotBeNull();
+        savedResumeDto.AiServiceUnavailable.Should().BeTrue();
+        savedResumeDto.ExtractedProfile.Should().BeNull();
+        addedResume.Should().NotBeNull();
     }
 }

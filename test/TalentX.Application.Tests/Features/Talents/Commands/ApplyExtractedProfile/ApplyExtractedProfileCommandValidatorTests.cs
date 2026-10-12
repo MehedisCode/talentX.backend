@@ -209,10 +209,10 @@ public class ApplyExtractedProfileCommandValidatorTests
             ProfileData = ValidProfileData() with { AdditionalUrls = ["not-a-url"] }
         };
 
-        var result = await _validator.ValidateAsync(command);
+        var validationResult = await _validator.ValidateAsync(command);
 
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.ErrorMessage.Contains("Additional URLs must be valid URLs"));
+        validationResult.IsValid.Should().BeFalse();
+        validationResult.Errors.Should().Contain(error => error.ErrorMessage.Contains("Additional URLs must be valid URLs"));
     }
 
     [Fact]
@@ -220,22 +220,22 @@ public class ApplyExtractedProfileCommandValidatorTests
     {
         var command = ValidCommand() with { ResumeFile = null };
 
-        var result = await _validator.ValidateAsync(command);
+        var validationResult = await _validator.ValidateAsync(command);
 
-        result.IsValid.Should().BeTrue();
+        validationResult.IsValid.Should().BeTrue();
     }
 
     [Fact]
     public async Task Validate_WhenResumeFileExceedsSizeLimit_HasError()
     {
         var fileMock = ValidFileMock();
-        fileMock.Setup(f => f.Length).Returns(6 * 1024 * 1024);
+        fileMock.Setup(file => file.Length).Returns(6 * 1024 * 1024);
         var command = ValidCommand() with { ResumeFile = fileMock.Object };
 
-        var result = await _validator.ValidateAsync(command);
+        var validationResult = await _validator.ValidateAsync(command);
 
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.ErrorMessage.Contains("exceed 5 MB"));
+        validationResult.IsValid.Should().BeFalse();
+        validationResult.Errors.Should().Contain(error => error.ErrorMessage.Contains("exceed 5 MB"));
     }
 
     [Fact]
