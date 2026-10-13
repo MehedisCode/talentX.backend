@@ -3,6 +3,7 @@ using TalentX.Application.Common.Exceptions;
 using TalentX.Application.Common.Interfaces;
 using TalentX.Application.Features.Invitations.DTOs;
 using TalentX.Application.Identity.Services;
+using TalentX.Domain.Enums;
 
 namespace TalentX.Application.Features.Invitations.Commands.WithdrawInvitation;
 
@@ -38,6 +39,11 @@ public sealed class WithdrawInvitationCommandHandler : IRequestHandler<WithdrawI
         if (invitation.JobId != request.JobId)
         {
             throw new BadRequestException("Invitation does not belong to the specified job.");
+        }
+
+        if (invitation.Status != InvitationStatus.Pending)
+        {
+            throw new ConflictException("Only pending invitations can be withdrawn.");
         }
 
         invitation.Withdraw();
