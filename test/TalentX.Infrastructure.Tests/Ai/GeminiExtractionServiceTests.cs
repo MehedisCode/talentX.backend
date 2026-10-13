@@ -134,14 +134,11 @@ public class GeminiExtractionServiceTests
             "email": "jane@example.com",
             "phone": "+1234567890",
             "location": "New York, NY",
-            "totalYearsExperience": 10.5,
-            "expectedSalary": 150000,
             "linkedInUrl": "https://linkedin.com/in/janedoe",
             "portfolioUrls": ["https://janedoe.dev"],
             "technicalSkills": ["C#", ".NET 10"],
             "softSkills": ["Leadership"],
             "toolsAndPlatforms": ["Docker", "AWS"],
-            "skillPropositions": ["Cloud Native Architecture"],
             "workExperience": [
                 {
                     "companyName": "Tech Corp",
@@ -196,9 +193,6 @@ public class GeminiExtractionServiceTests
         result.FullName.Should().Be("Jane Doe");
         result.Tagline.Should().Be("Senior .NET Architect");
         result.ShortBio.Should().Be("Over 10 years of experience building distributed systems.");
-        result.TotalYearsExperience.Should().Be(10.5m);
-        result.ExpectedSalary.Should().Be(150000m);
-        result.SkillPropositions.Should().ContainSingle("Cloud Native Architecture");
         result.Projects.Should().HaveCount(1);
         result.Projects[0].ProjectName.Should().Be("Cloud Marketplace");
     }

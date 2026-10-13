@@ -97,19 +97,6 @@ public static class GeminiResponseMapper
                 ? null
                 : result.ShortBio.Trim();
 
-            var cleanTotalYearsExperience = result.TotalYearsExperience is >= 0
-                ? result.TotalYearsExperience
-                : null;
-
-            var cleanExpectedSalary = result.ExpectedSalary is >= 0
-                ? result.ExpectedSalary
-                : null;
-
-            var cleanSkillPropositions = (result.SkillPropositions ?? [])
-                .Where(skillProposition => !string.IsNullOrWhiteSpace(skillProposition))
-                .Select(skillProposition => skillProposition.Trim())
-                .ToList();
-
             return new ResumeExtractionResult
             {
                 FullName = result.FullName,
@@ -118,8 +105,6 @@ public static class GeminiResponseMapper
                 Email = finalEmail,
                 Phone = finalPhone,
                 Location = result.Location,
-                TotalYearsExperience = cleanTotalYearsExperience,
-                ExpectedSalary = cleanExpectedSalary,
                 LinkedInUrl = result.LinkedInUrl,
                 PortfolioUrls = PortfolioUrlClassifier.Filter(
                     result.PortfolioUrls,
@@ -128,7 +113,6 @@ public static class GeminiResponseMapper
                 TechnicalSkills = result.TechnicalSkills ?? [],
                 SoftSkills = result.SoftSkills ?? [],
                 ToolsAndPlatforms = result.ToolsAndPlatforms ?? [],
-                SkillPropositions = cleanSkillPropositions,
                 WorkExperience = ResumeChronology.SortNewestFirst(
                     workExperience,
                     experienceItem => experienceItem.IsCurrent ? ResumeChronology.CurrentKey : ResumeChronology.ToSortKey(experienceItem.StartDate)),

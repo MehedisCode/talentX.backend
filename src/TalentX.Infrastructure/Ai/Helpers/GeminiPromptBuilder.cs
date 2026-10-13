@@ -92,15 +92,12 @@ public static class GeminiPromptBuilder
         - tagline: Headline / professional title (e.g. 'Senior Full Stack Engineer'). Null if not found.
         - shortBio: Executive summary / about me / professional summary. Null if not found.
         - location: Candidate's current residence/location (city, state/province, country). Do NOT use company locations as candidate location.
-        - totalYearsExperience: Total years of professional experience as a number (e.g. 5, 8.5). Null if not found.
-        - expectedSalary: Desired/expected salary or compensation if explicitly mentioned. Null if not found.
         - workExperience: Extract EVERY work experience entry in the resume — full-time, part-time, internship, contract, and freelance roles. Do not merge or skip roles, and do not omit a role just because its dates are missing (leave the date fields empty instead). Only treat a role as CURRENT (set 'endDate' to 'Present' and 'isCurrent' to true) when the resume indicates it: a start date with no end date, or wording like Present / Current / till date. A range such as '(December 2024 - Present)' means startDate 'December 2024' and endDate 'Present' with 'isCurrent' true. If the resume gives NO dates for a role, leave both date fields empty and set 'isCurrent' to false — do not infer or invent 'Present'. For past roles, set 'isCurrent' to false and fill 'startDate' and 'endDate' from the resume.
         - education: Extract all degrees, universities, and colleges. When the resume shows a date range (e.g. '2016 - 2020'), put the first year in 'startDate' and the second year in 'endDate'. For ongoing studies, set 'endDate' to 'Expected <Year>' or 'Present'. If the resume lists only a SINGLE year for a degree, treat that year as the completion/graduation year and put it in 'endDate' (leave 'startDate' empty). Do not invent dates that are not present.
         - projects: Extract notable projects into the projects field: array of { projectName, role, projectType ("Professional"|"Personal"|"Academic"), startDate, endDate, isOngoing, description, technologiesUsed (array of string tags), projectUrl }.
         - technicalSkills: Programming languages, frameworks, libraries, databases, and core technical proficiencies (e.g. C#, .NET, Python, React, PostgreSQL, REST APIs, GraphQL).
         - toolsAndPlatforms: Developer tools, cloud providers, DevOps tools, version control, and infrastructure (e.g. Git, Docker, Kubernetes, AWS, Azure, GCP, Linux, Jira, Postman, CI/CD).
         - softSkills: Interpersonal, leadership, communication, management, and agile/scrum methodologies (e.g. Problem Solving, Team Leadership, Agile/Scrum, Collaboration).
-        - skillPropositions: Key strengths, value propositions, or summary highlights as a list of strings. Empty list if none.
 
         IMPORTANT RULES FOR CONTACT & HYPERLINKS:
         - Do NOT guess or invent email addresses or phone numbers if none are found.
@@ -216,8 +213,6 @@ public static class GeminiPromptBuilder
             email = new { type = "string" },
             phone = new { type = "string" },
             location = new { type = "string" },
-            totalYearsExperience = new { type = "number", description = "Total years of professional experience" },
-            expectedSalary = new { type = "number", description = "Expected salary or compensation if stated" },
             linkedInUrl = new { type = "string" },
             portfolioUrls,
             workExperience,
@@ -225,8 +220,7 @@ public static class GeminiPromptBuilder
             projects,
             technicalSkills,
             softSkills,
-            toolsAndPlatforms,
-            skillPropositions = new { type = "array", items = new { type = "string" }, description = "Key value propositions or skill highlights" }
+            toolsAndPlatforms
         };
     }
 }

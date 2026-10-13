@@ -173,9 +173,6 @@ public class SaveResumeCommandHandlerTests
                 Phone = "+12125551234",
                 LinkedInUrl = "https://linkedin.com/in/janeextracted",
                 PortfolioUrls = ["https://extracted.dev"],
-                TotalYearsExperience = 6m,
-                ExpectedSalary = 110000m,
-                SkillPropositions = ["Quick learner"],
                 TechnicalSkills = ["C#"],
                 SoftSkills = ["Communication"],
                 ToolsAndPlatforms = ["Git"],
@@ -273,9 +270,6 @@ public class SaveResumeCommandHandlerTests
                 Phone = "Extracted Phone",
                 LinkedInUrl = "https://linkedin.com/in/extracted",
                 PortfolioUrls = ["https://extracted.dev"],
-                TotalYearsExperience = 2m,
-                ExpectedSalary = 50000m,
-                SkillPropositions = ["Extracted Proposition"],
                 TechnicalSkills = ["Python"]
             });
 
