@@ -9,8 +9,6 @@ public sealed class ResumeExtractionResult
     public string? Email { get; init; }
     public string? Phone { get; init; }
     public string? Location { get; init; }
-    public decimal? TotalYearsExperience { get; init; }
-    public decimal? ExpectedSalary { get; init; }
     public string? LinkedInUrl { get; init; }
     public List<string> PortfolioUrls { get; init; } = [];
     public List<WorkExperienceDto> WorkExperience { get; init; } = [];
@@ -19,6 +17,5 @@ public sealed class ResumeExtractionResult
     public List<string> TechnicalSkills { get; init; } = [];
     public List<string> SoftSkills { get; init; } = [];
     public List<string> ToolsAndPlatforms { get; init; } = [];
-    public List<string> SkillPropositions { get; init; } = [];
     public string FileStorageKey { get; set; } = string.Empty;
 }

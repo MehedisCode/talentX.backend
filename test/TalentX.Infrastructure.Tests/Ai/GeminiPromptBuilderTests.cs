@@ -219,9 +219,9 @@ public class GeminiPromptBuilderTests
         prompt.Should().NotBeNull();
         prompt.Should().Contain("tagline: Headline / professional title");
         prompt.Should().Contain("shortBio: Executive summary / about me / professional summary");
-        prompt.Should().Contain("totalYearsExperience: Total years of professional experience as a number");
-        prompt.Should().Contain("expectedSalary: Desired/expected salary or compensation");
-        prompt.Should().Contain("skillPropositions: Key strengths, value propositions");
+        prompt.Should().NotContain("totalYearsExperience");
+        prompt.Should().NotContain("expectedSalary");
+        prompt.Should().NotContain("skillPropositions");
     }
 
     [Theory]
@@ -249,18 +249,9 @@ public class GeminiPromptBuilderTests
         shortBioProperty.GetProperty("type").GetString().Should().Be("string");
         shortBioProperty.GetProperty("description").GetString().Should().Be("Executive summary or professional bio");
 
-        properties.TryGetProperty("totalYearsExperience", out var experienceProperty).Should().BeTrue();
-        experienceProperty.GetProperty("type").GetString().Should().Be("number");
-        experienceProperty.GetProperty("description").GetString().Should().Be("Total years of professional experience");
-
-        properties.TryGetProperty("expectedSalary", out var salaryProperty).Should().BeTrue();
-        salaryProperty.GetProperty("type").GetString().Should().Be("number");
-        salaryProperty.GetProperty("description").GetString().Should().Be("Expected salary or compensation if stated");
-
-        properties.TryGetProperty("skillPropositions", out var propositionsProperty).Should().BeTrue();
-        propositionsProperty.GetProperty("type").GetString().Should().Be("array");
-        propositionsProperty.GetProperty("items").GetProperty("type").GetString().Should().Be("string");
-        propositionsProperty.GetProperty("description").GetString().Should().Be("Key value propositions or skill highlights");
+        properties.TryGetProperty("totalYearsExperience", out _).Should().BeFalse();
+        properties.TryGetProperty("expectedSalary", out _).Should().BeFalse();
+        properties.TryGetProperty("skillPropositions", out _).Should().BeFalse();
 
         properties.TryGetProperty("fullName", out _).Should().BeTrue();
         properties.TryGetProperty("email", out _).Should().BeTrue();

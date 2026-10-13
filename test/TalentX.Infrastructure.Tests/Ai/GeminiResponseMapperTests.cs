@@ -57,9 +57,6 @@ public class GeminiResponseMapperTests
         result.ToolsAndPlatforms.Should().Contain(new[] { "Docker", "AWS" });
         result.Tagline.Should().BeNull();
         result.ShortBio.Should().BeNull();
-        result.TotalYearsExperience.Should().BeNull();
-        result.ExpectedSalary.Should().BeNull();
-        result.SkillPropositions.Should().BeEmpty();
 
         result.WorkExperience.Should().HaveCount(1);
         result.WorkExperience[0].CompanyName.Should().Be("Tech Corp");
@@ -315,13 +312,7 @@ public class GeminiResponseMapperTests
         {
           "fullName": "Alice Smith",
           "tagline": "Senior Full Stack Engineer",
-          "shortBio": "Over 8 years building scalable cloud services.",
-          "totalYearsExperience": 8.5,
-          "expectedSalary": 120000,
-          "skillPropositions": [
-            "Distributed Systems Architecture",
-            "High Throughput APIs"
-          ]
+          "shortBio": "Over 8 years building scalable cloud services."
         }
         """;
 
@@ -333,11 +324,6 @@ public class GeminiResponseMapperTests
 
         extractionResult.Tagline.Should().Be("Senior Full Stack Engineer");
         extractionResult.ShortBio.Should().Be("Over 8 years building scalable cloud services.");
-        extractionResult.TotalYearsExperience.Should().Be(8.5m);
-        extractionResult.ExpectedSalary.Should().Be(120000m);
-        extractionResult.SkillPropositions.Should().Equal(
-            "Distributed Systems Architecture",
-            "High Throughput APIs");
     }
 
     [Fact]
@@ -357,25 +343,16 @@ public class GeminiResponseMapperTests
 
         extractionResult.Tagline.Should().BeNull();
         extractionResult.ShortBio.Should().BeNull();
-        extractionResult.TotalYearsExperience.Should().BeNull();
-        extractionResult.ExpectedSalary.Should().BeNull();
-        extractionResult.SkillPropositions.Should().BeEmpty();
     }
 
     [Fact]
-    public void MapToResult_ShouldTrimStringsAndFilterWhitespaceSkillPropositions()
+    public void MapToResult_ShouldTrimStringsForTaglineAndShortBio()
     {
         var jsonPayload = """
         {
           "fullName": "Alice Smith",
           "tagline": "   Staff Engineer   ",
-          "shortBio": "   Experienced technical lead specializing in cloud systems.   ",
-          "skillPropositions": [
-            "   Cloud Native   ",
-            "   ",
-            "",
-            "   System Design   "
-          ]
+          "shortBio": "   Experienced technical lead specializing in cloud systems.   "
         }
         """;
 
@@ -387,19 +364,16 @@ public class GeminiResponseMapperTests
 
         extractionResult.Tagline.Should().Be("Staff Engineer");
         extractionResult.ShortBio.Should().Be("Experienced technical lead specializing in cloud systems.");
-        extractionResult.SkillPropositions.Should().Equal("Cloud Native", "System Design");
     }
 
     [Fact]
-    public void MapToResult_ShouldNormalizeNegativeNumbersAndWhitespaceStringsToNull()
+    public void MapToResult_ShouldNormalizeWhitespaceStringsToNull()
     {
         var jsonPayload = """
         {
           "fullName": "Alice Smith",
           "tagline": "   ",
-          "shortBio": "",
-          "totalYearsExperience": -3.5,
-          "expectedSalary": -75000
+          "shortBio": ""
         }
         """;
 
@@ -411,29 +385,6 @@ public class GeminiResponseMapperTests
 
         extractionResult.Tagline.Should().BeNull();
         extractionResult.ShortBio.Should().BeNull();
-        extractionResult.TotalYearsExperience.Should().BeNull();
-        extractionResult.ExpectedSalary.Should().BeNull();
-    }
-
-    [Fact]
-    public void MapToResult_ShouldAcceptZeroForExperienceAndSalary()
-    {
-        var jsonPayload = """
-        {
-          "fullName": "Alice Smith",
-          "totalYearsExperience": 0,
-          "expectedSalary": 0
-        }
-        """;
-
-        var extractionResult = GeminiResponseMapper.MapToResult(
-            jsonPayload,
-            null,
-            null,
-            NullLogger.Instance);
-
-        extractionResult.TotalYearsExperience.Should().Be(0m);
-        extractionResult.ExpectedSalary.Should().Be(0m);
     }
 
     [Fact]
