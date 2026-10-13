@@ -14,7 +14,7 @@ namespace TalentX.Application.Common.Helpers;
 /// </summary>
 public static class MatchingInputHash
 {
-    public const string ScoringVersion = "v2";
+    public const string ScoringVersion = "v3";
 
     private static readonly JsonSerializerOptions SerializerOptions = new()
     {

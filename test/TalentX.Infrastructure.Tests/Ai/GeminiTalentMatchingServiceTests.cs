@@ -145,6 +145,7 @@ public class GeminiTalentMatchingServiceTests
         var body = _handler.RequestBodies.Single();
         body.Should().Contain("ABSOLUTE SCORING RULES");
         body.Should().Contain("NEVER compare, rank, curve, or normalize");
+        body.Should().Contain("Score experience alignment BIDIRECTIONALLY");
         body.Should().Contain("CANDIDATES:");
     }
 

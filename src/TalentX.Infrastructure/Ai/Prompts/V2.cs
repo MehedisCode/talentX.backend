@@ -25,7 +25,7 @@ ABSOLUTE SCORING RULES (CRITICAL):
 
 CRITICAL MATCHING CRITERIA TO EVALUATE:
 1. Skills & Technologies: Compare job's RequiredSkills with candidate's TechnicalSkills, ToolsAndPlatforms, and SkillPropositions.
-2. Experience Level & Years: Compare job's ExperienceLevel with candidate's TotalYearsExperience.
+2. Experience Level & Years: Compare job's ExperienceLevel with candidate's TotalYearsExperience. Score experience alignment BIDIRECTIONALLY: a candidate materially below the role's required experience (under-qualified) AND a candidate materially above it (over-qualified, e.g. 10+ years of total experience for a role requiring ~3 years) both reduce this criterion's score. Candidates near the requested level or band score highest — more years is NOT automatically better; alignment is.
 3. Job Title & Past Roles: Compare job title and description with candidate's past WorkExperience job titles and companies.
 4. Industry Experience: Consider relevance of past companies and roles where available.
 5. Location & Work Arrangement: Compare job's Location, City, Country, and WorkArrangement (Remote, Hybrid, OnSite) with candidate's Location. Remote jobs are location-flexible.

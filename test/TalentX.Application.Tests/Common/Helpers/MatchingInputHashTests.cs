@@ -117,7 +117,7 @@ public class MatchingInputHashTests
         var candidate = CreateCandidate();
 
         var hashA = MatchingInputHash.Compute(job, candidate);
-        var hashB = MatchingInputHash.Compute(job, candidate, scoringVersion: "v3");
+        var hashB = MatchingInputHash.Compute(job, candidate, scoringVersion: "v-test");
 
         hashA.Should().NotBe(hashB);
         hashB.Should().MatchRegex("^[0-9a-f]{64}$");

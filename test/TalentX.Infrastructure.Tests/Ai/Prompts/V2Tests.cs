@@ -44,6 +44,16 @@ public class V2Tests
     }
 
     [Fact]
+    public void BuildPrompt_ContainsBidirectionalExperienceAlignment()
+    {
+        var prompt = new V2().BuildPrompt(SampleRequest());
+
+        prompt.Should().Contain("Score experience alignment BIDIRECTIONALLY");
+        prompt.Should().Contain("over-qualified");
+        prompt.Should().Contain("more years is NOT automatically better; alignment is");
+    }
+
+    [Fact]
     public void BuildPrompt_ContainsCandidatesSectionAndResponseSchema()
     {
         var prompt = new V2().BuildPrompt(SampleRequest());
